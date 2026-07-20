@@ -256,7 +256,16 @@ Paritet med dagens a11y-nivå uten axe-pakkene: skip-links, aria-landmarks, Navi
 ekvivalent (SSR-navigasjon endrer dette — ekte sidelastinger annonserer selv), fokus-håndtering i
 palette/popover/editor, tastaturnavigasjon. Manuell axe-sjekk i browser før cutover.
 
-## #17 Dockerfile + deploy — PÅGÅR
+## #17 Dockerfile + deploy — FERDIG (deployet i produksjon 2026-07-20)
+
+**DEPLOYET 2026-07-20 — PARALLELL DRIFT (Vegards beslutning):** bibel.flogvit.no beholdes
+SOM DEN ER (gammel app, service `bibel`); hono-varianten kjører PARALLELT på
+**https://bibel.flogvit.com** (service `bibel-hono`, /srv/flogvit.com/bibel-hono/, Caddy
+reverse_proxy i stedet for gammel 301). Ingen cutover/301 av .no nå. Gjort: flogvit_bibel +
+bruker `bibel` opprettet på db-flogvit (scw, konto-mønsteret), bibel.env på VM-en (root-only),
+alle data lastet via mysqldump lokal→VM→db-flogvit (93 480 vers / 402 731 word4word / 39
+tabeller verifisert), deploy/deploy-bibel.sh kjørt: bygget, helsesjekk OK, lesesider/søk/API
+verifisert live. Sitemap: committet versjon brukes når .env mangler i checkouten.
 
 **2026-07-20:** Dockerfile ferdig (Bun 1.3-slim, COPY tsconfig.json-gotchaen håndtert, kvn-package
 kopieres før bun install --production, ingen bible.db). Ny deploy-script klar i
@@ -272,12 +281,10 @@ trengs kun for import, ikke runtime — vurder). MySQL-tilkobling via env: secre
 (feedback-durable-secrets — aldri write-only). db-flogvit: ny database `bibel` + bruker; sjekk
 eksisterende state før endring (gcloud/Scaleway-regelen gjelder db-flogvit også).
 
-## #18 Verifisering + cutover — ÅPEN
+## #18 Verifisering + evt. cutover — ÅPEN (driftsmodell endret 2026-07-20)
 
-Side-ved-side mot prod: alle 36 sider rendrer, API-diff på alle ruter (curl-sammenlikning mot
-bibel.flogvit.no), sync roundtrip mot konto-innlogget bruker, offline-nedlasting + flymodus-test,
-typecheck rent, alle tester grønne. Deretter: bytt compose/Caddy — **bibel.flogvit.com blir
-kanonisk vhost; bibel.flogvit.no settes til 301 → .com** (snur dagens redirect). Verifiser live, rydd: `bibel/`
-erstattes av `bibel-hono/`-innholdet (historikk-mønsteret: commit tilstanden til gamle repoet på
-`flogvit-com-state` før swap), slett SQLite-sporet (data/bible.db, better-sqlite3, express, react,
-vite, hele gamle node_modules-treet).
+**Ny modell (Vegard 2026-07-20): parallell drift.** .com er live med hono-varianten (#17);
+.no beholdes som den er inntil videre — INGEN 301/cutover planlagt nå. Gjenstående
+verifisering skjer mot live .com: side-ved-side-diff mot .no, sync roundtrip mot
+konto-innlogget bruker, offline når #14 er bygget. Hvis/når .no skal over: merge `hono` →
+`main`, snu Caddy (.no → 301 .com), rydd gammel app — men det er en egen fremtidig beslutning.
