@@ -1,16 +1,11 @@
-import Database from 'better-sqlite3';
-import fs from 'fs';
-import path from 'path';
+// Genererer public/sitemap.xml — port av gamle scripts/generate-sitemap.ts
+// (better-sqlite3 → Bun.sql). Kjør: bun scripts/generate-sitemap.ts
+
+import { getSql, closeSql } from '../src/lib/db.ts';
 
 const BASE_URL = 'https://bibel.flogvit.com';
 
-interface Book {
-  id: number;
-  name: string;
-  chapters: number;
-}
-
-// Convert book name to URL slug
+// Sitemapens egen slug-variant (ASCII-folder æøå) — beholdt som i originalen.
 function toUrlSlug(name: string): string {
   return name
     .toLowerCase()
@@ -20,101 +15,40 @@ function toUrlSlug(name: string): string {
     .replace(/[å]/g, 'a');
 }
 
-function generateSitemap() {
-  const dbPath = path.join(process.cwd(), 'data', 'bible.db');
-  const db = new Database(dbPath, { readonly: true });
+const sql = getSql();
+const books = (await sql`SELECT id, name, chapters FROM books ORDER BY id`) as {
+  id: number;
+  name: string;
+  chapters: number;
+}[];
 
-  // Get all books
-  const books = db.prepare('SELECT id, name, chapters FROM books ORDER BY id').all() as Book[];
+const staticUrls: [path: string, changefreq: string, priority: string][] = [
+  ['/', 'weekly', '1.0'],
+  ['/om', 'monthly', '0.5'],
+  ['/sok', 'monthly', '0.7'],
+  ['/sok/original', 'monthly', '0.6'],
+  ['/tidslinje', 'monthly', '0.7'],
+  ['/profetier', 'monthly', '0.7'],
+  ['/personer', 'monthly', '0.7'],
+  ['/temaer', 'monthly', '0.7'],
+  ['/leseplan', 'monthly', '0.7'],
+  ['/kjente-vers', 'monthly', '0.6'],
+  ['/tilgjengelighet', 'monthly', '0.3'],
+];
 
-  const today = new Date().toISOString().split('T')[0];
-
-  let xml = `<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <!-- Static pages -->
-  <url>
-    <loc>${BASE_URL}/</loc>
-    <changefreq>weekly</changefreq>
-    <priority>1.0</priority>
-  </url>
-  <url>
-    <loc>${BASE_URL}/om</loc>
-    <changefreq>monthly</changefreq>
-    <priority>0.5</priority>
-  </url>
-  <url>
-    <loc>${BASE_URL}/sok</loc>
-    <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>${BASE_URL}/sok/original</loc>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
-    <loc>${BASE_URL}/tidslinje</loc>
-    <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>${BASE_URL}/profetier</loc>
-    <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>${BASE_URL}/personer</loc>
-    <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>${BASE_URL}/temaer</loc>
-    <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>${BASE_URL}/leseplan</loc>
-    <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>${BASE_URL}/kjente-vers</loc>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
-    <loc>${BASE_URL}/tilgjengelighet</loc>
-    <changefreq>monthly</changefreq>
-    <priority>0.3</priority>
-  </url>
-`;
-
-  // Add all Bible chapters
-  for (const book of books) {
-    const slug = toUrlSlug(book.name);
-    for (let chapter = 1; chapter <= book.chapters; chapter++) {
-      xml += `  <url>
-    <loc>${BASE_URL}/${slug}/${chapter}</loc>
-    <changefreq>monthly</changefreq>
-    <priority>0.8</priority>
-  </url>
-`;
-    }
-  }
-
-  xml += `</urlset>
-`;
-
-  // Write to public folder
-  const outputPath = path.join(process.cwd(), 'public', 'sitemap.xml');
-  fs.writeFileSync(outputPath, xml, 'utf-8');
-
-  // Count URLs
-  const urlCount = (xml.match(/<url>/g) || []).length;
-  console.log(`Sitemap generated: ${outputPath}`);
-  console.log(`Total URLs: ${urlCount}`);
-
-  db.close();
+let xml = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n`;
+for (const [p, changefreq, priority] of staticUrls) {
+  xml += `  <url>\n    <loc>${BASE_URL}${p}</loc>\n    <changefreq>${changefreq}</changefreq>\n    <priority>${priority}</priority>\n  </url>\n`;
 }
+for (const book of books) {
+  const slug = toUrlSlug(book.name);
+  for (let chapter = 1; chapter <= book.chapters; chapter++) {
+    xml += `  <url>\n    <loc>${BASE_URL}/${slug}/${chapter}</loc>\n    <changefreq>monthly</changefreq>\n    <priority>0.8</priority>\n  </url>\n`;
+  }
+}
+xml += `</urlset>\n`;
 
-generateSitemap();
+await Bun.write('public/sitemap.xml', xml);
+const urlCount = (xml.match(/<url>/g) || []).length;
+console.log(`Sitemap generert: public/sitemap.xml (${urlCount} URL-er)`);
+await closeSql();

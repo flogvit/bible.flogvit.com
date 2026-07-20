@@ -1,0 +1,129 @@
+/* Brukersider — felles skall, lister, editor. Token-broen. */
+
+.user-main { padding: 48px 0; }
+.user-intro { color: var(--ink-2); margin-bottom: 24px; max-width: 640px; }
+.user-empty { color: var(--muted); font-style: italic; }
+.user-note { color: var(--muted); font-size: 14px; margin-top: 16px; }
+.user-toolbar { margin-bottom: 20px; }
+
+.user-input {
+  padding: 10px 14px;
+  font-size: 15px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--ink);
+}
+.user-input:focus { outline: none; border-color: var(--gold); box-shadow: 0 0 0 3px var(--gold-bg); }
+.user-btn {
+  display: inline-block;
+  padding: 10px 18px;
+  background: var(--gold);
+  color: var(--on-accent);
+  border: none;
+  border-radius: var(--radius);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  text-decoration: none;
+}
+.user-btn-ghost {
+  display: inline-block;
+  padding: 8px 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--ink);
+  text-decoration: none;
+  font-size: 14px;
+}
+
+.user-create { display: flex; gap: 8px; margin-bottom: 20px; }
+.user-create .user-input { flex: 1; }
+
+.user-list { display: flex; flex-direction: column; gap: 10px; }
+.user-card {
+  display: block;
+  padding: 14px 18px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  text-decoration: none;
+}
+a.user-card:hover { border-color: var(--gold); }
+.user-card-ref { font-family: var(--font-mono); font-size: 13px; color: var(--gold-text); }
+.user-card-title { display: block; color: var(--ink); font-weight: 500; font-size: 16px; }
+.user-card-meta { color: var(--muted); font-size: 13px; }
+.user-card-text { font-family: var(--font-serif); color: var(--ink); margin: 6px 0 0; line-height: 1.6; }
+
+/* leseplan */
+.plan-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; }
+.plan-card {
+  padding: 18px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+}
+.plan-name { font-size: 18px; margin-bottom: 6px; }
+.plan-desc { color: var(--ink-2); font-size: 14px; margin-bottom: 10px; }
+.plan-meta { display: flex; gap: 10px; margin-bottom: 12px; }
+.plan-days, .plan-cat { font-family: var(--font-mono); font-size: 12px; color: var(--muted); }
+.plan-actions { display: flex; align-items: center; gap: 10px; }
+.plan-active-badge {
+  font-size: 12px;
+  color: var(--gold-text);
+  background: var(--gold-bg);
+  padding: 3px 10px;
+  border-radius: var(--radius-pill);
+}
+
+/* innstillinger */
+.settings-form { display: flex; flex-direction: column; gap: 24px; max-width: 560px; }
+.settings-group { border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 18px; }
+.settings-group legend { padding: 0 8px; font-weight: 600; color: var(--ink); }
+.settings-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 8px 0; }
+.settings-toggle { display: flex; align-items: center; gap: 10px; padding: 6px 0; cursor: pointer; }
+
+/* editor */
+.editor-head { display: flex; gap: 12px; align-items: center; margin-bottom: 8px; }
+.editor-title { flex: 1; font-size: 18px; }
+.editor-actions { display: flex; gap: 8px; }
+.editor-hint { color: var(--muted); font-size: 13px; margin-bottom: 12px; }
+.editor-hint code { font-family: var(--font-mono); background: var(--paper-2); padding: 1px 5px; border-radius: 4px; }
+.editor-split { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.editor-textarea {
+  min-height: 60vh;
+  padding: 14px;
+  font-family: var(--font-mono);
+  font-size: 14px;
+  line-height: 1.6;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--ink);
+  resize: vertical;
+}
+.editor-preview {
+  padding: 14px 18px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--paper-2);
+  overflow-y: auto;
+  max-height: 70vh;
+  font-family: var(--font-serif);
+  line-height: 1.7;
+}
+.editor-preview h1, .editor-preview h2, .editor-preview h3 { margin: 12px 0 6px; }
+.editor-preview .inline-ref { color: var(--gold-text); }
+@media (max-width: 768px) { .editor-split { grid-template-columns: 1fr; } }
+
+.devotional-article { font-family: var(--font-serif); line-height: 1.7; }
+.devotional-article h1 { font-size: 28px; margin-bottom: 16px; }
+.devotional-article .inline-ref { color: var(--gold-text); }
+.devotional-article .user-btn-ghost { margin-top: 24px; font-family: var(--font-ui); }
+
+/* offline / oversettelser */
+.offline-status { padding: 16px 18px; background: var(--paper-2); border-radius: var(--radius); margin-bottom: 16px; }
+.trans-section { margin-bottom: 32px; }
+.trans-builtin { padding-left: 20px; color: var(--ink-2); }
+.trans-builtin li { margin-bottom: 4px; }

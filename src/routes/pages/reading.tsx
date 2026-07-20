@@ -1,0 +1,1925 @@
+// Lesesiden — port av bibel/src/pages/ChapterPage.tsx + ChapterContent og
+// komponentene i bibel/src/components/bible/ (VerseDisplay, ChapterToc,
+// Summary, ImportantWords, ChapterInsightsPanel, ChapterParallelsView,
+// ReadingSidebar/sidebar/StudyPanel, MobileToolbar/MobileSidebarOverlay,
+// LayoutModeButtons) + TextPage.tsx (/tekst).
+//
+// Alt innhold SSR-es (vers, grunntekst, undertekst, ord-for-ord, referanser,
+// profetier, sammendrag, TOC, Studium-sidebar). Interaktivitet er øyer:
+// public/js/reading.js (versdetaljer, layout-modus, leseposisjon, kopiering)
+// og public/js/studium.js (sidebar-blokker, panelfaner, mobil-verktøylinje).
+// Kontrakten mot shortcuts.js: <body data-book-slug data-chapter
+// data-max-chapter data-next-book-slug data-bible-query> + CustomEvents
+// 'bibel:layout-mode' og 'bibel:panel-tab' ([data-panel-tabs]-container).
+
+import { Hono } from 'hono';
+import { raw } from 'hono/html';
+import type { AppEnv } from '../../lib/session.ts';
+import { Layout } from '../../views/layout.tsx';
+import { Breadcrumbs } from '../../views/breadcrumbs.tsx';
+import { Footnotes } from '../../views/footnotes.tsx';
+import { InlineRefs } from '../../views/inline-refs.tsx';
+import { ItemTagging } from '../../views/item-tagging.tsx';
+import { VerseView } from '../../views/verse-display.tsx';
+import { booksData, getBookInfoBySlug, getBookInfoById } from '../../lib/books-data.ts';
+import type { BookInfo } from '../../lib/books-data.ts';
+import { toUrlSlug } from '../../lib/url-utils.ts';
+import { parseStandardRef, refSegmentToUrl } from '../../lib/standard-ref-parser.ts';
+import { parseVerseTemplate } from '../../lib/verse-template.ts';
+import {
+  getVerses,
+  getVerse,
+  getOriginalVerses,
+  getOriginalVerse,
+  getOriginalLanguage,
+  getBookSummary,
+  getChapterSummary,
+  getChapterContext,
+  getChapterInsight,
+  getOriginalWord4Word,
+  getReferences,
+  getImportantWords,
+  getTimelineEventsForChapter,
+  getPropheciesForChapter,
+  getPersonsByChapter,
+  getThemesByChapter,
+  getStoriesByChapter,
+  getNumberSymbolismByChapter,
+  getReadingTextsByChapter,
+  getGospelParallelsForChapter,
+  getVersesWithOriginal,
+  formatReference,
+} from '../../lib/bible.ts';
+import type {
+  Verse,
+  Word4Word,
+  Reference,
+  Prophecy,
+  TimelineEvent,
+  GospelParallel,
+  GospelParallelPassage,
+  VerseRef,
+} from '../../lib/bible.ts';
+import { mapChapter, resolveMappingId, getAvailableMappings } from '../../lib/verse-mapper.ts';
+
+const r = new Hono<AppEnv>();
+
+const SITE = 'https://bibel.flogvit.com';
+
+// ── Hjelpere ──────────────────────────────────────────────────────────
+
+/** Bevar bible/mapping/secondary i lenker (som gamle bibleQuery, utvidet). */
+function buildQuery(bible: string, mapping: string | undefined, secondary: string | undefined): string {
+  const params = new URLSearchParams();
+  if (bible && bible !== 'osnb2') params.set('bible', bible);
+  if (mapping && mapping !== 'osnb2') params.set('mapping', mapping);
+  if (secondary) params.set('secondary', secondary);
+  const s = params.toString();
+  return s ? `?${s}` : '';
+}
+
+/** Kort etikett over undertekst-stripen (som undertekstShortLabel). */
+function undertekstShortLabel(id: string | undefined): string {
+  if (!id) return '';
+  if (id === 'osnb2') return 'nb';
+  if (id === 'osnn1') return 'nn';
+  if (id === '1930') return '1930';
+  if (id === 'dnb2024') return '2024';
+  return id;
+}
+
+/** Ren tekst-utdrag til meta description (fjerner klammer-refs og maler). */
+function excerpt(text: string, max = 160): string {
+  const plain = text
+    .replace(/\{\{[^}]+\}\}/g, '')
+    .replace(/\[[a-zæøå]+:([^\]|]+)(?:\|([^\]]+))?\]/gi, (_m, v: string, label?: string) => label || v)
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (plain.length <= max) return plain;
+  const cut = plain.slice(0, max);
+  return `${cut.slice(0, Math.max(cut.lastIndexOf(' '), 80))}…`;
+}
+
+// Samme bokgrupper som gamle ChapterToc
+const TOC_CATEGORIES: { label: string; range: [number, number] }[] = [
+  { label: 'Mosebøkene', range: [1, 5] },
+  { label: 'Historiske', range: [6, 17] },
+  { label: 'Poetiske', range: [18, 22] },
+  { label: 'Profetene', range: [23, 39] },
+  { label: 'Evangeliene & Apg', range: [40, 44] },
+  { label: 'Paulus-brev', range: [45, 57] },
+  { label: 'Øvrige brev & Åp.', range: [58, 66] },
+];
+
+// ── Datamodell for SSR-kapittelet ────────────────────────────────────
+
+interface DisplayVerse {
+  verse: Verse; // verse.chapter/verse.verse er visningsnummerering
+  osnb2Chapter: number;
+  osnb2Verse: number;
+  originalText: string | null;
+  secondaryText: string | null;
+  word4word: Word4Word[];
+  references: Reference[];
+  prophecies: Prophecy[];
+}
+
+interface ChapterData {
+  verses: DisplayVerse[];
+  bookSummary: string | null;
+  summary: string | null;
+  context: string | null;
+  insight: unknown | null;
+  importantWords: { word: string; explanation: string }[];
+  timelineEvents: TimelineEvent[];
+  persons: { id: string; name: string; verses: number[] }[];
+  themes: { id: number; name: string; title: string; verses: number[] }[];
+  stories: { slug: string; title: string; category: string }[];
+  numbers: { number: number; meaning: string }[];
+  readingTexts: { id: number; name: string; date: string }[];
+  parallels: GospelParallel[];
+  chapterProphecies: Prophecy[];
+}
+
+function versesInProphecy(p: Prophecy, bookId: number, chapter: number, verse: number): boolean {
+  const hit = (ref: { book_id: number; chapter: number; verse_start: number; verse_end: number }) =>
+    ref.book_id === bookId && ref.chapter === chapter && verse >= ref.verse_start && verse <= ref.verse_end;
+  if (hit(p.prophecy)) return true;
+  return p.fulfillments.some(hit);
+}
+
+async function loadChapterData(
+  bookId: number,
+  chapter: number,
+  bible: string,
+  mapping: string | null,
+  secondary: string | undefined,
+): Promise<ChapterData | null> {
+  const lang = bible === 'osnn1' ? 'nn' : 'nb';
+
+  // Vers (med ev. KVN-mapping) — samme oppsett som /api/chapter.
+  let base: { verse: Verse; osnb2Chapter: number; osnb2Verse: number }[];
+  if (mapping && mapping !== 'osnb2') {
+    const mapped = await mapChapter(bookId, chapter, mapping, bible);
+    if (mapped.length === 0) return null;
+    base = mapped.map((m) => ({
+      verse: { ...m.verse, chapter: m.displayChapter, verse: m.displayVerse },
+      osnb2Chapter: m.osnb2Chapter,
+      osnb2Verse: m.osnb2Verse,
+    }));
+  } else {
+    const versesRaw = await getVerses(bookId, chapter, bible);
+    if (versesRaw.length === 0) return null;
+    base = versesRaw.map((v) => ({ verse: v, osnb2Chapter: v.chapter, osnb2Verse: v.verse }));
+  }
+
+  // Kapittelmetadata bruker osnb2-kapittelet (primærinnholdet).
+  const primaryChapter = base[0]?.osnb2Chapter ?? chapter;
+
+  const [bookSummary, summary, context, insight, importantWords, timelineEvents, chapterProphecies] =
+    await Promise.all([
+      chapter === 1 ? getBookSummary(bookId) : Promise.resolve(null),
+      getChapterSummary(bookId, primaryChapter),
+      getChapterContext(bookId, primaryChapter),
+      getChapterInsight(bookId, primaryChapter),
+      getImportantWords(bookId, primaryChapter),
+      getTimelineEventsForChapter(bookId, primaryChapter),
+      getPropheciesForChapter(bookId, primaryChapter),
+    ]);
+
+  // Studium-ressurser (samme kall som /api/search/chapter-resources).
+  const [personsRaw, themesRaw, storiesRaw, numbersRaw, readingTextsRaw, parallels] = await Promise.all([
+    getPersonsByChapter(bookId, primaryChapter),
+    getThemesByChapter(bookId, primaryChapter),
+    getStoriesByChapter(bookId, primaryChapter),
+    getNumberSymbolismByChapter(bookId, primaryChapter),
+    getReadingTextsByChapter(bookId, primaryChapter),
+    getGospelParallelsForChapter(bookId, primaryChapter),
+  ]);
+
+  const persons = personsRaw.map((p) => ({
+    id: p.id,
+    name: p.name,
+    verses: (p.references || [])
+      .filter((ref) => ref.bookId === bookId && ref.chapterId === primaryChapter)
+      .map((ref) => ref.verseId),
+  }));
+  const themes = themesRaw.map((t) => ({ id: t.id, name: t.name, title: t.title, verses: t.verses }));
+  const stories = storiesRaw.map((s) => ({ slug: s.slug, title: s.title, category: s.category }));
+  const numbers = numbersRaw.map((n) => ({ number: n.number, meaning: n.meaning }));
+  const readingTexts = readingTextsRaw.map((rt) => ({ id: rt.id, name: rt.name, date: rt.date }));
+
+  // Per-vers data: grunntekst, undertekst, ord-for-ord, referanser, profetier.
+  const wantSecondary = !!secondary && secondary !== 'original' && secondary !== bible;
+  const verses: DisplayVerse[] = [];
+  for (const b of base) {
+    const [orig, sec, w4w, refs] = await Promise.all([
+      getOriginalVerse(bookId, b.osnb2Chapter, b.osnb2Verse),
+      wantSecondary ? getVerse(bookId, b.osnb2Chapter, b.osnb2Verse, secondary) : Promise.resolve(undefined),
+      getOriginalWord4Word(bookId, b.osnb2Chapter, b.osnb2Verse, lang),
+      getReferences(bookId, b.osnb2Chapter, b.osnb2Verse, lang),
+    ]);
+    verses.push({
+      verse: b.verse,
+      osnb2Chapter: b.osnb2Chapter,
+      osnb2Verse: b.osnb2Verse,
+      originalText: orig?.text ?? null,
+      secondaryText: sec?.text ?? null,
+      word4word: w4w,
+      references: refs,
+      prophecies: chapterProphecies.filter((p) => versesInProphecy(p, bookId, b.osnb2Chapter, b.osnb2Verse)),
+    });
+  }
+
+  return {
+    verses,
+    bookSummary,
+    summary,
+    context,
+    insight,
+    importantWords,
+    timelineEvents,
+    persons,
+    themes,
+    stories,
+    numbers,
+    readingTexts,
+    parallels,
+    chapterProphecies,
+  };
+}
+
+// ── Tekst med {{ref}}-maler (port av VerseTemplateText, server-side) ─
+
+async function TemplateText({ text }: { text: string }) {
+  const parts = parseVerseTemplate(text);
+  if (!parts.some((p) => p.type === 'verse')) return <>{text}</>;
+
+  const rendered = await Promise.all(
+    parts.map(async (part) => {
+      if (part.type === 'text') return <>{part.content}</>;
+      const segments = parseStandardRef(part.refString || part.content);
+      const first = segments[0];
+      if (!first) return <span class="vtt-missing">[{part.content}]</span>;
+      const verseNums = first.verses || (first.fromVerse ? [first.fromVerse] : []);
+      const refObj: VerseRef = { bookId: first.bookId, chapter: first.chapter, verses: verseNums };
+      const verses = await getVersesWithOriginal([refObj]);
+      const textJoined = verses.map((v) => v.verse.text).join(' ');
+      const label = `${first.bookShortName} ${first.chapter}`;
+      if (!textJoined) return <span class="vtt-missing">[{part.content}]</span>;
+      return (
+        <a href={refSegmentToUrl(first)} class="inline-ref vtt-verse" data-ref={part.refString} title={label}>
+          {textJoined}
+        </a>
+      );
+    }),
+  );
+  return <span>{rendered}</span>;
+}
+
+// ── ChapterToc (venstre sidekolonne) ─────────────────────────────────
+
+function ChapterToc({
+  book,
+  bookSlug,
+  chapter,
+  query,
+}: {
+  book: BookInfo;
+  bookSlug: string;
+  chapter: number;
+  query: string;
+}) {
+  const category = TOC_CATEGORIES.find((c) => book.id >= c.range[0] && book.id <= c.range[1]);
+  const siblings = category ? booksData.filter((b) => b.id >= category.range[0] && b.id <= category.range[1]) : [];
+
+  return (
+    <nav class="chapter-toc-nav" aria-label="Kapittelnavigasjon">
+      <div class="toc-group-label">{book.name_no}</div>
+      <div class="toc-chapter-grid">
+        {Array.from({ length: book.chapters }, (_, i) => i + 1).map((ch) => (
+          <a
+            href={`/${bookSlug}/${ch}${query}`}
+            class={`toc-chapter-cell ${ch === chapter ? 'is-active' : ''}`}
+            aria-current={ch === chapter ? 'page' : undefined}
+          >
+            {ch}
+          </a>
+        ))}
+      </div>
+
+      {category && siblings.length > 1 && (
+        <>
+          <div class="toc-group-label">{category.label}</div>
+          {siblings.map((b) => (
+            <a
+              href={`/${toUrlSlug(b.short_name)}/1${query}`}
+              class={`toc-item ${b.id === book.id ? 'is-active' : ''}`}
+            >
+              <span class="toc-item-name">{b.name_no}</span>
+              <span class="toc-item-chapters">{b.chapters}</span>
+            </a>
+          ))}
+        </>
+      )}
+
+      <div class="toc-group-label">Alle bøker</div>
+      <a href="/" class="toc-item">
+        <span class="toc-item-name">Forsiden →</span>
+      </a>
+    </nav>
+  );
+}
+
+// ── Kapittelinnsikt (port av ChapterInsightsPanel) ───────────────────
+// Data er JSON fra chapter_insights — samme typer som gamle
+// data/chapterInsightTypes.ts (genealogy/list/two-column/person-list/
+// creation/faith-heroes). Rendres som <details> (virker uten JS).
+
+/* eslint-disable @typescript-eslint/no-explicit-any */
+function ChapterInsights({ insight }: { insight: any }) {
+  if (!insight || typeof insight !== 'object' || !insight.type) return null;
+  return (
+    <details class="insights-panel">
+      <summary class="insights-toggle">
+        <span class="insights-toggle-icon" aria-hidden="true">
+          +
+        </span>
+        <span>{insight.buttonText}</span>
+        <span class="insights-toggle-hint">{insight.hint}</span>
+      </summary>
+      <div class="insights-content">
+        <p class="insights-intro">
+          <TemplateText text={insight.intro || ''} />
+        </p>
+        <InsightContent insight={insight} />
+      </div>
+    </details>
+  );
+}
+
+function InsightContent({ insight }: { insight: any }) {
+  switch (insight.type) {
+    case 'genealogy':
+      return <GenealogyContent insight={insight} />;
+    case 'list':
+      return <ListContent insight={insight} />;
+    case 'two-column':
+      return <TwoColumnContent insight={insight} />;
+    case 'person-list':
+      return <PersonListContent insight={insight} />;
+    case 'creation':
+      return <CreationContent insight={insight} />;
+    case 'faith-heroes':
+      return <FaithHeroesContent insight={insight} />;
+    default:
+      return null;
+  }
+}
+
+function PersonLink({ personId, name, className }: { personId?: string; name: string; className: string }) {
+  if (personId) {
+    return (
+      <a href={`/personer/${personId}`} class={className} title={`Les mer om ${name}`}>
+        {name}
+      </a>
+    );
+  }
+  return <span class={className}>{name}</span>;
+}
+
+function GenealogyContent({ insight }: { insight: any }) {
+  return (
+    <>
+      <div class="ins-sections">
+        {(insight.sections || []).map((section: any) => (
+          <div class="ins-section">
+            <h3 class="ins-section-title">
+              {section.title}
+              <span class="ins-verse-ref">
+                v.{section.startVerse}-{section.endVerse}
+              </span>
+            </h3>
+            <div class="ins-person-list">
+              {(section.persons || []).map((person: any, i: number) => (
+                <div class="ins-person-item">
+                  {i > 0 && <span class="ins-arrow">→</span>}
+                  <span class="ins-person">
+                    <PersonLink personId={person.personId} name={person.name} className="ins-person-link" />
+                    {person.years && <span class="ins-person-years">{person.years}</span>}
+                    {person.note && <span class="ins-person-note">{person.note}</span>}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+      {insight.footer && (
+        <div class="ins-footer">
+          <h4>{insight.footer.title}</h4>
+          <p>
+            <TemplateText text={insight.footer.content || ''} />
+            {insight.footer.links && (
+              <>
+                {' '}
+                {insight.footer.links.map((link: any, i: number) => (
+                  <span>
+                    {i > 0 && ', '}
+                    <a href={`/personer/${link.personId}`} class="ins-footer-link">
+                      {link.text}
+                    </a>
+                  </span>
+                ))}
+              </>
+            )}
+          </p>
+        </div>
+      )}
+    </>
+  );
+}
+
+function ListContent({ insight }: { insight: any }) {
+  return (
+    <div class="ins-list">
+      {(insight.items || []).map((item: any) => (
+        <div class="ins-list-item">
+          {item.number != null && <span class="ins-list-number">{item.number}</span>}
+          <div class="ins-list-content">
+            <h4 class="ins-list-title">{item.title}</h4>
+            <p class="ins-list-text">
+              <TemplateText text={item.text || ''} />
+            </p>
+            <span class="ins-list-verses">v.{(item.verses || []).join(', ')}</span>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function TwoColumnContent({ insight }: { insight: any }) {
+  return (
+    <>
+      <div class="ins-two-column">
+        <div class="ins-column">
+          <h4 class="ins-column-title">{insight.leftTitle}</h4>
+          <span class="ins-column-verses">v.{(insight.verses?.left || []).join('-')}</span>
+          <ul class="ins-column-list">
+            {(insight.leftItems || []).map((item: any) => (
+              <li class="ins-column-item">
+                <TemplateText text={item.text || ''} />
+              </li>
+            ))}
+          </ul>
+        </div>
+        <div class="ins-column-divider" />
+        <div class="ins-column">
+          <h4 class="ins-column-title">{insight.rightTitle}</h4>
+          <span class="ins-column-verses">v.{(insight.verses?.right || []).join('-')}</span>
+          <ul class="ins-column-list">
+            {(insight.rightItems || []).map((item: any) => (
+              <li class="ins-column-item">
+                <TemplateText text={item.text || ''} />
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
+      {insight.footer && (
+        <div class="ins-footer">
+          <p>
+            <TemplateText text={insight.footer} />
+          </p>
+        </div>
+      )}
+    </>
+  );
+}
+
+function PersonListContent({ insight }: { insight: any }) {
+  return (
+    <div class="ins-person-grid">
+      {(insight.persons || []).map((person: any, index: number) => (
+        <div class="ins-person-card">
+          <span class="ins-person-number">{index + 1}</span>
+          <div class="ins-person-info">
+            <PersonLink personId={person.personId} name={person.name} className="ins-person-card-name" />
+            <p class="ins-person-description">
+              <TemplateText text={person.description || ''} />
+            </p>
+            {person.note && <span class="ins-person-card-note">{person.note}</span>}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function CreationContent({ insight }: { insight: any }) {
+  return (
+    <div class="ins-creation">
+      {(insight.days || []).map((day: any) => (
+        <div class="ins-creation-day">
+          <div class="ins-day-number">
+            <span>Dag {day.day}</span>
+          </div>
+          <div class="ins-day-content">
+            <h4 class="ins-day-title">{day.title}</h4>
+            <ul class="ins-day-created">
+              {(day.created || []).map((item: string) => (
+                <li>{item}</li>
+              ))}
+            </ul>
+            <span class="ins-day-verses">
+              v.{day.verses?.[0]}-{day.verses?.[day.verses.length - 1]}
+            </span>
+          </div>
+        </div>
+      ))}
+      <div class="ins-creation-day">
+        <div class="ins-day-number ins-day-rest">
+          <span>Dag 7</span>
+        </div>
+        <div class="ins-day-content">
+          <h4 class="ins-day-title">Hvile</h4>
+          <p class="ins-day-description">
+            Gud fullførte sitt verk og hvilte. Han velsignet og helliget den sjuende dagen.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function FaithHeroesContent({ insight }: { insight: any }) {
+  return (
+    <div class="ins-heroes-grid">
+      {(insight.heroes || []).map((hero: any) => (
+        <div class="ins-hero-card">
+          <PersonLink personId={hero.personId} name={hero.name} className="ins-hero-name" />
+          <p class="ins-hero-deed">
+            <TemplateText text={hero.deed || ''} />
+          </p>
+          <span class="ins-hero-verses">v.{(hero.verses || []).join(', ')}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+/* eslint-enable @typescript-eslint/no-explicit-any */
+
+// ── Parallelle tekster (port av ChapterParallelsView, SSR-utgave) ────
+
+type Gospel = 'matthew' | 'mark' | 'luke' | 'john';
+const GOSPELS: Gospel[] = ['matthew', 'mark', 'luke', 'john'];
+const GOSPEL_NAMES: Record<Gospel, string> = {
+  matthew: 'Matteus',
+  mark: 'Markus',
+  luke: 'Lukas',
+  john: 'Johannes',
+};
+const GOSPEL_COLORS: Record<Gospel, string> = {
+  matthew: 'blue',
+  mark: 'green',
+  luke: 'orange',
+  john: 'purple',
+};
+const BOOK_ID_TO_GOSPEL: Record<number, Gospel> = { 40: 'matthew', 41: 'mark', 42: 'luke', 43: 'john' };
+
+function passageUrl(passage: GospelParallelPassage): string {
+  return `/${toUrlSlug(passage.book_short_name || '')}/${passage.chapter}#v${passage.verse_start}`;
+}
+
+async function GospelColumn({
+  gospel,
+  passage,
+  bible,
+  isCurrentGospel,
+}: {
+  gospel: Gospel;
+  passage: GospelParallelPassage | undefined;
+  bible: string;
+  isCurrentGospel: boolean;
+}) {
+  if (!passage) {
+    return (
+      <div class={`gospel-column gospel-${gospel}`}>
+        <div class="gospel-column-header">
+          <span class="gospel-badge">{GOSPEL_NAMES[gospel]}</span>
+        </div>
+        <div class="gospel-no-passage">Ikke i {GOSPEL_NAMES[gospel]}</div>
+      </div>
+    );
+  }
+  const chapterVerses = await getVerses(passage.book_id, passage.chapter, bible);
+  const verses = chapterVerses.filter((v) => v.verse >= passage.verse_start && v.verse <= passage.verse_end);
+  return (
+    <div class={`gospel-column gospel-${gospel} ${isCurrentGospel ? 'is-current' : ''}`}>
+      <div class="gospel-column-header">
+        <span class="gospel-badge">
+          {GOSPEL_NAMES[gospel]}
+          {isCurrentGospel && <span class="gospel-current-label">(du leser)</span>}
+        </span>
+        {!isCurrentGospel && (
+          <a href={passageUrl(passage)} class="gospel-reference-link">
+            {passage.reference}
+          </a>
+        )}
+      </div>
+      <div class="gospel-verses">
+        {verses.map((v) => (
+          <p class="gospel-verse">
+            <span class="gospel-verse-num">{v.verse}</span>
+            {v.text}
+          </p>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function ChapterParallels({
+  bookId,
+  chapter,
+  parallels,
+  bible,
+}: {
+  bookId: number;
+  chapter: number;
+  parallels: GospelParallel[];
+  bible: string;
+}) {
+  const currentGospel = BOOK_ID_TO_GOSPEL[bookId];
+  if (!currentGospel) return null;
+  const relevant = parallels.filter((p) => {
+    const passage = p.passages?.[currentGospel];
+    return passage && passage.chapter === chapter;
+  });
+  if (relevant.length === 0) return null;
+
+  return (
+    <details class="parallels-container">
+      <summary class="parallels-header">
+        <span class="parallels-title">Parallelle tekster</span>
+        <span class="parallels-subtitle">
+          {relevant.length} {relevant.length === 1 ? 'parallell' : 'paralleller'} i dette kapitlet
+        </span>
+      </summary>
+      <div class="parallels-list">
+        {relevant.map((parallel) => {
+          const gospelsIn = GOSPELS.filter((g) => parallel.passages?.[g]);
+          return (
+            <details class="parallel-item">
+              <summary class="parallel-item-header">
+                <span class="parallel-item-title">{parallel.title}</span>
+                <span class="parallel-gospel-badges">
+                  {gospelsIn.map((g) => (
+                    <span
+                      class={`parallel-badge parallel-${GOSPEL_COLORS[g]} ${g === currentGospel ? 'is-current' : ''}`}
+                      title={GOSPEL_NAMES[g]}
+                    >
+                      {GOSPEL_NAMES[g].charAt(0)}
+                    </span>
+                  ))}
+                </span>
+              </summary>
+              <div class="parallel-content">
+                {parallel.notes && <p class="parallel-notes">{parallel.notes}</p>}
+                <div class="parallel-columns" style={`--parallel-cols: ${gospelsIn.length}`}>
+                  {gospelsIn.map((g) => (
+                    <GospelColumn
+                      gospel={g}
+                      passage={parallel.passages?.[g]}
+                      bible={bible}
+                      isCurrentGospel={g === currentGospel}
+                    />
+                  ))}
+                </div>
+              </div>
+            </details>
+          );
+        })}
+      </div>
+    </details>
+  );
+}
+
+// ── Versblokk (port av VerseDisplay) ─────────────────────────────────
+
+function VerseStrip({
+  originalText,
+  secondaryText,
+  secondary,
+  hebrew,
+}: {
+  originalText: string | null;
+  secondaryText: string | null;
+  secondary: string | undefined;
+  hebrew: boolean;
+}) {
+  if (secondary === 'original' && originalText) {
+    return (
+      <div
+        class={`original-verse ${hebrew ? 'hebrew' : 'greek'}`}
+        dir={hebrew ? 'rtl' : 'ltr'}
+        lang={hebrew ? 'he' : 'el'}
+      >
+        <span class="undertekst-label" aria-hidden="true">
+          {hebrew ? 'hebr' : 'gresk'}
+        </span>
+        {originalText}
+      </div>
+    );
+  }
+  if (secondary && secondary !== 'original' && secondaryText) {
+    return (
+      <div class="secondary-verse">
+        <span class="undertekst-label" aria-hidden="true">
+          {undertekstShortLabel(secondary)}
+        </span>
+        {secondaryText}
+      </div>
+    );
+  }
+  return null;
+}
+
+function VerseDetailPanel({
+  data,
+  bookId,
+  hebrew,
+}: {
+  data: DisplayVerse;
+  bookId: number;
+  hebrew: boolean;
+}) {
+  const v = data.verse;
+  const n = v.verse;
+  const key = `${bookId}-${v.chapter}-${n}`;
+  const selectableVersions = (v.versions || []).filter((ver) => ver.type !== 'error');
+  const hasVersions = selectableVersions.length > 0;
+  const hasFootnotes = !!v.footnotes && v.footnotes.length > 0;
+  const book = getBookInfoById(bookId);
+  const verseRef = book ? `${book.short_name.toLowerCase()}-${v.chapter}-${n}` : '';
+
+  return (
+    <div class="verse-detail" id={`v${n}-detail`} hidden data-verse-key={key}>
+      <div class="vd-header">
+        <button type="button" class="favorite-toggle" data-fav-toggle>
+          ☆ Legg til favoritt
+        </button>
+      </div>
+
+      <div class="vd-tabs" role="tablist" aria-label={`Detaljer for vers ${n}`}>
+        <button type="button" class="vd-tab is-active" data-vd-tab="original">
+          Grunntekst
+        </button>
+        <button type="button" class="vd-tab" data-vd-tab="references">
+          Referanser {data.references.length > 0 && `(${data.references.length})`}
+        </button>
+        {data.prophecies.length > 0 && (
+          <button type="button" class="vd-tab" data-vd-tab="prophecies">
+            Profetier ({data.prophecies.length})
+          </button>
+        )}
+        <button type="button" class="vd-tab" data-vd-tab="topics">
+          Emner
+        </button>
+        <button type="button" class="vd-tab" data-vd-tab="notes">
+          Notater
+        </button>
+        <button type="button" class="vd-tab" data-vd-tab="devotionals">
+          Manuskripter
+        </button>
+        {hasVersions && (
+          <button type="button" class="vd-tab" data-vd-tab="versions">
+            Versjoner
+          </button>
+        )}
+        {hasFootnotes && (
+          <button type="button" class="vd-tab" data-vd-tab="footnotes">
+            Fotnoter ({v.footnotes!.length})
+          </button>
+        )}
+      </div>
+
+      <div class="vd-panes">
+        {/* Grunntekst + Ord for ord — data ligger i DOM-et (data-attributter) */}
+        <div class="vd-pane is-active" data-vd-pane="original">
+          {data.originalText && (
+            <div
+              class={`full-original-text ${hebrew ? 'hebrew' : 'greek'}`}
+              dir={hebrew ? 'rtl' : 'ltr'}
+              lang={hebrew ? 'he' : 'el'}
+            >
+              {data.originalText}
+            </div>
+          )}
+          {data.word4word.length > 0 ? (
+            <>
+              <h3 class="vd-section-title">Ord for ord</h3>
+              <div
+                class={`w4w-words ${hebrew ? 'hebrew-words' : ''}`}
+                dir={hebrew ? 'rtl' : 'ltr'}
+                lang={hebrew ? 'he' : 'el'}
+              >
+                {data.word4word.map((w) => (
+                  <button
+                    type="button"
+                    class="w4w-word"
+                    data-w4w-word-btn
+                    data-word={w.word}
+                    data-pron={w.pronunciation || ''}
+                    data-expl={w.explanation || ''}
+                    aria-pressed="false"
+                    aria-label={`${w.word}${w.pronunciation ? ` (${w.pronunciation})` : ''}. Klikk for forklaring`}
+                  >
+                    <span class="w4w-script">{w.word}</span>
+                    {w.pronunciation && <span class="w4w-translit">{w.pronunciation}</span>}
+                  </button>
+                ))}
+              </div>
+              <div class="w4w-explain" hidden data-w4w-explain>
+                <strong data-w4w-out-word></strong>
+                <span class="w4w-pron-inline" data-w4w-out-pron></span>
+                <p data-w4w-out-expl></p>
+                <a class="search-original-button" data-w4w-search href="/sok/original">
+                  Søk alle forekomster
+                </a>
+              </div>
+            </>
+          ) : (
+            <p class="text-muted">Ingen orddata tilgjengelig</p>
+          )}
+        </div>
+
+        {/* Referanser */}
+        <div class="vd-pane" data-vd-pane="references" hidden>
+          <div class="vd-references">
+            {data.references.length > 0 ? (
+              data.references.map((ref) => (
+                <a
+                  href={`/${toUrlSlug(ref.book_short_name || '')}/${ref.to_chapter}#v${ref.to_verse_start}`}
+                  class="vd-reference"
+                >
+                  <span class="vd-ref-link">{formatReference(ref)}</span>
+                  {ref.description && (
+                    <span class="vd-ref-description">
+                      <InlineRefs text={ref.description} />
+                    </span>
+                  )}
+                </a>
+              ))
+            ) : (
+              <p class="text-muted">Ingen referanser</p>
+            )}
+          </div>
+        </div>
+
+        {/* Profetier */}
+        {data.prophecies.length > 0 && (
+          <div class="vd-pane" data-vd-pane="prophecies" hidden>
+            <div class="vd-prophecies">
+              {data.prophecies.map((prophecy) => (
+                <a href={`/profetier#${prophecy.id}`} class="vd-prophecy">
+                  <span class="vd-prophecy-title">{prophecy.title}</span>
+                  <span class="vd-prophecy-category">{prophecy.category?.name}</span>
+                  {prophecy.explanation && (
+                    <p class="vd-prophecy-explanation">
+                      <InlineRefs text={prophecy.explanation} />
+                    </p>
+                  )}
+                </a>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Emner — item-tagging-skallet + tagging.js */}
+        <div class="vd-pane" data-vd-pane="topics" hidden>
+          <ItemTagging itemType="verse" itemId={key} />
+        </div>
+
+        {/* Notater — bygges av reading.js (localStorage 'bible-notes') */}
+        <div class="vd-pane" data-vd-pane="notes" hidden>
+          <div class="verse-notes" data-verse-notes>
+            <div class="notes-list" data-notes-list></div>
+            <div class="note-input-wrapper">
+              <textarea
+                class="note-textarea"
+                rows={3}
+                placeholder="Skriv et notat..."
+                aria-label="Skriv et notat for dette verset"
+                data-note-input
+              ></textarea>
+              <button type="button" class="note-add-button" data-note-add disabled>
+                Legg til notat
+              </button>
+            </div>
+            <noscript>
+              <p class="text-muted">Notater krever JavaScript.</p>
+            </noscript>
+          </div>
+        </div>
+
+        {/* Manuskripter — lokale (localStorage 'bible-devotionals'), fylles av reading.js */}
+        <div class="vd-pane" data-vd-pane="devotionals" hidden>
+          <div class="vd-devotionals" data-verse-devotionals data-verse-ref={verseRef}>
+            <div data-devotionals-list>
+              <p class="text-muted">Ingen manuskripter for dette verset</p>
+            </div>
+            <a href={`/manuskripter/ny?vers=${verseRef}`} class="write-devotional-link">
+              Skriv manuskript om dette verset
+            </a>
+          </div>
+        </div>
+
+        {/* Versjoner */}
+        {hasVersions && (
+          <div class="vd-pane" data-vd-pane="versions" hidden>
+            <div class="vd-versions" data-versions={JSON.stringify(selectableVersions.map((ver) => ver.text))}>
+              <p class="versions-intro">Velg hvilken oversettelse du vil bruke for dette verset:</p>
+              <div class="version-option">
+                <label class="version-label">
+                  <input type="radio" name={`version-${key}`} value="" checked data-version-radio />
+                  <span class="version-text">
+                    <span class="version-title">Standard versjon</span>
+                    <span class="version-preview">{v.text}</span>
+                  </span>
+                </label>
+              </div>
+              {selectableVersions.map((version, index) => (
+                <div class="version-option">
+                  <label class="version-label">
+                    <input type="radio" name={`version-${key}`} value={String(index)} data-version-radio />
+                    <span class="version-text">
+                      <span class="version-header">
+                        <span class="version-title">Alternativ {index + 1}</span>
+                        {version.type && (
+                          <span class={`version-badge badge-${version.type}`}>
+                            {version.type === 'suggestion' && 'Forslag'}
+                            {version.type === 'theological' && 'Teologisk'}
+                            {version.type === 'grammar' && 'Grammatikk'}
+                          </span>
+                        )}
+                        {version.severity && (
+                          <span class={`version-severity severity-${version.severity}`}>
+                            {version.severity === 'critical' && 'Kritisk'}
+                            {version.severity === 'major' && 'Viktig'}
+                            {version.severity === 'minor' && 'Liten'}
+                          </span>
+                        )}
+                      </span>
+                      <span class="version-preview">{version.text}</span>
+                      {version.explanation && <span class="version-explanation">{version.explanation}</span>}
+                    </span>
+                  </label>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Fotnoter */}
+        {hasFootnotes && (
+          <div class="vd-pane" data-vd-pane="footnotes" hidden>
+            <div class="vd-footnotes">
+              {v.footnotes!.map((fn) => (
+                <div class="vd-footnote">
+                  {fn.source && (
+                    <span class="vd-footnote-source">{fn.source.charAt(0).toUpperCase() + fn.source.slice(1)}</span>
+                  )}
+                  <p>{fn.text}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function VerseBlock({
+  data,
+  bookId,
+  secondary,
+}: {
+  data: DisplayVerse;
+  bookId: number;
+  secondary: string | undefined;
+}) {
+  const v = data.verse;
+  const n = v.verse;
+  const hebrew = getOriginalLanguage(bookId) === 'hebrew';
+
+  return (
+    <div id={`v${n}`} class="verse" data-verse-num={n} data-verse-id={`${bookId}-${v.chapter}-${n}`}>
+      <button
+        type="button"
+        class="verse-number"
+        data-verse-toggle
+        aria-expanded="false"
+        aria-controls={`v${n}-detail`}
+        aria-label={`Vers ${n}. Klikk for å se original tekst og referanser`}
+      >
+        {n}
+      </button>
+      <span class="verse-text" data-verse-text>
+        <span data-verse-plain>{v.text}</span>
+        {v.footnotes && v.footnotes.length > 0 && <Footnotes footnotes={v.footnotes} />}
+      </span>
+      <VerseStrip
+        originalText={data.originalText}
+        secondaryText={data.secondaryText}
+        secondary={secondary}
+        hebrew={hebrew}
+      />
+      <VerseDetailPanel data={data} bookId={bookId} hebrew={hebrew} />
+    </div>
+  );
+}
+
+// ── Studium-sidebar (port av ReadingSidebar/StudyPanel) ──────────────
+
+function StudyBlock({
+  id,
+  title,
+  count,
+  defaultOpen,
+  children,
+}: {
+  id: string;
+  title: string;
+  count?: number;
+  defaultOpen?: boolean;
+  children?: unknown;
+}) {
+  return (
+    <details class="st-block" data-block-id={id} open={defaultOpen}>
+      <summary class="st-block-head">
+        <span class="st-block-title">{title}</span>
+        {count !== undefined && count > 0 && <span class="st-block-count">{count}</span>}
+        <span class="st-block-chevron" aria-hidden="true">
+          ▸
+        </span>
+      </summary>
+      <div class="st-block-body">{children}</div>
+    </details>
+  );
+}
+
+function SummaryItem({ title, content }: { title: string; content: string }) {
+  return (
+    <div class="st-summary-item">
+      <h4 class="st-summary-sub">{title}</h4>
+      <div class="st-summary-text">
+        <InlineRefs text={content} />
+      </div>
+    </div>
+  );
+}
+
+function StudyPanel({
+  data,
+  book,
+  chapter,
+}: {
+  data: ChapterData;
+  book: BookInfo;
+  chapter: number;
+}) {
+  const summaryCount = [data.bookSummary, data.summary, data.context].filter(Boolean).length;
+  const newManuscriptRef = `${book.short_name.toLowerCase()}-${chapter}-1`;
+
+  return (
+    <div class="study-panel">
+      <StudyBlock id="oppslag" title="Oppslag" defaultOpen={false}>
+        <div class="st-lookup" data-lookup>
+          <input
+            type="search"
+            class="st-lookup-input"
+            placeholder='"Joh 3,16", "Abraham", "nåde"…'
+            aria-label="Oppslag"
+            data-lookup-input
+          />
+          <div data-lookup-results></div>
+          <noscript>
+            <p class="st-empty">
+              Oppslag krever JavaScript — bruk <a href="/sok">søkesiden</a>.
+            </p>
+          </noscript>
+        </div>
+      </StudyBlock>
+
+      <StudyBlock id="sammendrag" title="Sammendrag" count={summaryCount} defaultOpen>
+        {data.summary && <SummaryItem title={`Kapittel ${chapter}`} content={data.summary} />}
+        {data.bookSummary && <SummaryItem title={`Om ${book.name_no}`} content={data.bookSummary} />}
+        {data.context && <SummaryItem title="Historisk kontekst" content={data.context} />}
+        {!data.summary && !data.bookSummary && !data.context && (
+          <p class="st-empty">Ingen sammendrag for dette kapittelet ennå.</p>
+        )}
+      </StudyBlock>
+
+      <StudyBlock id="personer" title="Personer" count={data.persons.length} defaultOpen>
+        {data.persons.length > 0 ? (
+          <>
+            <div class="st-chip-row">
+              {data.persons.map((p) => (
+                <a href={`/personer/${p.id}`} class="st-chip">
+                  {p.name}
+                  {p.verses.length > 0 && <span class="st-chip-num">{p.verses.length}</span>}
+                </a>
+              ))}
+            </div>
+            <a href="/personer" class="st-see-all">
+              Alle personer →
+            </a>
+          </>
+        ) : (
+          <p class="st-empty">Ingen kjente personer i dette kapittelet.</p>
+        )}
+      </StudyBlock>
+
+      <StudyBlock id="viktige-ord" title="Viktige ord" count={data.importantWords.length} defaultOpen={false}>
+        {data.importantWords.length > 0 ? (
+          <ul class="st-word-list">
+            {data.importantWords.slice(0, 8).map((w) => (
+              <li class="st-word-item">
+                <strong class="st-word-term">{w.word}</strong>
+                {w.explanation && (
+                  <span class="st-word-expl">
+                    {' '}
+                    — <InlineRefs text={w.explanation} />
+                  </span>
+                )}
+              </li>
+            ))}
+            {data.importantWords.length > 8 && (
+              <li class="st-word-more">+ {data.importantWords.length - 8} til</li>
+            )}
+          </ul>
+        ) : (
+          <p class="st-empty">Ingen viktige ord ennå for dette kapittelet.</p>
+        )}
+      </StudyBlock>
+
+      <StudyBlock id="tidslinje" title="Tidslinje" count={data.timelineEvents.length} defaultOpen={false}>
+        {data.timelineEvents.length > 0 && (
+          <ol class="st-timeline-list">
+            {data.timelineEvents.slice(0, 6).map((e) => (
+              <li class="st-timeline-item">
+                <span class="st-timeline-year">{e.year_display || ''}</span>
+                <a href={`/tidslinje#${e.id}`} class="st-timeline-title">
+                  {e.title}
+                </a>
+              </li>
+            ))}
+          </ol>
+        )}
+        <a href="/tidslinje" class="st-see-all">
+          Se hele tidslinjen →
+        </a>
+      </StudyBlock>
+
+      <StudyBlock id="temaer" title="Temaer" count={data.themes.length} defaultOpen={false}>
+        {data.themes.length > 0 && (
+          <div class="st-chip-row">
+            {data.themes.map((t) => (
+              <a href={`/temaer/${t.name || String(t.id)}`} class="st-chip">
+                {t.title || t.name}
+                {t.verses.length > 0 && <span class="st-chip-num">{t.verses.length}</span>}
+              </a>
+            ))}
+          </div>
+        )}
+        <a href="/temaer" class="st-see-all">
+          Alle temaer →
+        </a>
+      </StudyBlock>
+
+      <StudyBlock id="profetier" title="Profetier" count={data.chapterProphecies.length} defaultOpen={false}>
+        {data.chapterProphecies.length > 0 && (
+          <ul class="st-prop-list">
+            {data.chapterProphecies.slice(0, 6).map((p) => (
+              <li class="st-prop-item">
+                <a href={`/profetier#${p.id}`} class="st-prop-title">
+                  {p.title}
+                </a>
+                {p.category?.name && <span class="st-prop-cat">{p.category.name}</span>}
+              </li>
+            ))}
+          </ul>
+        )}
+        <a href="/profetier" class="st-see-all">
+          Alle profetier →
+        </a>
+      </StudyBlock>
+
+      <StudyBlock id="historier" title="Bibelhistorier" count={data.stories.length} defaultOpen={false}>
+        {data.stories.length > 0 && (
+          <ul class="st-prop-list">
+            {data.stories.map((s) => (
+              <li class="st-prop-item">
+                <a href={`/historier/${s.slug}`} class="st-prop-title">
+                  {s.title}
+                </a>
+                {s.category && <span class="st-prop-cat">{s.category}</span>}
+              </li>
+            ))}
+          </ul>
+        )}
+        <a href="/historier" class="st-see-all">
+          Alle bibelhistorier →
+        </a>
+      </StudyBlock>
+
+      <StudyBlock id="paralleller" title="Parallelle tekster" count={data.parallels.length} defaultOpen={false}>
+        {data.parallels.length > 0 && (
+          <ul class="st-prop-list">
+            {data.parallels.map((p) => {
+              const gospels = GOSPELS.filter((g) => p.passages?.[g]).map((g) => GOSPEL_NAMES[g]);
+              return (
+                <li class="st-prop-item">
+                  <a href="/paralleller" class="st-prop-title">
+                    {p.title}
+                  </a>
+                  {gospels.length > 0 && <span class="st-prop-cat">{gospels.join(' · ')}</span>}
+                </li>
+              );
+            })}
+          </ul>
+        )}
+        <a href="/paralleller" class="st-see-all">
+          Alle paralleller →
+        </a>
+      </StudyBlock>
+
+      <StudyBlock id="tall" title="Tall i Bibelen" count={data.numbers.length} defaultOpen={false}>
+        {data.numbers.length > 0 && (
+          <div class="st-chip-row">
+            {data.numbers.map((n) => (
+              <a href={`/tall/${n.number}`} class="st-chip">
+                {n.number}
+                {n.meaning && <span class="st-chip-num">{n.meaning}</span>}
+              </a>
+            ))}
+          </div>
+        )}
+        <a href="/tall" class="st-see-all">
+          Alle tall →
+        </a>
+      </StudyBlock>
+
+      <StudyBlock id="lesetekster" title="Lesetekster" count={data.readingTexts.length} defaultOpen={false}>
+        {data.readingTexts.length > 0 && (
+          <ul class="st-ms-list">
+            {data.readingTexts.map((rt) => (
+              <li class="st-ms-item">
+                <a href={`/lesetekster/${rt.id}`} class="st-ms-title">
+                  {rt.name}
+                </a>
+                {rt.date && <span class="st-ms-type">{rt.date}</span>}
+              </li>
+            ))}
+          </ul>
+        )}
+        <a href="/lesetekster" class="st-see-all">
+          Alle lesetekster →
+        </a>
+      </StudyBlock>
+
+      <StudyBlock id="manuskripter" title="Manuskripter" defaultOpen>
+        {/* Lokale manuskripter (localStorage) fylles inn av studium.js */}
+        <ul class="st-ms-list" data-chapter-devotionals data-chapter-prefix={`${book.short_name.toLowerCase()}-${chapter}-`}></ul>
+        <a href={`/manuskripter/ny?ref=${encodeURIComponent(newManuscriptRef)}`} class="st-new-ms-link">
+          + Skriv nytt manuskript om {book.name_no} {chapter}
+        </a>
+      </StudyBlock>
+    </div>
+  );
+}
+
+// ── Panelfaner (høyre sidebar i panelmodus, kontrakt bibel:panel-tab) ─
+
+function PanelTimeline({ events, bookId, chapter }: { events: TimelineEvent[]; bookId: number; chapter: number }) {
+  if (events.length === 0) {
+    return (
+      <div class="panel-timeline">
+        <p class="st-empty">Ingen hendelser i tidslinjen for dette kapitlet.</p>
+        <a href="/tidslinje" class="st-see-all">
+          Se hele tidslinjen →
+        </a>
+      </div>
+    );
+  }
+  return (
+    <div class="panel-timeline">
+      {events.map((event) => (
+        <div class="pt-event" style={`--period-color: ${event.period?.color || 'var(--gold)'}`}>
+          <div class="pt-event-header">
+            <span class="pt-event-dot" aria-hidden="true" />
+            <span class="pt-event-year">{event.year_display}</span>
+            <h4 class="pt-event-title">{event.title}</h4>
+          </div>
+          {event.description && (
+            <p class="pt-event-description">
+              <InlineRefs text={event.description} />
+            </p>
+          )}
+          {event.references && event.references.length > 0 && (
+            <div class="pt-event-refs">
+              {event.references.map((ref) => {
+                const isCurrent = ref.book_id === bookId && ref.chapter === chapter;
+                const range =
+                  ref.verse_start === ref.verse_end ? `${ref.verse_start}` : `${ref.verse_start}-${ref.verse_end}`;
+                return (
+                  <a
+                    href={`/${toUrlSlug(ref.book_short_name || '')}/${ref.chapter}#v${ref.verse_start}`}
+                    class={`pt-ref-link ${isCurrent ? 'is-current' : ''}`}
+                  >
+                    {ref.book_short_name} {ref.chapter}:{range}
+                    {isCurrent && <span class="pt-here"> ← Du er her</span>}
+                  </a>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      ))}
+      <a href="/tidslinje" class="st-see-all">
+        Se hele tidslinjen →
+      </a>
+    </div>
+  );
+}
+
+// ── Mobil verktøylinje + overlegg (port av MobileToolbar) ────────────
+
+function MobileToolbar({
+  book,
+  bookSlug,
+  chapter,
+  query,
+  mapping,
+  bible,
+  secondary,
+}: {
+  book: BookInfo;
+  bookSlug: string;
+  chapter: number;
+  query: string;
+  mapping: string | undefined;
+  bible: string;
+  secondary: string | undefined;
+}) {
+  const maxChapter = book.chapters;
+  const mappings = getAvailableMappings();
+  const otBooks = booksData.filter((b) => b.testament === 'OT');
+  const ntBooks = booksData.filter((b) => b.testament === 'NT');
+
+  return (
+    <>
+      <div class="mobile-toolbar" data-mobile-toolbar>
+        <a
+          href={chapter > 1 ? `/${bookSlug}/${chapter - 1}${query}` : undefined}
+          class={`mt-nav ${chapter === 1 ? 'is-disabled' : ''}`}
+          aria-label={`Forrige kapittel${chapter > 1 ? `: ${book.name_no} ${chapter - 1}` : ' (ikke tilgjengelig)'}`}
+          aria-disabled={chapter === 1 ? 'true' : undefined}
+        >
+          ←
+        </a>
+        <button type="button" class="mt-title" data-open-picker>
+          {book.name_no} {chapter} <span class="mt-title-arrow" aria-hidden="true">▼</span>
+        </button>
+        <button type="button" class="mt-sidebar" data-open-studium title="Studium og verktøy" aria-label="Åpne studium-panel">
+          ▥
+        </button>
+        <button type="button" class="mt-tools" data-open-tools title="Hjelpemidler" aria-label="Åpne hjelpemidler">
+          ⚙
+        </button>
+        <a
+          href={chapter < maxChapter ? `/${bookSlug}/${chapter + 1}${query}` : undefined}
+          class={`mt-nav ${chapter === maxChapter ? 'is-disabled' : ''}`}
+          aria-label={`Neste kapittel${chapter < maxChapter ? `: ${book.name_no} ${chapter + 1}` : ' (ikke tilgjengelig)'}`}
+          aria-disabled={chapter === maxChapter ? 'true' : undefined}
+        >
+          →
+        </a>
+      </div>
+
+      {/* Kapittelvelger */}
+      <div class="mt-overlay" data-picker-overlay hidden>
+        <div class="mt-sheet mt-picker-sheet">
+          <div class="mt-sheet-header">
+            <h3 data-picker-book-name>{book.name_no}</h3>
+            <button type="button" class="mt-sheet-close" data-close-overlay aria-label="Lukk">
+              ✕
+            </button>
+          </div>
+          <div
+            class="mt-chapter-grid"
+            data-picker-grid
+            data-current-slug={bookSlug}
+            data-current-chapter={chapter}
+            data-query={query}
+          >
+            {Array.from({ length: maxChapter }, (_, i) => i + 1).map((ch) => (
+              <a
+                href={`/${bookSlug}/${ch}${query}`}
+                class={`mt-chapter-cell ${ch === chapter ? 'is-active' : ''}`}
+              >
+                {ch}
+              </a>
+            ))}
+          </div>
+          <div class="mt-book-picker">
+            <h4>Det gamle testamente</h4>
+            <div class="mt-book-grid">
+              {otBooks.map((b) => (
+                <button
+                  type="button"
+                  class={`mt-book-cell ${b.id === book.id ? 'is-active' : ''}`}
+                  data-book-slug={toUrlSlug(b.short_name)}
+                  data-book-name={b.name_no}
+                  data-book-chapters={b.chapters}
+                >
+                  {b.short_name}
+                </button>
+              ))}
+            </div>
+            <h4>Det nye testamente</h4>
+            <div class="mt-book-grid">
+              {ntBooks.map((b) => (
+                <button
+                  type="button"
+                  class={`mt-book-cell ${b.id === book.id ? 'is-active' : ''}`}
+                  data-book-slug={toUrlSlug(b.short_name)}
+                  data-book-name={b.name_no}
+                  data-book-chapters={b.chapters}
+                >
+                  {b.short_name}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Hjelpemidler — URL-styrte valg (bible/undertekst/nummerering) + skriftstørrelse */}
+      <div class="mt-overlay" data-tools-overlay hidden>
+        <div class="mt-sheet mt-tools-sheet" role="region" aria-label="Hjelpemidler">
+          <div class="mt-sheet-header">
+            <h3>Hjelpemidler</h3>
+            <button type="button" class="mt-sheet-close" data-close-overlay aria-label="Lukk">
+              ✕
+            </button>
+          </div>
+          <div class="tools-section">
+            <span class="tools-section-title">Oversettelse</span>
+            <div class="tools-bibles">
+              <a
+                href={`/${bookSlug}/${chapter}${buildQuery('osnb2', mapping, secondary)}`}
+                class={`tools-bible-button ${bible === 'osnb2' ? 'is-active' : ''}`}
+              >
+                Bokmål
+              </a>
+              <a
+                href={`/${bookSlug}/${chapter}${buildQuery('osnn1', mapping, secondary)}`}
+                class={`tools-bible-button ${bible === 'osnn1' ? 'is-active' : ''}`}
+              >
+                Nynorsk
+              </a>
+            </div>
+          </div>
+          <div class="tools-section">
+            <span class="tools-section-title">Undertekst</span>
+            <select class="tools-select" data-secondary-select aria-label="Undertekst">
+              <option value="" selected={!secondary}>
+                Ingen
+              </option>
+              <option value="original" selected={secondary === 'original'}>
+                Grunntekst
+              </option>
+              <option value="osnb2" selected={secondary === 'osnb2'}>
+                Bokmål
+              </option>
+              <option value="osnn1" selected={secondary === 'osnn1'}>
+                Nynorsk
+              </option>
+            </select>
+          </div>
+          {mappings.length > 0 && (
+            <div class="tools-section">
+              <span class="tools-section-title">Versnummerering</span>
+              <select class="tools-select" data-mapping-select aria-label="Versnummerering">
+                {mappings.map((m) => (
+                  <option value={m.id} selected={(mapping || 'osnb2') === m.id}>
+                    {m.displayName}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+          <div class="tools-section">
+            <span class="tools-section-title">Skriftstørrelse</span>
+            <div class="tools-font-sizes">
+              <button type="button" class="tools-font-button" data-font-size="small">
+                Liten
+              </button>
+              <button type="button" class="tools-font-button" data-font-size="medium">
+                Medium
+              </button>
+              <button type="button" class="tools-font-button" data-font-size="large">
+                Stor
+              </button>
+            </div>
+          </div>
+          <div class="tools-section">
+            <a href="/innstillinger" class="tools-settings-link">
+              Alle innstillinger →
+            </a>
+          </div>
+        </div>
+      </div>
+
+      {/* Studium-overlegg — studium.js flytter sidebar-innholdet hit */}
+      <div class="studium-overlay" data-studium-overlay hidden>
+        <div class="studium-overlay-header">
+          <div class="studium-overlay-title">Studium</div>
+          <button type="button" class="mt-sheet-close" data-close-overlay aria-label="Lukk panel">
+            ✕
+          </button>
+        </div>
+        <div class="studium-overlay-content" data-studium-overlay-content></div>
+      </div>
+    </>
+  );
+}
+
+// ── Kapittelsiden ────────────────────────────────────────────────────
+
+r.get('/:book/:chapter', async (c) => {
+  const bookSlug = c.req.param('book');
+  const chapterStr = c.req.param('chapter');
+
+  // Bokoppslag med alias-støtte (som gamle getBookInfoBySlug via book-aliases).
+  const book = getBookInfoBySlug(bookSlug);
+  if (!book) return c.notFound();
+
+  const chapter = parseInt(chapterStr, 10);
+  if (isNaN(chapter) || chapter < 1 || !/^\d+$/.test(chapterStr)) return c.notFound();
+  if (chapter > book.chapters) return c.notFound();
+
+  const bible = c.req.query('bible') || 'osnb2';
+  const mappingParam = c.req.query('mapping');
+  const mapping = (mappingParam && mappingParam !== 'osnb2' ? resolveMappingId(mappingParam) : null) ?? null;
+  const secondary = c.req.query('secondary') || undefined;
+
+  const canonicalSlug = toUrlSlug(book.short_name);
+  const data = await loadChapterData(book.id, chapter, bible, mapping, secondary);
+  if (!data) return c.notFound();
+
+  const maxChapter = book.chapters;
+  const nextBook = getBookInfoById(book.id + 1);
+  const nextBookSlug = nextBook ? toUrlSlug(nextBook.short_name) : undefined;
+  const query = buildQuery(bible, mapping ?? undefined, secondary);
+
+  const title = `${book.name_no} ${chapter} — FLOGVIT.bibel`;
+  const description = data.summary
+    ? excerpt(data.summary)
+    : `${book.name_no} kapittel ${chapter} — les med grunntekst, referanser og studieverktøy.`;
+
+  const undertekstOn = !!secondary && secondary !== 'original';
+  const grunntekstOn = secondary === 'original';
+  const otherNorwegian = bible === 'osnn1' ? 'osnb2' : 'osnn1';
+
+  // Kontrakten mot shortcuts.js: data-attributter på <body>.
+  const bodyData = `(function(d){d.bookSlug=${JSON.stringify(canonicalSlug)};d.chapter='${chapter}';d.maxChapter='${maxChapter}';${
+    nextBookSlug ? `d.nextBookSlug=${JSON.stringify(nextBookSlug)};` : ''
+  }d.bibleQuery=${JSON.stringify(query)};d.bookId='${book.id}';d.bookName=${JSON.stringify(book.name_no)};})(document.body.dataset);`;
+
+  return c.html(
+    <Layout
+      title={title}
+      description={description}
+      canonical={`${SITE}/${canonicalSlug}/${chapter}`}
+      styles={['reading.css', 'studium.css']}
+      scripts={['reading.js', 'studium.js', 'ref-preview.js', 'tagging.js']}
+    >
+      {raw(`<script>${bodyData}</script>`)}
+      <div class="chapter-page" data-reading-root>
+        <div class="chapter-layout" data-chapter-layout>
+          <aside class="chapter-toc" aria-label="Kapittelnavigasjon">
+            <ChapterToc book={book} bookSlug={canonicalSlug} chapter={chapter} query={query} />
+          </aside>
+
+          <article class="chapter-content">
+            <div class="chapter-meta">
+              <Breadcrumbs
+                items={[
+                  { label: 'Hjem', href: '/' },
+                  { label: book.name_no, href: `/${canonicalSlug}/1${query}` },
+                  { label: `Kap. ${chapter}` },
+                ]}
+              />
+              <span class="chapter-meta-actions">
+                <span class="layout-modes" role="group" aria-label="Visningsmodus" data-layout-modes>
+                  <button type="button" class="layout-mode-btn" data-mode="normal" aria-pressed="true" title="Normal visning (N)">
+                    <span aria-hidden="true">☰</span>
+                    <span class="sr-only">Normal</span>
+                  </button>
+                  <button type="button" class="layout-mode-btn" data-mode="reading" aria-pressed="false" title="Lesemodus (R)">
+                    <span aria-hidden="true">📖</span>
+                    <span class="sr-only">Lesemodus</span>
+                  </button>
+                  <button type="button" class="layout-mode-btn" data-mode="panel" aria-pressed="false" title="Panelmodus (P)">
+                    <span aria-hidden="true">▥</span>
+                    <span class="sr-only">Panelmodus</span>
+                  </button>
+                </span>
+              </span>
+            </div>
+
+            <header class="chapter-header">
+              <div class="chapter-book">{book.name_no}</div>
+              <h1 class="chapter-title">Kapittel {chapter}</h1>
+            </header>
+
+            <div class="chapter-rail">
+              <a
+                href={`/${canonicalSlug}/${chapter}${buildQuery(bible, mapping ?? undefined, undertekstOn ? undefined : otherNorwegian)}`}
+                class={`rail-chip ${undertekstOn ? 'is-on' : ''}`}
+                aria-pressed={undertekstOn}
+                title="Undertekst under hvert vers"
+              >
+                + Undertekst
+              </a>
+              <a
+                href={`/${canonicalSlug}/${chapter}${buildQuery(bible, mapping ?? undefined, grunntekstOn ? undefined : 'original')}`}
+                class={`rail-chip ${grunntekstOn ? 'is-on' : ''}`}
+                aria-pressed={grunntekstOn}
+              >
+                Grunntekst
+              </a>
+              {chapter > 1 && (
+                <a href={`/${canonicalSlug}/${chapter - 1}${query}`} class="rail-chip">
+                  ← Forrige
+                </a>
+              )}
+              {chapter < maxChapter ? (
+                <a href={`/${canonicalSlug}/${chapter + 1}${query}`} class="rail-chip">
+                  Neste →
+                </a>
+              ) : (
+                nextBook &&
+                nextBookSlug && (
+                  <a href={`/${nextBookSlug}/1${query}`} class="rail-chip">
+                    {nextBook.name_no} →
+                  </a>
+                )
+              )}
+            </div>
+
+            <ChapterInsights insight={data.insight} />
+
+            <ChapterParallels bookId={book.id} chapter={chapter} parallels={data.parallels} bible={bible} />
+
+            <section class="verses" data-verses>
+              {data.verses.map((v) => (
+                <VerseBlock data={v} bookId={book.id} secondary={secondary} />
+              ))}
+            </section>
+
+            <footer class="chapter-footer">
+              <div class="nav-buttons">
+                {chapter > 1 && (
+                  <a href={`/${canonicalSlug}/${chapter - 1}${query}`} class="nav-button">
+                    ← Forrige kapittel
+                  </a>
+                )}
+                {chapter < maxChapter ? (
+                  <a href={`/${canonicalSlug}/${chapter + 1}${query}`} class="nav-button">
+                    Neste kapittel →
+                  </a>
+                ) : (
+                  nextBook &&
+                  nextBookSlug && (
+                    <a href={`/${nextBookSlug}/1${query}`} class="nav-button">
+                      {nextBook.name_no} →
+                    </a>
+                  )
+                )}
+              </div>
+            </footer>
+          </article>
+
+          <aside class="reading-sidebar" aria-label="Verktøypanel" data-panel-tabs>
+            <div
+              class="sidebar-resize"
+              data-sidebar-resize
+              title="Dra for å endre bredde, dobbelklikk for 50%"
+            ></div>
+            <div class="panel-tabbar" role="tablist" aria-label="Panelfaner">
+              <button type="button" class="panel-tab is-active" data-panel-tab="1">
+                Studium
+              </button>
+              <button type="button" class="panel-tab" data-panel-tab="2">
+                Tidslinje
+              </button>
+              <button type="button" class="panel-tab" data-panel-tab="3">
+                Paralleller
+              </button>
+              <button type="button" class="panel-tab" data-panel-tab="4">
+                Innsikt
+              </button>
+            </div>
+            <div class="sidebar-content" data-sidebar-content>
+              <section class="panel-section is-active" data-panel-section="1">
+                <StudyPanel data={data} book={book} chapter={chapter} />
+              </section>
+              <section class="panel-section" data-panel-section="2" hidden>
+                <PanelTimeline events={data.timelineEvents} bookId={book.id} chapter={chapter} />
+              </section>
+              <section class="panel-section" data-panel-section="3" hidden>
+                {data.parallels.length > 0 ? (
+                  <ul class="st-prop-list">
+                    {data.parallels.map((p) => {
+                      const gospels = GOSPELS.filter((g) => p.passages?.[g]).map((g) => GOSPEL_NAMES[g]);
+                      return (
+                        <li class="st-prop-item">
+                          <a href="/paralleller" class="st-prop-title">
+                            {p.title}
+                          </a>
+                          {gospels.length > 0 && <span class="st-prop-cat">{gospels.join(' · ')}</span>}
+                        </li>
+                      );
+                    })}
+                  </ul>
+                ) : (
+                  <p class="st-empty">Ingen paralleller for dette kapittelet.</p>
+                )}
+              </section>
+              <section class="panel-section" data-panel-section="4" hidden>
+                {data.insight ? (
+                  <div class="insights-content">
+                    <InsightContent insight={data.insight} />
+                  </div>
+                ) : (
+                  <p class="st-empty">Ingen kapittelinnsikt for dette kapittelet.</p>
+                )}
+              </section>
+            </div>
+          </aside>
+        </div>
+
+        <MobileToolbar
+          book={book}
+          bookSlug={canonicalSlug}
+          chapter={chapter}
+          query={query}
+          mapping={mapping ?? undefined}
+          bible={bible}
+          secondary={secondary}
+        />
+      </div>
+    </Layout>,
+  );
+});
+
+// ── /tekst — port av TextPage.tsx (query-baserte passasjer) ──────────
+
+interface ParsedTextRef {
+  bookSlug: string;
+  chapter: number;
+  verseStart: number;
+  verseEnd: number;
+}
+
+function parseRefs(refsParam: string | undefined): ParsedTextRef[] {
+  if (!refsParam) return [];
+  return refsParam
+    .split(',')
+    .map((ref) => {
+      const parts = ref.trim().split('-');
+      if (parts.length < 3) return null;
+      const bookSlug = parts[0]!;
+      const chapter = parseInt(parts[1]!, 10);
+      const verseStart = parseInt(parts[2]!, 10);
+      const verseEnd = parts[3] ? parseInt(parts[3], 10) : verseStart;
+      if (isNaN(chapter) || isNaN(verseStart) || isNaN(verseEnd)) return null;
+      return { bookSlug, chapter, verseStart, verseEnd };
+    })
+    .filter((ref): ref is ParsedTextRef => ref !== null);
+}
+
+r.get('/tekst', async (c) => {
+  const refsParam = c.req.query('refs');
+  const bible = c.req.query('bible') || 'osnb2';
+  const parsedRefs = parseRefs(refsParam);
+
+  // Slug → VerseRef via bok-metadata (alias-støtte som ellers).
+  const verseRefs: VerseRef[] = [];
+  for (const ref of parsedRefs) {
+    const book = getBookInfoBySlug(ref.bookSlug);
+    if (!book) continue;
+    const verseNumbers: number[] = [];
+    for (let v = ref.verseStart; v <= ref.verseEnd; v++) verseNumbers.push(v);
+    verseRefs.push({ bookId: book.id, chapter: ref.chapter, verses: verseNumbers });
+  }
+
+  const verses = verseRefs.length > 0 ? await getVersesWithOriginal(verseRefs, bible) : [];
+
+  // Grupper per bok/kapittel (som gamle TextPage).
+  const grouped: { key: string; bookShortName: string; chapter: number; verses: typeof verses }[] = [];
+  for (const verse of verses) {
+    const key = `${verse.verse.book_id}-${verse.verse.chapter}`;
+    let group = grouped.find((g) => g.key === key);
+    if (!group) {
+      group = { key, bookShortName: verse.bookShortName, chapter: verse.verse.chapter, verses: [] };
+      grouped.push(group);
+    }
+    group.verses.push(verse);
+  }
+
+  return c.html(
+    <Layout
+      title="Bibelpassasjer — FLOGVIT.bibel"
+      description="Vis utvalgte bibelpassasjer samlet på én side."
+      canonical={`${SITE}/tekst`}
+      styles={['reading.css']}
+      scripts={['ref-preview.js']}
+    >
+      <div class="text-page">
+        <div class="reading-container">
+          <Breadcrumbs items={[{ label: 'Hjem', href: '/' }, { label: 'Bibelpassasjer' }]} />
+
+          <h1>Bibelpassasjer</h1>
+
+          {(!refsParam || parsedRefs.length === 0) && (
+            <div class="text-empty">
+              <h2>Ingen passasjer valgt</h2>
+              <p>
+                Bruk URL-parametere for å vise bibelpassasjer.
+                <br />
+                Format: <code>/tekst?refs=1mo-4-1-16,1mo-3-1-24</code>
+              </p>
+              <p>
+                Referanseformat: <code>bok-kapittel-versstart-versslutt</code>
+              </p>
+              <ul>
+                <li>
+                  <code>1mo-1-1-5</code> = 1. Mosebok 1:1-5
+                </li>
+                <li>
+                  <code>joh-3-16</code> = Johannes 3:16 (enkeltvers)
+                </li>
+                <li>
+                  <code>mat-5-1-12,luk-6-20-26</code> = Flere passasjer
+                </li>
+              </ul>
+            </div>
+          )}
+
+          {refsParam && parsedRefs.length > 0 && grouped.length === 0 && (
+            <p class="text-error">Ingen gyldige referanser funnet</p>
+          )}
+
+          {grouped.length > 0 && (
+            <div class="text-passages">
+              {grouped.map((group) => {
+                const firstVerse = group.verses[0]?.verse.verse;
+                const lastVerse = group.verses[group.verses.length - 1]?.verse.verse;
+                const verseRange = firstVerse === lastVerse ? `${firstVerse}` : `${firstVerse}-${lastVerse}`;
+                const contextUrl = `/${toUrlSlug(group.bookShortName)}/${group.chapter}#v${firstVerse}`;
+                return (
+                  <div class="text-passage">
+                    <div class="text-passage-header">
+                      <h2>
+                        <a href={contextUrl}>
+                          {group.bookShortName} {group.chapter}:{verseRange}
+                        </a>
+                      </h2>
+                      <a href={contextUrl} class="text-context-link">
+                        Vis i kontekst →
+                      </a>
+                    </div>
+                    <div class="text-verse-list">
+                      {group.verses.map((verseData) => (
+                        <VerseView data={verseData} />
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+    </Layout>,
+  );
+});
+
+export default r;

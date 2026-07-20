@@ -2,7 +2,7 @@
  * Static book data for client-side usage
  * This file can be imported in both client and server components
  */
-import { bookAliases } from './book-aliases';
+import { bookAliases } from './book-aliases.ts';
 
 export interface BookInfo {
   id: number;

@@ -1,8 +1,13 @@
-import { getDb } from './db';
+// Portert fra bibel (better-sqlite3) til Bun.sql mot MySQL.
+// Alle DB-funksjoner er async; bok-metadata caches ved oppstart via initBooks()
+// slik at bok-oppslag (getAllBooks/getBookById/...) forblir synkrone — de brukes
+// synkront av reference-parser.ts.
+
+import { getSql } from './db.ts';
 
 // Re-export toUrlSlug for convenience (server-side usage)
-export { toUrlSlug } from './url-utils';
-import { toUrlSlug } from './url-utils';
+export { toUrlSlug } from './url-utils.ts';
+import { toUrlSlug } from './url-utils.ts';
 
 export interface Book {
   id: number;
@@ -56,6 +61,21 @@ export interface Reference {
   book_short_name?: string;
 }
 
+// --- Bok-metadata (synkron cache) ---
+
+let booksCache: Book[] | null = null;
+
+/** Laster bok-metadata inn i minnet. Må kjøres ved oppstart før bok-oppslag. */
+export async function initBooks(): Promise<void> {
+  const sql = getSql();
+  booksCache = await sql`SELECT * FROM books ORDER BY id` as Book[];
+}
+
+function requireBooks(): Book[] {
+  if (!booksCache) throw new Error('initBooks() er ikke kjørt');
+  return booksCache;
+}
+
 /**
  * Get URL slug for a book (ASCII-safe version of short_name)
  */
@@ -64,29 +84,23 @@ export function getBookUrlSlug(book: Book): string {
 }
 
 export function getBookByShortName(shortName: string): Book | undefined {
-  const db = getDb();
+  const books = requireBooks();
   const normalized = shortName.toLowerCase();
 
   // First try exact match
-  let book = db.prepare(
-    'SELECT * FROM books WHERE LOWER(short_name) = ?'
-  ).get(normalized) as Book | undefined;
-
+  const book = books.find(b => b.short_name.toLowerCase() === normalized);
   if (book) return book;
 
   // Try matching with ASCII conversion (e.g., "ap" matches "Åp")
-  const books = db.prepare('SELECT * FROM books').all() as Book[];
   return books.find(b => toUrlSlug(b.short_name) === normalized);
 }
 
 export function getBookById(id: number): Book | undefined {
-  const db = getDb();
-  return db.prepare('SELECT * FROM books WHERE id = ?').get(id) as Book | undefined;
+  return requireBooks().find(b => b.id === id);
 }
 
 export function getAllBooks(): Book[] {
-  const db = getDb();
-  return db.prepare('SELECT * FROM books ORDER BY id').all() as Book[];
+  return requireBooks();
 }
 
 interface VerseRow {
@@ -100,11 +114,11 @@ interface VerseRow {
   footnotes: string | null;
 }
 
-export function getVerses(bookId: number, chapter: number, bible = 'osnb2'): Verse[] {
-  const db = getDb();
-  const rows = db.prepare(
-    'SELECT * FROM verses WHERE book_id = ? AND chapter = ? AND bible = ? ORDER BY verse'
-  ).all(bookId, chapter, bible) as VerseRow[];
+export async function getVerses(bookId: number, chapter: number, bible = 'osnb2'): Promise<Verse[]> {
+  const sql = getSql();
+  const rows = await sql`
+    SELECT * FROM verses WHERE book_id = ${bookId} AND chapter = ${chapter} AND bible = ${bible} ORDER BY verse
+  ` as VerseRow[];
 
   return rows.map(row => ({
     ...row,
@@ -113,13 +127,13 @@ export function getVerses(bookId: number, chapter: number, bible = 'osnb2'): Ver
   }));
 }
 
-export function getOriginalVerses(bookId: number, chapter: number): Verse[] {
-  const db = getDb();
+export async function getOriginalVerses(bookId: number, chapter: number): Promise<Verse[]> {
+  const sql = getSql();
   // GT (book 1-39) uses tanach (Hebrew), NT (book 40-66) uses sblgnt (Greek)
   const bible = bookId <= 39 ? 'tanach' : 'sblgnt';
-  return db.prepare(
-    'SELECT * FROM verses WHERE book_id = ? AND chapter = ? AND bible = ? ORDER BY verse'
-  ).all(bookId, chapter, bible) as Verse[];
+  return await sql`
+    SELECT * FROM verses WHERE book_id = ${bookId} AND chapter = ${chapter} AND bible = ${bible} ORDER BY verse
+  ` as Verse[];
 }
 
 export function getOriginalLanguage(bookId: number): 'hebrew' | 'greek' {
@@ -140,11 +154,11 @@ export interface VerseWithOriginal {
   bookShortName: string;
 }
 
-export function getVerse(bookId: number, chapter: number, verseNum: number, bible = 'osnb2'): Verse | undefined {
-  const db = getDb();
-  const row = db.prepare(
-    'SELECT * FROM verses WHERE book_id = ? AND chapter = ? AND verse = ? AND bible = ?'
-  ).get(bookId, chapter, verseNum, bible) as VerseRow | undefined;
+export async function getVerse(bookId: number, chapter: number, verseNum: number, bible = 'osnb2'): Promise<Verse | undefined> {
+  const sql = getSql();
+  const [row] = await sql`
+    SELECT * FROM verses WHERE book_id = ${bookId} AND chapter = ${chapter} AND verse = ${verseNum} AND bible = ${bible}
+  ` as VerseRow[];
 
   if (!row) return undefined;
 
@@ -155,15 +169,16 @@ export function getVerse(bookId: number, chapter: number, verseNum: number, bibl
   };
 }
 
-export function getOriginalVerse(bookId: number, chapter: number, verseNum: number): Verse | undefined {
-  const db = getDb();
+export async function getOriginalVerse(bookId: number, chapter: number, verseNum: number): Promise<Verse | undefined> {
+  const sql = getSql();
   const bible = bookId <= 39 ? 'tanach' : 'sblgnt';
-  return db.prepare(
-    'SELECT * FROM verses WHERE book_id = ? AND chapter = ? AND verse = ? AND bible = ?'
-  ).get(bookId, chapter, verseNum, bible) as Verse | undefined;
+  const [row] = await sql`
+    SELECT * FROM verses WHERE book_id = ${bookId} AND chapter = ${chapter} AND verse = ${verseNum} AND bible = ${bible}
+  ` as Verse[];
+  return row;
 }
 
-export function getVersesWithOriginal(refs: VerseRef[], bible = 'osnb2'): VerseWithOriginal[] {
+export async function getVersesWithOriginal(refs: VerseRef[], bible = 'osnb2'): Promise<VerseWithOriginal[]> {
   const results: VerseWithOriginal[] = [];
 
   for (const ref of refs) {
@@ -173,10 +188,10 @@ export function getVersesWithOriginal(refs: VerseRef[], bible = 'osnb2'): VerseW
     const verseNums = ref.verses || (ref.verse ? [ref.verse] : []);
 
     for (const verseNum of verseNums) {
-      const verse = getVerse(ref.bookId, ref.chapter, verseNum, bible);
+      const verse = await getVerse(ref.bookId, ref.chapter, verseNum, bible);
       if (!verse) continue;
 
-      const originalVerse = getOriginalVerse(ref.bookId, ref.chapter, verseNum);
+      const originalVerse = await getOriginalVerse(ref.bookId, ref.chapter, verseNum);
 
       results.push({
         verse,
@@ -190,14 +205,15 @@ export function getVersesWithOriginal(refs: VerseRef[], bible = 'osnb2'): VerseW
   return results;
 }
 
-export function getWord4Word(bookId: number, chapter: number, verse: number, bible = 'osnb2'): Word4Word[] {
-  const db = getDb();
-  return db.prepare(
-    'SELECT word_index, word, original, pronunciation, explanation FROM word4word WHERE book_id = ? AND chapter = ? AND verse = ? AND bible = ? ORDER BY word_index'
-  ).all(bookId, chapter, verse, bible) as Word4Word[];
+export async function getWord4Word(bookId: number, chapter: number, verse: number, bible = 'osnb2'): Promise<Word4Word[]> {
+  const sql = getSql();
+  return await sql`
+    SELECT word_index, word, original, pronunciation, explanation FROM word4word
+    WHERE book_id = ${bookId} AND chapter = ${chapter} AND verse = ${verse} AND bible = ${bible} ORDER BY word_index
+  ` as Word4Word[];
 }
 
-export function getOriginalWord4Word(bookId: number, chapter: number, verse: number, lang = 'nb'): Word4Word[] {
+export async function getOriginalWord4Word(bookId: number, chapter: number, verse: number, lang = 'nb'): Promise<Word4Word[]> {
   // GT (book 1-39) uses tanach (Hebrew), NT (book 40-66) uses sblgnt (Greek)
   // Combined with language: tanach-nb, tanach-nn, sblgnt-nb, sblgnt-nn
   const original = bookId <= 39 ? 'tanach' : 'sblgnt';
@@ -205,72 +221,72 @@ export function getOriginalWord4Word(bookId: number, chapter: number, verse: num
   return getWord4Word(bookId, chapter, verse, bible);
 }
 
-export function getReferences(bookId: number, chapter: number, verse: number, lang = 'nb'): Reference[] {
-  const db = getDb();
-  const refs = db.prepare(`
+export async function getReferences(bookId: number, chapter: number, verse: number, lang = 'nb'): Promise<Reference[]> {
+  const sql = getSql();
+  const refs = await sql`
     SELECT r.*, b.short_name as book_short_name
     FROM references_ r
     JOIN books b ON r.to_book_id = b.id
-    WHERE r.from_book_id = ? AND r.from_chapter = ? AND r.from_verse = ? AND r.language = ?
-  `).all(bookId, chapter, verse, lang) as Reference[];
+    WHERE r.from_book_id = ${bookId} AND r.from_chapter = ${chapter} AND r.from_verse = ${verse} AND r.language = ${lang}
+  ` as Reference[];
 
   // Fallback to 'nb' if no results for the requested language
   if (refs.length === 0 && lang !== 'nb') {
-    return db.prepare(`
+    return await sql`
       SELECT r.*, b.short_name as book_short_name
       FROM references_ r
       JOIN books b ON r.to_book_id = b.id
-      WHERE r.from_book_id = ? AND r.from_chapter = ? AND r.from_verse = ? AND r.language = 'nb'
-    `).all(bookId, chapter, verse) as Reference[];
+      WHERE r.from_book_id = ${bookId} AND r.from_chapter = ${chapter} AND r.from_verse = ${verse} AND r.language = 'nb'
+    ` as Reference[];
   }
 
   return refs;
 }
 
-export function getBookSummary(bookId: number): string | null {
-  const db = getDb();
-  const result = db.prepare(
-    'SELECT summary FROM book_summaries WHERE book_id = ?'
-  ).get(bookId) as { summary: string } | undefined;
+export async function getBookSummary(bookId: number): Promise<string | null> {
+  const sql = getSql();
+  const [result] = await sql`
+    SELECT summary FROM book_summaries WHERE book_id = ${bookId}
+  ` as { summary: string }[];
   return result?.summary ?? null;
 }
 
-export function getChapterSummary(bookId: number, chapter: number): string | null {
-  const db = getDb();
-  const result = db.prepare(
-    'SELECT summary FROM chapter_summaries WHERE book_id = ? AND chapter = ?'
-  ).get(bookId, chapter) as { summary: string } | undefined;
+export async function getChapterSummary(bookId: number, chapter: number): Promise<string | null> {
+  const sql = getSql();
+  const [result] = await sql`
+    SELECT summary FROM chapter_summaries WHERE book_id = ${bookId} AND chapter = ${chapter}
+  ` as { summary: string }[];
   return result?.summary ?? null;
 }
 
-export function getChapterContext(bookId: number, chapter: number): string | null {
-  const db = getDb();
-  const result = db.prepare(
-    'SELECT context FROM chapter_context WHERE book_id = ? AND chapter = ?'
-  ).get(bookId, chapter) as { context: string } | undefined;
+export async function getChapterContext(bookId: number, chapter: number): Promise<string | null> {
+  const sql = getSql();
+  const [result] = await sql`
+    SELECT context FROM chapter_context WHERE book_id = ${bookId} AND chapter = ${chapter}
+  ` as { context: string }[];
   return result?.context ?? null;
 }
 
-export function getImportantWords(bookId: number, chapter: number): { word: string; explanation: string }[] {
-  const db = getDb();
-  return db.prepare(
-    'SELECT word, explanation FROM important_words WHERE book_id = ? AND chapter = ?'
-  ).all(bookId, chapter) as { word: string; explanation: string }[];
+export async function getImportantWords(bookId: number, chapter: number): Promise<{ word: string; explanation: string }[]> {
+  const sql = getSql();
+  return await sql`
+    SELECT word, explanation FROM important_words WHERE book_id = ${bookId} AND chapter = ${chapter}
+  ` as { word: string; explanation: string }[];
 }
 
-export function getVersePrayer(bookId: number, chapter: number, verse: number): string | null {
-  const db = getDb();
-  const result = db.prepare(
-    'SELECT prayer FROM verse_prayers WHERE book_id = ? AND chapter = ? AND verse = ?'
-  ).get(bookId, chapter, verse) as { prayer: string } | undefined;
+export async function getVersePrayer(bookId: number, chapter: number, verse: number): Promise<string | null> {
+  const sql = getSql();
+  const [result] = await sql`
+    SELECT prayer FROM verse_prayers WHERE book_id = ${bookId} AND chapter = ${chapter} AND verse = ${verse}
+  ` as { prayer: string }[];
   return result?.prayer ?? null;
 }
 
-export function getVerseSermon(bookId: number, chapter: number, verse: number): string | null {
-  const db = getDb();
-  const result = db.prepare(
-    'SELECT sermon FROM verse_sermons WHERE book_id = ? AND chapter = ? AND verse = ?'
-  ).get(bookId, chapter, verse) as { sermon: string } | undefined;
+export async function getVerseSermon(bookId: number, chapter: number, verse: number): Promise<string | null> {
+  const sql = getSql();
+  const [result] = await sql`
+    SELECT sermon FROM verse_sermons WHERE book_id = ${bookId} AND chapter = ${chapter} AND verse = ${verse}
+  ` as { sermon: string }[];
   return result?.sermon ?? null;
 }
 
@@ -288,11 +304,11 @@ export interface ImportantVerse {
   text: string | null;
 }
 
-export function getImportantVersesForChapter(bookId: number, chapter: number): number[] {
-  const db = getDb();
-  const results = db.prepare(
-    'SELECT verse FROM important_verses WHERE book_id = ? AND chapter = ?'
-  ).all(bookId, chapter) as { verse: number }[];
+export async function getImportantVersesForChapter(bookId: number, chapter: number): Promise<number[]> {
+  const sql = getSql();
+  const results = await sql`
+    SELECT verse FROM important_verses WHERE book_id = ${bookId} AND chapter = ${chapter}
+  ` as { verse: number }[];
   return results.map(r => r.verse);
 }
 
@@ -306,9 +322,9 @@ export interface WellKnownVerse {
   verse_text: string;
 }
 
-export function getAllWellKnownVerses(): WellKnownVerse[] {
-  const db = getDb();
-  return db.prepare(`
+export async function getAllWellKnownVerses(): Promise<WellKnownVerse[]> {
+  const sql = getSql();
+  return await sql`
     SELECT
       iv.book_id,
       b.name_no as book_name_no,
@@ -321,7 +337,7 @@ export function getAllWellKnownVerses(): WellKnownVerse[] {
     JOIN books b ON iv.book_id = b.id
     JOIN verses v ON iv.book_id = v.book_id AND iv.chapter = v.chapter AND iv.verse = v.verse AND v.bible = 'osnb2'
     ORDER BY iv.book_id, iv.chapter, iv.verse
-  `).all() as WellKnownVerse[];
+  ` as WellKnownVerse[];
 }
 
 export interface SearchResult {
@@ -365,14 +381,15 @@ export interface ThemeData {
   sections: ThemeSection[];
 }
 
-export function getAllThemes(): Theme[] {
-  const db = getDb();
-  return db.prepare('SELECT * FROM themes ORDER BY name').all() as Theme[];
+export async function getAllThemes(): Promise<Theme[]> {
+  const sql = getSql();
+  return await sql`SELECT * FROM themes ORDER BY name` as Theme[];
 }
 
-export function getThemeByName(name: string): Theme | undefined {
-  const db = getDb();
-  return db.prepare('SELECT * FROM themes WHERE name = ?').get(name) as Theme | undefined;
+export async function getThemeByName(name: string): Promise<Theme | undefined> {
+  const sql = getSql();
+  const [row] = await sql`SELECT * FROM themes WHERE name = ${name}` as Theme[];
+  return row;
 }
 
 export function isJsonTheme(content: string): boolean {
@@ -437,21 +454,22 @@ export interface DayData {
   footnotes?: { text: string; source?: string }[];
 }
 
-export function getAllDays(): Day[] {
-  const db = getDb();
-  return db.prepare('SELECT * FROM days ORDER BY name').all() as Day[];
+export async function getAllDays(): Promise<Day[]> {
+  const sql = getSql();
+  return await sql`SELECT * FROM days ORDER BY name` as Day[];
 }
 
-export function getDayById(id: string): Day | undefined {
-  const db = getDb();
-  return db.prepare('SELECT * FROM days WHERE id = ?').get(id) as Day | undefined;
+export async function getDayById(id: string): Promise<Day | undefined> {
+  const sql = getSql();
+  const [row] = await sql`SELECT * FROM days WHERE id = ${id}` as Day[];
+  return row;
 }
 
-export function getTodaysDays(): DayData[] {
-  const db = getDb();
+export async function getTodaysDays(): Promise<DayData[]> {
+  const sql = getSql();
   const today = new Date().toISOString().substring(0, 10);
   const year = today.substring(0, 4);
-  const rows = db.prepare('SELECT * FROM days').all() as Day[];
+  const rows = await sql`SELECT * FROM days` as Day[];
 
   return rows
     .map(row => {
@@ -464,9 +482,9 @@ export function getTodaysDays(): DayData[] {
     .filter((d): d is DayData => d !== null && d.dates[year] === today);
 }
 
-export function searchDays(query: string): { id: string; name: string; description: string; category: string }[] {
+export async function searchDays(query: string): Promise<{ id: string; name: string; description: string; category: string }[]> {
   if (!query || query.length < 2) return [];
-  const db = getDb();
+  const sql = getSql();
 
   const words = query.toLowerCase().split(/\s+/).filter(w => w.length >= 2);
   if (words.length === 0) return [];
@@ -480,9 +498,9 @@ export function searchDays(query: string): { id: string; name: string; descripti
     return [p, p];
   });
 
-  const rows = db.prepare(
-    `SELECT * FROM days WHERE ${conditions} ORDER BY name`
-  ).all(...params) as Day[];
+  const rows = await sql.unsafe(
+    `SELECT * FROM days WHERE ${conditions} ORDER BY name`, params
+  ) as Day[];
 
   return rows.map(row => {
     const data = JSON.parse(row.content) as DayData;
@@ -514,14 +532,15 @@ export interface NumberSymbolismData {
   }[];
 }
 
-export function getAllNumberSymbolism(): NumberSymbolism[] {
-  const db = getDb();
-  return db.prepare('SELECT * FROM number_symbolism ORDER BY number').all() as NumberSymbolism[];
+export async function getAllNumberSymbolism(): Promise<NumberSymbolism[]> {
+  const sql = getSql();
+  return await sql`SELECT * FROM number_symbolism ORDER BY number` as NumberSymbolism[];
 }
 
-export function getNumberSymbolismByNumber(num: number): NumberSymbolism | undefined {
-  const db = getDb();
-  return db.prepare('SELECT * FROM number_symbolism WHERE number = ?').get(num) as NumberSymbolism | undefined;
+export async function getNumberSymbolismByNumber(num: number): Promise<NumberSymbolism | undefined> {
+  const sql = getSql();
+  const [row] = await sql`SELECT * FROM number_symbolism WHERE number = ${num}` as NumberSymbolism[];
+  return row;
 }
 
 export interface SearchResponse {
@@ -530,38 +549,39 @@ export interface SearchResponse {
   hasMore: boolean;
 }
 
-export function searchVerses(query: string, limit = 50, offset = 0, bible = 'osnb2'): SearchResponse {
+export async function searchVerses(query: string, limit = 50, offset = 0, bible = 'osnb2'): Promise<SearchResponse> {
   if (!query || query.length < 2) return { results: [], total: 0, hasMore: false };
 
-  const db = getDb();
+  const sql = getSql();
+  const pattern = `%${query}%`;
 
-  const countResult = db.prepare(`
+  const [countResult] = await sql`
     SELECT COUNT(*) as total
     FROM verses v
-    WHERE v.text LIKE ? AND v.bible = ?
-  `).get(`%${query}%`, bible) as { total: number };
+    WHERE v.text LIKE ${pattern} AND v.bible = ${bible}
+  ` as { total: number | bigint }[];
 
-  const total = countResult.total;
+  const total = Number(countResult?.total ?? 0);
 
-  const results = db.prepare(`
+  const results = await sql`
     SELECT v.book_id, b.name_no as book_name_no, b.short_name as book_short_name,
            v.chapter, v.verse, v.text
     FROM verses v
     JOIN books b ON v.book_id = b.id
-    WHERE v.text LIKE ? AND v.bible = ?
+    WHERE v.text LIKE ${pattern} AND v.bible = ${bible}
     ORDER BY v.book_id, v.chapter, v.verse
-    LIMIT ? OFFSET ?
-  `).all(`%${query}%`, bible, limit, offset) as SearchResult[];
+    LIMIT ${limit} OFFSET ${offset}
+  ` as SearchResult[];
 
   return { results, total, hasMore: offset + results.length < total };
 }
 
-export function getVerseCount(bookId: number, chapter: number, bible = 'osnb2'): number {
-  const db = getDb();
-  const result = db.prepare(
-    'SELECT MAX(verse) as count FROM verses WHERE book_id = ? AND chapter = ? AND bible = ?'
-  ).get(bookId, chapter, bible) as { count: number } | undefined;
-  return result?.count ?? 0;
+export async function getVerseCount(bookId: number, chapter: number, bible = 'osnb2'): Promise<number> {
+  const sql = getSql();
+  const [result] = await sql`
+    SELECT MAX(verse) as count FROM verses WHERE book_id = ${bookId} AND chapter = ${chapter} AND bible = ${bible}
+  ` as { count: number | bigint | null }[];
+  return result?.count == null ? 0 : Number(result.count);
 }
 
 export interface OriginalWordSearchResult {
@@ -613,24 +633,24 @@ function normalizeGreek(text: string): string {
   return text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').normalize('NFC');
 }
 
-export function searchOriginalWord(word: string, limit = 50, offset = 0): OriginalWordSearchResponse {
+export async function searchOriginalWord(word: string, limit = 50, offset = 0): Promise<OriginalWordSearchResponse> {
   if (!word) return { results: [], total: 0, hasMore: false, word: '', language: 'greek', matchingWords: [] };
 
-  const db = getDb();
+  const sql = getSql();
 
   // Determine language based on word characters
   const isHebrew = /[\u0590-\u05FF]/.test(word);
   const word4wordBible = isHebrew ? 'tanach-nb' : 'sblgnt-nb';  // word4word table uses -nb suffix
   const versesBible = isHebrew ? 'tanach' : 'sblgnt';            // verses table uses plain names
-  const language = isHebrew ? 'hebrew' : 'greek';
+  const language: 'hebrew' | 'greek' = isHebrew ? 'hebrew' : 'greek';
 
   // Normalize the search word
   const normalizedWord = isHebrew ? normalizeHebrew(word) : normalizeGreek(word);
 
   // Get all unique words from the bible and find those matching when normalized
-  const allWords = db.prepare(`
-    SELECT DISTINCT word FROM word4word WHERE bible = ?
-  `).all(word4wordBible) as { word: string }[];
+  const allWords = await sql`
+    SELECT DISTINCT word FROM word4word WHERE bible = ${word4wordBible}
+  ` as { word: string }[];
 
   // For Hebrew, also match words that CONTAIN the normalized word (to handle prefixes)
   // Hebrew prefixes like בְּ (be-), הַ (ha-), וְ (ve-) are attached to the word
@@ -657,16 +677,17 @@ export function searchOriginalWord(word: string, limit = 50, offset = 0): Origin
   const placeholders = matchingWords.map(() => '?').join(',');
 
   // Count total matches
-  const countResult = db.prepare(`
-    SELECT COUNT(DISTINCT w.book_id || '-' || w.chapter || '-' || w.verse) as total
+  // MySQL: || er ikke strengkonkatenering — bruk CONCAT i stedet for SQLite's '-'-join
+  const [countResult] = await sql.unsafe(`
+    SELECT COUNT(DISTINCT CONCAT(w.book_id, '-', w.chapter, '-', w.verse)) as total
     FROM word4word w
     WHERE w.word IN (${placeholders}) AND w.bible = ?
-  `).get(...matchingWords, word4wordBible) as { total: number };
+  `, [...matchingWords, word4wordBible]) as { total: number | bigint }[];
 
-  const total = countResult.total;
+  const total = Number(countResult?.total ?? 0);
 
   // Get matching verses with both Norwegian and original text
-  const rawResults = db.prepare(`
+  const rawResults = await sql.unsafe(`
     SELECT DISTINCT
       w.book_id,
       b.name_no as book_name_no,
@@ -682,21 +703,22 @@ export function searchOriginalWord(word: string, limit = 50, offset = 0): Origin
     WHERE w.word IN (${placeholders}) AND w.bible = ?
     ORDER BY w.book_id, w.chapter, w.verse
     LIMIT ? OFFSET ?
-  `).all(versesBible, ...matchingWords, word4wordBible, limit, offset) as Omit<OriginalWordSearchResult, 'norwegianWords'>[];
+  `, [versesBible, ...matchingWords, word4wordBible, limit, offset]) as Omit<OriginalWordSearchResult, 'norwegianWords'>[];
 
   // For each result, find the Norwegian words and original words that match
-  const results: OriginalWordSearchResult[] = rawResults.map(r => {
+  const results: OriginalWordSearchResult[] = [];
+  for (const r of rawResults) {
     // Get Norwegian word4word entries for this verse
-    const norwegianEntries = db.prepare(`
+    const norwegianEntries = await sql`
       SELECT DISTINCT word, original FROM word4word
-      WHERE book_id = ? AND chapter = ? AND verse = ? AND bible = 'osnb2' AND original IS NOT NULL
-    `).all(r.book_id, r.chapter, r.verse) as { word: string; original: string }[];
+      WHERE book_id = ${r.book_id} AND chapter = ${r.chapter} AND verse = ${r.verse} AND bible = 'osnb2' AND original IS NOT NULL
+    ` as { word: string; original: string }[];
 
     // Get original language word4word entries for this verse
-    const originalEntries = db.prepare(`
+    const originalEntries = await sql`
       SELECT DISTINCT word FROM word4word
-      WHERE book_id = ? AND chapter = ? AND verse = ? AND bible = ?
-    `).all(r.book_id, r.chapter, r.verse, word4wordBible) as { word: string }[];
+      WHERE book_id = ${r.book_id} AND chapter = ${r.chapter} AND verse = ${r.verse} AND bible = ${word4wordBible}
+    ` as { word: string }[];
 
     // Find Norwegian words whose 'original' matches when normalized/stripped
     const norwegianWords = norwegianEntries
@@ -722,8 +744,8 @@ export function searchOriginalWord(word: string, limit = 50, offset = 0): Origin
       })
       .map(entry => entry.word);
 
-    return { ...r, norwegianWords, originalWordsInVerse };
-  });
+    results.push({ ...r, norwegianWords, originalWordsInVerse });
+  }
 
   return { results, total, hasMore: offset + results.length < total, word, language, matchingWords };
 }
@@ -796,17 +818,26 @@ export interface MultiTimelineData {
   };
 }
 
-function attachReferencesToEvents(events: (TimelineEvent & { period_name?: string; period_color?: string })[]): TimelineEvent[] {
-  const db = getDb();
-  return events.map(event => {
-    const refs = db.prepare(`
+// `seq` er en intern rekkefølge-kolonne (se schema.ts) og skal aldri ut i
+// API-kontrakten — den fantes ikke i SQLite-utgaven.
+function dropSeq<T>(rows: T[]): T[] {
+  for (const r of rows) delete (r as { seq?: unknown }).seq;
+  return rows;
+}
+
+async function attachReferencesToEvents(events: (TimelineEvent & { period_name?: string; period_color?: string })[]): Promise<TimelineEvent[]> {
+  const sql = getSql();
+  dropSeq(events);
+  const result: TimelineEvent[] = [];
+  for (const event of events) {
+    const refs = await sql`
       SELECT tr.book_id, tr.chapter, tr.verse_start, tr.verse_end, b.short_name as book_short_name, b.name_no as book_name_no
       FROM timeline_references tr
       JOIN books b ON tr.book_id = b.id
-      WHERE tr.event_id = ?
-    `).all(event.id) as TimelineReference[];
+      WHERE tr.event_id = ${event.id}
+    ` as TimelineReference[];
 
-    return {
+    result.push({
       ...event,
       references: refs,
       period: event.period_id ? {
@@ -817,121 +848,123 @@ function attachReferencesToEvents(events: (TimelineEvent & { period_name?: strin
         description: null,
         sort_order: 0
       } : undefined
-    };
-  });
+    });
+  }
+  return result;
 }
 
-export function getTimelinePeriods(): TimelinePeriod[] {
-  const db = getDb();
-  return db.prepare('SELECT * FROM timeline_periods WHERE timeline_type = ? ORDER BY sort_order').all('bible') as TimelinePeriod[];
+export async function getTimelinePeriods(): Promise<TimelinePeriod[]> {
+  const sql = getSql();
+  return await sql`SELECT * FROM timeline_periods WHERE timeline_type = ${'bible'} ORDER BY sort_order` as TimelinePeriod[];
 }
 
-export function getTimelineEvents(): TimelineEvent[] {
-  const db = getDb();
-  const events = db.prepare(`
+export async function getTimelineEvents(): Promise<TimelineEvent[]> {
+  const sql = getSql();
+  const events = await sql`
     SELECT e.*, p.name as period_name, p.color as period_color
     FROM timeline_events e
     LEFT JOIN timeline_periods p ON e.period_id = p.id AND p.timeline_type = e.timeline_type
     WHERE e.timeline_type = 'bible'
-    ORDER BY p.sort_order, e.year IS NULL DESC, e.year, e.sort_order
-  `).all() as (TimelineEvent & { period_name?: string; period_color?: string })[];
+    ORDER BY p.sort_order, e.year IS NULL DESC, e.year, e.sort_order, e.seq
+  ` as (TimelineEvent & { period_name?: string; period_color?: string })[];
 
   return attachReferencesToEvents(events);
 }
 
-export function getWorldTimelinePeriods(): TimelinePeriod[] {
-  const db = getDb();
-  return db.prepare('SELECT * FROM timeline_periods WHERE timeline_type = ? ORDER BY sort_order').all('world') as TimelinePeriod[];
+export async function getWorldTimelinePeriods(): Promise<TimelinePeriod[]> {
+  const sql = getSql();
+  return await sql`SELECT * FROM timeline_periods WHERE timeline_type = ${'world'} ORDER BY sort_order` as TimelinePeriod[];
 }
 
-export function getWorldTimelineEvents(): TimelineEvent[] {
-  const db = getDb();
-  const events = db.prepare(`
+export async function getWorldTimelineEvents(): Promise<TimelineEvent[]> {
+  const sql = getSql();
+  const events = await sql`
     SELECT e.*, p.name as period_name, p.color as period_color
     FROM timeline_events e
     LEFT JOIN timeline_periods p ON e.period_id = p.id AND p.timeline_type = e.timeline_type
     WHERE e.timeline_type = 'world'
-    ORDER BY p.sort_order, e.year IS NULL DESC, e.year, e.sort_order
-  `).all() as (TimelineEvent & { period_name?: string; period_color?: string })[];
+    ORDER BY p.sort_order, e.year IS NULL DESC, e.year, e.sort_order, e.seq
+  ` as (TimelineEvent & { period_name?: string; period_color?: string })[];
 
   return attachReferencesToEvents(events);
 }
 
-export function getBookTimelineSections(bookId?: number): TimelineBookSection[] {
-  const db = getDb();
+export async function getBookTimelineSections(bookId?: number): Promise<TimelineBookSection[]> {
+  const sql = getSql();
   if (bookId) {
-    return db.prepare('SELECT * FROM timeline_book_sections WHERE book_id = ? ORDER BY sort_order').all(bookId) as TimelineBookSection[];
+    return dropSeq(await sql`SELECT * FROM timeline_book_sections WHERE book_id = ${bookId} ORDER BY sort_order, seq` as TimelineBookSection[]);
   }
-  return db.prepare('SELECT * FROM timeline_book_sections ORDER BY book_id, sort_order').all() as TimelineBookSection[];
+  return dropSeq(await sql`SELECT * FROM timeline_book_sections ORDER BY book_id, sort_order, seq` as TimelineBookSection[]);
 }
 
-export function getBookTimelineEvents(bookId?: number): TimelineEvent[] {
-  const db = getDb();
+export async function getBookTimelineEvents(bookId?: number): Promise<TimelineEvent[]> {
+  const sql = getSql();
   let events: (TimelineEvent & { period_name?: string; period_color?: string })[];
   if (bookId) {
-    events = db.prepare(`
+    events = await sql`
       SELECT e.*, NULL as period_name, NULL as period_color
       FROM timeline_events e
-      WHERE e.timeline_type = 'books' AND e.book_id = ?
-      ORDER BY e.sort_order
-    `).all(bookId) as (TimelineEvent & { period_name?: string; period_color?: string })[];
+      WHERE e.timeline_type = 'books' AND e.book_id = ${bookId}
+      ORDER BY e.sort_order, e.seq
+    ` as (TimelineEvent & { period_name?: string; period_color?: string })[];
   } else {
-    events = db.prepare(`
+    events = await sql`
       SELECT e.*, NULL as period_name, NULL as period_color
       FROM timeline_events e
       WHERE e.timeline_type = 'books'
-      ORDER BY e.book_id, e.sort_order
-    `).all() as (TimelineEvent & { period_name?: string; period_color?: string })[];
+      ORDER BY e.book_id, e.sort_order, e.seq
+    ` as (TimelineEvent & { period_name?: string; period_color?: string })[];
   }
   return attachReferencesToEvents(events);
 }
 
-export function getMultiTimeline(): MultiTimelineData {
-  const db = getDb();
+export async function getMultiTimeline(): Promise<MultiTimelineData> {
+  const sql = getSql();
 
   // Get books that have timeline data
-  const availableBooks = db.prepare(`
+  const availableBooks = await sql`
     SELECT DISTINCT b.id, b.name_no, b.short_name
     FROM timeline_events e
     JOIN books b ON e.book_id = b.id
     WHERE e.timeline_type = 'books'
     ORDER BY b.id
-  `).all() as { id: number; name_no: string; short_name: string }[];
+  ` as { id: number; name_no: string; short_name: string }[];
 
   return {
     bible: {
-      periods: getTimelinePeriods(),
-      events: getTimelineEvents(),
+      periods: await getTimelinePeriods(),
+      events: await getTimelineEvents(),
     },
     world: {
-      periods: getWorldTimelinePeriods(),
-      events: getWorldTimelineEvents(),
+      periods: await getWorldTimelinePeriods(),
+      events: await getWorldTimelineEvents(),
     },
     books: {
       available: availableBooks,
-      sections: getBookTimelineSections(),
-      events: getBookTimelineEvents(),
+      sections: await getBookTimelineSections(),
+      events: await getBookTimelineEvents(),
     },
   };
 }
 
-export function getTimelineEventById(id: string): TimelineEvent | undefined {
-  const db = getDb();
-  const event = db.prepare(`
+export async function getTimelineEventById(id: string): Promise<TimelineEvent | undefined> {
+  const sql = getSql();
+  const [event] = await sql`
     SELECT e.*, p.name as period_name, p.color as period_color, p.description as period_description
     FROM timeline_events e
     LEFT JOIN timeline_periods p ON e.period_id = p.id AND p.timeline_type = e.timeline_type
-    WHERE e.id = ?
-  `).get(id) as (TimelineEvent & { period_name?: string; period_color?: string; period_description?: string }) | undefined;
+    WHERE e.id = ${id}
+  ` as (TimelineEvent & { period_name?: string; period_color?: string; period_description?: string })[];
 
   if (!event) return undefined;
+  dropSeq([event]);
 
-  const refs = db.prepare(`
+  const refs = await sql`
     SELECT tr.book_id, tr.chapter, tr.verse_start, tr.verse_end, b.short_name as book_short_name, b.name_no as book_name_no
     FROM timeline_references tr
     JOIN books b ON tr.book_id = b.id
-    WHERE tr.event_id = ?
-  `).all(id) as TimelineReference[];
+    WHERE tr.event_id = ${id}
+  ` as TimelineReference[];
 
   return {
     ...event,
@@ -947,23 +980,23 @@ export function getTimelineEventById(id: string): TimelineEvent | undefined {
   };
 }
 
-export function getTimelineEventsByPeriod(periodId: string): TimelineEvent[] {
-  const db = getDb();
-  const events = db.prepare(`
+export async function getTimelineEventsByPeriod(periodId: string): Promise<TimelineEvent[]> {
+  const sql = getSql();
+  const events = await sql`
     SELECT e.*, p.name as period_name, p.color as period_color
     FROM timeline_events e
     LEFT JOIN timeline_periods p ON e.period_id = p.id AND p.timeline_type = e.timeline_type
-    WHERE e.period_id = ? AND e.timeline_type = 'bible'
-    ORDER BY e.year IS NULL DESC, e.year, e.sort_order
-  `).all(periodId) as (TimelineEvent & { period_name?: string; period_color?: string })[];
+    WHERE e.period_id = ${periodId} AND e.timeline_type = 'bible'
+    ORDER BY e.year IS NULL DESC, e.year, e.sort_order, e.seq
+  ` as (TimelineEvent & { period_name?: string; period_color?: string })[];
 
   return attachReferencesToEvents(events);
 }
 
-export function getFullTimeline(): TimelineData {
+export async function getFullTimeline(): Promise<TimelineData> {
   return {
-    periods: getTimelinePeriods(),
-    events: getTimelineEvents()
+    periods: await getTimelinePeriods(),
+    events: await getTimelineEvents()
   };
 }
 
@@ -989,16 +1022,17 @@ function sortTimelineEvents(events: TimelineEvent[]): TimelineEvent[] {
   });
 }
 
-function getEventsForChapterDirect(db: ReturnType<typeof getDb>, bookId: number, chapter: number): TimelineEvent[] {
-  const eventIds = db.prepare(`
+async function getEventsForChapterDirect(bookId: number, chapter: number): Promise<TimelineEvent[]> {
+  const sql = getSql();
+  const eventIds = await sql`
     SELECT DISTINCT event_id
     FROM timeline_references
-    WHERE book_id = ? AND chapter = ?
-  `).all(bookId, chapter) as { event_id: string }[];
+    WHERE book_id = ${bookId} AND chapter = ${chapter}
+  ` as { event_id: string }[];
 
   const events: TimelineEvent[] = [];
   for (const { event_id } of eventIds) {
-    const event = getTimelineEventById(event_id);
+    const event = await getTimelineEventById(event_id);
     if (event) events.push(event);
   }
   return events;
@@ -1008,7 +1042,8 @@ function getEventsForChapterDirect(db: ReturnType<typeof getDb>, bookId: number,
  * Map events to bible-type event IDs for highlighting in the main timeline.
  * For books-type events, find bible equivalent by title or nearest by year.
  */
-function mapToBibleEventIds(db: ReturnType<typeof getDb>, events: TimelineEvent[]): string[] {
+async function mapToBibleEventIds(events: TimelineEvent[]): Promise<string[]> {
+  const sql = getSql();
   const ids = new Set<string>();
   for (const event of events) {
     if (event.timeline_type === 'bible') {
@@ -1016,22 +1051,22 @@ function mapToBibleEventIds(db: ReturnType<typeof getDb>, events: TimelineEvent[
       continue;
     }
     // Try exact title match first
-    const bibleEvent = db.prepare(`
+    const [bibleEvent] = await sql`
       SELECT id FROM timeline_events
-      WHERE timeline_type = 'bible' AND LOWER(title) = LOWER(?)
-    `).get(event.title) as { id: string } | undefined;
+      WHERE timeline_type = 'bible' AND LOWER(title) = LOWER(${event.title})
+    ` as { id: string }[];
     if (bibleEvent) {
       ids.add(bibleEvent.id);
       continue;
     }
     // Fallback: find nearest bible event by year
     if (event.year != null) {
-      const nearest = db.prepare(`
+      const [nearest] = await sql`
         SELECT id FROM timeline_events
         WHERE timeline_type = 'bible' AND year IS NOT NULL
-        ORDER BY ABS(year - ?)
+        ORDER BY ABS(year - ${event.year})
         LIMIT 1
-      `).get(event.year) as { id: string } | undefined;
+      ` as { id: string }[];
       if (nearest) {
         ids.add(nearest.id);
       }
@@ -1040,22 +1075,22 @@ function mapToBibleEventIds(db: ReturnType<typeof getDb>, events: TimelineEvent[
   return Array.from(ids);
 }
 
-export function getTimelineEventsForChapter(bookId: number, chapter: number): TimelineEvent[] {
-  const db = getDb();
+export async function getTimelineEventsForChapter(bookId: number, chapter: number): Promise<TimelineEvent[]> {
+  const sql = getSql();
 
   // Direct hits for this chapter
-  const direct = getEventsForChapterDirect(db, bookId, chapter);
+  const direct = await getEventsForChapterDirect(bookId, chapter);
   if (direct.length > 0) {
     return sortTimelineEvents(deduplicateTimelineEvents(direct));
   }
 
   // No direct hits — find nearest chapters in this book that have events
-  const nearbyChapters = db.prepare(`
+  const nearbyChapters = await sql`
     SELECT DISTINCT chapter
     FROM timeline_references
-    WHERE book_id = ?
+    WHERE book_id = ${bookId}
     ORDER BY chapter
-  `).all(bookId) as { chapter: number }[];
+  ` as { chapter: number }[];
 
   if (nearbyChapters.length === 0) return [];
 
@@ -1071,10 +1106,10 @@ export function getTimelineEventsForChapter(bookId: number, chapter: number): Ti
 
   const contextEvents: TimelineEvent[] = [];
   if (before !== null) {
-    contextEvents.push(...getEventsForChapterDirect(db, bookId, before));
+    contextEvents.push(...await getEventsForChapterDirect(bookId, before));
   }
   if (after !== null) {
-    contextEvents.push(...getEventsForChapterDirect(db, bookId, after));
+    contextEvents.push(...await getEventsForChapterDirect(bookId, after));
   }
 
   return sortTimelineEvents(deduplicateTimelineEvents(contextEvents));
@@ -1084,10 +1119,9 @@ export function getTimelineEventsForChapter(bookId: number, chapter: number): Ti
  * Get bible-timeline event IDs relevant for a chapter.
  * Maps books-type events to bible-type equivalents.
  */
-export function getChapterTimelineEventIds(bookId: number, chapter: number): string[] {
-  const db = getDb();
-  const events = getTimelineEventsForChapter(bookId, chapter);
-  return mapToBibleEventIds(db, events);
+export async function getChapterTimelineEventIds(bookId: number, chapter: number): Promise<string[]> {
+  const events = await getTimelineEventsForChapter(bookId, chapter);
+  return mapToBibleEventIds(events);
 }
 
 // Prophecy types and functions
@@ -1123,20 +1157,23 @@ export interface ProphecyData {
   prophecies: Prophecy[];
 }
 
-export function getProphecyCategories(): ProphecyCategory[] {
-  const db = getDb();
-  return db.prepare('SELECT * FROM prophecy_categories').all() as ProphecyCategory[];
+export async function getProphecyCategories(): Promise<ProphecyCategory[]> {
+  const sql = getSql();
+  // seq bevarer innsettingsrekkefølgen (= rekkefølgen i prophecies.json, som
+  // SQLite ga implisitt via rowid).
+  return dropSeq(await sql`SELECT * FROM prophecy_categories ORDER BY seq` as ProphecyCategory[]);
 }
 
-export function getProphecies(): Prophecy[] {
-  const db = getDb();
-  const prophecies = db.prepare(`
+export async function getProphecies(): Promise<Prophecy[]> {
+  const sql = getSql();
+  const prophecies = await sql`
     SELECT p.*, c.name as category_name, c.description as category_description,
            b.short_name as prophecy_book_short_name, b.name_no as prophecy_book_name_no
     FROM prophecies p
     LEFT JOIN prophecy_categories c ON p.category_id = c.id
     LEFT JOIN books b ON p.prophecy_book_id = b.id
-  `).all() as (Prophecy & {
+    ORDER BY p.seq
+  ` as (Prophecy & {
     category_name?: string;
     category_description?: string;
     prophecy_book_id: number;
@@ -1147,15 +1184,16 @@ export function getProphecies(): Prophecy[] {
     prophecy_book_name_no?: string;
   })[];
 
-  return prophecies.map(p => {
+  const result: Prophecy[] = [];
+  for (const p of prophecies) {
     // Get fulfillments
-    const fulfillments = db.prepare(`
+    const fulfillments = await sql`
       SELECT pf.book_id, pf.chapter, pf.verse_start, pf.verse_end,
              b.short_name as book_short_name, b.name_no as book_name_no
       FROM prophecy_fulfillments pf
       JOIN books b ON pf.book_id = b.id
-      WHERE pf.prophecy_id = ?
-    `).all(p.id) as ProphecyReference[];
+      WHERE pf.prophecy_id = ${p.id}
+    ` as ProphecyReference[];
 
     // Format reference strings
     const formatRef = (ref: ProphecyReference): string => {
@@ -1180,7 +1218,7 @@ export function getProphecies(): Prophecy[] {
       reference: formatRef(f)
     }));
 
-    return {
+    result.push({
       id: p.id,
       category_id: p.category_id,
       title: p.title,
@@ -1192,20 +1230,21 @@ export function getProphecies(): Prophecy[] {
         name: p.category_name || '',
         description: p.category_description || null
       } : undefined
-    };
-  });
+    });
+  }
+  return result;
 }
 
-export function getProphecyById(id: string): Prophecy | undefined {
-  const db = getDb();
-  const prophecy = db.prepare(`
+export async function getProphecyById(id: string): Promise<Prophecy | undefined> {
+  const sql = getSql();
+  const [prophecy] = await sql`
     SELECT p.*, c.name as category_name, c.description as category_description,
            b.short_name as prophecy_book_short_name, b.name_no as prophecy_book_name_no
     FROM prophecies p
     LEFT JOIN prophecy_categories c ON p.category_id = c.id
     LEFT JOIN books b ON p.prophecy_book_id = b.id
-    WHERE p.id = ?
-  `).get(id) as (Prophecy & {
+    WHERE p.id = ${id}
+  ` as (Prophecy & {
     category_name?: string;
     category_description?: string;
     prophecy_book_id: number;
@@ -1214,17 +1253,17 @@ export function getProphecyById(id: string): Prophecy | undefined {
     prophecy_verse_end: number;
     prophecy_book_short_name?: string;
     prophecy_book_name_no?: string;
-  }) | undefined;
+  })[];
 
   if (!prophecy) return undefined;
 
-  const fulfillments = db.prepare(`
+  const fulfillments = await sql`
     SELECT pf.book_id, pf.chapter, pf.verse_start, pf.verse_end,
            b.short_name as book_short_name, b.name_no as book_name_no
     FROM prophecy_fulfillments pf
     JOIN books b ON pf.book_id = b.id
-    WHERE pf.prophecy_id = ?
-  `).all(id) as ProphecyReference[];
+    WHERE pf.prophecy_id = ${id}
+  ` as ProphecyReference[];
 
   const formatRef = (ref: ProphecyReference): string => {
     const verseRange = ref.verse_start === ref.verse_end
@@ -1258,37 +1297,37 @@ export function getProphecyById(id: string): Prophecy | undefined {
   };
 }
 
-export function getPropheciesByCategory(categoryId: string): Prophecy[] {
-  const all = getProphecies();
+export async function getPropheciesByCategory(categoryId: string): Promise<Prophecy[]> {
+  const all = await getProphecies();
   return all.filter(p => p.category_id === categoryId);
 }
 
-export function getFullProphecyData(): ProphecyData {
+export async function getFullProphecyData(): Promise<ProphecyData> {
   return {
-    categories: getProphecyCategories(),
-    prophecies: getProphecies()
+    categories: await getProphecyCategories(),
+    prophecies: await getProphecies()
   };
 }
 
-export function getPropheciesForChapter(bookId: number, chapter: number): Prophecy[] {
-  const db = getDb();
+export async function getPropheciesForChapter(bookId: number, chapter: number): Promise<Prophecy[]> {
+  const sql = getSql();
 
   // Find prophecies that reference this chapter (either as prophecy or fulfillment)
-  const prophecyIds = db.prepare(`
+  const prophecyIds = await sql`
     SELECT DISTINCT p.id
     FROM prophecies p
-    WHERE (p.prophecy_book_id = ? AND p.prophecy_chapter = ?)
+    WHERE (p.prophecy_book_id = ${bookId} AND p.prophecy_chapter = ${chapter})
     UNION
     SELECT DISTINCT pf.prophecy_id
     FROM prophecy_fulfillments pf
-    WHERE pf.book_id = ? AND pf.chapter = ?
-  `).all(bookId, chapter, bookId, chapter) as { id: string }[];
+    WHERE pf.book_id = ${bookId} AND pf.chapter = ${chapter}
+  ` as { id: string }[];
 
   if (prophecyIds.length === 0) return [];
 
   const prophecies: Prophecy[] = [];
   for (const { id } of prophecyIds) {
-    const prophecy = getProphecyById(id);
+    const prophecy = await getProphecyById(id);
     if (prophecy) {
       prophecies.push(prophecy);
     }
@@ -1297,27 +1336,27 @@ export function getPropheciesForChapter(bookId: number, chapter: number): Prophe
   return prophecies;
 }
 
-export function getPropheciesForVerse(bookId: number, chapter: number, verse: number): Prophecy[] {
-  const db = getDb();
+export async function getPropheciesForVerse(bookId: number, chapter: number, verse: number): Promise<Prophecy[]> {
+  const sql = getSql();
 
   // Find prophecies where this verse is part of the prophecy reference or a fulfillment
-  const prophecyIds = db.prepare(`
+  const prophecyIds = await sql`
     SELECT DISTINCT p.id
     FROM prophecies p
-    WHERE p.prophecy_book_id = ? AND p.prophecy_chapter = ?
-      AND ? >= p.prophecy_verse_start AND ? <= p.prophecy_verse_end
+    WHERE p.prophecy_book_id = ${bookId} AND p.prophecy_chapter = ${chapter}
+      AND ${verse} >= p.prophecy_verse_start AND ${verse} <= p.prophecy_verse_end
     UNION
     SELECT DISTINCT pf.prophecy_id
     FROM prophecy_fulfillments pf
-    WHERE pf.book_id = ? AND pf.chapter = ?
-      AND ? >= pf.verse_start AND ? <= pf.verse_end
-  `).all(bookId, chapter, verse, verse, bookId, chapter, verse, verse) as { id: string }[];
+    WHERE pf.book_id = ${bookId} AND pf.chapter = ${chapter}
+      AND ${verse} >= pf.verse_start AND ${verse} <= pf.verse_end
+  ` as { id: string }[];
 
   if (prophecyIds.length === 0) return [];
 
   const prophecies: Prophecy[] = [];
   for (const { id } of prophecyIds) {
-    const prophecy = getProphecyById(id);
+    const prophecy = await getProphecyById(id);
     if (prophecy) {
       prophecies.push(prophecy);
     }
@@ -1408,14 +1447,15 @@ export const roleLabels: Record<string, string> = {
   'vismann': 'Vismann'
 };
 
-export function getAllPersons(): Person[] {
-  const db = getDb();
-  return db.prepare('SELECT * FROM persons ORDER BY name').all() as Person[];
+export async function getAllPersons(): Promise<Person[]> {
+  const sql = getSql();
+  return await sql`SELECT * FROM persons ORDER BY name` as Person[];
 }
 
-export function getPersonByName(name: string): Person | undefined {
-  const db = getDb();
-  return db.prepare('SELECT * FROM persons WHERE name = ?').get(name) as Person | undefined;
+export async function getPersonByName(name: string): Promise<Person | undefined> {
+  const sql = getSql();
+  const [row] = await sql`SELECT * FROM persons WHERE name = ${name}` as Person[];
+  return row;
 }
 
 export function parsePersonContent(content: string): PersonData | null {
@@ -1426,54 +1466,51 @@ export function parsePersonContent(content: string): PersonData | null {
   }
 }
 
-export function getPersonData(name: string): PersonData | null {
-  const person = getPersonByName(name);
+export async function getPersonData(name: string): Promise<PersonData | null> {
+  const person = await getPersonByName(name);
   if (!person) return null;
   return parsePersonContent(person.content);
 }
 
-export function getAllPersonsData(): PersonData[] {
-  const persons = getAllPersons();
-  return persons
+export async function getAllPersonsData(): Promise<PersonData[]> {
+  const persons = await getAllPersons();
+  const all = persons
     .map(p => parsePersonContent(p.content))
     .filter((p): p is PersonData => p !== null);
+  // Deduplicate by id (keep last/latest version)
+  const byId = new Map<string, PersonData>();
+  for (const p of all) byId.set(p.id, p);
+  return Array.from(byId.values());
 }
 
-export function getPersonsByChapter(bookId: number, chapter: number): PersonData[] {
-  const db = getDb();
-  const rows = db.prepare(`
-    SELECT content FROM persons
-    WHERE EXISTS (
-      SELECT 1 FROM json_each(json_extract(content, '$.references'))
-      WHERE json_extract(value, '$.bookId') = ?
-        AND json_extract(value, '$.chapterId') = ?
-    )
-  `).all(bookId, chapter) as { content: string }[];
+export async function getPersonsByChapter(bookId: number, chapter: number): Promise<PersonData[]> {
+  const sql = getSql();
+  // SQLite brukte json_each/json_extract; i MySQL filtrerer vi i JS i stedet
+  // (samme semantikk: minst én reference med matchende bookId + chapterId)
+  const rows = await sql`SELECT content FROM persons` as { content: string }[];
 
   return rows
     .map(r => parsePersonContent(r.content))
-    .filter((p): p is PersonData => p !== null);
+    .filter((p): p is PersonData =>
+      p !== null && !!p.references?.some(ref => ref.bookId === bookId && ref.chapterId === chapter)
+    );
 }
 
-export function getNumberSymbolismByChapter(bookId: number, chapter: number): NumberSymbolismData[] {
-  const db = getDb();
-  const rows = db.prepare(`
-    SELECT content FROM number_symbolism
-    WHERE EXISTS (
-      SELECT 1 FROM json_each(json_extract(content, '$.references'))
-      WHERE json_extract(value, '$.bookId') = ?
-        AND json_extract(value, '$.chapterId') = ?
-    )
-  `).all(bookId, chapter) as { content: string }[];
+export async function getNumberSymbolismByChapter(bookId: number, chapter: number): Promise<NumberSymbolismData[]> {
+  const sql = getSql();
+  // SQLite brukte json_each/json_extract; i MySQL filtrerer vi i JS i stedet
+  const rows = await sql`SELECT content FROM number_symbolism` as { content: string }[];
 
   return rows
     .map(r => { try { return JSON.parse(r.content) as NumberSymbolismData; } catch { return null; } })
-    .filter((n): n is NumberSymbolismData => n !== null);
+    .filter((n): n is NumberSymbolismData =>
+      n !== null && !!n.references?.some(ref => ref.bookId === bookId && ref.chapterId === chapter)
+    );
 }
 
-export function getThemesByChapter(bookId: number, chapter: number): { id: number; name: string; title: string; introduction?: string; verses: number[] }[] {
-  const db = getDb();
-  const themes = db.prepare('SELECT id, name, content FROM themes').all() as Theme[];
+export async function getThemesByChapter(bookId: number, chapter: number): Promise<{ id: number; name: string; title: string; introduction?: string; verses: number[] }[]> {
+  const sql = getSql();
+  const themes = await sql`SELECT id, name, content FROM themes` as Theme[];
 
   return themes.filter(t => {
     try {
@@ -1497,9 +1534,9 @@ export function getThemesByChapter(bookId: number, chapter: number): { id: numbe
   });
 }
 
-export function getStoriesByChapter(bookId: number, chapter: number): { slug: string; title: string; category: string; description: string; verses: number[] }[] {
-  const db = getDb();
-  const stories = db.prepare('SELECT slug, title, category, content, description FROM stories').all() as (Story & { description: string })[];
+export async function getStoriesByChapter(bookId: number, chapter: number): Promise<{ slug: string; title: string; category: string; description: string; verses: number[] }[]> {
+  const sql = getSql();
+  const stories = await sql`SELECT slug, title, category, content, description FROM stories` as (Story & { description: string })[];
 
   return stories.filter(s => {
     try {
@@ -1522,23 +1559,26 @@ export function getStoriesByChapter(bookId: number, chapter: number): { slug: st
   });
 }
 
-export function getPersonsByRole(role: string): PersonData[] {
-  const allPersons = getAllPersonsData();
+export async function getPersonsByRole(role: string): Promise<PersonData[]> {
+  const allPersons = await getAllPersonsData();
   return allPersons.filter(p => p.roles.includes(role));
 }
 
-export function getPersonsByEra(era: string): PersonData[] {
-  const allPersons = getAllPersonsData();
+export async function getPersonsByEra(era: string): Promise<PersonData[]> {
+  const allPersons = await getAllPersonsData();
   return allPersons.filter(p => p.era === era);
 }
 
-export function getRelatedPersonsData(personId: string): PersonData[] {
-  const person = getPersonData(personId);
+export async function getRelatedPersonsData(personId: string): Promise<PersonData[]> {
+  const person = await getPersonData(personId);
   if (!person || !person.relatedPersons) return [];
 
-  return person.relatedPersons
-    .map(id => getPersonData(id))
-    .filter((p): p is PersonData => p !== null);
+  const result: PersonData[] = [];
+  for (const id of person.relatedPersons) {
+    const p = await getPersonData(id);
+    if (p !== null) result.push(p);
+  }
+  return result;
 }
 
 // Chapter Insights types and functions
@@ -1559,11 +1599,11 @@ export interface ChapterInsightDbRow {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function getChapterInsight(bookId: number, chapter: number): any | null {
-  const db = getDb();
-  const result = db.prepare(
-    'SELECT content FROM chapter_insights WHERE book_id = ? AND chapter = ?'
-  ).get(bookId, chapter) as { content: string } | undefined;
+export async function getChapterInsight(bookId: number, chapter: number): Promise<any | null> {
+  const sql = getSql();
+  const [result] = await sql`
+    SELECT content FROM chapter_insights WHERE book_id = ${bookId} AND chapter = ${chapter}
+  ` as { content: string }[];
 
   if (!result) return null;
 
@@ -1609,28 +1649,29 @@ export interface GospelParallelsData {
   parallels: GospelParallel[];
 }
 
-export function getGospelParallelSections(): GospelParallelSection[] {
-  const db = getDb();
-  return db.prepare('SELECT * FROM gospel_parallel_sections ORDER BY sort_order').all() as GospelParallelSection[];
+export async function getGospelParallelSections(): Promise<GospelParallelSection[]> {
+  const sql = getSql();
+  return await sql`SELECT * FROM gospel_parallel_sections ORDER BY sort_order` as GospelParallelSection[];
 }
 
-export function getGospelParallels(): GospelParallel[] {
-  const db = getDb();
-  const parallels = db.prepare(`
+export async function getGospelParallels(): Promise<GospelParallel[]> {
+  const sql = getSql();
+  const parallels = await sql`
     SELECT p.*, s.name as section_name, s.description as section_description
     FROM gospel_parallels p
     LEFT JOIN gospel_parallel_sections s ON p.section_id = s.id
     ORDER BY p.sort_order
-  `).all() as (GospelParallel & { section_name?: string; section_description?: string })[];
+  ` as (GospelParallel & { section_name?: string; section_description?: string })[];
 
-  return parallels.map(parallel => {
+  const result: GospelParallel[] = [];
+  for (const parallel of parallels) {
     // Get passages for this parallel
-    const passages = db.prepare(`
+    const passages = await sql`
       SELECT gpp.*, b.short_name as book_short_name, b.name_no as book_name_no
       FROM gospel_parallel_passages gpp
       JOIN books b ON gpp.book_id = b.id
-      WHERE gpp.parallel_id = ?
-    `).all(parallel.id) as (GospelParallelPassage & { parallel_id: string })[];
+      WHERE gpp.parallel_id = ${parallel.id}
+    ` as (GospelParallelPassage & { parallel_id: string })[];
 
     // Convert passages array to Record keyed by gospel
     const passagesRecord: Record<string, GospelParallelPassage> = {};
@@ -1647,7 +1688,7 @@ export function getGospelParallels(): GospelParallel[] {
       };
     }
 
-    return {
+    result.push({
       id: parallel.id,
       section_id: parallel.section_id,
       title: parallel.title,
@@ -1660,35 +1701,36 @@ export function getGospelParallels(): GospelParallel[] {
         description: parallel.section_description || null,
         sort_order: 0
       } : undefined
-    };
-  });
+    });
+  }
+  return result;
 }
 
-export function getGospelParallelsData(): GospelParallelsData {
+export async function getGospelParallelsData(): Promise<GospelParallelsData> {
   return {
-    sections: getGospelParallelSections(),
-    parallels: getGospelParallels()
+    sections: await getGospelParallelSections(),
+    parallels: await getGospelParallels()
   };
 }
 
-export function getGospelParallelById(id: string): GospelParallel | undefined {
-  const db = getDb();
-  const parallel = db.prepare(`
+export async function getGospelParallelById(id: string): Promise<GospelParallel | undefined> {
+  const sql = getSql();
+  const [parallel] = await sql`
     SELECT p.*, s.name as section_name, s.description as section_description
     FROM gospel_parallels p
     LEFT JOIN gospel_parallel_sections s ON p.section_id = s.id
-    WHERE p.id = ?
-  `).get(id) as (GospelParallel & { section_name?: string; section_description?: string }) | undefined;
+    WHERE p.id = ${id}
+  ` as (GospelParallel & { section_name?: string; section_description?: string })[];
 
   if (!parallel) return undefined;
 
   // Get passages for this parallel
-  const passages = db.prepare(`
+  const passages = await sql`
     SELECT gpp.*, b.short_name as book_short_name, b.name_no as book_name_no
     FROM gospel_parallel_passages gpp
     JOIN books b ON gpp.book_id = b.id
-    WHERE gpp.parallel_id = ?
-  `).all(id) as (GospelParallelPassage & { parallel_id: string })[];
+    WHERE gpp.parallel_id = ${id}
+  ` as (GospelParallelPassage & { parallel_id: string })[];
 
   // Convert passages array to Record keyed by gospel
   const passagesRecord: Record<string, GospelParallelPassage> = {};
@@ -1721,27 +1763,27 @@ export function getGospelParallelById(id: string): GospelParallel | undefined {
   };
 }
 
-export function getGospelParallelsBySection(sectionId: string): GospelParallel[] {
-  const all = getGospelParallels();
+export async function getGospelParallelsBySection(sectionId: string): Promise<GospelParallel[]> {
+  const all = await getGospelParallels();
   return all.filter(p => p.section_id === sectionId);
 }
 
-export function getGospelParallelsForChapter(bookId: number, chapter: number): GospelParallel[] {
-  const db = getDb();
+export async function getGospelParallelsForChapter(bookId: number, chapter: number): Promise<GospelParallel[]> {
+  const sql = getSql();
 
   // Find all parallels that have a passage in this book/chapter
-  const parallelIds = db.prepare(`
+  const parallelIds = await sql`
     SELECT DISTINCT parallel_id
     FROM gospel_parallel_passages
-    WHERE book_id = ? AND chapter = ?
-  `).all(bookId, chapter) as { parallel_id: string }[];
+    WHERE book_id = ${bookId} AND chapter = ${chapter}
+  ` as { parallel_id: string }[];
 
   if (parallelIds.length === 0) return [];
 
   // Get full parallel data for each
   const parallels: GospelParallel[] = [];
   for (const { parallel_id } of parallelIds) {
-    const parallel = getGospelParallelById(parallel_id);
+    const parallel = await getGospelParallelById(parallel_id);
     if (parallel) {
       parallels.push(parallel);
     }
@@ -1791,28 +1833,30 @@ function countWords(text: string): number {
   return text.split(/\s+/).filter(w => w.length > 0).length;
 }
 
-export function getBookStatistics(bookId: number, bible = 'osnb2'): BookStatistics | null {
-  const db = getDb();
+export async function getBookStatistics(bookId: number, bible = 'osnb2'): Promise<BookStatistics | null> {
+  const sql = getSql();
   const book = getBookById(bookId);
   if (!book) return null;
 
-  // Get verse count and word count for the book (Norwegian)
-  const verseData = db.prepare(`
-    SELECT COUNT(*) as verseCount, GROUP_CONCAT(text, ' ') as allText
-    FROM verses WHERE book_id = ? AND bible = ?
-  `).get(bookId, bible) as { verseCount: number; allText: string };
+  // Get verse count and word count for the book (Norwegian).
+  // SQLite brukte GROUP_CONCAT(text, ' '); i MySQL trunkeres GROUP_CONCAT av
+  // group_concat_max_len, så vi henter radene og joiner teksten i JS i stedet.
+  const rows = await sql`
+    SELECT text FROM verses WHERE book_id = ${bookId} AND bible = ${bible}
+  ` as { text: string }[];
+  const allText = rows.map(r => r.text).join(' ');
 
   // Get original text word count
   const originalBible = bookId <= 39 ? 'tanach' : 'sblgnt';
-  const originalData = db.prepare(`
-    SELECT GROUP_CONCAT(text, ' ') as allText
-    FROM verses WHERE book_id = ? AND bible = ?
-  `).get(bookId, originalBible) as { allText: string };
+  const origRows = await sql`
+    SELECT text FROM verses WHERE book_id = ${bookId} AND bible = ${originalBible}
+  ` as { text: string }[];
+  const originalAllText = origRows.map(r => r.text).join(' ');
 
   // Count original words (split on whitespace, remove punctuation)
   let originalWords = 0;
-  if (originalData?.allText) {
-    originalWords = originalData.allText
+  if (originalAllText) {
+    originalWords = originalAllText
       .replace(/[.,;:!?־׃׀·]/g, ' ')
       .split(/\s+/)
       .filter(w => w.length > 0).length;
@@ -1824,15 +1868,14 @@ export function getBookStatistics(bookId: number, bible = 'osnb2'): BookStatisti
     shortName: book.short_name,
     testament: book.testament,
     chapters: book.chapters,
-    verses: verseData.verseCount,
-    words: countWords(verseData.allText),
+    verses: rows.length,
+    words: countWords(allText),
     originalWords,
     originalLanguage: bookId <= 39 ? 'hebrew' : 'greek'
   };
 }
 
-export function getBibleStatistics(bible = 'osnb2'): BibleStatistics {
-  const db = getDb();
+export async function getBibleStatistics(bible = 'osnb2'): Promise<BibleStatistics> {
   const books = getAllBooks();
 
   let totalChapters = 0;
@@ -1849,7 +1892,7 @@ export function getBibleStatistics(bible = 'osnb2'): BibleStatistics {
   const bookStats: BookStatistics[] = [];
 
   for (const book of books) {
-    const stats = getBookStatistics(book.id, bible);
+    const stats = await getBookStatistics(book.id, bible);
     if (stats) {
       bookStats.push(stats);
       totalChapters += stats.chapters;
@@ -1890,13 +1933,13 @@ export function getBibleStatistics(bible = 'osnb2'): BibleStatistics {
   };
 }
 
-export function getTopWords(bible = 'osnb2', limit = 100, includeStopWords = false): WordFrequency[] {
-  const db = getDb();
+export async function getTopWords(bible = 'osnb2', limit = 100, includeStopWords = false): Promise<WordFrequency[]> {
+  const sql = getSql();
 
   // Get all text from verses
-  const verses = db.prepare(`
-    SELECT text FROM verses WHERE bible = ?
-  `).all(bible) as { text: string }[];
+  const verses = await sql`
+    SELECT text FROM verses WHERE bible = ${bible}
+  ` as { text: string }[];
 
   // Count words
   const wordCounts: Record<string, number> = {};
@@ -1928,14 +1971,14 @@ export function getTopWords(bible = 'osnb2', limit = 100, includeStopWords = fal
     .map(([word, count]) => ({ word, count }));
 }
 
-export function getTopOriginalWords(language: 'hebrew' | 'greek', limit = 100): WordFrequency[] {
-  const db = getDb();
+export async function getTopOriginalWords(language: 'hebrew' | 'greek', limit = 100): Promise<WordFrequency[]> {
+  const sql = getSql();
   const bible = language === 'hebrew' ? 'tanach' : 'sblgnt';
 
   // Get all text from verses in the original language
-  const verses = db.prepare(`
-    SELECT text FROM verses WHERE bible = ?
-  `).all(bible) as { text: string }[];
+  const verses = await sql`
+    SELECT text FROM verses WHERE bible = ${bible}
+  ` as { text: string }[];
 
   // Count words
   const wordCounts: Record<string, number> = {};
@@ -1981,14 +2024,15 @@ export interface VerseMapping {
   unmapped: string | null;
 }
 
-export function getAllVerseMappings(): { id: string; name: string; description: string | null }[] {
-  const db = getDb();
-  return db.prepare('SELECT id, name, description FROM verse_mappings ORDER BY name').all() as { id: string; name: string; description: string | null }[];
+export async function getAllVerseMappings(): Promise<{ id: string; name: string; description: string | null }[]> {
+  const sql = getSql();
+  return await sql`SELECT id, name, description FROM verse_mappings ORDER BY name` as { id: string; name: string; description: string | null }[];
 }
 
-export function getVerseMappingById(id: string): VerseMapping | undefined {
-  const db = getDb();
-  return db.prepare('SELECT * FROM verse_mappings WHERE id = ?').get(id) as VerseMapping | undefined;
+export async function getVerseMappingById(id: string): Promise<VerseMapping | undefined> {
+  const sql = getSql();
+  const [row] = await sql`SELECT * FROM verse_mappings WHERE id = ${id}` as VerseMapping[];
+  return row;
 }
 
 // === Stories (Bibelhistorier) ===
@@ -2020,19 +2064,20 @@ export interface Story {
   content: string;
 }
 
-export function getAllStories(): Story[] {
-  const db = getDb();
-  return db.prepare('SELECT * FROM stories ORDER BY category, title').all() as Story[];
+export async function getAllStories(): Promise<Story[]> {
+  const sql = getSql();
+  return await sql`SELECT * FROM stories ORDER BY category, title` as Story[];
 }
 
-export function getStoryBySlug(slug: string): Story | undefined {
-  const db = getDb();
-  return db.prepare('SELECT * FROM stories WHERE slug = ?').get(slug) as Story | undefined;
+export async function getStoryBySlug(slug: string): Promise<Story | undefined> {
+  const sql = getSql();
+  const [row] = await sql`SELECT * FROM stories WHERE slug = ${slug}` as Story[];
+  return row;
 }
 
-export function searchStories(query: string): Story[] {
+export async function searchStories(query: string): Promise<Story[]> {
   if (!query || query.length < 2) return [];
-  const db = getDb();
+  const sql = getSql();
 
   // Split into words and require all significant words to match (in title, keywords, or description)
   const words = query.toLowerCase().split(/\s+/).filter(w => w.length >= 2);
@@ -2047,14 +2092,14 @@ export function searchStories(query: string): Story[] {
     return [p, p, p];
   });
 
-  return db.prepare(
-    `SELECT * FROM stories WHERE ${conditions} ORDER BY title`
-  ).all(...params) as Story[];
+  return await sql.unsafe(
+    `SELECT * FROM stories WHERE ${conditions} ORDER BY title`, params
+  ) as Story[];
 }
 
-export function searchThemes(query: string): Theme[] {
+export async function searchThemes(query: string): Promise<Theme[]> {
   if (!query || query.length < 2) return [];
-  const db = getDb();
+  const sql = getSql();
 
   const words = query.toLowerCase().split(/\s+/).filter(w => w.length >= 2);
   if (words.length === 0) return [];
@@ -2068,14 +2113,14 @@ export function searchThemes(query: string): Theme[] {
     return [p, p];
   });
 
-  return db.prepare(
-    `SELECT * FROM themes WHERE ${conditions} ORDER BY name`
-  ).all(...params) as Theme[];
+  return await sql.unsafe(
+    `SELECT * FROM themes WHERE ${conditions} ORDER BY name`, params
+  ) as Theme[];
 }
 
-export function getStoriesByCategory(category: string): Story[] {
-  const db = getDb();
-  return db.prepare('SELECT * FROM stories WHERE category = ? ORDER BY title').all(category) as Story[];
+export async function getStoriesByCategory(category: string): Promise<Story[]> {
+  const sql = getSql();
+  return await sql`SELECT * FROM stories WHERE category = ${category} ORDER BY title` as Story[];
 }
 
 // --- Extended search functions ---
@@ -2089,9 +2134,9 @@ export interface PersonSearchResult {
   roles: string[];
 }
 
-export function searchPersons(query: string): PersonSearchResult[] {
+export async function searchPersons(query: string): Promise<PersonSearchResult[]> {
   if (!query || query.length < 2) return [];
-  const db = getDb();
+  const sql = getSql();
 
   const words = query.toLowerCase().split(/\s+/).filter(w => w.length >= 2);
   if (words.length === 0) return [];
@@ -2105,9 +2150,9 @@ export function searchPersons(query: string): PersonSearchResult[] {
     return [p, p];
   });
 
-  const rows = db.prepare(
-    `SELECT * FROM persons WHERE ${conditions} ORDER BY name`
-  ).all(...params) as Person[];
+  const rows = await sql.unsafe(
+    `SELECT * FROM persons WHERE ${conditions} ORDER BY name`, params
+  ) as Person[];
 
   return rows
     .map(row => {
@@ -2133,9 +2178,9 @@ export interface ProphecySearchResult {
   prophecy_ref: string;
 }
 
-export function searchProphecies(query: string): ProphecySearchResult[] {
+export async function searchProphecies(query: string): Promise<ProphecySearchResult[]> {
   if (!query || query.length < 2) return [];
-  const db = getDb();
+  const sql = getSql();
 
   const words = query.toLowerCase().split(/\s+/).filter(w => w.length >= 2);
   if (words.length === 0) return [];
@@ -2149,15 +2194,16 @@ export function searchProphecies(query: string): ProphecySearchResult[] {
     return [p, p, p];
   });
 
-  return db.prepare(`
+  // MySQL: CONCAT i stedet for SQLite's ||-konkatenering
+  return await sql.unsafe(`
     SELECT p.id, p.title, p.explanation, c.name as category_name,
-           b.short_name || ' ' || p.prophecy_chapter || ':' || p.prophecy_verse_start as prophecy_ref
+           CONCAT(b.short_name, ' ', p.prophecy_chapter, ':', p.prophecy_verse_start) as prophecy_ref
     FROM prophecies p
     LEFT JOIN prophecy_categories c ON p.category_id = c.id
     LEFT JOIN books b ON p.prophecy_book_id = b.id
     WHERE ${conditions}
     ORDER BY p.title
-  `).all(...params) as ProphecySearchResult[];
+  `, params) as ProphecySearchResult[];
 }
 
 export interface TimelineSearchResult {
@@ -2168,9 +2214,9 @@ export interface TimelineSearchResult {
   timeline_type: string;
 }
 
-export function searchTimelineEvents(query: string): TimelineSearchResult[] {
+export async function searchTimelineEvents(query: string): Promise<TimelineSearchResult[]> {
   if (!query || query.length < 2) return [];
-  const db = getDb();
+  const sql = getSql();
 
   const words = query.toLowerCase().split(/\s+/).filter(w => w.length >= 2);
   if (words.length === 0) return [];
@@ -2184,13 +2230,13 @@ export function searchTimelineEvents(query: string): TimelineSearchResult[] {
     return [p, p];
   });
 
-  return db.prepare(
+  return await sql.unsafe(
     `SELECT id, title, description, year_display, timeline_type
      FROM timeline_events
      WHERE ${conditions}
-     ORDER BY sort_order
-     LIMIT 20`
-  ).all(...params) as TimelineSearchResult[];
+     ORDER BY sort_order, seq
+     LIMIT 20`, params
+  ) as TimelineSearchResult[];
 }
 
 export interface GospelParallelSearchResult {
@@ -2200,9 +2246,9 @@ export interface GospelParallelSearchResult {
   section_name: string;
 }
 
-export function searchGospelParallels(query: string): GospelParallelSearchResult[] {
+export async function searchGospelParallels(query: string): Promise<GospelParallelSearchResult[]> {
   if (!query || query.length < 2) return [];
-  const db = getDb();
+  const sql = getSql();
 
   const words = query.toLowerCase().split(/\s+/).filter(w => w.length >= 2);
   if (words.length === 0) return [];
@@ -2216,13 +2262,13 @@ export function searchGospelParallels(query: string): GospelParallelSearchResult
     return [p, p, p];
   });
 
-  return db.prepare(`
+  return await sql.unsafe(`
     SELECT p.id, p.title, p.notes, s.name as section_name
     FROM gospel_parallels p
     LEFT JOIN gospel_parallel_sections s ON p.section_id = s.id
     WHERE ${conditions}
     ORDER BY p.sort_order
-  `).all(...params) as GospelParallelSearchResult[];
+  `, params) as GospelParallelSearchResult[];
 }
 
 export interface ReadingPlanSearchResult {
@@ -2233,9 +2279,9 @@ export interface ReadingPlanSearchResult {
   days: number;
 }
 
-export function searchReadingPlans(query: string): ReadingPlanSearchResult[] {
+export async function searchReadingPlans(query: string): Promise<ReadingPlanSearchResult[]> {
   if (!query || query.length < 2) return [];
-  const db = getDb();
+  const sql = getSql();
 
   const words = query.toLowerCase().split(/\s+/).filter(w => w.length >= 2);
   if (words.length === 0) return [];
@@ -2249,9 +2295,9 @@ export function searchReadingPlans(query: string): ReadingPlanSearchResult[] {
     return [p, p, p];
   });
 
-  return db.prepare(
-    `SELECT id, name, description, category, days FROM reading_plans WHERE ${conditions} ORDER BY name`
-  ).all(...params) as ReadingPlanSearchResult[];
+  return await sql.unsafe(
+    `SELECT id, name, description, category, days FROM reading_plans WHERE ${conditions} ORDER BY name`, params
+  ) as ReadingPlanSearchResult[];
 }
 
 export interface ImportantWordSearchResult {
@@ -2263,9 +2309,9 @@ export interface ImportantWordSearchResult {
   book_name_no: string;
 }
 
-export function searchImportantWords(query: string): ImportantWordSearchResult[] {
+export async function searchImportantWords(query: string): Promise<ImportantWordSearchResult[]> {
   if (!query || query.length < 2) return [];
-  const db = getDb();
+  const sql = getSql();
 
   const words = query.toLowerCase().split(/\s+/).filter(w => w.length >= 2);
   if (words.length === 0) return [];
@@ -2279,15 +2325,15 @@ export function searchImportantWords(query: string): ImportantWordSearchResult[]
     return [p, p];
   });
 
-  return db.prepare(`
+  return await sql.unsafe(`
     SELECT iw.word, iw.explanation, iw.book_id, iw.chapter,
            b.short_name as book_short_name, b.name_no as book_name_no
     FROM important_words iw
     JOIN books b ON iw.book_id = b.id
     WHERE ${conditions}
-    ORDER BY iw.word
+    ORDER BY CAST(iw.word AS BINARY), iw.id
     LIMIT 10
-  `).all(...params) as ImportantWordSearchResult[];
+  `, params) as ImportantWordSearchResult[];
 }
 
 export interface NumberSymbolismSearchResult {
@@ -2296,13 +2342,13 @@ export interface NumberSymbolismSearchResult {
   description: string;
 }
 
-export function searchNumberSymbolism(query: string): NumberSymbolismSearchResult[] {
-  const db = getDb();
+export async function searchNumberSymbolism(query: string): Promise<NumberSymbolismSearchResult[]> {
+  const sql = getSql();
 
   // Direct number lookup — bypasses the 2-char minimum
   if (/^\d+$/.test(query.trim())) {
     const num = parseInt(query.trim(), 10);
-    const row = db.prepare('SELECT * FROM number_symbolism WHERE number = ?').get(num) as NumberSymbolism | undefined;
+    const [row] = await sql`SELECT * FROM number_symbolism WHERE number = ${num}` as NumberSymbolism[];
     if (row) {
       const data = JSON.parse(row.content) as NumberSymbolismData;
       return [{ number: data.number, meaning: data.meaning, description: data.description }];
@@ -2321,9 +2367,9 @@ export function searchNumberSymbolism(query: string): NumberSymbolismSearchResul
 
   const params = words.map(w => `%${w}%`);
 
-  const rows = db.prepare(
-    `SELECT * FROM number_symbolism WHERE ${conditions} ORDER BY number`
-  ).all(...params) as NumberSymbolism[];
+  const rows = await sql.unsafe(
+    `SELECT * FROM number_symbolism WHERE ${conditions} ORDER BY number`, params
+  ) as NumberSymbolism[];
 
   return rows.map(row => {
     const data = JSON.parse(row.content) as NumberSymbolismData;
@@ -2345,6 +2391,9 @@ export interface ReadingText {
 export interface ReadingTextRef {
   id: number;
   reading_text_id: number;
+  slot_index: number;
+  option_index: number;
+  part_index: number;
   title: string | null;
   display_ref: string;
   book_id: number;
@@ -2356,45 +2405,126 @@ export interface ReadingTextRef {
   sort_order: number;
 }
 
-export interface ReadingTextWithRefs extends ReadingText {
-  readings: ReadingTextRef[];
+export interface VerseRange {
+  book_id: number;
+  chapter: number;
+  verse_start: number;
+  verse_end: number | null;
+  part_start: string | null;
+  part_end: string | null;
 }
 
-export function getAllReadingTexts(): ReadingText[] {
-  const db = getDb();
-  return db.prepare('SELECT * FROM reading_texts ORDER BY date').all() as ReadingText[];
+export interface ReadingPart {
+  title: string | null;
+  /**
+   * Stable key for the part: ALL ref markups joined with ';' (with their @source intact).
+   * Used as the lookup key in `verses` and as a deterministic identity for the part.
+   * Not for direct human display — the UI renders each entry of `refs` separately
+   * (so cross-chapter compound refs like "1 Mos 1,1-5; 1,26-2,2" render as two
+   * <Reference> links).
+   */
+  display_ref: string;
+  /** Individual ref markups, e.g. ["Apg 16,25-40@dnb2024"] or two for compound. */
+  refs: string[];
+  ranges: VerseRange[];
 }
 
-export function getReadingTextById(id: number): ReadingTextWithRefs | undefined {
-  const db = getDb();
-  const text = db.prepare('SELECT * FROM reading_texts WHERE id = ?').get(id) as ReadingText | undefined;
+export interface ReadingOption {
+  parts: ReadingPart[];
+}
+
+export interface ReadingSlot {
+  options: ReadingOption[];
+}
+
+export interface ReadingTextWithSlots extends ReadingText {
+  slots: ReadingSlot[];
+}
+
+/** @deprecated transitional alias — prefer ReadingTextWithSlots */
+export type ReadingTextWithRefs = ReadingTextWithSlots;
+
+export async function getAllReadingTexts(): Promise<ReadingText[]> {
+  const sql = getSql();
+  return await sql`SELECT * FROM reading_texts ORDER BY date` as ReadingText[];
+}
+
+/**
+ * Strip the `[ref:` / `]` envelope but KEEP the @source mapping suffix so callers
+ * (e.g. <Reference />) can convert to the user's preferred numbering system.
+ *   "[ref:Apg 16,25-40@dnb2024]" → "Apg 16,25-40@dnb2024"
+ *   "[ref:Apg 16,25-40@dnb2024|display]" → "Apg 16,25-40@dnb2024"  (drop |display)
+ */
+function stripRefMarkupToText(markup: string): string {
+  const m = markup.match(/^\[ref:([^|\]]+)/);
+  if (!m) return markup;
+  return m[1]!.trim();
+}
+
+function buildSlots(rows: ReadingTextRef[]): ReadingSlot[] {
+  const sorted = [...rows].sort((a, b) =>
+    a.slot_index - b.slot_index ||
+    a.option_index - b.option_index ||
+    a.part_index - b.part_index ||
+    a.sort_order - b.sort_order,
+  );
+  const slots: ReadingSlot[] = [];
+  for (const r of sorted) {
+    while (slots.length <= r.slot_index) slots.push({ options: [] });
+    const slot = slots[r.slot_index]!;
+    while (slot.options.length <= r.option_index) slot.options.push({ parts: [] });
+    const option = slot.options[r.option_index]!;
+    while (option.parts.length <= r.part_index) {
+      option.parts.push({ title: null, display_ref: '', refs: [], ranges: [] });
+    }
+    const part = option.parts[r.part_index]!;
+    if (part.title === null) part.title = r.title;
+    // Each row's display_ref is one [ref:Book ch,vv@source] markup. Multiple distinct
+    // markups in the same part = compound cross-chapter ref ("1 Mos 1,1-5;1,26-2,2").
+    const refText = stripRefMarkupToText(r.display_ref);
+    if (!part.refs.includes(refText)) part.refs.push(refText);
+    part.display_ref = part.refs.join(';');
+    part.ranges.push({
+      book_id: r.book_id,
+      chapter: r.chapter,
+      verse_start: r.verse_start,
+      verse_end: r.verse_end,
+      part_start: r.part_start,
+      part_end: r.part_end,
+    });
+  }
+  return slots;
+}
+
+export async function getReadingTextById(id: number): Promise<ReadingTextWithSlots | undefined> {
+  const sql = getSql();
+  const [text] = await sql`SELECT * FROM reading_texts WHERE id = ${id}` as ReadingText[];
   if (!text) return undefined;
-
-  const refs = db.prepare(
-    'SELECT * FROM reading_text_refs WHERE reading_text_id = ? ORDER BY sort_order'
-  ).all(id) as ReadingTextRef[];
-
-  return { ...text, readings: refs };
+  const refs = await sql`
+    SELECT * FROM reading_text_refs WHERE reading_text_id = ${id} ORDER BY slot_index, option_index, part_index, sort_order
+  ` as ReadingTextRef[];
+  return { ...text, slots: buildSlots(refs) };
 }
 
-export function getReadingTextsByDate(date: string): ReadingTextWithRefs[] {
-  const db = getDb();
-  const texts = db.prepare('SELECT * FROM reading_texts WHERE date = ? ORDER BY id').all(date) as ReadingText[];
-
-  return texts.map(text => {
-    const refs = db.prepare(
-      'SELECT * FROM reading_text_refs WHERE reading_text_id = ? ORDER BY sort_order'
-    ).all(text.id) as ReadingTextRef[];
-    return { ...text, readings: refs };
-  });
+export async function getReadingTextsByDate(date: string): Promise<ReadingTextWithSlots[]> {
+  const sql = getSql();
+  const texts = await sql`SELECT * FROM reading_texts WHERE date = ${date} ORDER BY id` as ReadingText[];
+  const result: ReadingTextWithSlots[] = [];
+  for (const text of texts) {
+    const refs = await sql`
+      SELECT * FROM reading_text_refs WHERE reading_text_id = ${text.id} ORDER BY slot_index, option_index, part_index, sort_order
+    ` as ReadingTextRef[];
+    result.push({ ...text, slots: buildSlots(refs) });
+  }
+  return result;
 }
 
-export function getTodaysReadingTexts(): ReadingTextWithRefs[] {
+export async function getTodaysReadingTexts(): Promise<ReadingTextWithSlots[]> {
   const today = new Date().toISOString().substring(0, 10);
   return getReadingTextsByDate(today);
 }
 
-export function getReadingTextsByChapter(bookId: number, chapter: number): {
+export async function getReadingTextsByChapter(bookId: number, chapter: number): Promise<{
   id: number;
   name: string;
   date: string;
@@ -2402,26 +2532,26 @@ export function getReadingTextsByChapter(bookId: number, chapter: number): {
   display_ref: string;
   verse_start: number;
   verse_end: number | null;
-}[] {
-  const db = getDb();
-  return db.prepare(`
+}[]> {
+  const sql = getSql();
+  return await sql`
     SELECT t.id, t.name, t.date, r.title, r.display_ref, r.verse_start, r.verse_end
     FROM reading_text_refs r
     JOIN reading_texts t ON r.reading_text_id = t.id
-    WHERE r.book_id = ? AND r.chapter = ?
+    WHERE r.book_id = ${bookId} AND r.chapter = ${chapter}
     ORDER BY t.date
-  `).all(bookId, chapter) as any[];
+  ` as any[];
 }
 
-export function searchReadingTexts(query: string): { id: number; name: string; date: string; series: string | null }[] {
-  const db = getDb();
+export async function searchReadingTexts(query: string): Promise<{ id: number; name: string; date: string; series: string | null }[]> {
+  const sql = getSql();
   const words = query.toLowerCase().split(/\s+/).filter(w => w.length >= 2);
   if (words.length === 0) return [];
 
   const conditions = words.map(() => 'LOWER(name) LIKE ?').join(' AND ');
   const params = words.map(w => `%${w}%`);
 
-  return db.prepare(
-    `SELECT * FROM reading_texts WHERE ${conditions} ORDER BY date LIMIT 50`
-  ).all(...params) as any[];
+  return await sql.unsafe(
+    `SELECT * FROM reading_texts WHERE ${conditions} ORDER BY date LIMIT 50`, params
+  ) as any[];
 }

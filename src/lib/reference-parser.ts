@@ -1,5 +1,6 @@
-import { Book, getAllBooks, getBookById, getBookUrlSlug } from './bible';
-import { bookAliases } from './book-aliases';
+import type { Book } from './bible.ts';
+import { getAllBooks, getBookById, getBookUrlSlug } from './bible.ts';
+import { bookAliases } from './book-aliases.ts';
 
 export interface ParsedReference {
   book: Book;
@@ -120,7 +121,7 @@ export function parseReference(input: string): ParseResult {
       return {
         success: false,
         suggestions,
-        partial: { book: suggestions[0].book }
+        partial: { book: suggestions[0]!.book }
       };
     }
     return { success: false, error: 'Ugyldig format' };
@@ -129,10 +130,10 @@ export function parseReference(input: string): ParseResult {
   const [, bookPart, chapterStr, verseStartStr, verseEndStr] = match;
 
   // Find the book
-  const book = findBook(bookPart.trim());
+  const book = findBook(bookPart!.trim());
 
   if (!book) {
-    const suggestions = getBookSuggestions(bookPart.trim());
+    const suggestions = getBookSuggestions(bookPart!.trim());
     if (suggestions.length > 0) {
       return { success: false, suggestions, error: 'Fant ikke bok' };
     }
@@ -196,7 +197,7 @@ export function looksLikeReference(input: string): boolean {
   const hasNumber = /[a-zæøå]\s*\d/.test(normalized);
 
   // Or check if the input matches known book aliases/names
-  const suggestions = getBookSuggestions(normalized.split(/[\s\d]/)[0]);
+  const suggestions = getBookSuggestions(normalized.split(/[\s\d]/)[0]!);
 
   return hasNumber || suggestions.length > 0;
 }

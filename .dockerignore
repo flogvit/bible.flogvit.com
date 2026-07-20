@@ -1,7 +1,0 @@
-node_modules
-.git
-.next
-*.log
-.env.local
-.DS_Store
-deploy/

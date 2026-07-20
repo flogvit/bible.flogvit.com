@@ -32,7 +32,7 @@ export function parseVerseTemplate(text: string): VerseTemplate[] {
       });
     }
 
-    const refText = match[1].trim();
+    const refText = match[1]!.trim();
     parts.push({
       type: 'verse',
       content: refText,

@@ -1,0 +1,122 @@
+/* Forside — port av home.module.scss + HomeHero/BookCategories/DiscoverGrid
+   sine SCSS-moduler via token-broen. */
+
+.home-wrap { padding: 32px 0 64px; display: flex; flex-direction: column; gap: 44px; }
+
+/* hero */
+.home-hero { display: grid; grid-template-columns: 1.4fr 1fr; gap: 20px; }
+.home-continue {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 28px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
+.home-continue-title { font-family: var(--font-serif); font-size: 30px; margin: 4px 0; }
+.home-continue-sub { color: var(--ink-2); }
+.home-actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.home-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 16px;
+  border-radius: var(--radius);
+  font-size: 14px;
+  font-weight: 500;
+  text-decoration: none;
+}
+.home-btn-primary { background: var(--gold); color: var(--on-accent); }
+.home-btn-primary:hover { color: var(--on-accent); filter: brightness(1.05); }
+.home-btn-ghost { background: transparent; border: 1px solid var(--border); color: var(--ink); }
+.home-btn-ghost:hover { border-color: var(--gold); color: var(--ink); }
+
+.home-side { display: flex; flex-direction: column; gap: 16px; }
+.home-card {
+  padding: 18px 20px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+}
+.home-card h3 { font-size: 15px; margin-bottom: 10px; }
+.home-vod-text { font-family: var(--font-serif); line-height: 1.6; color: var(--ink); }
+.home-vod-foot { margin-top: 12px; font-size: 14px; }
+.home-vod-foot a { color: var(--gold-text); font-family: var(--font-mono); font-size: 13px; }
+.home-vod-note { color: var(--muted); }
+.home-vod-empty { color: var(--muted); font-style: italic; }
+.home-plans-head { display: flex; align-items: baseline; justify-content: space-between; }
+.home-plans-count { font-size: 12px; color: var(--muted); font-family: var(--font-mono); }
+.home-plans-empty p { color: var(--ink-2); margin: 10px 0; }
+.home-plans-btn {
+  display: inline-block;
+  padding: 7px 14px;
+  background: var(--gold-bg);
+  color: var(--gold-text);
+  border-radius: var(--radius);
+  font-size: 14px;
+  text-decoration: none;
+}
+
+/* dagens lesetekst */
+.home-lesetekster { display: flex; flex-direction: column; gap: 12px; }
+.home-todays-reading {
+  padding: 16px 20px;
+  background: var(--paper-2);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+}
+.home-todays-eyebrow {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--gold-text);
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+.home-todays-reading h3 { font-size: 18px; }
+.home-todays-reading a { color: var(--ink); }
+.home-todays-reading a:hover { color: var(--gold-text); }
+
+/* seksjoner */
+.home-section-head { display: flex; align-items: baseline; gap: 12px; margin-bottom: 16px; }
+.home-section-sub { color: var(--muted); font-size: 14px; }
+
+/* bøker */
+.home-book-group { margin-bottom: 20px; }
+.home-book-group-label { font-size: 13px; color: var(--muted); margin-bottom: 8px; font-family: var(--font-mono); }
+.home-book-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+.home-book {
+  display: flex;
+  flex-direction: column;
+  padding: 10px 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  text-decoration: none;
+}
+.home-book:hover { border-color: var(--gold); }
+.home-book-name { color: var(--ink); font-weight: 500; }
+.home-book-meta { color: var(--muted); font-size: 12px; }
+
+/* utforsk */
+.home-discover-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
+.home-disc {
+  display: block;
+  padding: 16px 18px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  text-decoration: none;
+  transition: box-shadow 0.12s ease, transform 0.12s ease;
+}
+.home-disc:hover { box-shadow: var(--shadow-md); transform: translateY(-2px); }
+.home-disc h4 { font-size: 16px; margin-bottom: 4px; color: var(--ink); }
+.home-disc p { color: var(--ink-2); font-size: 14px; line-height: 1.5; margin: 0; }
+
+@media (max-width: 768px) {
+  .home-hero { grid-template-columns: 1fr; }
+}

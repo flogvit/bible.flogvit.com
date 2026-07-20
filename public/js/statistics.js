@@ -1,0 +1,55 @@
+// Statistikk: ordfane-bytting. Oversettelse er SSR-rendret; hebraisk/gresk
+// hentes lazy fra API-et ved klikk (som gamle appen). Uten JS vises
+// oversettelses-ordene.
+
+const tabs = document.querySelectorAll('.stat-word-tab');
+const listEl = document.getElementById('stat-words');
+if (tabs.length && listEl) {
+  const bible = listEl.dataset.bible || 'osnb2';
+  // Behold SSR-oversettelseslista så vi slipper å hente den på nytt.
+  const cache = { translation: listEl.innerHTML };
+
+  function render(words) {
+    listEl.innerHTML = words
+      .map(
+        (w) =>
+          `<li class="stat-word-item"><span class="stat-word"></span><span class="stat-word-count"></span></li>`,
+      )
+      .join('');
+    listEl.querySelectorAll('.stat-word-item').forEach((li, i) => {
+      li.querySelector('.stat-word').textContent = words[i].word;
+      li.querySelector('.stat-word-count').textContent = String(words[i].count).replace(
+        /\B(?=(\d{3})+(?!\d))/g,
+        ' ',
+      );
+    });
+  }
+
+  async function load(tab) {
+    if (cache[tab]) {
+      listEl.innerHTML = cache[tab];
+      return;
+    }
+    const url =
+      tab === 'translation'
+        ? `/api/statistics/top-words?bible=${encodeURIComponent(bible)}&limit=100`
+        : `/api/statistics/top-words/${tab}?limit=100`;
+    listEl.innerHTML = '<li class="stat-word-loading">Laster…</li>';
+    try {
+      const res = await fetch(url);
+      const data = await res.json();
+      render(data.words || []);
+      cache[tab] = listEl.innerHTML;
+    } catch {
+      listEl.innerHTML = '<li class="stat-word-loading">Kunne ikke laste ord.</li>';
+    }
+  }
+
+  tabs.forEach((btn) => {
+    btn.addEventListener('click', () => {
+      tabs.forEach((b) => b.classList.remove('active'));
+      btn.classList.add('active');
+      load(btn.dataset.wordtab);
+    });
+  });
+}

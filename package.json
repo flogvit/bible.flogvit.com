@@ -1,72 +1,20 @@
 {
-  "name": "bibel.flogvit.no",
+  "name": "bibel-web",
   "version": "0.1.0",
   "private": true,
-  "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/flogvit/bibel.flogvit.no.git"
-  },
-  "bugs": {
-    "url": "https://github.com/flogvit/bibel.flogvit.no/issues"
-  },
-  "homepage": "https://bibel.flogvit.no",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "dev:api": "tsx watch api/server.ts",
-    "dev:all": "concurrently \"npm run dev\" \"npm run dev:api\"",
-    "build": "vite build",
-    "build:api": "tsc -p tsconfig.api.json",
-    "build:all": "npm run build && npm run build:api",
-    "start": "tsx api/server.ts",
-    "start:prod": "tsx api/server.ts",
-    "preview": "vite preview",
-    "lint": "eslint",
-    "import-bible": "npx tsx scripts/import-bible.ts",
-    "generate-sitemap": "npx tsx scripts/generate-sitemap.ts",
-    "init-mysql": "npx tsx scripts/init-mysql.ts",
-    "deploy": "bash deploy/deploy-docker.sh",
-    "deploy:scaleway": "bash deploy/deploy-scaleway.sh"
+    "dev": "bun --watch src/index.ts",
+    "start": "bun src/index.ts",
+    "test": "bun test",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@codemirror/lang-markdown": "^6.5.0",
-    "@codemirror/language": "^6.12.1",
-    "@lezer/highlight": "^1.2.3",
-    "@uiw/react-codemirror": "^4.25.4",
     "@free-bible/kvn": "file:kvn-package",
-    "better-sqlite3": "^12.6.2",
-    "cors": "^2.8.5",
-    "express": "^4.21.2",
-    "google-auth-library": "^10.5.0",
-    "idb": "^8.0.3",
-    "jsonwebtoken": "^9.0.3",
-    "mysql2": "^3.17.0",
-    "react": "19.2.3",
-    "react-dom": "19.2.3",
-    "react-markdown": "^10.1.0",
-    "react-router-dom": "^7.1.5",
-    "remark-gfm": "^4.0.1",
-    "sass": "^1.97.2"
+    "hono": "^4.7.0"
   },
   "devDependencies": {
-    "@axe-core/react": "^4.11.0",
-    "@types/better-sqlite3": "^7.6.13",
-    "@types/cors": "^2.8.17",
-    "@types/express": "^5.0.0",
-    "@types/jsonwebtoken": "^9.0.10",
-    "@types/node": "^20",
-    "@types/react": "^19",
-    "@types/react-dom": "^19",
-    "@vitejs/plugin-react": "^4.3.4",
-    "axe-core": "^4.11.1",
-    "concurrently": "^9.1.2",
-    "eslint": "^9",
-    "eslint-config-next": "16.1.4",
-    "eslint-plugin-jsx-a11y": "^6.10.2",
-    "tsx": "^4.19.3",
-    "typescript": "^5",
-    "vite": "^6.1.8",
-    "vitest": "^4.0.18"
+    "@types/bun": "^1.2.0",
+    "typescript": "^5.8.0"
   }
 }

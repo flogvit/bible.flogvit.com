@@ -1,0 +1,137 @@
+/* Personer (liste + detalj) — port av persons.module.scss + person.module.scss
+   via token-broen. Mørk modus følger variablene. */
+
+.persons-main, .person-main { padding: 48px 0; }
+
+.persons-intro { color: var(--ink-2); margin-bottom: 24px; max-width: 600px; }
+
+.persons-search-container { position: relative; margin-bottom: 20px; }
+.persons-search-input {
+  width: 100%;
+  padding: 12px 16px;
+  font-size: 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--ink);
+}
+.persons-search-input:focus {
+  outline: none;
+  border-color: var(--gold);
+  box-shadow: 0 0 0 3px var(--gold-bg);
+}
+.persons-search-input::placeholder { color: var(--muted); }
+
+.persons-filter-section { margin-bottom: 24px; }
+.persons-filter-group { margin-bottom: 12px; }
+.persons-filter-label {
+  display: block;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+.persons-filter-buttons { display: flex; flex-wrap: wrap; gap: 6px; }
+.persons-filter-button {
+  padding: 5px 10px;
+  font-size: 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--muted);
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+.persons-filter-button:hover { border-color: var(--gold); color: var(--gold-text); }
+.persons-filter-button.active { background: var(--gold); border-color: var(--gold); color: var(--on-accent); }
+
+.persons-search-info { font-size: 14px; color: var(--muted); margin-bottom: 12px; }
+.persons-no-results { color: var(--muted); font-style: italic; }
+
+.persons-list { display: grid; gap: 16px; margin-top: 24px; }
+.persons-card {
+  padding: 20px;
+  text-decoration: none;
+  display: block;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+  transition: box-shadow 0.12s ease, transform 0.12s ease;
+}
+.persons-card:hover { box-shadow: var(--shadow-md); transform: translateY(-2px); }
+.persons-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 8px;
+  gap: 12px;
+}
+.persons-card-name { color: var(--ink); margin: 0; font-size: 20px; }
+.persons-card-title { color: var(--muted); font-size: 14px; margin-bottom: 8px; }
+.persons-card-meta { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+.persons-card-summary { color: var(--ink-2); font-size: 14px; margin: 0; line-height: 1.5; }
+
+.persons-era-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  font-size: 12px;
+  background: var(--gold-bg);
+  color: var(--gold-text);
+  border-radius: var(--radius-sm);
+}
+.persons-role-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  font-size: 12px;
+  background: var(--paper-2);
+  color: var(--ink-2);
+  border-radius: var(--radius-sm);
+}
+
+/* --- detalj --- */
+.person-header { margin-bottom: 24px; }
+.person-title { color: var(--muted); font-size: 16px; margin: 4px 0; }
+.person-aliases { color: var(--muted); font-size: 14px; font-style: italic; margin: 4px 0; }
+.person-meta { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 10px; }
+.person-lifespan { color: var(--muted); font-size: 13px; }
+
+.person-summary { font-size: 17px; line-height: 1.6; margin-bottom: 20px; color: var(--ink-2); }
+.person-tagging-section { margin-bottom: 24px; }
+
+.person-family-section, .person-events-section, .person-references-section, .person-related-section {
+  margin-bottom: 32px;
+}
+.person-family-section h2, .person-events-section h2,
+.person-references-section h2, .person-related-section h2 {
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+.person-family-list, .person-related-list { display: flex; flex-wrap: wrap; gap: 10px; }
+.person-family-member, .person-related-person {
+  display: flex;
+  flex-direction: column;
+  padding: 10px 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  text-decoration: none;
+  min-width: 120px;
+}
+.person-family-member:hover, .person-related-person:hover { border-color: var(--gold); }
+.person-family-relation, .person-related-title { font-size: 12px; color: var(--muted); }
+.person-family-name, .person-related-name { color: var(--ink); font-weight: 500; }
+
+.person-ref-list { display: flex; flex-wrap: wrap; gap: 6px; }
+.person-ref-chip {
+  display: inline-block;
+  padding: 4px 10px;
+  font-size: 13px;
+  background: var(--paper-2);
+  color: var(--gold-text);
+  border-radius: var(--radius-sm);
+  text-decoration: none;
+}
+.person-ref-chip:hover { background: var(--gold-bg); color: var(--ink); }

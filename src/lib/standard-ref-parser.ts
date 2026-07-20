@@ -12,8 +12,8 @@
  * - "Joh 3"             → whole chapter
  */
 
-import { booksData, type BookInfo } from './books-data';
-import { bookAliases } from './book-aliases';
+import { booksData, type BookInfo } from './books-data.ts';
+import { bookAliases } from './book-aliases.ts';
 
 export interface RefSegment {
   bookId: number;
@@ -75,10 +75,10 @@ function parseSegment(spec: string, bookId: number, bookShortName: string): RefS
   // Check for cross-chapter range: "3,16-4,20"
   const crossMatch = spec.match(/^(\d+),(\d+)-(\d+),(\d+)$/);
   if (crossMatch) {
-    const startCh = parseInt(crossMatch[1]);
-    const startV = parseInt(crossMatch[2]);
-    const endCh = parseInt(crossMatch[3]);
-    const endV = parseInt(crossMatch[4]);
+    const startCh = parseInt(crossMatch[1]!);
+    const startV = parseInt(crossMatch[2]!);
+    const endCh = parseInt(crossMatch[3]!);
+    const endV = parseInt(crossMatch[4]!);
 
     if (startCh === endCh) {
       const verses: number[] = [];
@@ -124,8 +124,8 @@ function parseSegment(spec: string, bookId: number, bookShortName: string): RefS
 
     if (trimmedPart.includes('-')) {
       const [startStr, endStr] = trimmedPart.split('-');
-      const start = parseInt(startStr);
-      const end = parseInt(endStr);
+      const start = parseInt(startStr!);
+      const end = parseInt(endStr!);
       if (!isNaN(start) && !isNaN(end)) {
         for (let v = start; v <= end; v++) verses.push(v);
       }

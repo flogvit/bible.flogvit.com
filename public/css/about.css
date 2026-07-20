@@ -1,0 +1,60 @@
+/* /om og /tilgjengelighet — port av about.module.scss via token-broen.
+   Mørk modus følger automatisk av variablene. */
+
+.about-main { padding: 48px 0; }
+
+.about-section { margin-bottom: 48px; }
+.about-section h2 {
+  margin-bottom: 16px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+.about-section h3 {
+  font-size: 18px;
+  margin-top: 24px;
+  margin-bottom: 8px;
+}
+.about-section p { margin-bottom: 16px; }
+.about-section a {
+  color: var(--gold-text);
+  text-decoration: underline;
+}
+.about-section a:hover { color: var(--ink); }
+.about-section ul { margin-top: 8px; padding-left: 24px; }
+.about-section li { margin-bottom: 8px; }
+.about-section kbd {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  padding: 2px 6px;
+  background: var(--paper-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-ui);
+  font-size: 14px;
+  color: var(--ink);
+  box-shadow: var(--shadow-sm);
+}
+
+.about-verse-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 16px 0;
+  font-size: 14px;
+}
+.about-verse-table th,
+.about-verse-table td {
+  padding: 8px 16px;
+  text-align: left;
+  border: 1px solid var(--border);
+}
+.about-verse-table th {
+  background: var(--paper-2);
+  font-weight: 600;
+  color: var(--ink);
+}
+.about-verse-table td:last-child {
+  color: var(--muted);
+  font-style: italic;
+}
