@@ -14,6 +14,44 @@
   display: none !important;
 }
 
+/* Brødsmulesti (delt view, src/views/breadcrumbs.tsx) — global fordi den
+   brukes på alle sidetyper; lesesiden justerer margin via .chapter-meta. */
+.breadcrumbs {
+  margin: 0 0 16px;
+}
+.breadcrumbs ol {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  font-size: 0.85rem;
+}
+.breadcrumbs li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.breadcrumbs li + li::before {
+  content: "›";
+  color: var(--ink-2);
+  user-select: none;
+}
+.breadcrumbs a {
+  color: var(--ink-2);
+  text-decoration: none;
+}
+.breadcrumbs a:hover {
+  color: var(--accent);
+  text-decoration: underline;
+}
+.breadcrumbs [aria-current='page'] {
+  color: var(--ink);
+  font-weight: 500;
+}
+
 :root {
   /* nøytraler, lys (familie) */
   --paper: #faf9f6;
