@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# Deploy av bibel.flogvit.com (Bun+Hono-utgaven, branch `hono`) til flogvit-vm.
-# Kjøres lokalt fra en checkout av hono-branchen (katalogen dette scriptet
-# ligger i). PARALLELL DRIFT: bibel.flogvit.no (gammel app, /srv/…/bibel/,
-# service `bibel`) røres IKKE — hono-varianten bor i /srv/…/bibel-hono/ som
-# service `bibel-hono`. Merges til main og tar over katalogen ved evt. cutover.
+# Deploy av bibel.flogvit.com (Bun+Hono-utgaven, branch `main`) til flogvit-vm.
+# Kjøres lokalt fra en checkout av main (katalogen dette scriptet
+# ligger i). PARALLELL DRIFT: bibel.flogvit.no (gammel app, branch bibel-no,
+# /srv/…/bibel/, service `bibel`) røres IKKE — hono-varianten bor i /srv/…/bibel-hono/ som
+# service `bibel-hono`.
 #
 # - Ingen bible.db-staging: alt innhold bor i managed MySQL (db-flogvit).
 #   Import kjøres separat (scripts/init-db.ts + import-bible.ts, eller dump —
