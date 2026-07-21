@@ -19,6 +19,7 @@ import {
   getProphecyCategories,
   getGospelParallels,
   getGospelParallelSections,
+  getVerses,
   getMultiTimeline,
   getBibleStatistics,
   getTopWords,
@@ -373,6 +374,22 @@ r.get('/paralleller', async (c) => {
   const parallels = await getGospelParallels();
   const sectionName = new Map(sections.map((s) => [s.id, s.name]));
 
+  // SSR av selve tekstene (som gamle appen lazy-lastet per parallell):
+  // hent hvert kapittel bare én gang — mange passasjer deler kapittel.
+  const chapterCache = new Map<string, Awaited<ReturnType<typeof getVerses>>>();
+  for (const p of parallels) {
+    for (const passage of Object.values(p.passages ?? {})) {
+      const key = `${passage.book_id}-${passage.chapter}`;
+      if (!chapterCache.has(key)) {
+        chapterCache.set(key, await getVerses(passage.book_id, passage.chapter));
+      }
+    }
+  }
+  const passageVerses = (passage: { book_id: number; chapter: number; verse_start: number; verse_end: number }) =>
+    (chapterCache.get(`${passage.book_id}-${passage.chapter}`) ?? []).filter(
+      (v) => v.verse >= passage.verse_start && v.verse <= passage.verse_end,
+    );
+
   return c.html(
     <Layout
       title="Parallelle evangelietekster — FLOGVIT.bibel"
@@ -421,12 +438,21 @@ r.get('/paralleller', async (c) => {
                         <div class={`parallel-column parallel-${g}`}>
                           <span class="parallel-gospel">{GOSPEL_NAMES[g]}</span>
                           {passage ? (
-                            <a
-                              href={`/${toUrlSlug(passage.book_short_name || '')}/${passage.chapter}#v${passage.verse_start}`}
-                              class="parallel-passage-ref"
-                            >
-                              {passage.reference}
-                            </a>
+                            <>
+                              <a
+                                href={`/${toUrlSlug(passage.book_short_name || '')}/${passage.chapter}#v${passage.verse_start}`}
+                                class="parallel-passage-ref"
+                              >
+                                {passage.reference}
+                              </a>
+                              <div class="parallel-verses">
+                                {passageVerses(passage).map((v) => (
+                                  <p class="parallel-verse">
+                                    <span class="parallel-verse-num">{v.verse}</span> {v.text}
+                                  </p>
+                                ))}
+                              </div>
+                            </>
                           ) : (
                             <span class="parallel-no-passage">Ikke i {GOSPEL_NAMES[g]}</span>
                           )}

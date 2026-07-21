@@ -134,6 +134,21 @@
 .parallel-gospel { font-weight: 600; font-size: 14px; color: var(--ink); }
 .parallel-passage-ref { font-family: var(--font-mono); font-size: 13px; color: var(--gold-text); }
 .parallel-no-passage { font-size: 13px; color: var(--muted); font-style: italic; }
+.parallel-verses { display: flex; flex-direction: column; gap: 4px; margin-top: 4px; }
+.parallel-verse {
+  font-family: var(--font-serif);
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--ink);
+  margin: 0;
+}
+.parallel-verse-num {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--muted);
+  vertical-align: super;
+  margin-right: 2px;
+}
 @media (max-width: 768px) {
   .parallel-columns { grid-template-columns: 1fr 1fr; }
 }
