@@ -19,6 +19,7 @@ import { Layout } from '../../views/layout.tsx';
 import { Breadcrumbs } from '../../views/breadcrumbs.tsx';
 import { Footnotes } from '../../views/footnotes.tsx';
 import { InlineRefs } from '../../views/inline-refs.tsx';
+import { Markdown } from '../../views/markdown.tsx';
 import { ItemTagging } from '../../views/item-tagging.tsx';
 import { VerseView } from '../../views/verse-display.tsx';
 import { booksData, getBookInfoBySlug, getBookInfoById } from '../../lib/books-data.ts';
@@ -1076,7 +1077,7 @@ function SummaryItem({ title, content }: { title: string; content: string }) {
     <div class="st-summary-item">
       <h4 class="st-summary-sub">{title}</h4>
       <div class="st-summary-text">
-        <InlineRefs text={content} />
+        <Markdown text={content} />
       </div>
     </div>
   );
