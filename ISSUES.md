@@ -197,7 +197,16 @@ kjente vers, oversettelser/mappings, statistikk, søk + grunntekstsøk, dagens v
 Tilgjengelighet, 404. SEO-meta + canonical på alle (SSR er en reell forbedring — i dag klientrendres
 alt).
 
-## #10 Studium-arbeidsflaten — I HOVEDSAK FERDIG (verifiser mot browser i #18)
+## #10 Studium-arbeidsflaten — MANGLER ØYENE (oppdaget i prod 2026-07-21)
+
+**`public/js/reading.js` og `public/js/studium.js` BLE ALDRI SKREVET** — reading.tsx
+refererer dem (404 i konsollen), så versdetaljer, layout-modus, panelfaner, mobil-verktøylinje,
+leseposisjon og kopiering er døde. Tidligere «verifisert i browser»-påstand dekket åpenbart ikke
+lesesiden. Blank side i prod skyldtes i tillegg at `.studium-overlay { display:flex }` slo
+`[hidden]` — fikset med global `[hidden] { display:none !important }` i styles.css (570b956).
+Selve lesingen (SSR-vers, TOC, sammendrag) fungerer nå; øyene må skrives som neste steg.
+Sjekk også: sammendrag i sidepanelet viser rå markdown (`**…**`) — trolig samme manglende øy
+eller manglende SSR-rendering.
 
 **2026-07-20:** Lesesiden `src/routes/pages/reading.tsx` (1925 linjer) + `css/reading.css` +
 `css/studium.css` portert av agent: /:book/:chapter (SSR av vers m/ankere id="v{n}", grunntekst,
