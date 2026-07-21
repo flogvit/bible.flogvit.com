@@ -235,6 +235,14 @@ annonserer selv (#16).
 
 ## #12 Brukerdata-øyer + sync-klient — ÅPEN
 
+**Innstillinger-paritet mangler (Vegard påpekte 2026-07-21):** gamle /innstillinger hadde i
+tillegg: Konto og synkronisering-seksjon (login-status, sync — hører hjemme her i #12),
+per-oversettelse på/av-toggles (inkl. grunntekstene + egne bibler), sekundærbibel-valg
+(inkl. «Grunntekst»), **versnummerering/KVN-mapping-valg**, og eksport/import av brukerdata
+(useDataImportExport). Ny side har kun fontstørrelse + primærbibel + 10 visnings-toggles.
+NB: flere toggles er uansett døde til reading.js/studium.js (#10) finnes. Footer-lenkene til
+/om, /om#hjelp og /tilgjengelighet var foreldreløse — fikset (e35d950).
+
 Favoritter, leseplaner, leseposisjon/ContinueReading, notater, andakter, emnetagging
 (Topics/ItemTagging), verselister, innstillinger — localStorage/IndexedDB-lagring som i dag, koblet
 til sync-motoren (vanilla-port av `src/lib/sync/`, idb-wrapperen erstattes med rå IndexedDB).
