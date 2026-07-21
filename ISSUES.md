@@ -282,11 +282,17 @@ mot samme API-endepunkter.
 gammel (1199 URL-er, diffet mot regenerert gammel sitemap). robots.txt + favicon.svg kopiert;
 favicon lenket i layout. Title/description settes per side i #9.
 
-## #16 Tilgjengelighet — ÅPEN
+## #16 Tilgjengelighet — FERDIG (axe-sweep 2026-07-21, 8c4424a)
 
-Paritet med dagens a11y-nivå uten axe-pakkene: skip-links, aria-landmarks, NavigationAnnouncer-
-ekvivalent (SSR-navigasjon endrer dette — ekte sidelastinger annonserer selv), fokus-håndtering i
-palette/popover/editor, tastaturnavigasjon. Manuell axe-sjekk i browser før cutover.
+**Sweep 2026-07-21:** crawl av 260 URL-er i prod (statuskoder, døde lenker, ressurser, title/h1/
+lang/skip-link/main/img-alt) + axe-core (WCAG 2.0/2.1 A+AA) i browser på lesesiden, forsiden,
+innstillinger, søk, statistikk, editor, personer, paralleller, tidslinje, leseplan. Funn fikset:
+aria-pressed på rail-chip-lenker → aria-current; falsk role=tablist på statistikk-ordfaner →
+group + aria-pressed (statistics.js synker); manglende h1 på forsiden og editoren; lenker i
+løpende tekst fikk understrek (WCAG 1.4.1); .sr-only globalt. **Resultat: 0 axe-brudd på alle
+testede sider.** Grenser: automatisk sjekk (axe) + strukturell crawl — manuell skjermleser-test
+og mørk modus-kontrastsjekk er ikke gjort. SSR-navigasjon = ekte sidelastinger annonserer selv
+(NavigationAnnouncer trengs ikke).
 
 ## #17 Dockerfile + deploy — FERDIG (deployet i produksjon 2026-07-20)
 
