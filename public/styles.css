@@ -8,6 +8,12 @@
    Source Serif 4 er bibels langlesningstypografi (tillatt per STYLE.md);
    UI-chromen bruker familiens Schibsted Grotesk + IBM Plex Mono. */
 
+/* hidden-attributtet skal alltid vinne — side-CSS setter display på klasser
+   (f.eks. .studium-overlay { display:flex }) som ellers overstyrer UA-regelen. */
+[hidden] {
+  display: none !important;
+}
+
 :root {
   /* nøytraler, lys (familie) */
   --paper: #faf9f6;
