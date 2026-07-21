@@ -658,14 +658,14 @@ r.get('/statistikk', async (c) => {
 
           <section class="overview-section">
             <h2>Hyppigste ord</h2>
-            <div class="stat-word-tabs" role="tablist">
-              <button type="button" class="stat-word-tab active" data-wordtab="translation">
+            <div class="stat-word-tabs" role="group" aria-label="Ordkilde">
+              <button type="button" class="stat-word-tab active" data-wordtab="translation" aria-pressed="true">
                 Oversettelse
               </button>
-              <button type="button" class="stat-word-tab" data-wordtab="hebrew">
+              <button type="button" class="stat-word-tab" data-wordtab="hebrew" aria-pressed="false">
                 Hebraisk
               </button>
-              <button type="button" class="stat-word-tab" data-wordtab="greek">
+              <button type="button" class="stat-word-tab" data-wordtab="greek" aria-pressed="false">
                 Gresk
               </button>
             </div>

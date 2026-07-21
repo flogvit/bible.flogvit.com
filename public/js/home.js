@@ -27,7 +27,7 @@ if (cont) {
     const eyebrow = document.createElement('div');
     eyebrow.className = 'eyebrow';
     eyebrow.textContent = 'Fortsett å lese';
-    const h2 = document.createElement('h2');
+    const h2 = document.createElement('h1');
     h2.className = 'home-continue-title';
     h2.textContent = title;
     const sub = document.createElement('div');

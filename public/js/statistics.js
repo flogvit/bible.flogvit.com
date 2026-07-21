@@ -47,8 +47,12 @@ if (tabs.length && listEl) {
 
   tabs.forEach((btn) => {
     btn.addEventListener('click', () => {
-      tabs.forEach((b) => b.classList.remove('active'));
+      tabs.forEach((b) => {
+        b.classList.remove('active');
+        b.setAttribute('aria-pressed', 'false');
+      });
       btn.classList.add('active');
+      btn.setAttribute('aria-pressed', 'true');
       load(btn.dataset.wordtab);
     });
   });

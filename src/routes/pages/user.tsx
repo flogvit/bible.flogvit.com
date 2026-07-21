@@ -148,6 +148,7 @@ function DevotionalEditor(props: { slug?: string }) {
       <div class="user-main">
         <div class="container">
           <Breadcrumbs items={[{ label: 'Hjem', href: '/' }, { label: 'Manuskripter', href: '/manuskripter' }, { label: props.slug ? 'Rediger' : 'Nytt' }]} />
+          <h1 class="sr-only">{props.slug ? 'Rediger manuskript' : 'Nytt manuskript'}</h1>
           <div data-user-page="devotional-editor" data-slug={props.slug || ''}>
             <div class="editor-head">
               <input type="text" data-editor-title placeholder="Tittel…" class="user-input editor-title" aria-label="Tittel" />

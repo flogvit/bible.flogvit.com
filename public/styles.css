@@ -14,6 +14,26 @@
   display: none !important;
 }
 
+/* Skjermleser-tekst (global — brukes av lesesiden og editorene) */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Lenker i løpende tekst skal kunne skjelnes uten farge (WCAG 1.4.1) */
+p a:not([class]),
+.settings-account a,
+.home-plans-btn {
+  text-decoration: underline;
+}
+
 /* Brødsmulesti (delt view, src/views/breadcrumbs.tsx) — global fordi den
    brukes på alle sidetyper; lesesiden justerer margin via .chapter-meta. */
 .breadcrumbs {

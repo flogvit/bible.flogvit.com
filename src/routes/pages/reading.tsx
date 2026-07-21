@@ -1653,7 +1653,7 @@ r.get('/:book/:chapter', async (c) => {
               <a
                 href={`/${canonicalSlug}/${chapter}${buildQuery(bible, mapping ?? undefined, undertekstOn ? undefined : otherNorwegian)}`}
                 class={`rail-chip ${undertekstOn ? 'is-on' : ''}`}
-                aria-pressed={undertekstOn}
+                aria-current={undertekstOn ? 'true' : undefined}
                 title="Undertekst under hvert vers"
               >
                 + Undertekst
@@ -1661,7 +1661,7 @@ r.get('/:book/:chapter', async (c) => {
               <a
                 href={`/${canonicalSlug}/${chapter}${buildQuery(bible, mapping ?? undefined, grunntekstOn ? undefined : 'original')}`}
                 class={`rail-chip ${grunntekstOn ? 'is-on' : ''}`}
-                aria-pressed={grunntekstOn}
+                aria-current={grunntekstOn ? 'true' : undefined}
               >
                 Grunntekst
               </a>

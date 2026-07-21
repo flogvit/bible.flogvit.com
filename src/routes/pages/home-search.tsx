@@ -104,7 +104,7 @@ r.get('/', async (c) => {
           <div class="home-continue" id="home-continue" data-state="welcome">
             <div>
               <div class="eyebrow">Velkommen</div>
-              <h2 class="home-continue-title">Bibelen</h2>
+              <h1 class="home-continue-title">Bibelen</h1>
               <div class="home-continue-sub">
                 Begynn et sted under, eller bruk ⌘K for å gå rett til et vers.
               </div>
