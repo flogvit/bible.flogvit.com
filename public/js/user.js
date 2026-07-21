@@ -182,6 +182,47 @@ if (root) {
         write(KEYS.settings, cur);
       });
     });
+
+    // Eksport/import av alle brukerdata (samme localStorage-nøkler).
+    const EXPORT_KEYS = [
+      'bible-favorites', 'bible-notes', 'bible-topics', 'bible-settings',
+      'bible-verse-lists', 'bible-devotionals', 'bible-verse-versions',
+      'bible-reading-position', 'activeReadingPlan', 'readingPlanProgress',
+    ];
+    const status = root.querySelector('[data-data-status]');
+    root.querySelector('[data-export-data]')?.addEventListener('click', () => {
+      const data = {};
+      for (const key of EXPORT_KEYS) {
+        const val = read(key, undefined);
+        if (val !== undefined) data[key] = val;
+      }
+      const blob = new Blob([JSON.stringify({ app: 'flogvit-bibel', version: 1, exportedAt: new Date().toISOString(), data }, null, 2)], { type: 'application/json' });
+      const a = el('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `bibel-data-${new Date().toISOString().slice(0, 10)}.json`;
+      a.click();
+      URL.revokeObjectURL(a.href);
+    });
+    root.querySelector('[data-import-data]')?.addEventListener('change', async (e) => {
+      const file = e.target.files && e.target.files[0];
+      if (!file) return;
+      try {
+        const parsed = JSON.parse(await file.text());
+        const data = parsed && parsed.data && typeof parsed.data === 'object' ? parsed.data : parsed;
+        let n = 0;
+        for (const key of EXPORT_KEYS) {
+          if (key in data) {
+            write(key, data[key]);
+            n++;
+          }
+        }
+        if (status) status.textContent = n > 0 ? `Importerte ${n} datasett — laster siden på nytt…` : 'Fant ingen kjente data i filen.';
+        if (n > 0) setTimeout(() => location.reload(), 800);
+      } catch {
+        if (status) status.textContent = 'Kunne ikke lese filen — er den en gyldig eksport?';
+      }
+      e.target.value = '';
+    });
   }
 
   // ---- offline-status ----

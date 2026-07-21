@@ -243,9 +243,15 @@ if (toolbar) {
     location.href = url.pathname + url.search + url.hash;
   }
   document.querySelector('[data-secondary-select]')?.addEventListener('change', (e) => {
+    const s = read(KEYS.settings, {});
+    s.secondaryBible = e.target.value;
+    write(KEYS.settings, s);
     navigateWithParam('secondary', e.target.value);
   });
   document.querySelector('[data-mapping-select]')?.addEventListener('change', (e) => {
+    const s = read(KEYS.settings, {});
+    s.verseMapping = e.target.value;
+    write(KEYS.settings, s);
     navigateWithParam('mapping', e.target.value === 'osnb2' ? '' : e.target.value);
   });
 

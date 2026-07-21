@@ -9,10 +9,12 @@
 
 import { Hono } from 'hono';
 import type { AppEnv } from '../../lib/session.ts';
+import { ACCOUNT_URL } from '../../lib/session.ts';
 import { Layout } from '../../views/layout.tsx';
 import { Breadcrumbs } from '../../views/breadcrumbs.tsx';
 import type { Child } from 'hono/jsx';
 import { getSql } from '../../lib/db.ts';
+import { getAvailableMappings } from '../../lib/verse-mapper.ts';
 
 const r = new Hono<AppEnv>();
 
@@ -198,11 +200,32 @@ const TOGGLES: { key: string; label: string }[] = [
   { key: 'showReadingTexts', label: 'Vis dagens lesetekst på forsiden' },
   { key: 'showVerseFootnotes', label: 'Vis fotnoter' },
   { key: 'copyVerseNumbers', label: 'Ta med versnummer ved kopiering' },
+  { key: 'showContinueReading', label: 'Vis «fortsett lesing» på forsiden' },
 ];
-r.get('/innstillinger', (c) =>
-  c.html(
+r.get('/innstillinger', (c) => {
+  const user = c.var.user;
+  const mappings = getAvailableMappings();
+  return c.html(
     <UserPage title="Innstillinger" crumb="Innstillinger" heading="Innstillinger" page="settings" intro="Lagres i nettleseren. Tema og språk styres fra FLOGVIT-menyen øverst.">
       <form data-settings-form class="settings-form">
+        <fieldset class="settings-group">
+          <legend>Konto og synkronisering</legend>
+          {user ? (
+            <>
+              <p class="settings-account">
+                Innlogget som <strong>{user.displayName || user.email}</strong>.
+              </p>
+              <p class="settings-sync" data-sync-status>
+                Synkronisering er på — favoritter, notater og innstillinger lagres til kontoen din.
+              </p>
+            </>
+          ) : (
+            <p class="settings-account">
+              Du er ikke innlogget. <a href={ACCOUNT_URL}>Logg inn med FLOGVIT-konto</a> for å
+              synkronisere favoritter, notater og innstillinger mellom enheter.
+            </p>
+          )}
+        </fieldset>
         <fieldset class="settings-group">
           <legend>Tekst</legend>
           <label class="settings-row">
@@ -213,6 +236,9 @@ r.get('/innstillinger', (c) =>
               <option value="large">Stor</option>
             </select>
           </label>
+        </fieldset>
+        <fieldset class="settings-group">
+          <legend>Oversettelse og nummerering</legend>
           <label class="settings-row">
             <span>Bibeloversettelse</span>
             <select data-setting="bible" class="user-input">
@@ -220,6 +246,29 @@ r.get('/innstillinger', (c) =>
               <option value="osnn1">Nynorsk</option>
             </select>
           </label>
+          <label class="settings-row">
+            <span>Undertekst (sekundær)</span>
+            <select data-setting="secondaryBible" class="user-input">
+              <option value="">Ingen</option>
+              <option value="original">Grunntekst</option>
+              <option value="osnb2">Bokmål</option>
+              <option value="osnn1">Nynorsk</option>
+            </select>
+          </label>
+          {mappings.length > 0 && (
+            <label class="settings-row">
+              <span>Versnummerering</span>
+              <select data-setting="verseMapping" class="user-input">
+                {mappings.map((m) => (
+                  <option value={m.id}>{m.displayName}</option>
+                ))}
+              </select>
+            </label>
+          )}
+          <p class="user-note">
+            Valgene brukes som standard på lesesidene; knappene på selve siden overstyrer for
+            økten.
+          </p>
         </fieldset>
         <fieldset class="settings-group">
           <legend>Visning</legend>
@@ -230,10 +279,26 @@ r.get('/innstillinger', (c) =>
             </label>
           ))}
         </fieldset>
+        <fieldset class="settings-group">
+          <legend>Dine data</legend>
+          <div class="settings-data-buttons">
+            <button type="button" class="user-btn" data-export-data>
+              Eksporter alt (JSON)
+            </button>
+            <label class="user-btn-ghost settings-import-label">
+              Importer fra fil
+              <input type="file" accept="application/json,.json" data-import-data hidden />
+            </label>
+          </div>
+          <p class="user-note" data-data-status>
+            Eksporten inneholder favoritter, notater, emner, verslister, manuskripter, leseplan og
+            innstillinger.
+          </p>
+        </fieldset>
       </form>
     </UserPage>,
-  ),
-);
+  );
+});
 
 // ---------- /offline ----------
 r.get('/offline', (c) =>

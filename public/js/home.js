@@ -15,7 +15,8 @@ function readJSON(key) {
 
 const cont = document.getElementById('home-continue');
 if (cont) {
-  const pos = readJSON('bible-reading-position');
+  const settings = readJSON('bible-settings') || {};
+  const pos = settings.showContinueReading === false ? null : readJSON('bible-reading-position');
   if (pos && pos.bookSlug && pos.chapter) {
     const url = `/${pos.bookSlug}/${pos.chapter}#v${pos.verse || 1}`;
     const title = `${pos.bookName || ''} ${pos.chapter}`.trim();

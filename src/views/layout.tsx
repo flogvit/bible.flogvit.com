@@ -343,6 +343,7 @@ export function Layout(props: LayoutProps) {
           <Footer />
           <script type="module" src="/js/chrome.js" />
           <script type="module" src="/js/shortcuts.js" />
+          <script type="module" src="/js/sync.js" />
           <script type="module" src="/js/cmdk.js" />
           {(props.scripts ?? []).map((s) => (
             <script type="module" src={`/js/${s}`} />

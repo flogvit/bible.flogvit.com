@@ -127,3 +127,9 @@ a.user-card:hover { border-color: var(--gold); }
 .trans-section { margin-bottom: 32px; }
 .trans-builtin { padding-left: 20px; color: var(--ink-2); }
 .trans-builtin li { margin-bottom: 4px; }
+
+/* Konto/sync + eksport/import på innstillingssiden */
+.settings-account { margin: 4px 0; }
+.settings-sync { margin: 4px 0; color: var(--muted); font-size: 14px; }
+.settings-data-buttons { display: flex; flex-wrap: wrap; gap: 10px; margin: 4px 0 8px; }
+.settings-import-label { cursor: pointer; }

@@ -71,6 +71,53 @@ if (rootPage) {
   applyFontSize(settings().fontSize);
   document.addEventListener('bibel:font-size', (e) => applyFontSize(e.detail));
 
+  // ── Innstillinger som standardvalg for lesesiden ─────────────────
+  // bible/secondaryBible/verseMapping fra /innstillinger brukes når URL-en
+  // ikke sier noe annet. Knappene på siden (rail-chips, hjelpemidler) setter
+  // et sesjonsflagg så de vinner for resten av økten.
+  const OVERRIDE_FLAG = 'bibel-url-override';
+  const overridden = () => {
+    try {
+      return sessionStorage.getItem(OVERRIDE_FLAG) === '1';
+    } catch {
+      return false;
+    }
+  };
+  document.querySelectorAll('.rail-chip, [data-secondary-select], [data-mapping-select], .tools-bible-button').forEach((elm) => {
+    elm.addEventListener(elm.tagName === 'SELECT' ? 'change' : 'click', () => {
+      try {
+        sessionStorage.setItem(OVERRIDE_FLAG, '1');
+      } catch {}
+    });
+  });
+  if (!overridden()) {
+    const s = settings();
+    const url = new URL(location.href);
+    let changed = false;
+    const applyParam = (name, value, def) => {
+      if (url.searchParams.has(name)) return;
+      if (value && value !== def) {
+        url.searchParams.set(name, value);
+        changed = true;
+      }
+    };
+    applyParam('bible', s.bible, 'osnb2');
+    applyParam('secondary', s.secondaryBible, '');
+    applyParam('mapping', s.verseMapping, 'osnb2');
+    if (changed) location.replace(url.pathname + url.search + url.hash);
+  }
+
+  // ── Visnings-toggles fra innstillingene ──────────────────────────
+  {
+    const s = settings();
+    const hide = (sel) => document.querySelectorAll(sel).forEach((n) => (n.style.display = 'none'));
+    if (s.showChapterInsights === false) hide('.insights-panel');
+    if (s.showParallels === false) hide('.parallels-container');
+    if (s.showTimeline === false) hide('.st-block[data-block-id="tidslinje"]');
+    if (s.showBookSummary === false && s.showChapterSummary === false) hide('.st-block[data-block-id="sammendrag"]');
+    if (s.showVerseFootnotes === false) hide('.footnotes');
+  }
+
   // ── Versdetaljer: åpne/lukk (én åpen om gangen, som gamle appen) ──
   document.querySelectorAll('[data-verse-toggle]').forEach((btn) => {
     btn.addEventListener('click', () => {
@@ -142,7 +189,9 @@ if (rootPage) {
       const f = favKeyOf(btn.closest('.verse'));
       let favs = read(KEYS.favorites, []);
       const on = isFav(f, favs);
-      favs = on ? favs.filter((x) => !(x.bookId === f.bookId && x.chapter === f.chapter && x.verse === f.verse)) : [...favs, f];
+      favs = on
+        ? favs.filter((x) => !(x.bookId === f.bookId && x.chapter === f.chapter && x.verse === f.verse))
+        : [...favs, { ...f, addedAt: Date.now() }];
       write(KEYS.favorites, favs);
       paintFav(btn, !on);
     });
