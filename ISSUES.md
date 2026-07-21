@@ -197,9 +197,16 @@ kjente vers, oversettelser/mappings, statistikk, søk + grunntekstsøk, dagens v
 Tilgjengelighet, 404. SEO-meta + canonical på alle (SSR er en reell forbedring — i dag klientrendres
 alt).
 
-## #10 Studium-arbeidsflaten — MANGLER ØYENE (oppdaget i prod 2026-07-21)
+## #10 Studium-arbeidsflaten — FERDIG (øyene skrevet og deployet 2026-07-21)
 
-**`public/js/reading.js` og `public/js/studium.js` BLE ALDRI SKREVET** — reading.tsx
+**Øyene skrevet 2026-07-21 (2070fd0):** reading.js (versdetaljer m/faner, ord-for-ord,
+favoritter, notater, lokale manuskripter, versversjoner, layout-modus, leseposisjon,
+kopiering-med-referanse, innstillinger-som-standard for bible/secondary/mapping) og
+studium.js (st-blokk-tilstand, panelfaner, sidebar-resize, oppslag, kapittelmanuskripter,
+hele mobil-verktøylinja). Browser-verifisert lokalt og i prod (ingen konsollfeil).
+Sammendrag SSR-rendres som markdown (views/markdown.tsx, 73729e1).
+
+Historikk: **`public/js/reading.js` og `public/js/studium.js` BLE ALDRI SKREVET** — reading.tsx
 refererer dem (404 i konsollen), så versdetaljer, layout-modus, panelfaner, mobil-verktøylinje,
 leseposisjon og kopiering er døde. Tidligere «verifisert i browser»-påstand dekket åpenbart ikke
 lesesiden. Blank side i prod skyldtes i tillegg at `.studium-overlay { display:flex }` slo
@@ -233,9 +240,17 @@ layout-modus og panelfaner via CustomEvents `bibel:layout-mode`/`bibel:panel-tab
 lesesiden (#9/#10) implementerer mot). NavigationAnnouncer utgår: SSR gir ekte sidelastinger som
 annonserer selv (#16).
 
-## #12 Brukerdata-øyer + sync-klient — ÅPEN
+## #12 Brukerdata-øyer + sync-klient — I HOVEDSAK FERDIG (3ff4830, 2026-07-21)
 
-**Innstillinger-paritet mangler (Vegard påpekte 2026-07-21):** gamle /innstillinger hadde i
+**Gjort:** /innstillinger har nå konto/sync-seksjon (SSR login-state), sekundærbibel- og
+versnummerering-valg (brukes som standard på lesesidene; sidens egne knapper overstyrer for
+økten via sessionStorage-flagg), eksport/import av alle brukerdata, fortsett-lesing-toggle.
+Ny global sync.js mot /api/sync med gamle klientens protokoll (singleton/per-item/per-plan,
+tombstones via skygge-snapshot, endringsfangst ved patchet localStorage.setItem, debounced
+push + pull ved last; 401 huskes per økt). **GJENSTÅR å verifisere sync med EKTE innlogget
+konto-bruker (krever Vegards login) + per-oversettelse-toggles/egne bibler (hører til #14).**
+
+Historikk: **Innstillinger-paritet mangler (Vegard påpekte 2026-07-21):** gamle /innstillinger hadde i
 tillegg: Konto og synkronisering-seksjon (login-status, sync — hører hjemme her i #12),
 per-oversettelse på/av-toggles (inkl. grunntekstene + egne bibler), sekundærbibel-valg
 (inkl. «Grunntekst»), **versnummerering/KVN-mapping-valg**, og eksport/import av brukerdata
