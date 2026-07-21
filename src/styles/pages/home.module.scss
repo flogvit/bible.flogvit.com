@@ -2,9 +2,25 @@
 @use '@/styles/mixins' as *;
 
 .main {
-  padding: $spacing-2xl 0;
+  background: var(--paper);
+  min-height: calc(100vh - 3.25rem);
 }
 
+.wrap {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 40px 24px 80px;
+
+  @include mobile {
+    padding: 20px 14px 60px;
+  }
+}
+
+.lesetekster {
+  margin-top: 28px;
+}
+
+// Legacy classes still used by other code paths
 .header {
   text-align: center;
   margin-bottom: $spacing-3xl;
@@ -18,10 +34,10 @@
   display: inline-block;
   margin-top: $spacing-md;
   font-size: $font-size-sm;
-  color: $color-text-muted;
+  color: var(--muted);
 
   &:hover {
-    color: $color-secondary;
+    color: var(--ink);
   }
 }
 
@@ -31,7 +47,7 @@
   h2 {
     margin-bottom: $spacing-lg;
     padding-bottom: $spacing-sm;
-    border-bottom: 2px solid $color-border;
+    border-bottom: 2px solid var(--border);
   }
 }
 
@@ -53,20 +69,26 @@
   padding: $spacing-md;
   text-decoration: none;
   color: inherit;
+  min-width: 0;
 
   &:hover {
-    color: $color-primary;
+    color: var(--ink);
+  }
+
+  @include mobile {
+    padding: $spacing-sm;
   }
 }
 
 .bookName {
-  font-family: $font-serif;
+  font-family: var(--serif);
   font-size: $font-size-base;
-  color: $color-primary;
+  color: var(--ink);
   margin-bottom: $spacing-xs;
+  overflow-wrap: anywhere;
 }
 
 .chapters {
   font-size: $font-size-sm;
-  color: $color-text-muted;
+  color: var(--muted);
 }

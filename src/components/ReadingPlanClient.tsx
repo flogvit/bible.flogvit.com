@@ -18,6 +18,7 @@ export function ReadingPlanClient() {
     currentDay,
     streak,
     completionPercentage,
+    isOpenEnded,
     startPlan,
     markComplete,
     markIncomplete,
@@ -26,6 +27,7 @@ export function ReadingPlanClient() {
 
   const [showConfirmReset, setShowConfirmReset] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [startingPlanId, setStartingPlanId] = useState<string | null>(null);
 
   // Group plans by category
   const categories = [
@@ -39,7 +41,14 @@ export function ReadingPlanClient() {
     : availablePlans;
 
   const handleStartPlan = (planId: string) => {
-    startPlan(planId);
+    setStartingPlanId(planId);
+  };
+
+  const handleStartWithPacing = (pacing: 'scheduled' | 'openended') => {
+    if (startingPlanId) {
+      startPlan(startingPlanId, pacing);
+      setStartingPlanId(null);
+    }
   };
 
   const handleReset = () => {
@@ -78,6 +87,9 @@ export function ReadingPlanClient() {
                 <div>
                   <h3>{activePlan.name}</h3>
                   <p>{activePlan.description}</p>
+                  <span className={styles.pacingBadge}>
+                    {isOpenEnded ? 'Eget tempo' : 'Tidsplan'}
+                  </span>
                 </div>
                 <button
                   onClick={() => setShowConfirmReset(true)}
@@ -90,17 +102,17 @@ export function ReadingPlanClient() {
               <div className={styles.stats}>
                 <div className={styles.stat}>
                   <span className={styles.statValue}>{activeProgress.completedDays.length}</span>
-                  <span className={styles.statLabel}>dager lest</span>
+                  <span className={styles.statLabel}>{isOpenEnded ? 'porsjoner lest' : 'dager lest'}</span>
                 </div>
                 <div className={styles.stat}>
                   <span className={styles.statValue}>{activePlan.days - activeProgress.completedDays.length}</span>
-                  <span className={styles.statLabel}>dager igjen</span>
+                  <span className={styles.statLabel}>{isOpenEnded ? 'porsjoner igjen' : 'dager igjen'}</span>
                 </div>
                 <div className={styles.stat}>
                   <span className={styles.statValue}>{completionPercentage}%</span>
                   <span className={styles.statLabel}>fullført</span>
                 </div>
-                {streak > 0 && (
+                {!isOpenEnded && streak > 0 && (
                   <div className={styles.stat}>
                     <span className={styles.statValue}>{streak}</span>
                     <span className={styles.statLabel}>dager på rad</span>
@@ -117,10 +129,10 @@ export function ReadingPlanClient() {
                 </div>
               </div>
 
-              {/* Today's reading */}
+              {/* Today's / next reading */}
               {todaysReading && (
                 <div className={styles.todaysReading}>
-                  <h4>Dagens lesing (dag {todaysReading.day})</h4>
+                  <h4>{isOpenEnded ? `Neste lesing (porsjon ${todaysReading.day})` : `Dagens lesing (dag ${todaysReading.day})`}</h4>
                   <div className={styles.chapters}>
                     {todaysReading.chapters.map((ch, i) => {
                       const book = getBookInfoById(ch.bookId);
@@ -140,7 +152,7 @@ export function ReadingPlanClient() {
                     onClick={() => markComplete(todaysReading.day)}
                     className={styles.markButton}
                   >
-                    Marker dag {todaysReading.day} som lest
+                    {isOpenEnded ? `Marker porsjon ${todaysReading.day} som lest` : `Marker dag ${todaysReading.day} som lest`}
                   </button>
                 </div>
               )}
@@ -185,6 +197,31 @@ export function ReadingPlanClient() {
               </div>
             )}
           </section>
+        )}
+
+        {/* Pacing mode selection dialog */}
+        {startingPlanId && (
+          <div className={styles.dialog}>
+            <div className={styles.dialogContent}>
+              <h3>Velg modus</h3>
+              <p>Hvordan vil du følge denne planen?</p>
+              <div className={styles.pacingOptions}>
+                <button onClick={() => handleStartWithPacing('scheduled')} className={styles.pacingOption}>
+                  <strong>Følg tidsplan</strong>
+                  <span>Les en porsjon per dag med streak-teller og kalendervisning</span>
+                </button>
+                <button onClick={() => handleStartWithPacing('openended')} className={styles.pacingOption}>
+                  <strong>Eget tempo</strong>
+                  <span>Les i ditt eget tempo uten tidspress</span>
+                </button>
+              </div>
+              <div className={styles.dialogButtons}>
+                <button onClick={() => setStartingPlanId(null)} className={styles.cancelButton}>
+                  Avbryt
+                </button>
+              </div>
+            </div>
+          </div>
         )}
 
         {/* Available plans */}

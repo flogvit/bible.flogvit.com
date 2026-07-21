@@ -1434,9 +1434,13 @@ export function getPersonData(name: string): PersonData | null {
 
 export function getAllPersonsData(): PersonData[] {
   const persons = getAllPersons();
-  return persons
+  const all = persons
     .map(p => parsePersonContent(p.content))
     .filter((p): p is PersonData => p !== null);
+  // Deduplicate by id (keep last/latest version)
+  const byId = new Map<string, PersonData>();
+  for (const p of all) byId.set(p.id, p);
+  return Array.from(byId.values());
 }
 
 export function getPersonsByChapter(bookId: number, chapter: number): PersonData[] {
@@ -2345,6 +2349,9 @@ export interface ReadingText {
 export interface ReadingTextRef {
   id: number;
   reading_text_id: number;
+  slot_index: number;
+  option_index: number;
+  part_index: number;
   title: string | null;
   display_ref: string;
   book_id: number;
@@ -2356,40 +2363,119 @@ export interface ReadingTextRef {
   sort_order: number;
 }
 
-export interface ReadingTextWithRefs extends ReadingText {
-  readings: ReadingTextRef[];
+export interface VerseRange {
+  book_id: number;
+  chapter: number;
+  verse_start: number;
+  verse_end: number | null;
+  part_start: string | null;
+  part_end: string | null;
 }
+
+export interface ReadingPart {
+  title: string | null;
+  /**
+   * Stable key for the part: ALL ref markups joined with ';' (with their @source intact).
+   * Used as the lookup key in `verses` and as a deterministic identity for the part.
+   * Not for direct human display — the UI renders each entry of `refs` separately
+   * (so cross-chapter compound refs like "1 Mos 1,1-5; 1,26-2,2" render as two
+   * <Reference> links).
+   */
+  display_ref: string;
+  /** Individual ref markups, e.g. ["Apg 16,25-40@dnb2024"] or two for compound. */
+  refs: string[];
+  ranges: VerseRange[];
+}
+
+export interface ReadingOption {
+  parts: ReadingPart[];
+}
+
+export interface ReadingSlot {
+  options: ReadingOption[];
+}
+
+export interface ReadingTextWithSlots extends ReadingText {
+  slots: ReadingSlot[];
+}
+
+/** @deprecated transitional alias — prefer ReadingTextWithSlots */
+export type ReadingTextWithRefs = ReadingTextWithSlots;
 
 export function getAllReadingTexts(): ReadingText[] {
   const db = getDb();
   return db.prepare('SELECT * FROM reading_texts ORDER BY date').all() as ReadingText[];
 }
 
-export function getReadingTextById(id: number): ReadingTextWithRefs | undefined {
+/**
+ * Strip the `[ref:` / `]` envelope but KEEP the @source mapping suffix so callers
+ * (e.g. <Reference />) can convert to the user's preferred numbering system.
+ *   "[ref:Apg 16,25-40@dnb2024]" → "Apg 16,25-40@dnb2024"
+ *   "[ref:Apg 16,25-40@dnb2024|display]" → "Apg 16,25-40@dnb2024"  (drop |display)
+ */
+function stripRefMarkupToText(markup: string): string {
+  const m = markup.match(/^\[ref:([^|\]]+)/);
+  if (!m) return markup;
+  return m[1].trim();
+}
+
+function buildSlots(rows: ReadingTextRef[]): ReadingSlot[] {
+  const sorted = [...rows].sort((a, b) =>
+    a.slot_index - b.slot_index ||
+    a.option_index - b.option_index ||
+    a.part_index - b.part_index ||
+    a.sort_order - b.sort_order,
+  );
+  const slots: ReadingSlot[] = [];
+  for (const r of sorted) {
+    while (slots.length <= r.slot_index) slots.push({ options: [] });
+    const slot = slots[r.slot_index];
+    while (slot.options.length <= r.option_index) slot.options.push({ parts: [] });
+    const option = slot.options[r.option_index];
+    while (option.parts.length <= r.part_index) {
+      option.parts.push({ title: null, display_ref: '', refs: [], ranges: [] });
+    }
+    const part = option.parts[r.part_index];
+    if (part.title === null) part.title = r.title;
+    // Each row's display_ref is one [ref:Book ch,vv@source] markup. Multiple distinct
+    // markups in the same part = compound cross-chapter ref ("1 Mos 1,1-5;1,26-2,2").
+    const refText = stripRefMarkupToText(r.display_ref);
+    if (!part.refs.includes(refText)) part.refs.push(refText);
+    part.display_ref = part.refs.join(';');
+    part.ranges.push({
+      book_id: r.book_id,
+      chapter: r.chapter,
+      verse_start: r.verse_start,
+      verse_end: r.verse_end,
+      part_start: r.part_start,
+      part_end: r.part_end,
+    });
+  }
+  return slots;
+}
+
+export function getReadingTextById(id: number): ReadingTextWithSlots | undefined {
   const db = getDb();
   const text = db.prepare('SELECT * FROM reading_texts WHERE id = ?').get(id) as ReadingText | undefined;
   if (!text) return undefined;
-
   const refs = db.prepare(
-    'SELECT * FROM reading_text_refs WHERE reading_text_id = ? ORDER BY sort_order'
+    'SELECT * FROM reading_text_refs WHERE reading_text_id = ? ORDER BY slot_index, option_index, part_index, sort_order'
   ).all(id) as ReadingTextRef[];
-
-  return { ...text, readings: refs };
+  return { ...text, slots: buildSlots(refs) };
 }
 
-export function getReadingTextsByDate(date: string): ReadingTextWithRefs[] {
+export function getReadingTextsByDate(date: string): ReadingTextWithSlots[] {
   const db = getDb();
   const texts = db.prepare('SELECT * FROM reading_texts WHERE date = ? ORDER BY id').all(date) as ReadingText[];
-
   return texts.map(text => {
     const refs = db.prepare(
-      'SELECT * FROM reading_text_refs WHERE reading_text_id = ? ORDER BY sort_order'
+      'SELECT * FROM reading_text_refs WHERE reading_text_id = ? ORDER BY slot_index, option_index, part_index, sort_order'
     ).all(text.id) as ReadingTextRef[];
-    return { ...text, readings: refs };
+    return { ...text, slots: buildSlots(refs) };
   });
 }
 
-export function getTodaysReadingTexts(): ReadingTextWithRefs[] {
+export function getTodaysReadingTexts(): ReadingTextWithSlots[] {
   const today = new Date().toISOString().substring(0, 10);
   return getReadingTextsByDate(today);
 }

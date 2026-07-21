@@ -81,6 +81,7 @@
   align-items: flex-start;
   gap: $spacing-lg;
   transition: box-shadow $transition-fast, transform $transition-fast;
+  min-width: 0;
 
   &:hover {
     box-shadow: $shadow-md;
@@ -94,17 +95,20 @@
   font-weight: 600;
   color: $color-accent;
   min-width: 3rem;
+  flex-shrink: 0;
   text-align: center;
   line-height: 1.2;
 }
 
 .numberInfo {
   flex: 1;
+  min-width: 0;
 
   h2 {
     color: $color-primary;
     margin-bottom: $spacing-sm;
     font-size: $font-size-xl;
+    overflow-wrap: break-word;
   }
 }
 

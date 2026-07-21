@@ -278,6 +278,57 @@
   }
 }
 
+// Pacing mode selection
+.pacingOptions {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-md;
+  margin-bottom: $spacing-xl;
+}
+
+.pacingOption {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: $spacing-xs;
+  padding: $spacing-lg;
+  background: $color-background;
+  border: 2px solid $color-border;
+  border-radius: $radius-md;
+  cursor: pointer;
+  text-align: left;
+  transition: all $transition-fast;
+
+  strong {
+    font-size: $font-size-base;
+    color: $color-primary;
+  }
+
+  span {
+    font-size: $font-size-sm;
+    color: $color-text-muted;
+  }
+
+  &:hover {
+    border-color: $color-secondary;
+
+    strong {
+      color: $color-secondary;
+    }
+  }
+}
+
+.pacingBadge {
+  display: inline-block;
+  margin-top: $spacing-xs;
+  padding: 2px $spacing-sm;
+  background: $color-background;
+  border: 1px solid $color-border;
+  border-radius: $radius-sm;
+  font-size: $font-size-xs;
+  color: $color-text-muted;
+}
+
 // Plans section
 .plansSection {
   h2 {
@@ -507,5 +558,32 @@
 
   .activeLabel {
     background: $dark-color-accent;
+  }
+
+  .pacingOption {
+    background: $dark-color-background;
+    border-color: $dark-color-border;
+
+    strong {
+      color: $dark-color-primary;
+    }
+
+    span {
+      color: $dark-color-text-muted;
+    }
+
+    &:hover {
+      border-color: $dark-color-secondary;
+
+      strong {
+        color: $dark-color-secondary;
+      }
+    }
+  }
+
+  .pacingBadge {
+    background: $dark-color-background;
+    border-color: $dark-color-border;
+    color: $dark-color-text-muted;
   }
 }

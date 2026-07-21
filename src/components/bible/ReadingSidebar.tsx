@@ -1,19 +1,8 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { useSettings } from '@/components/SettingsContext';
-import { TimelinePanel } from './TimelinePanel';
-import { ContextPanel } from './sidebar/ContextPanel';
-import { LookupPanel } from './sidebar/LookupPanel';
-import { ResourcesPanel } from './sidebar/ResourcesPanel';
-import type { SidebarTab } from '@/lib/settings';
+import { StudyPanel } from './sidebar/StudyPanel';
 import type { TimelineEvent } from '@/lib/bible';
 import styles from './ReadingSidebar.module.scss';
-
-const tabs: { value: SidebarTab; label: string }[] = [
-  { value: 'timeline', label: 'Tidslinje' },
-  { value: 'context', label: 'Kontekst' },
-  { value: 'resources', label: 'Ressurser' },
-  { value: 'lookup', label: 'Oppslag' },
-];
 
 interface ReadingSidebarProps {
   bookId: number;
@@ -27,6 +16,9 @@ interface ReadingSidebarProps {
   onWidthChange?: (width: number) => void;
 }
 
+// Single scrollable column matching the redesign's .read-context: no tabs,
+// just stacked collapsible blocks. Search (Oppslag) lives as the first
+// block; verse lookup also works globally via ⌘K.
 export function ReadingSidebar({
   bookId,
   chapter,
@@ -39,22 +31,15 @@ export function ReadingSidebar({
   onWidthChange,
 }: ReadingSidebarProps) {
   const { settings, updateSetting } = useSettings();
-  const activeTab = settings.sidebarTab || 'timeline';
   const isPanelMode = settings.layoutMode === 'panel';
-
-  const setActiveTab = (tab: SidebarTab) => {
-    updateSetting('sidebarTab', tab);
-  };
 
   // Drag resize state
   const [isDragging, setIsDragging] = useState(false);
   const [dragWidth, setDragWidth] = useState<number | null>(null);
-  const width = dragWidth ?? (settings.sidebarWidth || 280);
-  const savedWidthRef = useRef(settings.sidebarWidth || 280);
+  const savedWidthRef = useRef(settings.sidebarWidth || 320);
 
-  // Keep ref in sync with setting
   useEffect(() => {
-    savedWidthRef.current = settings.sidebarWidth || 280;
+    savedWidthRef.current = settings.sidebarWidth || 320;
   }, [settings.sidebarWidth]);
 
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
@@ -66,8 +51,8 @@ export function ReadingSidebar({
   const handleDoubleClick = useCallback(() => {
     if (isPanelMode) return;
     const halfScreen = Math.floor(window.innerWidth / 2);
-    const currentWidth = settings.sidebarWidth || 280;
-    const newWidth = currentWidth >= halfScreen - 20 ? 280 : halfScreen;
+    const currentWidth = settings.sidebarWidth || 320;
+    const newWidth = currentWidth >= halfScreen - 20 ? 320 : halfScreen;
     updateSetting('sidebarWidth', newWidth);
   }, [isPanelMode, settings.sidebarWidth, updateSetting]);
 
@@ -76,8 +61,8 @@ export function ReadingSidebar({
 
     const handleMouseMove = (e: MouseEvent) => {
       const newWidth = Math.min(
-        Math.max(200, window.innerWidth - e.clientX),
-        Math.floor(window.innerWidth * 0.5)
+        Math.max(240, window.innerWidth - e.clientX),
+        Math.floor(window.innerWidth * 0.5),
       );
       setDragWidth(newWidth);
       onWidthChange?.(newWidth);
@@ -102,7 +87,7 @@ export function ReadingSidebar({
       document.body.style.cursor = '';
       document.body.style.userSelect = '';
     };
-  }, [isDragging, dragWidth, updateSetting]);
+  }, [isDragging, dragWidth, updateSetting, onWidthChange]);
 
   return (
     <div className={styles.sidebar}>
@@ -115,44 +100,17 @@ export function ReadingSidebar({
         />
       )}
 
-      <div className={styles.tabs}>
-        {tabs.map(tab => (
-          <button
-            key={tab.value}
-            className={`${styles.tab} ${activeTab === tab.value ? styles.active : ''}`}
-            onClick={() => setActiveTab(tab.value)}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
-
       <div className={styles.content}>
-        {activeTab === 'timeline' && (
-          <TimelinePanel
-            events={timelineEvents}
-            chapterEventIds={chapterEventIds}
-            currentBookId={bookId}
-            currentChapter={chapter}
-          />
-        )}
-
-        {activeTab === 'context' && (
-          <ContextPanel
-            bookId={bookId}
-            chapter={chapter}
-            bookName={bookName}
-            bookSummary={bookSummary}
-            chapterSummary={chapterSummary}
-            historicalContext={historicalContext}
-          />
-        )}
-
-        {activeTab === 'resources' && (
-          <ResourcesPanel bookId={bookId} chapter={chapter} bookName={bookName} />
-        )}
-
-        {activeTab === 'lookup' && <LookupPanel />}
+        <StudyPanel
+          bookId={bookId}
+          chapter={chapter}
+          bookName={bookName}
+          bookSummary={bookSummary}
+          chapterSummary={chapterSummary}
+          historicalContext={historicalContext}
+          timelineEvents={timelineEvents}
+          chapterEventIds={chapterEventIds}
+        />
       </div>
     </div>
   );

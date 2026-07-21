@@ -191,7 +191,7 @@ export function StatisticsPage() {
   if (loading) {
     return (
       <div className={styles.main}>
-        <div className="reading-container">
+        <div className="container">
           <div className={styles.loading}>Laster statistikk...</div>
         </div>
       </div>
@@ -201,7 +201,7 @@ export function StatisticsPage() {
   if (!stats) {
     return (
       <div className={styles.main}>
-        <div className="reading-container">
+        <div className="container">
           <p>Kunne ikke laste statistikk.</p>
         </div>
       </div>
@@ -260,7 +260,7 @@ export function StatisticsPage() {
 
   return (
     <div className={styles.main}>
-      <div className="reading-container">
+      <div className="container">
         <Breadcrumbs items={[
           { label: 'Hjem', href: '/' },
           { label: 'Statistikk' }

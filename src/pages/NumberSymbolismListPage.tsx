@@ -49,7 +49,7 @@ export function NumberSymbolismListPage() {
   if (isLoading) {
     return (
       <div className={styles.main}>
-        <div className="reading-container">
+        <div className="container">
           <Breadcrumbs items={[
             { label: 'Hjem', href: '/' },
             { label: 'Tall' }
@@ -64,7 +64,7 @@ export function NumberSymbolismListPage() {
   if (error) {
     return (
       <div className={styles.main}>
-        <div className="reading-container">
+        <div className="container">
           <Breadcrumbs items={[
             { label: 'Hjem', href: '/' },
             { label: 'Tall' }
@@ -90,7 +90,7 @@ export function NumberSymbolismListPage() {
 
   return (
     <div className={styles.main}>
-      <div className="reading-container">
+      <div className="container">
         <Breadcrumbs items={[
           { label: 'Hjem', href: '/' },
           { label: 'Tall' }

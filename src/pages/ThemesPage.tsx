@@ -71,7 +71,7 @@ export function ThemesPage() {
   if (isLoading) {
     return (
       <div className={styles.main}>
-        <div className="reading-container">
+        <div className="container">
           <Breadcrumbs items={[
             { label: 'Hjem', href: '/' },
             { label: 'Temaer' }
@@ -86,7 +86,7 @@ export function ThemesPage() {
   if (error) {
     return (
       <div className={styles.main}>
-        <div className="reading-container">
+        <div className="container">
           <Breadcrumbs items={[
             { label: 'Hjem', href: '/' },
             { label: 'Temaer' }
@@ -100,7 +100,7 @@ export function ThemesPage() {
 
   return (
     <div className={styles.main}>
-      <div className="reading-container">
+      <div className="container">
         <Breadcrumbs items={[
           { label: 'Hjem', href: '/' },
           { label: 'Temaer' }

@@ -64,12 +64,13 @@ export async function getPlanProgressAsync(planId: string): Promise<ReadingPlanP
 }
 
 // Start a new reading plan
-export async function startReadingPlanAsync(planId: string): Promise<ReadingPlanProgress> {
+export async function startReadingPlanAsync(planId: string, pacing: 'scheduled' | 'openended' = 'scheduled'): Promise<ReadingPlanProgress> {
   const progress: ReadingPlanProgress = {
     planId,
     startDate: new Date().toISOString().split('T')[0],
     completedDays: [],
     lastReadDate: null,
+    pacing,
   };
 
   await saveSinglePlanProgress(planId, progress);
@@ -177,12 +178,13 @@ export function getPlanProgress(planId: string): ReadingPlanProgress | null {
 }
 
 // Start a new reading plan (sync)
-export function startReadingPlan(planId: string): ReadingPlanProgress {
+export function startReadingPlan(planId: string, pacing: 'scheduled' | 'openended' = 'scheduled'): ReadingPlanProgress {
   const progress: ReadingPlanProgress = {
     planId,
     startDate: new Date().toISOString().split('T')[0],
     completedDays: [],
     lastReadDate: null,
+    pacing,
   };
 
   saveProgress(planId, progress);
@@ -270,6 +272,17 @@ export function calculateCurrentDay(startDate: string): number {
 
 // Get today's reading for a plan
 export function getTodaysReading(plan: ReadingPlan, progress: ReadingPlanProgress): DayReading | null {
+  // Open-ended mode: just return the first uncompleted day
+  if (progress.pacing === 'openended') {
+    for (let day = 1; day <= plan.days; day++) {
+      if (!progress.completedDays.includes(day)) {
+        return plan.readings.find(r => r.day === day) || null;
+      }
+    }
+    return null;
+  }
+
+  // Scheduled mode: based on calendar day
   const currentDay = calculateCurrentDay(progress.startDate);
 
   // If we're past the plan's duration, return the last day

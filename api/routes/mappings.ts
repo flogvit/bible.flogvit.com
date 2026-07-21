@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { getAllVerseMappings, getVerseMappingById } from '../../src/lib/bible';
-import { getAvailableMappings, getKvnMappingData } from '../lib/verse-mapper';
+import { getAvailableMappings, getKvnMappingData, getKvnMappingRaw } from '../lib/verse-mapper';
 
 export const mappingsRouter = Router();
 
@@ -15,6 +15,26 @@ mappingsRouter.get('/', (_req: Request, res: Response) => {
     res.json({ mappings });
   } catch (error) {
     console.error('Error fetching mappings:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
+ * GET /api/mappings/kvn/all
+ * Returns all KVN mapping files bundled in one response for frontend use.
+ * Keyed by mapping ID.
+ */
+mappingsRouter.get('/kvn/all', (_req: Request, res: Response) => {
+  try {
+    const ids = getAvailableMappings();
+    const all: Record<string, any> = {};
+    for (const m of ids) {
+      all[m.id] = getKvnMappingRaw(m.id);
+    }
+    res.set('Cache-Control', 'public, max-age=86400');
+    res.json(all);
+  } catch (error) {
+    console.error('Error fetching all KVN mappings:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

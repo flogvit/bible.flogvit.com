@@ -125,67 +125,95 @@
 }
 
 .originalVerse {
-  margin: $spacing-sm 0 $spacing-sm $spacing-lg;
-  padding: $spacing-sm $spacing-md;
-  background: $color-background;
-  border-radius: $radius-sm;
-  font-size: $font-size-lg;
-  line-height: 1.8;
-  color: $color-original-text;
+  margin: 4px 0 8px;
+  padding: 6px 0 6px 0.5em;
+  font-family: 'Times New Roman', serif;
+  font-size: 0.85em;
+  line-height: 1.55;
+  color: var(--ink-2);
+  display: block;
 
   &.hebrew {
     font-family: 'SBL Hebrew', 'Ezra SIL', 'Times New Roman', serif;
-    font-size: $font-size-xl;
+    font-size: 0.95em;
     text-align: right;
+    direction: rtl;
   }
 
   &.greek {
     font-family: 'SBL Greek', 'Gentium Plus', 'Times New Roman', serif;
-    font-size: $font-size-lg;
   }
 }
 
 .secondaryVerse {
-  margin: $spacing-xs 0 $spacing-xs $spacing-lg;
-  padding: $spacing-xs $spacing-md;
-  font-size: $font-size-sm;
-  line-height: 1.6;
-  color: $color-text-muted;
+  margin: 2px 0 6px;
+  padding: 2px 0 4px 0.5em;
+  font-family: var(--serif);
+  font-size: 0.82em;
+  line-height: 1.55;
   font-style: italic;
+  color: var(--muted);
+  display: block;
+}
+
+// Tiny gold mono label shown before each undertekst strip (e.g. "nn", "gresk")
+.undertekstLabel {
+  font-family: var(--mono);
+  font-style: normal;
+  font-size: 10.5px;
+  color: var(--gold-text);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-right: 8px;
 }
 
 .expanded {
-  margin: $spacing-md 0 $spacing-md $spacing-lg;
-  background: $color-background;
-  border-radius: $radius-md;
-  overflow: visible;
+  margin: 14px 0 18px 0;
+  background: var(--paper-2);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+  font-family: var(--sans);
   animation: fadeIn 0.2s ease;
 }
 
 .tabs {
   display: flex;
-  border-bottom: 1px solid $color-border;
+  gap: 2px;
+  padding: 6px 10px 0;
+  border-bottom: 1px solid var(--border);
+  overflow-x: auto;
+  scrollbar-width: none;
+  background: var(--paper);
+
+  &::-webkit-scrollbar { display: none; }
 }
 
 .tab {
-  flex: 1;
-  padding: $spacing-sm $spacing-md;
+  font-family: var(--sans);
+  font-size: 12.5px;
   background: transparent;
-  border: none;
-  font-family: $font-sans;
-  font-size: $font-size-sm;
+  border: 0;
+  padding: 8px 11px;
+  border-radius: 8px 8px 0 0;
+  color: var(--muted);
   cursor: pointer;
-  transition: all $transition-fast;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
   border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
 
   &:hover {
-    background: $color-paper;
+    color: var(--ink);
   }
 
   &.active {
+    color: var(--ink);
+    border-bottom-color: var(--gold);
     font-weight: 500;
-    border-bottom-color: $color-verse-number;
-    background: $color-paper;
   }
 }
 
@@ -947,8 +975,8 @@
 }
 
 .severityMajor {
-  background: #fff8e1;
-  color: #f57f17;
+  background: var(--gold-bg);
+  color: var(--gold-text);
 }
 
 .severityMinor {
@@ -1447,5 +1475,37 @@
 
   .writeDevotionalLink {
     color: $dark-color-verse-number;
+  }
+}
+
+// Mobile-specific overrides — placed last to win the cascade
+@media (max-width: 640px) {
+  .expanded {
+    margin-left: 0;
+    margin-right: 0;
+    border-radius: 12px;
+  }
+
+  .tabs {
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    padding-left: 8px;
+    padding-right: 8px;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .tab {
+    flex: 0 0 auto;
+  }
+
+  .verseNumber,
+  .verseNumberStatic {
+    min-width: 1.8em;
+    padding: 2px 4px;
+  }
+
+  .originalVerse,
+  .secondaryVerse {
+    padding-left: 0;
   }
 }

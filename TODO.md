@@ -158,6 +158,38 @@ Pakke appen som standalone desktop-app for macOS, Windows og Linux.
 - SQLite-database (better-sqlite3)
 - Brukerdata (IndexedDB/localStorage via `src/lib/offline/userData.ts`)
 
+## Lokal LLM-generering (Qwen 3.5 122B)
+
+Følgende oppgaver kan kjøres med en lokal LLM. Prioritert etter brukerverdi.
+
+### Høy prioritet
+| Oppgave | Status | Omfang | Kommentar |
+|---------|--------|--------|-----------|
+| Kryssreferanser | ⚠️ 1/3 ferdig | Bøker 2-39, 43-66 | Mest synlig for brukerne, mangler for 2/3 av Bibelen |
+| Temaer | ❌ 1 fil | Alle temaer | Stor verdi for studiebibel-opplevelsen |
+| Spørsmål til refleksjon | ❌ Ikke startet | Per kapittel | Enkelt å generere, nyttig for bibelstudiegrupper |
+| Stedsoversikt | ❌ Ikke startet | Engangsjobb | Kan kobles til fremtidig kartfunksjon |
+
+### Medium prioritet
+| Oppgave | Status | Omfang | Kommentar |
+|---------|--------|--------|-----------|
+| Bønn basert på vers | ❌ 4 filer | Per kapittel | Inspirert av kapittelteksten |
+| Andakt/preken per vers | ❌ 5 filer | Per kapittel | Korte andakter |
+| Typologi GT→NT | ❌ Ikke startet | Engangsjobb | Forbilder i GT som peker mot NT |
+| Symboler og billedspråk | ❌ Ikke startet | Engangsjobb | Forklaring av bibelsk symbolikk |
+
+### Lavere prioritet
+| Oppgave | Status | Omfang | Kommentar |
+|---------|--------|--------|-----------|
+| Applikasjoner for dagliglivet | ❌ Ikke startet | Per kapittel | Praktiske anvendelser |
+| Bibelsk ordbok | ❌ Ikke startet | Engangsjobb | Leksikonartikler |
+| Ordhistorie/etymologi | ❌ Ikke startet | Per ord | Hebraiske/greske ordstammer |
+| Word4word norsk (GT) | ⚠️ Delvis | Fleste GT-bøker | Oversette ord-for-ord fra hebraisk |
+| Semantiske felt | ❌ Ikke startet | Per ord | Relaterte ord/synonymer |
+
+### Engelske tidsepoke-tagger på personsiden
+Noen person-epoker er på engelsk (conquest, creation, divided-kingdom, early-church, jesus, united-kingdom) mens andre er norske. Kan fikses med LLM-kjøring over person-dataene.
+
 ## Bugs/Forbedringer
 - [ ] Tidslinjen i lesemodus: kompaktere design, kollapsbare perioder, evt. 2-kolonners layout
 - [ ] Tidslinjen generelt: vurder kompaktere event-kort, bok-kolonne bak toggle

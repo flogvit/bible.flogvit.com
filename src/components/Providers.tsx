@@ -11,14 +11,18 @@ import { DevotionalsProvider } from './DevotionalsContext';
 import { VerseVersionsProvider } from './VerseVersionsContext';
 import { ReadingPositionProvider } from './ReadingPositionContext';
 import { SyncProvider } from './SyncContext';
+import { MappingProvider } from './MappingContext';
 import { ServiceWorkerProvider } from './ServiceWorkerProvider';
 import { OfflineIndicator } from './OfflineIndicator';
 import { UpdateNotification } from './UpdateNotification';
+import { CommandPaletteProvider } from './CommandPaletteContext';
+import { CommandPalette } from './CommandPalette';
 
 export function Providers({ children }: { children: ReactNode }) {
   return (
     <AuthProvider>
       <SettingsProvider>
+        <MappingProvider>
         <FavoritesProvider>
           <TopicsProvider>
             <NotesProvider>
@@ -27,10 +31,13 @@ export function Providers({ children }: { children: ReactNode }) {
                 <ReadingPositionProvider>
                   <ReadingPlanProvider>
                     <SyncProvider>
-                      {children}
-                      <ServiceWorkerProvider />
-                      <OfflineIndicator />
-                      <UpdateNotification />
+                      <CommandPaletteProvider>
+                        {children}
+                        <CommandPalette />
+                        <ServiceWorkerProvider />
+                        <OfflineIndicator />
+                        <UpdateNotification />
+                      </CommandPaletteProvider>
                     </SyncProvider>
                   </ReadingPlanProvider>
                 </ReadingPositionProvider>
@@ -39,6 +46,7 @@ export function Providers({ children }: { children: ReactNode }) {
             </NotesProvider>
           </TopicsProvider>
         </FavoritesProvider>
+        </MappingProvider>
       </SettingsProvider>
     </AuthProvider>
   );

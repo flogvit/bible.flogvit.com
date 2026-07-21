@@ -101,7 +101,7 @@ export function StoriesPage() {
   if (isLoading) {
     return (
       <div className={styles.main}>
-        <div className="reading-container">
+        <div className="container">
           <Breadcrumbs items={[{ label: 'Hjem', href: '/' }, { label: 'Bibelhistorier' }]} />
           <h1>Bibelhistorier</h1>
           <p>Laster historier...</p>
@@ -113,7 +113,7 @@ export function StoriesPage() {
   if (error) {
     return (
       <div className={styles.main}>
-        <div className="reading-container">
+        <div className="container">
           <Breadcrumbs items={[{ label: 'Hjem', href: '/' }, { label: 'Bibelhistorier' }]} />
           <h1>Bibelhistorier</h1>
           <p>{error}</p>
@@ -124,7 +124,7 @@ export function StoriesPage() {
 
   return (
     <div className={styles.main}>
-      <div className="reading-container">
+      <div className="container">
         <Breadcrumbs items={[{ label: 'Hjem', href: '/' }, { label: 'Bibelhistorier' }]} />
 
         <h1>Bibelhistorier</h1>

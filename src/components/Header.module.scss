@@ -2,95 +2,167 @@
 @use '@/styles/mixins' as *;
 
 .header {
-  background: $color-paper;
-  border-bottom: 1px solid $color-border;
   position: sticky;
   top: 0;
   z-index: 500;
+  background: color-mix(in oklab, var(--paper) 88%, transparent);
+  backdrop-filter: saturate(1.2) blur(10px);
+  border-bottom: 1px solid var(--border);
+  font-family: var(--sans);
 }
 
-.container {
-  @include container;
+.inner {
+  max-width: 1240px;
+  margin: 0 auto;
   display: flex;
   align-items: center;
-  gap: $spacing-sm;
-  min-height: 3.75rem; // 60px at 16px base, scales with zoom
-  padding-top: $spacing-sm;
-  padding-bottom: $spacing-sm;
-}
+  gap: 10px;
+  padding: 10px 24px;
+  min-height: 3.25rem;
 
-.logo {
-  font-family: $font-serif;
-  font-size: $font-size-xl;
-  color: $color-primary;
-  text-decoration: none;
-
-  &:hover {
-    color: $color-secondary;
+  @include mobile {
+    padding: 8px 12px;
+    gap: 6px;
   }
 }
 
-.searchForm {
-  display: flex;
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--serif);
+  font-weight: 600;
+  font-size: 18px;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+  text-decoration: none;
+  flex-shrink: 0;
+}
+
+.brandMark {
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  background: linear-gradient(145deg, var(--gold) 0%, #8a6420 100%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff8e4;
+  font-family: var(--serif);
+  font-weight: 700;
+  font-size: 14px;
+  box-shadow: inset 0 -1px 0 rgba(0, 0, 0, 0.15);
+  flex-shrink: 0;
+}
+
+.brandText {
+  @include mobile {
+    display: none;
+  }
+}
+
+.cmdkTrigger {
   flex: 1;
-  max-width: 300px;
+  max-width: 440px;
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--paper-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 7px 12px;
+  color: var(--muted);
+  font-family: var(--sans);
+  font-size: 13.5px;
+  cursor: pointer;
+  min-width: 0;
+
+  &:hover {
+    border-color: var(--border-strong);
+  }
+
+  @include mobile {
+    padding: 6px 8px;
+    gap: 6px;
+  }
+}
+
+.cmdkLabel {
+  flex: 1;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
 
   @include mobile {
     display: none;
   }
 }
 
-.searchInput {
-  flex: 1;
-  padding: $spacing-sm $spacing-md;
-  border: 1px solid $color-border;
-  border-radius: $radius-sm 0 0 $radius-sm;
-  font-family: $font-sans;
-  font-size: $font-size-sm;
+.cmdkKbd {
+  font-family: var(--mono);
+  font-size: 11px;
+  background: var(--paper);
+  color: var(--muted);
+  padding: 2px 6px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  flex-shrink: 0;
 
-  &:focus {
-    outline: none;
-    border-color: $color-primary;
+  @include mobile {
+    display: none;
   }
 }
 
-.searchButton {
-  padding: $spacing-sm $spacing-md;
-  background: $color-background;
-  border: 1px solid $color-border;
-  border-left: none;
-  border-radius: 0 $radius-sm $radius-sm 0;
+.iconBtn {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: transparent;
+  border: 1px solid transparent;
   cursor: pointer;
-  transition: background $transition-fast;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ink-2);
+  flex-shrink: 0;
+  padding: 0;
 
   &:hover {
-    background: $color-border;
+    background: var(--paper-2);
+    border-color: var(--border);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--gold);
+    outline-offset: 2px;
   }
 }
 
 .nav {
   display: flex;
   align-items: center;
-  gap: $spacing-md;
-  margin-left: auto;
+  gap: 2px;
+  flex-shrink: 0;
 
   @include mobile {
     position: fixed;
-    top: 3.75rem; // Matches header min-height, scales with zoom
+    top: 3.25rem;
     left: 0;
     right: 0;
     bottom: 0;
-    background: $color-paper;
+    background: var(--paper);
     flex-direction: column;
     justify-content: flex-start;
-    padding-top: $spacing-xl;
-    padding-bottom: $spacing-xl;
+    padding: $spacing-xl $spacing-md;
     gap: $spacing-md;
     transform: translateX(100%);
     transition: transform $transition-base;
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
-    z-index: 500; // Dekker alt inkludert MobileToolbar
+    z-index: 500;
 
     &.open {
       transform: translateX(0);
@@ -99,20 +171,21 @@
 }
 
 .navLink {
-  font-size: $font-size-base;
-  color: $color-text;
+  font-family: var(--sans);
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--ink-2);
   text-decoration: none;
-  padding: $spacing-sm $spacing-md;
-  border-radius: $radius-sm;
-  transition: background $transition-fast, color $transition-fast;
+  padding: 7px 11px;
+  border-radius: 8px;
   background: none;
   border: none;
-  font-family: $font-sans;
   cursor: pointer;
+  transition: background $transition-fast, color $transition-fast;
 
   &:hover {
-    background: $color-background;
-    color: $color-secondary;
+    background: var(--paper-2);
+    color: var(--ink);
   }
 
   @include mobile {
@@ -123,7 +196,6 @@
   }
 }
 
-// Dropdown styles
 .dropdown {
   position: relative;
 
@@ -135,12 +207,13 @@
 .dropdownTrigger {
   display: flex;
   align-items: center;
-  gap: $spacing-xs;
+  gap: 4px;
 }
 
 .dropdownArrow {
   font-size: 0.8em;
   transition: transform $transition-fast;
+  opacity: 0.7;
 
   &.open {
     transform: rotate(180deg);
@@ -150,12 +223,13 @@
 .dropdownMenu {
   position: absolute;
   top: 100%;
-  left: 0;
+  right: 0;
   min-width: 260px;
-  background: $color-paper;
-  border: 1px solid $color-border;
-  border-radius: $radius-sm;
-  box-shadow: $shadow-md;
+  background: var(--paper);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-md);
+  padding: 4px;
   opacity: 0;
   visibility: hidden;
   transform: translateY(-8px);
@@ -165,7 +239,7 @@
   &.open {
     opacity: 1;
     visibility: visible;
-    transform: translateY(4px);
+    transform: translateY(6px);
   }
 }
 
@@ -173,39 +247,31 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: $spacing-sm $spacing-md;
-  color: $color-text;
+  gap: 12px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  color: var(--ink-2);
   text-decoration: none;
-  font-size: $font-size-sm;
+  font-size: 13.5px;
   transition: background $transition-fast, color $transition-fast;
 
-  &:first-child {
-    border-radius: $radius-sm $radius-sm 0 0;
-  }
-
-  &:last-child {
-    border-radius: 0 0 $radius-sm $radius-sm;
-  }
-
   &:hover {
-    background: $color-background;
-    color: $color-secondary;
+    background: var(--gold-bg);
+    color: var(--ink);
   }
 }
 
 .shortcutHint {
-  font-size: $font-size-xs;
-  color: $color-text-muted;
-  background: $color-background;
-  border: 1px solid $color-border;
-  border-radius: 3px;
-  padding: 0 4px;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  color: var(--muted);
+  background: var(--paper-2);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 1px 5px;
   line-height: 1.4;
-  font-family: $font-sans;
-  margin-left: $spacing-md;
 }
 
-// Mobile: show items inline instead of dropdown
 .mobileDropdownItems {
   display: none;
 
@@ -223,14 +289,14 @@
 
   @include mobile {
     display: block;
-    font-family: $font-serif;
+    font-family: var(--serif);
     font-size: $font-size-sm;
-    color: $color-text-muted;
+    color: var(--muted);
     text-transform: uppercase;
     letter-spacing: 0.08em;
     padding: $spacing-lg $spacing-md $spacing-xs;
     text-align: center;
-    border-top: 1px solid $color-border;
+    border-top: 1px solid var(--border);
 
     .mobileGroup:first-child & {
       border-top: none;
@@ -238,7 +304,6 @@
     }
   }
 }
-
 
 .menuButton {
   display: none;
@@ -254,9 +319,9 @@
 
 .hamburger {
   display: block;
-  width: 24px;
+  width: 22px;
   height: 2px;
-  background: $color-primary;
+  background: var(--ink);
   position: relative;
   transition: background $transition-fast;
 
@@ -264,103 +329,13 @@
   &::after {
     content: '';
     position: absolute;
-    width: 24px;
+    width: 22px;
     height: 2px;
-    background: $color-primary;
+    background: var(--ink);
     left: 0;
     transition: transform $transition-fast;
   }
 
-  &::before {
-    top: -7px;
-  }
-
-  &::after {
-    bottom: -7px;
-  }
-}
-
-// Dark mode
-:global(html.dark) {
-  .header {
-    background: $dark-color-paper;
-    border-bottom-color: $dark-color-border;
-  }
-
-  .logo {
-    color: $dark-color-primary;
-
-    &:hover {
-      color: $dark-color-secondary;
-    }
-  }
-
-  .nav {
-    @include mobile {
-      background: $dark-color-paper;
-    }
-  }
-
-  .navLink {
-    color: $dark-color-text;
-
-    &:hover {
-      background: $dark-color-background;
-      color: $dark-color-secondary;
-    }
-  }
-
-  .dropdownMenu {
-    background: $dark-color-paper;
-    border-color: $dark-color-border;
-  }
-
-  .dropdownLink {
-    color: $dark-color-text;
-
-    &:hover {
-      background: $dark-color-background;
-      color: $dark-color-secondary;
-    }
-  }
-
-  .shortcutHint {
-    color: $dark-color-text-muted;
-    background: $dark-color-background;
-    border-color: $dark-color-border;
-  }
-
-  .hamburger {
-    background: $dark-color-primary;
-
-    &::before,
-    &::after {
-      background: $dark-color-primary;
-    }
-  }
-
-  .searchInput {
-    background: $dark-color-background;
-    border-color: $dark-color-border;
-    color: $dark-color-text;
-
-    &:focus {
-      border-color: $dark-color-secondary;
-    }
-  }
-
-  .searchButton {
-    background: $dark-color-background;
-    border-color: $dark-color-border;
-
-    &:hover {
-      background: $dark-color-border;
-    }
-  }
-
-  .mobileGroupTitle {
-    color: $dark-color-text-muted;
-    border-top-color: $dark-color-border;
-  }
-
+  &::before { top: -6px; }
+  &::after { bottom: -6px; }
 }

@@ -5,12 +5,11 @@ import {
   getTodaysReadingTexts,
   getVerse,
 } from '../../src/lib/bible';
-import type { ReadingTextWithRefs, ReadingTextRef } from '../../src/lib/bible';
+import type { ReadingTextWithSlots, VerseRange } from '../../src/lib/bible';
 import { UkvnMapper, loadUkvnMapping, ukvnEncode, ukvnDecode, sliceVersePart, resolveMappingId } from '@free-bible/kvn';
 
 export const readingTextsRouter = Router();
 
-// Cache mappers
 const mapperCache = new Map<string, UkvnMapper>();
 function getCachedMapper(mappingId: string): UkvnMapper {
   if (!mapperCache.has(mappingId)) {
@@ -19,7 +18,6 @@ function getCachedMapper(mappingId: string): UkvnMapper {
   return mapperCache.get(mappingId)!;
 }
 
-/** Convert osmain coordinates to a target mapping's coordinates */
 function osmainTo(bookId: number, chapter: number, verse: number, mappingId: string): { chapter: number; verse: number } {
   const mapper = getCachedMapper(mappingId);
   const osmainKvn = ukvnEncode(bookId, chapter, verse);
@@ -29,72 +27,73 @@ function osmainTo(bookId: number, chapter: number, verse: number, mappingId: str
 }
 
 interface EnrichedVerse {
-  chapter: number;  // in display mapping
-  verse: number;    // in display mapping
+  chapter: number;
+  verse: number;
   text: string;
-  part?: string;    // 'a', 'b' etc. if sub-verse
+  part?: string;
 }
 
 /**
- * Enrich a reading text with verse texts.
- * - bible: which bible text to fetch (osnb2, osnn1, etc.)
- * - mapping: which numbering system to use for display verse numbers
+ * Resolve the verses for one VerseRange (osmain coords) into the requested bible text
+ * and the requested display mapping. Returns an array of enriched verses in order.
+ */
+function rangeToVerses(range: VerseRange, bible: string, displayMapping: string): EnrichedVerse[] {
+  const out: EnrichedVerse[] = [];
+  const end = range.verse_end ?? range.verse_start;
+  for (let v = range.verse_start; v <= end; v++) {
+    const osnb2 = osmainTo(range.book_id, range.chapter, v, 'osnb2');
+    const verse = getVerse(range.book_id, osnb2.chapter, osnb2.verse, bible);
+    if (!verse) continue;
+
+    let verseText = verse.text;
+    let part: string | undefined;
+    const isFirst = v === range.verse_start;
+    const isLast = v === end;
+    if (isFirst && range.part_start) {
+      const partNum = range.part_start.charCodeAt(0) - 96;
+      verseText = sliceVersePart(verseText, partNum, partNum + 1);
+      part = range.part_start;
+    } else if (isLast && range.part_end && range.part_end !== range.part_start) {
+      const partNum = range.part_end.charCodeAt(0) - 96;
+      verseText = sliceVersePart(verseText, partNum, partNum + 1);
+      part = range.part_end;
+    }
+    if (!verseText.trim()) continue;
+    const display = osmainTo(range.book_id, range.chapter, v, displayMapping);
+    out.push({
+      chapter: display.chapter,
+      verse: display.verse,
+      text: verseText,
+      ...(part && { part }),
+    });
+  }
+  return out;
+}
+
+/**
+ * Enrich a reading text with verse texts. Builds a `verses` map keyed by each part's
+ * display_ref so the UI can look up "the verses for this reading" by display string.
  */
 function enrichWithVerseText(
-  text: ReadingTextWithRefs,
+  text: ReadingTextWithSlots,
   bible: string,
   mapping: string,
-): ReadingTextWithRefs & { verses: Record<string, EnrichedVerse[]> } {
+): ReadingTextWithSlots & { verses: Record<string, EnrichedVerse[]> } {
   const verses: Record<string, EnrichedVerse[]> = {};
-  // Resolve mapping to canonical ID, fall back to osnb2
   const resolvedMapping = resolveMappingId(mapping) || 'osnb2';
 
-  for (const ref of text.readings) {
-    const key = ref.display_ref;
-    if (verses[key]) continue;
-
-    const refVerses: EnrichedVerse[] = [];
-    const relatedRefs = text.readings.filter(r => r.display_ref === key);
-
-    for (const r of relatedRefs) {
-      const end = r.verse_end ?? r.verse_start;
-      for (let v = r.verse_start; v <= end; v++) {
-        // osmain → osnb2 for fetching text
-        const osnb2 = osmainTo(r.book_id, r.chapter, v, 'osnb2');
-        const verse = getVerse(r.book_id, osnb2.chapter, osnb2.verse, bible);
-        if (!verse) continue;
-
-        let verseText = verse.text;
-        let part: string | undefined;
-
-        // Handle sub-verse parts
-        const isFirstVerse = v === r.verse_start;
-        const isLastVerse = v === end;
-        if (isFirstVerse && r.part_start) {
-          const partNum = r.part_start.charCodeAt(0) - 96;
-          verseText = sliceVersePart(verseText, partNum, partNum + 1);
-          part = r.part_start;
-        } else if (isLastVerse && r.part_end && r.part_end !== r.part_start) {
-          const partNum = r.part_end.charCodeAt(0) - 96;
-          verseText = sliceVersePart(verseText, partNum, partNum + 1);
-          part = r.part_end;
+  for (const slot of text.slots) {
+    for (const option of slot.options) {
+      for (const part of option.parts) {
+        const key = part.display_ref;
+        if (verses[key]) continue;
+        const aggregated: EnrichedVerse[] = [];
+        for (const range of part.ranges) {
+          aggregated.push(...rangeToVerses(range, bible, resolvedMapping));
         }
-
-        if (!verseText.trim()) continue;
-
-        // osmain → display mapping for verse numbers
-        const display = osmainTo(r.book_id, r.chapter, v, resolvedMapping);
-
-        refVerses.push({
-          chapter: display.chapter,
-          verse: display.verse,
-          text: verseText,
-          ...(part && { part }),
-        });
+        verses[key] = aggregated;
       }
     }
-
-    verses[key] = refVerses;
   }
 
   return { ...text, verses };
@@ -102,7 +101,7 @@ function enrichWithVerseText(
 
 /**
  * GET /api/reading-texts
- * Returns all reading texts
+ * Returns all reading texts (light list, no slots).
  */
 readingTextsRouter.get('/', (_req: Request, res: Response) => {
   try {
@@ -117,7 +116,6 @@ readingTextsRouter.get('/', (_req: Request, res: Response) => {
 
 /**
  * GET /api/reading-texts/today
- * Returns reading texts matching today's date
  */
 readingTextsRouter.get('/today', (_req: Request, res: Response) => {
   try {
@@ -125,14 +123,13 @@ readingTextsRouter.get('/today', (_req: Request, res: Response) => {
     res.set('Cache-Control', 'no-cache');
     res.json(texts);
   } catch (error) {
-    console.error('Error fetching today\'s reading texts:', error);
+    console.error("Error fetching today's reading texts:", error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
 
 /**
  * GET /api/reading-texts/:id
- * Returns a specific reading text with its references
  */
 readingTextsRouter.get('/:id', (req: Request, res: Response) => {
   const id = parseInt(req.params.id as string, 10);

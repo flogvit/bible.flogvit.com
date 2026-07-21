@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { ToolsPanel } from './ToolsPanel';
 import { MobileSidebarOverlay } from './MobileSidebarOverlay';
 import { useSettings } from '@/components/SettingsContext';
+import { booksData } from '@/lib/books-data';
 import styles from './MobileToolbar.module.scss';
 import type { TimelineEvent } from '@/lib/bible';
 
@@ -13,6 +14,7 @@ interface MobileToolbarProps {
   bookSlug: string;
   bookId: number;
   timelineEvents?: TimelineEvent[];
+  chapterEventIds?: string[];
   hasParallels?: boolean;
   bookSummary?: string | null;
   chapterSummary?: string | null;
@@ -26,6 +28,7 @@ export function MobileToolbar({
   bookSlug,
   bookId,
   timelineEvents = [],
+  chapterEventIds = [],
   hasParallels = false,
   bookSummary = null,
   chapterSummary = null,
@@ -33,10 +36,16 @@ export function MobileToolbar({
 }: MobileToolbarProps) {
   const [showTools, setShowTools] = useState(false);
   const [showSidebar, setShowSidebar] = useState(false);
+  const [showChapterPicker, setShowChapterPicker] = useState(false);
+  const [pickerBookId, setPickerBookId] = useState(bookId);
   const { settings } = useSettings();
   const [searchParams] = useSearchParams();
   const bible = searchParams.get('bible');
   const bibleQuery = bible ? `?bible=${bible}` : '';
+
+  const pickerBook = booksData.find(b => b.id === pickerBookId);
+  const otBooks = booksData.filter(b => b.testament === 'OT');
+  const ntBooks = booksData.filter(b => b.testament === 'NT');
 
   // Hide in reading mode
   if (settings.layoutMode === 'reading') {
@@ -55,14 +64,21 @@ export function MobileToolbar({
           ←
         </a>
 
-        <span className={styles.title}>
-          {bookName} {chapter}
-        </span>
+        <button
+          className={styles.titleButton}
+          onClick={() => {
+            setPickerBookId(bookId);
+            setShowChapterPicker(true);
+          }}
+        >
+          {bookName} {chapter} <span className={styles.titleArrow}>&#9660;</span>
+        </button>
 
         <button
           className={styles.sidebarButton}
           onClick={() => setShowSidebar(true)}
-          title="Panel"
+          title="Studium og verktøy"
+          aria-label="Åpne studium-panel"
         >
           ▥
         </button>
@@ -99,11 +115,63 @@ export function MobileToolbar({
           chapter={chapter}
           bookName={bookName}
           timelineEvents={timelineEvents}
+          chapterEventIds={chapterEventIds}
           bookSummary={bookSummary}
           chapterSummary={chapterSummary}
           historicalContext={historicalContext}
           onClose={() => setShowSidebar(false)}
         />
+      )}
+
+      {showChapterPicker && (
+        <div className={styles.overlay} onClick={() => setShowChapterPicker(false)}>
+          <div className={styles.pickerSheet} onClick={e => e.stopPropagation()}>
+            <div className={styles.pickerHeader}>
+              <h3>{pickerBook?.name_no ?? bookName}</h3>
+              <button className={styles.pickerClose} onClick={() => setShowChapterPicker(false)}>&#10005;</button>
+            </div>
+
+            <div className={styles.chapterGrid}>
+              {Array.from({ length: pickerBook?.chapters ?? maxChapter }, (_, i) => i + 1).map(ch => (
+                <a
+                  key={ch}
+                  href={`/${(pickerBook?.short_name ?? bookSlug).toLowerCase()}/${ch}${bibleQuery}`}
+                  className={`${styles.chapterCell} ${pickerBookId === bookId && ch === chapter ? styles.chapterActive : ''}`}
+                  onClick={() => setShowChapterPicker(false)}
+                >
+                  {ch}
+                </a>
+              ))}
+            </div>
+
+            <div className={styles.bookPicker}>
+              <h4>Det gamle testamente</h4>
+              <div className={styles.bookGrid}>
+                {otBooks.map(b => (
+                  <button
+                    key={b.id}
+                    className={`${styles.bookCell} ${b.id === pickerBookId ? styles.bookActive : ''}`}
+                    onClick={() => setPickerBookId(b.id)}
+                  >
+                    {b.short_name}
+                  </button>
+                ))}
+              </div>
+              <h4>Det nye testamente</h4>
+              <div className={styles.bookGrid}>
+                {ntBooks.map(b => (
+                  <button
+                    key={b.id}
+                    className={`${styles.bookCell} ${b.id === pickerBookId ? styles.bookActive : ''}`}
+                    onClick={() => setPickerBookId(b.id)}
+                  >
+                    {b.short_name}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </>
   );

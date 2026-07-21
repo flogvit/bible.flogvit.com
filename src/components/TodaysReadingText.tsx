@@ -1,40 +1,47 @@
 import { useState, useEffect } from 'react';
+import type * as React from 'react';
 import { Link } from 'react-router-dom';
-import { booksData } from '@/lib/books-data';
-import { toUrlSlug } from '@/lib/url-utils';
+import { Reference } from './Reference';
 import styles from './TodaysDay.module.scss';
 
-interface ReadingRef {
-  title: string | null;
-  display_ref: string;
+interface VerseRange {
   book_id: number;
-  chapter: number;
-  verse_start: number;
-  verse_end: number | null;
 }
 
-interface ReadingTextWithRefs {
+interface PartResponse {
+  title: string | null;
+  display_ref: string;
+  refs: string[];
+  ranges: VerseRange[];
+}
+
+function getReadingType(bookId: number): string {
+  if (bookId === 19) return 'Salme';
+  if (bookId <= 39) return 'GT';
+  if (bookId === 44) return 'Apostlene';
+  if (bookId >= 40 && bookId <= 43) return 'Evangelium';
+  if (bookId === 66) return 'Åp';
+  return 'Brev';
+}
+
+interface OptionResponse {
+  parts: PartResponse[];
+}
+
+interface SlotResponse {
+  options: OptionResponse[];
+}
+
+interface ReadingTextWithSlots {
   id: number;
   date: string;
   name: string;
   series: string | null;
-  readings: ReadingRef[];
-}
-
-function refToUrl(ref: ReadingRef): string {
-  const book = booksData.find(b => b.id === ref.book_id);
-  const slug = book ? toUrlSlug(book.short_name) : '';
-  return `/${slug}/${ref.chapter}#v${ref.verse_start}`;
-}
-
-function extractDisplayText(displayRef: string): string {
-  // Extract display text from [ref:...|display text] format
-  const match = displayRef.match(/\|([^\]]+)\]/);
-  return match ? match[1] : displayRef;
+  slots: SlotResponse[];
 }
 
 export function TodaysReadingText() {
-  const [texts, setTexts] = useState<ReadingTextWithRefs[]>([]);
+  const [texts, setTexts] = useState<ReadingTextWithSlots[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -51,19 +58,53 @@ export function TodaysReadingText() {
     <>
       {texts.map(text => (
         <div key={text.id} className={styles.container}>
+          <div style={{
+            fontSize: '0.7rem',
+            textTransform: 'uppercase',
+            letterSpacing: '0.08em',
+            color: 'var(--color-secondary, #8b7355)',
+            fontWeight: 600,
+            marginBottom: '0.25rem',
+          }}>
+            DnK lesetekster{text.series ? ` · Rekke ${text.series}` : ''}
+          </div>
           <div className={styles.header}>
             <h3>
               <Link to={`/lesetekster/${text.id}`} className={styles.dayLink}>{text.name}</Link>
             </h3>
-            {text.series && <span className={styles.category}>{text.series}</span>}
           </div>
 
-          <div className={styles.references}>
-            <span className={styles.refLabel}>Lesetekster:</span>
-            {text.readings.map((ref, i) => (
-              <Link key={i} to={refToUrl(ref)} className={styles.refLink} title={ref.title || undefined}>
-                {extractDisplayText(ref.display_ref)}
-              </Link>
+          <div className={styles.references} style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', alignItems: 'flex-start' }}>
+            {text.slots.map((slot, slotIdx) => (
+              <div key={slotIdx} style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'baseline', gap: '0.4rem' }}>
+                {slot.options.flatMap((option, optIdx) => {
+                  const items: React.ReactNode[] = [];
+                  if (optIdx > 0) {
+                    items.push(
+                      <span key={`or-${optIdx}`} style={{ color: 'var(--color-text-muted, #999)', fontStyle: 'italic', fontSize: '0.85rem' }}>
+                        eller
+                      </span>,
+                    );
+                  }
+                  option.parts.forEach((part, partIdx) => {
+                    const type = part.ranges.length > 0 ? getReadingType(part.ranges[0].book_id) : '';
+                    items.push(
+                      <span key={`${optIdx}-${partIdx}`} style={{ display: 'inline-flex', alignItems: 'baseline', gap: '0.25rem' }}>
+                        {type && (
+                          <small style={{ color: 'var(--color-text-muted, #999)', fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{type}:</small>
+                        )}
+                        {part.refs.map((r, ri) => (
+                          <span key={ri}>
+                            {ri > 0 && '; '}
+                            <Reference text={r} className={styles.refLink} />
+                          </span>
+                        ))}
+                      </span>,
+                    );
+                  });
+                  return items;
+                })}
+              </div>
             ))}
           </div>
 

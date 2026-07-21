@@ -50,8 +50,6 @@ export interface StoredVerse {
   verse: number;
   text: string;
   bible: string;
-  srcChapter?: number;
-  srcVerse?: number;
   versions?: {
     text: string;
     explanation: string;

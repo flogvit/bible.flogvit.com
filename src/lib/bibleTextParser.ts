@@ -2,8 +2,6 @@ import type { StoredChapter, StoredVerse } from './offline/db';
 
 export interface MappingData {
   bookNames: Record<string, number>; // "1 Mos" -> 1
-  verseMap: Record<string, string>;  // "bookId-srcChapter-srcVerse" -> "bookId-osnb2Chapter-osnb2Verse"
-  unmapped?: { bookId: number; srcRef: string; reason: string }[];
 }
 
 export interface ParseResult {
@@ -31,7 +29,7 @@ export function parseBibleText(
     (a, b) => b.length - a.length
   );
 
-  // Group verses by [bookId, chapter] (osnb2 numbering)
+  // Group verses by [bookId, chapter] (original numbering)
   const chapterMap = new Map<string, { verses: StoredVerse[]; bookId: number; chapter: number }>();
 
   let parsedCount = 0;
@@ -74,37 +72,23 @@ export function parseBibleText(
     const srcVerse = parseInt(refMatch[2], 10);
     const verseText = refMatch[3];
 
-    // Map to osnb2 numbering
-    const srcKey = `${bookId}-${srcChapter}-${srcVerse}`;
-    let osnb2BookId = bookId;
-    let osnb2Chapter = srcChapter;
-    let osnb2Verse = srcVerse;
-
-    if (mapping.verseMap[srcKey]) {
-      const parts = mapping.verseMap[srcKey].split('-').map(Number);
-      osnb2BookId = parts[0];
-      osnb2Chapter = parts[1];
-      osnb2Verse = parts[2];
-    }
-
-    const chapterKey = `${osnb2BookId}-${osnb2Chapter}`;
+    // Store with original numbering (no conversion)
+    const chapterKey = `${bookId}-${srcChapter}`;
     if (!chapterMap.has(chapterKey)) {
       chapterMap.set(chapterKey, {
-        bookId: osnb2BookId,
-        chapter: osnb2Chapter,
+        bookId,
+        chapter: srcChapter,
         verses: [],
       });
     }
 
     chapterMap.get(chapterKey)!.verses.push({
-      id: 0, // Not used for user bibles
-      book_id: osnb2BookId,
-      chapter: osnb2Chapter,
-      verse: osnb2Verse,
+      id: 0,
+      book_id: bookId,
+      chapter: srcChapter,
+      verse: srcVerse,
       text: verseText,
       bible: bibleId,
-      srcChapter: srcChapter !== osnb2Chapter ? srcChapter : undefined,
-      srcVerse: srcVerse !== osnb2Verse ? srcVerse : undefined,
     });
 
     parsedCount++;

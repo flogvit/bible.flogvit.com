@@ -6,8 +6,14 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: $spacing-md;
   padding: $spacing-md $spacing-lg;
   margin-bottom: $spacing-lg;
+
+  @include mobile {
+    padding: $spacing-sm $spacing-md;
+    gap: $spacing-sm;
+  }
 }
 
 .content {
@@ -15,6 +21,8 @@
   align-items: center;
   gap: $spacing-md;
   flex-wrap: wrap;
+  flex: 1;
+  min-width: 0;
 }
 
 .label {
@@ -27,11 +35,16 @@
   font-size: $font-size-lg;
   color: $color-secondary;
   text-decoration: none;
+  overflow-wrap: anywhere;
   transition: color $transition-fast;
 
   &:hover {
     color: $color-primary;
     text-decoration: underline;
+  }
+
+  @include mobile {
+    font-size: $font-size-base;
   }
 }
 
@@ -49,6 +62,7 @@
   line-height: 1;
   color: $color-text-muted;
   cursor: pointer;
+  flex-shrink: 0;
   transition: all $transition-fast;
 
   &:hover {

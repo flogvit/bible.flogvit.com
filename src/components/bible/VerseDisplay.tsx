@@ -47,6 +47,17 @@ interface VerseExtras {
 
 type TabType = 'original' | 'references' | 'prophecies' | 'prayer' | 'sermon' | 'topics' | 'notes' | 'versions' | 'devotionals' | 'footnotes';
 
+// Map a secondaryBible id to a short label shown above each undertekst strip.
+function undertekstShortLabel(id: string | undefined): string {
+  if (!id) return '';
+  if (id === 'osnb2') return 'nb';
+  if (id === 'osnn1') return 'nn';
+  if (id === '1930') return '1930';
+  if (id === 'dnb2024') return '2024';
+  if (id.startsWith('user:')) return 'egen';
+  return id;
+}
+
 // Hook to detect mobile
 function useIsMobile(breakpoint = 600) {
   const [isMobile, setIsMobile] = useState(false);
@@ -431,12 +442,18 @@ export function VerseDisplay({ verse, bookId, originalText, originalLanguage, se
           dir={originalLanguage === 'hebrew' ? 'rtl' : 'ltr'}
           lang={originalLanguage === 'hebrew' ? 'he' : 'el'}
         >
+          <span className={styles.undertekstLabel} aria-hidden="true">
+            {originalLanguage === 'hebrew' ? 'hebr' : 'gresk'}
+          </span>
           {originalText}
         </div>
       )}
 
       {settings.showOriginalText && settings.secondaryBible !== 'original' && secondaryText && (
         <div className={styles.secondaryVerse}>
+          <span className={styles.undertekstLabel} aria-hidden="true">
+            {undertekstShortLabel(settings.secondaryBible)}
+          </span>
           {secondaryText}
         </div>
       )}

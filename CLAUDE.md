@@ -1,15 +1,11 @@
 # Bibel.flogvit.com
 
 ## Prosjektbeskrivelse
-En norsk bibel-nettside med oppslagsverk og verktøy for bibellesning. Bygget med Next.js og SQLite.
+En norsk bibel-nettside med oppslagsverk og verktøy for bibellesning. Vite-frontend + Express-API med SQLite (`data/bible.db`).
 
-## Teknologi
-- **Framework**: Next.js 15 med App Router
-- **Database**: SQLite (via better-sqlite3) - `data/bible.db`
-- **Styling**: SASS Modules (*.module.scss)
-- **State**: localStorage for brukerinnstillinger og data
-- **Autentisering**: NextAuth.js (planlagt)
-- **Realtime**: Socket.io for sam-lesing (planlagt)
+## Brancher
+- **`bibel-no`** (denne): gammel app (Vite+React+Express+SQLite), serverer **bibel.flogvit.no** — fryst, beholdes som den er inntil videre. Deploy til .no må skje fra en checkout av DENNE branchen (`server/deploy-bibel.sh` i flogvit.com/server/).
+- **`main`**: Bun+Hono+hono/jsx+Bun.sql mot MySQL — kjører på **bibel.flogvit.com** (parallelt med .no). Plan og status i `ISSUES.md` der.
 
 ## Datakilder
 All bibeldata hentes fra `../free-bible/generate/`:
@@ -66,66 +62,6 @@ npx tsx scripts/import.ts
 - Vite proxyer `/api/*` til Express-backenden i utvikling
 - Produksjon: Express serverer alt på port 3018
 
-## Mappestruktur
-```
-bibel.flogvit.no/
-├── src/
-│   ├── app/                      # Next.js App Router
-│   │   ├── page.tsx              # Forside med bokliste
-│   │   ├── [book]/[chapter]/     # Bibelvisning
-│   │   ├── sok/                  # Søk i bibeltekst
-│   │   ├── sok/original/         # Søk i originalspråk
-│   │   ├── temaer/               # Tematiske oversikter
-│   │   ├── profetier/            # Profetier og oppfyllelser
-│   │   ├── tidslinje/            # Bibelsk tidslinje
-│   │   ├── leseplan/             # Leseplaner
-│   │   ├── emner/                # Brukerens emnetagging
-│   │   ├── favoritter/           # Favorittvers
-│   │   ├── kjente-vers/          # Kjente bibelvers
-│   │   ├── tekst/                # Vis flere passasjer
-│   │   ├── om/                   # Om-side
-│   │   └── api/                  # API-ruter
-│   ├── components/               # React-komponenter
-│   │   └── bible/                # Bibelspesifikke komponenter
-│   └── lib/
-│       ├── db.ts                 # SQLite database
-│       ├── bible.ts              # Bibel-hjelpefunksjoner
-│       └── settings.ts           # Brukerinnstillinger (localStorage)
-├── scripts/
-│   └── import-bible.ts           # Importskript for database
-└── data/
-    └── bible.db                  # SQLite database
-```
-
-## API-endepunkter
-- `GET /api/verses?refs=1mo-1-1,joh-3-16` - Hent flere vers
-- `GET /api/books` - Bokliste
-- `GET /api/prophecies` - Profetier og oppfyllelser
-- `GET /api/timeline` - Tidslinjehendelser (kun bibel, bakoverkompatibel)
-- `GET /api/timeline/multi` - Alle tre tidslinjer (bibel, verden, bøker)
-
-## Database-skjema
-**Bibeldata:**
-- `books` - Bokliste med norske og engelske navn
-- `verses` - Alle vers med tekst og metadata
-- `word4word` - Ord-for-ord data
-- `references` - Kryssreferanser
-- `book_summaries` - Boksammendrag
-- `chapter_summaries` - Kapittelsammendrag
-- `important_words` - Viktige ord per kapittel
-- `themes` - Tematiske oversikter
-- `chapter_insights` - Strukturerte kapittel-innsikter (JSON)
-
-**Studiebibel:**
-- `prophecy_categories` - Profetikategorier
-- `prophecies` - Profetier med GT-referanser
-- `prophecy_fulfillments` - NT-oppfyllelser
-- `timeline_periods` - Tidslinjeperioder (PK: id + timeline_type, typer: bible/world)
-- `timeline_events` - Tidslinjehendelser (timeline_type: bible/world/books)
-- `timeline_references` - Referanser til hendelser
-- `timeline_book_sections` - Bok-seksjoner for bok-tidslinjer
-- `reading_plans` - Leseplaner
-
 ## Funksjoner
 
 ### Bibellesing
@@ -147,7 +83,7 @@ bibel.flogvit.no/
 - Innstillinger (showSummary, showOriginal, theme, etc.)
 
 ## Apache-konfigurasjon
-Kjør Next.js bak Apache som reverse proxy:
+Kjør Express-serveren bak Apache som reverse proxy:
 ```apache
 <VirtualHost *:80>
     ServerName bibel.flogvit.no
@@ -155,10 +91,6 @@ Kjør Next.js bak Apache som reverse proxy:
     ProxyPassReverse / http://localhost:3018/
 </VirtualHost>
 ```
-
-## Utviklingsprinsipper
-- **KISS** - Keep It Simple, Stupid. Enkleste løsning som fungerer.
-- **DRY** - Don't Repeat Yourself. Gjenbruk kode, unngå duplisering.
 
 ## Designretningslinjer
 Basert på books.flogvit.com - moderne, stilrent, behagelig.
@@ -203,15 +135,4 @@ Alle sider (`src/pages/`) skal pakkes inn i en container. Standard mønster:
 - Alltid bruk `<Breadcrumbs>` for navigasjon tilbake
 
 ## Viktige regler
-- Bruk alltid `tsx` for TypeScript, ikke `ts-node`
-- Aldri overskrive filer med cp/mv uten å spørre
-- Ikke lag forklarende markdown-filer
 - Oppdater TODO.md når oppgaver fullføres (se også DONE.md)
-- Ingen hardkodede testverdier i koden
-
-## localStorage-nøkler
-- `favorites` - Favorittvers (array av refs)
-- `topics` - Emnetagging (objekt med topic → vers-array)
-- `activeReadingPlan` - Aktiv leseplan-ID
-- `readingPlanProgress` - Leseplan-progresjon
-- `settings` - Brukerinnstillinger (theme, fontSize, showSummary, etc.)

@@ -66,6 +66,18 @@ function getCrossMapper(mappingId: string): CrossMapper {
 }
 
 /**
+ * Get raw UkvnMappingFile for a given mapping ID (for serving to frontend).
+ */
+export function getKvnMappingRaw(mappingId: string): UkvnMappingFile {
+  let file = mappingFiles.get(mappingId);
+  if (!file) {
+    file = loadUkvnMapping(mappingId);
+    mappingFiles.set(mappingId, file);
+  }
+  return file;
+}
+
+/**
  * List available KVN mappings.
  */
 export function getAvailableMappings(): MappingInfo[] {
@@ -148,10 +160,11 @@ export function mapChapter(
   bookId: number,
   targetChapter: number,
   mappingId: string,
+  bible = 'osnb2',
 ): MappedVerse[] {
   if (mappingId === 'osnb2') {
     // Identity — no mapping needed
-    const verses = getVerses(bookId, targetChapter, 'osnb2');
+    const verses = getVerses(bookId, targetChapter, bible);
     return verses.map(v => ({
       displayChapter: v.chapter,
       displayVerse: v.verse,
@@ -192,8 +205,13 @@ export function mapChapter(
   const rawMatches: RawMatch[] = [];
 
   for (const ch of chaptersToScan) {
-    const verses = getVerses(bookId, ch, 'osnb2');
-    for (const v of verses) {
+    // Use osnb2 for coordinate lookup
+    const osnb2Verses = getVerses(bookId, ch, 'osnb2');
+    // Fetch text from requested bible (may differ from osnb2)
+    const bibleVerses = bible !== 'osnb2' ? getVerses(bookId, ch, bible) : osnb2Verses;
+    const bibleVerseMap = new Map(bibleVerses.map(v => [v.verse, v]));
+
+    for (const v of osnb2Verses) {
       const kvn = ukvnEncode(bookId, v.chapter, v.verse);
       const mapped = cross.map(kvn);
       const target = ukvnDecode(mapped.tkvn);
@@ -210,6 +228,9 @@ export function mapChapter(
           partTracker.get(osmainBase)!.add(osmainDecoded.part);
         }
 
+        // Use text from the requested bible, fall back to osnb2
+        const bibleVerse = bibleVerseMap.get(v.verse) || v;
+
         rawMatches.push({
           displayChapter: target.chapter,
           displayVerse: target.verse,
@@ -218,7 +239,7 @@ export function mapChapter(
           partial: mapped.partial,
           part: osmainDecoded.part,
           osmainBase,
-          verse: v,
+          verse: bibleVerse,
         });
       }
     }

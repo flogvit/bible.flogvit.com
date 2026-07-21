@@ -1,0 +1,85 @@
+@use '@/styles/variables' as *;
+@use '@/styles/mixins' as *;
+
+.toc {
+  font-family: var(--sans);
+  padding-bottom: 40px;
+}
+
+.groupLabel {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.11em;
+  color: var(--muted);
+  font-weight: 600;
+  margin: 16px 8px 6px;
+}
+
+.chapterGrid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 2px;
+  padding: 6px 8px 12px;
+}
+
+.chapterCell {
+  font-family: var(--mono);
+  font-size: 11px;
+  padding: 5px 0;
+  border-radius: 5px;
+  text-align: center;
+  color: var(--muted);
+  text-decoration: none;
+
+  &:hover {
+    background: var(--paper-2);
+    color: var(--ink);
+  }
+}
+
+.chapterCellActive {
+  background: var(--gold);
+  color: #fff8e4;
+  font-weight: 600;
+
+  &:hover {
+    background: var(--gold);
+    color: #fff8e4;
+  }
+}
+
+.tocItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 10px;
+  border-radius: 7px;
+  font-size: 13.5px;
+  color: var(--ink-2);
+  text-decoration: none;
+
+  &:hover {
+    background: var(--paper-2);
+    color: var(--ink);
+  }
+}
+
+.tocItemActive {
+  background: var(--gold-bg);
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.tocItemName {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tocItemChapters {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--muted);
+}

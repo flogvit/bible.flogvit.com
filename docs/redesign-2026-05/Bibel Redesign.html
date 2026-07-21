@@ -1,0 +1,2565 @@
+<!doctype html>
+<html lang="nb">
+<head>
+<meta charset="utf-8"/>
+<title>Bibel — Redesign mock</title>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,500;8..60,600;8..60,700&family=Inter+Tight:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    /* Palett: varm papir + gull, avledet fra eksisterende _variables.scss */
+    --paper: #faf8f5;
+    --paper-2: #f3eee5;
+    --ink: #1f1b16;
+    --ink-2: #3a342c;
+    --muted: #6b6258;
+    --border: #e6dfd2;
+    --border-strong: #d6cdba;
+    --gold: #b48a3a;
+    --gold-text: #7a5818;
+    --gold-soft: #e9d9b1;
+    --gold-bg: #f7efd9;
+    --verse-num: #8f6a1f;
+    --shadow-sm: 0 1px 2px rgba(70, 50, 20, .06), 0 1px 1px rgba(70,50,20,.04);
+    --shadow-md: 0 6px 20px rgba(70, 50, 20, .08), 0 2px 6px rgba(70,50,20,.05);
+    --radius: 10px;
+    --radius-sm: 6px;
+    --serif: 'Source Serif 4', Georgia, 'Iowan Old Style', serif;
+    --sans: 'Inter Tight', system-ui, -apple-system, sans-serif;
+    --mono: 'JetBrains Mono', ui-monospace, monospace;
+  }
+  html.dark {
+    --paper: #17161c;
+    --paper-2: #1e1d25;
+    --ink: #ece6d8;
+    --ink-2: #d5cebd;
+    --muted: #8f8778;
+    --border: #2b2932;
+    --border-strong: #3a3744;
+    --gold: #d9b766;
+    --gold-text: #d9b766;
+    --gold-soft: #3b301b;
+    --gold-bg: #2a2316;
+    --verse-num: #d9b766;
+    --shadow-sm: 0 1px 2px rgba(0,0,0,.4);
+    --shadow-md: 0 8px 26px rgba(0,0,0,.45);
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 16px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* ================ Top chrome (demo switcher) ================ */
+  .demo-bar {
+    position: sticky; top: 0; z-index: 60;
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 20px;
+    background: color-mix(in oklab, var(--paper) 85%, transparent);
+    backdrop-filter: saturate(1.2) blur(10px);
+    border-bottom: 1px solid var(--border);
+    font-family: var(--sans);
+  }
+  .demo-bar .brand {
+    font-family: var(--serif);
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    font-size: 18px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .brand-mark {
+    width: 22px; height: 22px; border-radius: 5px;
+    background: linear-gradient(145deg, var(--gold) 0%, #8a6420 100%);
+    display: inline-flex; align-items: center; justify-content: center;
+    color: #fff8e4; font-family: var(--serif); font-weight: 700; font-size: 13px;
+    box-shadow: inset 0 -1px 0 rgba(0,0,0,.15);
+  }
+  .tabs { display: flex; gap: 4px; margin-left: 16px; }
+  .tab {
+    font: inherit; background: transparent; border: 0; cursor: pointer;
+    padding: 6px 12px; border-radius: 999px; color: var(--muted);
+    font-size: 13px; font-weight: 500;
+  }
+  .tab[aria-selected="true"] {
+    background: var(--ink); color: var(--paper);
+  }
+  .demo-bar .spacer { flex: 1; }
+  .pill-btn {
+    font: inherit; font-size: 12.5px; cursor: pointer;
+    border: 1px solid var(--border-strong); background: var(--paper);
+    color: var(--ink-2); padding: 6px 11px; border-radius: 999px;
+    display: inline-flex; gap: 6px; align-items: center;
+  }
+  .pill-btn kbd {
+    font-family: var(--mono); font-size: 10.5px;
+    background: var(--paper-2); padding: 1px 5px; border-radius: 4px;
+    border: 1px solid var(--border);
+  }
+
+  /* ================ Generic ================ */
+  h1,h2,h3,h4 { font-family: var(--serif); font-weight: 600; color: var(--ink); letter-spacing: -0.015em; line-height: 1.2; margin: 0; }
+  p { margin: 0; }
+  a { color: inherit; }
+  .muted { color: var(--muted); }
+
+  /* ================ PAGE SHELL (used by both tabs) ================ */
+  .page { display: none; }
+  .page.active { display: block; }
+
+  /* Shared header inside the app */
+  .app-header {
+    position: sticky; top: 47px; z-index: 40;
+    background: color-mix(in oklab, var(--paper) 88%, transparent);
+    backdrop-filter: saturate(1.2) blur(10px);
+    border-bottom: 1px solid var(--border);
+  }
+  .app-header-inner {
+    max-width: 1240px; margin: 0 auto;
+    display: flex; align-items: center; gap: 14px;
+    padding: 12px 24px;
+  }
+  .app-nav {
+    display: flex; gap: 2px; margin-left: 4px;
+  }
+  .app-nav a {
+    text-decoration: none; padding: 7px 11px; border-radius: 8px;
+    font-size: 13.5px; color: var(--ink-2); font-weight: 500;
+  }
+  .app-nav a:hover { background: var(--paper-2); }
+  .app-nav a.current { background: var(--ink); color: var(--paper); }
+
+  .cmdk-trigger {
+    flex: 1; max-width: 440px; margin-left: auto;
+    display: flex; align-items: center; gap: 10px;
+    background: var(--paper-2); border: 1px solid var(--border);
+    border-radius: 10px; padding: 7px 12px;
+    color: var(--muted); font-size: 13.5px; cursor: pointer;
+  }
+  .cmdk-trigger:hover { border-color: var(--border-strong); }
+  .cmdk-trigger .where { color: var(--muted); }
+  .cmdk-trigger kbd {
+    margin-left: auto; font-family: var(--mono); font-size: 11px;
+    background: var(--paper); padding: 2px 6px; border-radius: 4px;
+    border: 1px solid var(--border);
+  }
+
+  .icon-btn {
+    width: 34px; height: 34px; border-radius: 8px;
+    background: transparent; border: 1px solid transparent; cursor: pointer;
+    display: inline-flex; align-items: center; justify-content: center;
+    color: var(--ink-2);
+  }
+  .icon-btn:hover { background: var(--paper-2); border-color: var(--border); }
+
+  /* ================ HOME PAGE ================ */
+  .home-wrap { max-width: 1180px; margin: 0 auto; padding: 40px 24px 80px; }
+
+  .hero {
+    display: grid; grid-template-columns: 1.4fr 1fr;
+    gap: 28px; margin-bottom: 48px;
+  }
+  @media (max-width: 900px) { .hero { grid-template-columns: 1fr; } }
+
+  .hero-continue {
+    background:
+      radial-gradient(1200px 400px at -10% -30%, var(--gold-bg), transparent 60%),
+      var(--paper-2);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 28px 30px;
+    display: flex; flex-direction: column; justify-content: space-between;
+    min-height: 240px;
+    position: relative; overflow: hidden;
+  }
+  .hero-continue::after {
+    content: ""; position: absolute; right: -40px; top: -40px;
+    width: 200px; height: 200px; border-radius: 50%;
+    background: radial-gradient(circle at 30% 30%, var(--gold-soft), transparent 70%);
+    opacity: .7; pointer-events: none;
+  }
+  .eyebrow {
+    font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.11em;
+    color: var(--muted); font-weight: 600;
+  }
+  .hero-continue h2 {
+    font-size: 34px; margin: 10px 0 6px; font-weight: 600;
+  }
+  .hero-continue .last-verse {
+    font-family: var(--serif); font-size: 17px; color: var(--ink-2);
+    font-style: italic; line-height: 1.5; max-width: 44ch;
+    margin-top: 14px;
+  }
+  .hero-actions { display: flex; gap: 10px; margin-top: 22px; z-index: 1; }
+  .btn {
+    font: inherit; font-size: 14px; font-weight: 500; cursor: pointer;
+    padding: 10px 18px; border-radius: 10px; border: 1px solid transparent;
+    display: inline-flex; align-items: center; gap: 8px;
+  }
+  .btn-primary { background: var(--ink); color: var(--paper); }
+  .btn-primary:hover { background: #000; }
+  .btn-ghost { background: transparent; border-color: var(--border-strong); color: var(--ink-2); }
+  .btn-ghost:hover { background: var(--paper); }
+
+  .hero-side {
+    display: grid; gap: 16px;
+  }
+  .card {
+    background: var(--paper-2);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 18px 20px;
+  }
+  .card h3 {
+    font-family: var(--sans); font-weight: 600; font-size: 13px;
+    text-transform: uppercase; letter-spacing: 0.09em; color: var(--muted);
+    margin-bottom: 10px;
+  }
+  .verse-of-day { position: relative; display: flex; flex-direction: column; }
+  .verse-of-day .vod-scroll {
+    max-height: 7.2em; overflow-y: auto; padding-right: 6px;
+    /* fade mask when content overflows */
+    -webkit-mask-image: linear-gradient(to bottom, #000 0, #000 calc(100% - 24px), transparent 100%);
+            mask-image: linear-gradient(to bottom, #000 0, #000 calc(100% - 24px), transparent 100%);
+    scrollbar-width: thin;
+  }
+  .verse-of-day .vod-scroll.no-fade {
+    -webkit-mask-image: none; mask-image: none;
+  }
+  .verse-of-day .vod-text {
+    font-family: var(--serif);
+    /* fluid: shrinks gracefully with longer verses */
+    font-size: clamp(15px, 1.05vw + 12px, 19px);
+    line-height: 1.5; color: var(--ink);
+    text-wrap: pretty;
+  }
+  .verse-of-day .vod-foot {
+    margin-top: 10px; display: flex; align-items: center; justify-content: space-between;
+    gap: 10px;
+  }
+  .verse-of-day .vod-ref { font-size: 13px; color: var(--muted); }
+  .vod-ref a { color: var(--gold-text); text-decoration: none; font-weight: 500; }
+  .vod-actions { display: flex; gap: 4px; }
+  .vod-actions button {
+    width: 28px; height: 28px; border-radius: 7px; border: 1px solid var(--border);
+    background: var(--paper); cursor: pointer; color: var(--muted);
+    display: inline-flex; align-items: center; justify-content: center;
+  }
+  .vod-actions button:hover { color: var(--gold-text); border-color: var(--gold-soft); }
+
+  .streak-row { display: flex; align-items: center; gap: 14px; }
+  .streak-num { font-family: var(--serif); font-size: 34px; font-weight: 600; line-height: 1; color: var(--gold-text); }
+  .streak-row small { font-size: 12.5px; color: var(--muted); display: block; margin-top: 2px; }
+  .streak-dots { display: flex; gap: 4px; margin-left: auto; }
+  .streak-dots span {
+    width: 9px; height: 14px; border-radius: 2px;
+    background: var(--gold);
+  }
+  .streak-dots span.dim { background: var(--border-strong); }
+
+  /* ---- Plans (multi) ---- */
+  .plans-card { padding: 14px 16px; }
+  .plans-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
+  .plans-head h3 { margin: 0; }
+  .plans-count { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+  .plans-tabs {
+    display: flex; gap: 2px; overflow-x: auto; scrollbar-width: none;
+    border-bottom: 1px solid var(--border); margin: 0 -4px 10px;
+    padding: 0 4px;
+  }
+  .plans-tabs::-webkit-scrollbar { display: none; }
+  .plans-tab {
+    font: inherit; font-size: 12.5px; font-weight: 500;
+    background: transparent; border: 0; cursor: pointer; color: var(--muted);
+    padding: 8px 10px; border-bottom: 2px solid transparent;
+    white-space: nowrap; display: inline-flex; gap: 6px; align-items: center;
+    flex: 0 0 auto;
+  }
+  .plans-tab.on { color: var(--ink); border-bottom-color: var(--gold); }
+  .plans-tab .streak-mini {
+    font-family: var(--mono); font-size: 10.5px; color: var(--gold-text);
+    background: var(--gold-bg); padding: 1px 5px; border-radius: 4px;
+  }
+  .plans-tab.add { color: var(--muted); opacity: .8; }
+  .plan-body { display: none; }
+  .plan-body.on { display: block; }
+  .plan-prog {
+    height: 4px; background: var(--border); border-radius: 999px; overflow: hidden;
+    margin: 10px 0 8px;
+  }
+  .plan-prog > span { display: block; height: 100%; background: var(--gold); border-radius: 999px; }
+  .plan-today {
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    font-size: 13px;
+  }
+  .plan-today .what { color: var(--ink-2); font-family: var(--serif); }
+  .plan-today .days { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+
+  /* Section: books */
+  .section-title-row {
+    display: flex; align-items: baseline; justify-content: space-between;
+    margin: 48px 0 18px;
+  }
+  .section-title-row h2 {
+    font-family: var(--serif); font-size: 26px; font-weight: 600;
+  }
+  .section-tabs { display: flex; gap: 4px; background: var(--paper-2); padding: 4px; border-radius: 999px; border: 1px solid var(--border); }
+  .section-tabs button {
+    font: inherit; font-size: 12.5px; font-weight: 500;
+    background: transparent; border: 0; cursor: pointer;
+    padding: 6px 12px; border-radius: 999px; color: var(--muted);
+  }
+  .section-tabs button.active { background: var(--paper); color: var(--ink); box-shadow: var(--shadow-sm); }
+
+  .tax-group { margin-bottom: 26px; }
+  .tax-label {
+    display: flex; align-items: center; gap: 10px;
+    font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em;
+    color: var(--muted); margin-bottom: 10px;
+  }
+  .tax-label::after {
+    content: ""; height: 1px; background: var(--border); flex: 1;
+  }
+
+  .book-grid {
+    display: grid; gap: 6px;
+    grid-template-columns: repeat(auto-fill, minmax(128px, 1fr));
+  }
+  .book {
+    display: flex; flex-direction: column; justify-content: space-between;
+    padding: 11px 13px;
+    border-radius: 9px;
+    border: 1px solid transparent;
+    background: transparent;
+    text-decoration: none; color: var(--ink);
+    min-height: 64px;
+    transition: background 120ms ease, border-color 120ms ease, transform 120ms ease;
+  }
+  .book:hover {
+    background: var(--paper-2);
+    border-color: var(--border);
+    transform: translateY(-1px);
+  }
+  .book .name { font-family: var(--serif); font-weight: 500; font-size: 15.5px; letter-spacing: -0.01em; }
+  .book .meta { font-size: 11.5px; color: var(--muted); font-family: var(--mono); margin-top: 4px; }
+
+  /* Gold rail when actively reading this book */
+  .book.current { border-color: var(--gold-soft); background: var(--gold-bg); }
+  .book.current .name { color: var(--ink); }
+
+  /* Discover section */
+  .discover-grid {
+    display: grid; gap: 14px;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    margin-top: 16px;
+  }
+  @media (max-width: 900px) { .discover-grid { grid-template-columns: repeat(2, 1fr); } }
+  .disc {
+    padding: 20px; border-radius: 14px; border: 1px solid var(--border);
+    background: var(--paper-2);
+    display: flex; flex-direction: column; gap: 8px; min-height: 140px;
+    text-decoration: none; color: inherit; cursor: pointer;
+    transition: transform 150ms ease, border-color 150ms ease;
+  }
+  .disc:hover { transform: translateY(-2px); border-color: var(--gold-soft); }
+  .disc .disc-icon {
+    width: 32px; height: 32px; border-radius: 8px;
+    background: var(--paper); border: 1px solid var(--border);
+    display: inline-flex; align-items: center; justify-content: center;
+    color: var(--gold-text);
+  }
+  .disc h4 { font-size: 16px; font-family: var(--serif); font-weight: 600; }
+  .disc p { font-size: 13px; color: var(--muted); line-height: 1.45; }
+
+  /* ================ READING PAGE ================ */
+  .read-wrap {
+    display: grid;
+    grid-template-columns: 240px minmax(0, 1fr) 320px;
+    gap: 0;
+    min-height: calc(100vh - 47px);
+  }
+  @media (max-width: 1100px) {
+    .read-wrap { grid-template-columns: 200px minmax(0,1fr); }
+    .read-context { display: none; }
+  }
+  @media (max-width: 720px) {
+    .read-wrap { grid-template-columns: minmax(0,1fr); }
+    .read-toc { display: none; }
+  }
+
+  .read-toc {
+    position: sticky; top: 47px; align-self: start;
+    height: calc(100vh - 47px);
+    overflow-y: auto;
+    padding: 22px 14px 40px 24px;
+    border-right: 1px solid var(--border);
+  }
+  .toc-group-label {
+    font-size: 11px; text-transform: uppercase; letter-spacing: 0.11em;
+    color: var(--muted); font-weight: 600; margin: 16px 8px 6px;
+  }
+  .toc-item {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 6px 10px; border-radius: 7px;
+    font-size: 13.5px; color: var(--ink-2); text-decoration: none;
+    cursor: pointer;
+  }
+  .toc-item:hover { background: var(--paper-2); }
+  .toc-item.active { background: var(--gold-bg); color: var(--ink); font-weight: 600; }
+  .toc-item .ch { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+
+  .toc-chapters {
+    display: grid; grid-template-columns: repeat(6, 1fr); gap: 2px;
+    padding: 6px 8px 12px;
+  }
+  .toc-ch {
+    font-family: var(--mono); font-size: 11px;
+    padding: 5px 0; border-radius: 5px; text-align: center;
+    cursor: pointer; color: var(--muted);
+  }
+  .toc-ch:hover { background: var(--paper-2); color: var(--ink); }
+  .toc-ch.current { background: var(--gold); color: #fff8e4; font-weight: 600; }
+  .toc-ch.read { color: var(--ink-2); }
+
+  /* Main reading column */
+  .read-main { padding: 40px 56px 120px; max-width: 820px; margin: 0 auto; width: 100%; }
+  body[data-focus="1"] .read-toc,
+  body[data-focus="1"] .read-context,
+  body[data-focus="1"] .app-header,
+  body[data-focus="1"] .chapter-rail { display: none; }
+  body[data-focus="1"] .read-wrap { grid-template-columns: minmax(0,1fr); }
+  body[data-focus="1"] .read-main { max-width: 680px; padding-top: 80px; }
+  body[data-focus="1"] .focus-exit { display: inline-flex; }
+
+  .focus-exit {
+    display: none;
+    position: fixed; top: 18px; right: 18px; z-index: 80;
+  }
+
+  .chapter-head { margin-bottom: 18px; }
+  .chapter-book {
+    font-size: 12px; text-transform: uppercase; letter-spacing: 0.12em;
+    color: var(--muted); font-weight: 600;
+  }
+  .chapter-title {
+    font-family: var(--serif); font-size: 44px; font-weight: 600;
+    margin: 4px 0 8px; letter-spacing: -0.02em;
+  }
+  .chapter-sub {
+    font-family: var(--serif); font-style: italic;
+    color: var(--muted); font-size: 16px; max-width: 60ch;
+  }
+
+  .chapter-rail {
+    display: flex; gap: 8px; align-items: center; margin: 12px 0 28px;
+    flex-wrap: wrap;
+  }
+  .rail-chip {
+    font-size: 12.5px; padding: 5px 10px; border-radius: 999px;
+    border: 1px solid var(--border); color: var(--ink-2);
+    background: var(--paper-2);
+    display: inline-flex; gap: 6px; align-items: center;
+    cursor: pointer;
+  }
+  .rail-chip:hover { border-color: var(--border-strong); }
+  .rail-chip .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--gold); }
+
+  /* Chapter meta (breadcrumb + plan badge) */
+  .chapter-meta {
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    margin-bottom: 16px; font-size: 12.5px; color: var(--muted);
+  }
+  .chapter-meta .bc { display: flex; align-items: center; gap: 6px; }
+  .chapter-meta .bc a { color: var(--muted); text-decoration: none; }
+  .chapter-meta .bc a:hover { color: var(--ink); }
+  .chapter-meta .bc-sep { opacity: .4; }
+  .plan-badge {
+    margin-left: auto;
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 5px 10px 5px 6px; background: var(--gold-bg);
+    border: 1px solid var(--gold-soft); border-radius: 999px;
+    font-size: 12px; color: var(--ink-2);
+  }
+  .plan-badge .pb-num {
+    background: var(--gold); color: #fff8e4; font-family: var(--mono);
+    padding: 1px 7px; border-radius: 999px; font-size: 10.5px;
+    font-weight: 600;
+  }
+  .plan-badge button {
+    background: transparent; border: 0; color: var(--ink-2);
+    font: inherit; font-size: 12px; cursor: pointer; padding: 0 2px 0 4px;
+    border-left: 1px solid var(--gold-soft); margin-left: 2px;
+  }
+
+  /* Verses */
+  .verse {
+    font-family: var(--serif);
+    font-size: var(--verse-size, 19px);
+    line-height: var(--verse-lh, 1.75);
+    color: var(--ink);
+    margin-bottom: 4px;
+  }
+  .verse-n {
+    color: var(--verse-num);
+    font-family: var(--sans);
+    font-size: 0.7em; font-weight: 600;
+    vertical-align: super;
+    margin-right: 6px;
+    cursor: pointer;
+  }
+  .verse mark {
+    background: linear-gradient(transparent 60%, var(--gold-soft) 60%);
+    color: inherit; padding: 0 1px; border-radius: 1px;
+    cursor: pointer;
+  }
+  .verse.paragraph { text-indent: 0.5em; }
+  .pericope {
+    font-family: var(--serif); font-style: italic; font-size: 14px;
+    color: var(--muted); margin: 28px 0 10px;
+  }
+
+  /* Single clickable verse (for verse-popup demo) */
+  .vs {
+    position: relative;
+  }
+  .vs-num {
+    color: var(--verse-num); font-family: var(--sans);
+    font-size: 0.7em; font-weight: 600; vertical-align: super;
+    margin-right: 6px; cursor: pointer;
+    padding: 0 2px; border-radius: 3px;
+    display: inline-flex; align-items: center; gap: 2px;
+  }
+  .vs-num:hover { background: var(--gold-bg); }
+  .vs.open .vs-num { background: var(--gold); color: #fff8e4; }
+  .vs-ind { display: inline-flex; gap: 2px; margin-right: 2px; }
+  .vs-ind .fav { color: var(--gold-text); font-size: 0.85em; }
+  .vs-ind .tp, .vs-ind .nt {
+    width: 5px; height: 5px; border-radius: 50%;
+    display: inline-block; vertical-align: middle;
+  }
+  .vs-ind .tp { background: #a07c3a; }
+  .vs-ind .nt { background: #6a8a6a; }
+
+  /* Parallel translation strip (below primary verse) */
+  .parallel-strip {
+    font-family: var(--serif); font-size: 0.78em; color: var(--muted);
+    line-height: 1.55; font-style: italic;
+    padding: 2px 0 4px 0.5em;
+    display: block;
+  }
+  .parallel-strip .ps-label {
+    font-family: var(--mono); font-style: normal; font-size: 10.5px;
+    color: var(--gold-text); text-transform: uppercase; letter-spacing: 0.1em;
+    margin-right: 8px;
+  }
+  .parallel-greek {
+    font-family: 'Times New Roman', serif; font-size: 0.85em;
+    color: var(--ink-2); font-style: normal;
+    direction: ltr; display: block;
+    padding: 2px 0 2px 0.5em;
+  }
+
+  /* ======== VERSE POPUP (inline card under a verse) ======== */
+  .vpop {
+    margin: 14px 0 18px;
+    background: var(--paper-2);
+    border: 1px solid var(--border-strong);
+    border-radius: 14px;
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
+    font-family: var(--sans); font-size: 13.5px;
+    text-indent: 0;
+  }
+  .vpop-head {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+    background: var(--paper);
+  }
+  .vpop-ref {
+    font-family: var(--serif); font-size: 15px; font-weight: 600;
+    color: var(--ink);
+  }
+  .vpop-ref .tiny {
+    font-family: var(--sans); font-size: 11px; font-weight: 500;
+    color: var(--muted); margin-left: 6px;
+  }
+  .vpop-tools {
+    margin-left: auto; display: flex; gap: 4px;
+  }
+  .vpop-tools button {
+    border: 1px solid var(--border); background: var(--paper);
+    border-radius: 7px; padding: 4px 8px; font-size: 11.5px;
+    font: inherit; font-size: 11.5px; cursor: pointer; color: var(--ink-2);
+    display: inline-flex; align-items: center; gap: 5px;
+  }
+  .vpop-tools button:hover { border-color: var(--gold-soft); background: var(--gold-bg); }
+  .vpop-tools button.on { background: var(--gold); color: #fff8e4; border-color: var(--gold); }
+  .vpop-close {
+    width: 26px !important; height: 26px; padding: 0 !important;
+    justify-content: center;
+  }
+
+  /* Tabs */
+  .vpop-tabs {
+    display: flex; gap: 2px; padding: 6px 10px 0;
+    border-bottom: 1px solid var(--border);
+    overflow-x: auto; scrollbar-width: none;
+  }
+  .vpop-tabs::-webkit-scrollbar { display: none; }
+  .vpop-tab {
+    font: inherit; font-size: 12.5px; background: transparent; border: 0;
+    padding: 8px 11px; border-radius: 8px 8px 0 0;
+    color: var(--muted); cursor: pointer;
+    display: inline-flex; align-items: center; gap: 5px; white-space: nowrap;
+    border-bottom: 2px solid transparent; margin-bottom: -1px;
+  }
+  .vpop-tab:hover { color: var(--ink); }
+  .vpop-tab.active { color: var(--ink); border-bottom-color: var(--gold); font-weight: 500; }
+  .vpop-tab .count {
+    font-family: var(--mono); font-size: 10.5px; color: var(--muted);
+    background: var(--paper); padding: 1px 5px; border-radius: 4px;
+    border: 1px solid var(--border);
+  }
+  .vpop-tab.active .count { color: var(--gold-text); border-color: var(--gold-soft); background: var(--gold-bg); }
+
+  .vpop-body { padding: 16px 18px 18px; }
+  .vpop-panel { display: none; }
+  .vpop-panel.active { display: block; }
+
+  /* Original text (Greek/Hebrew w/ word-for-word) */
+  .orig-fullverse {
+    font-size: 22px; line-height: 1.6;
+    padding: 10px 14px; margin-bottom: 14px;
+    background: var(--paper); border: 1px solid var(--border);
+    border-radius: 10px; color: var(--ink);
+  }
+  .orig-fullverse.greek { font-family: 'Times New Roman', 'Gentium Plus', serif; }
+  .orig-fullverse.hebrew { font-family: 'SBL Hebrew', 'Times New Roman', serif; direction: rtl; }
+  .w4w-grid {
+    display: flex; flex-wrap: wrap; gap: 6px;
+    margin-top: 10px;
+  }
+  .w4w {
+    display: inline-flex; flex-direction: column; align-items: center;
+    padding: 6px 10px; border-radius: 8px; cursor: pointer;
+    background: var(--paper); border: 1px solid var(--border);
+    min-width: 58px; text-align: center;
+  }
+  .w4w:hover { border-color: var(--gold-soft); background: var(--gold-bg); }
+  .w4w.sel { border-color: var(--gold); background: var(--gold-bg); }
+  .w4w .orig { font-size: 18px; color: var(--ink); font-family: 'Times New Roman', serif; }
+  .w4w .translit { font-family: var(--mono); font-size: 10px; color: var(--gold-text); margin-top: 2px; }
+  .w4w .gloss { font-size: 11px; color: var(--muted); margin-top: 2px; font-style: italic; }
+
+  .w4w-detail {
+    margin-top: 12px; padding: 12px 14px; border-radius: 10px;
+    background: var(--gold-bg); border: 1px solid var(--gold-soft);
+    font-size: 13px;
+  }
+  .w4w-detail strong { font-size: 16px; color: var(--ink); font-family: 'Times New Roman', serif; }
+  .w4w-detail .pron { font-family: var(--mono); color: var(--gold-text); font-size: 12px; margin-left: 8px; }
+  .w4w-detail p { margin-top: 6px; color: var(--ink-2); line-height: 1.5; }
+  .w4w-detail .seek {
+    font: inherit; font-size: 12px; background: transparent;
+    border: 1px solid var(--gold-text); color: var(--gold-text); padding: 4px 9px;
+    border-radius: 6px; cursor: pointer; margin-top: 8px;
+  }
+
+  /* Cross references list */
+  .xref-list { display: flex; flex-direction: column; gap: 2px; }
+  .xref-item {
+    display: grid; grid-template-columns: 90px 1fr auto; gap: 14px; align-items: baseline;
+    padding: 10px 10px 10px 0; border-bottom: 1px dashed var(--border);
+    cursor: pointer; text-decoration: none;
+  }
+  .xref-item:last-child { border-bottom: 0; }
+  .xref-item:hover { background: var(--paper); border-radius: 8px; padding-left: 10px; }
+  .xref-item .xr-ref { font-family: var(--mono); font-size: 12.5px; color: var(--gold-text); font-weight: 500; }
+  .xref-item .xr-text { font-family: var(--serif); font-size: 14px; color: var(--ink-2); line-height: 1.5; }
+  .xref-item .xr-go { color: var(--muted); font-size: 14px; }
+
+  /* Prophecies */
+  .proph-item {
+    display: block; padding: 12px 14px; margin-bottom: 8px; text-decoration: none;
+    border: 1px solid var(--border); border-radius: 10px; background: var(--paper);
+  }
+  .proph-item:hover { border-color: var(--gold-soft); }
+  .proph-head { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
+  .proph-title { font-family: var(--serif); font-size: 15px; color: var(--ink); font-weight: 600; }
+  .proph-cat {
+    font-family: var(--mono); font-size: 10.5px; color: var(--gold-text);
+    background: var(--gold-bg); padding: 2px 7px; border-radius: 4px;
+  }
+  .proph-item p { font-size: 13px; color: var(--muted); line-height: 1.5; }
+  .proph-flow {
+    font-family: var(--mono); font-size: 11px; color: var(--ink-2);
+    margin-top: 6px;
+  }
+  .proph-flow .arrow { color: var(--gold-text); margin: 0 4px; }
+
+  /* Topics */
+  .tags-wrap { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+  .tag {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 4px 4px 4px 10px; background: var(--paper); border: 1px solid var(--border);
+    border-radius: 999px; font-size: 12.5px; color: var(--ink-2);
+  }
+  .tag button {
+    width: 18px; height: 18px; border-radius: 50%; border: 0;
+    background: var(--paper-2); color: var(--muted); cursor: pointer;
+    font: inherit; font-size: 12px; line-height: 1;
+  }
+  .tag button:hover { background: var(--gold); color: #fff8e4; }
+  .inp {
+    width: 100%; font: inherit; font-size: 13px;
+    padding: 8px 12px; border-radius: 8px;
+    border: 1px solid var(--border); background: var(--paper); color: var(--ink);
+    outline: none;
+  }
+  .inp:focus { border-color: var(--gold); }
+  textarea.inp { min-height: 76px; resize: vertical; font-family: var(--serif); font-size: 14px; line-height: 1.5; }
+
+  /* Notes */
+  .note-item {
+    padding: 12px 14px; margin-bottom: 10px;
+    background: var(--paper); border: 1px solid var(--border);
+    border-radius: 10px;
+  }
+  .note-item p { font-family: var(--serif); font-size: 14.5px; color: var(--ink); line-height: 1.55; }
+  .note-foot {
+    display: flex; align-items: center; gap: 10px; margin-top: 8px;
+    font-size: 11.5px; color: var(--muted);
+  }
+  .note-foot .sp { flex: 1; }
+  .note-foot button {
+    background: transparent; border: 0; cursor: pointer; font: inherit;
+    font-size: 12px; color: var(--muted); padding: 2px 4px;
+  }
+  .note-foot button:hover { color: var(--ink); }
+
+  /* Versions */
+  .ver-opt {
+    display: block; padding: 10px 12px 10px 38px; margin-bottom: 6px;
+    background: var(--paper); border: 1px solid var(--border);
+    border-radius: 10px; cursor: pointer; position: relative;
+  }
+  .ver-opt:hover { border-color: var(--gold-soft); }
+  .ver-opt.sel { background: var(--gold-bg); border-color: var(--gold-soft); }
+  .ver-opt input { position: absolute; left: 14px; top: 13px; }
+  .ver-head { display: flex; align-items: center; gap: 8px; margin-bottom: 2px; }
+  .ver-title { font-size: 13px; font-weight: 600; color: var(--ink); }
+  .ver-tag {
+    font-family: var(--mono); font-size: 10px;
+    padding: 1px 6px; border-radius: 4px;
+  }
+  .tg-default { background: var(--paper-2); color: var(--muted); border: 1px solid var(--border); }
+  .tg-sugg { background: #eaf1e6; color: #476639; }
+  .tg-theo { background: #f1e9e1; color: #7a5634; }
+  .tg-gram { background: #e7ecf1; color: #455a73; }
+  .sv-minor { color: var(--muted); font-size: 10.5px; margin-left: auto; }
+  .sv-major { color: #a27025; font-size: 10.5px; margin-left: auto; }
+  .sv-critical { color: #9c3838; font-size: 10.5px; margin-left: auto; font-weight: 600; }
+  .ver-text { font-family: var(--serif); font-size: 14px; color: var(--ink-2); line-height: 1.5; }
+  .ver-expl { font-size: 12px; color: var(--muted); margin-top: 4px; font-style: italic; }
+
+  /* Footnotes */
+  .fn-item {
+    padding: 10px 12px; margin-bottom: 6px; background: var(--paper);
+    border: 1px solid var(--border); border-radius: 8px; font-size: 13px;
+  }
+  .fn-item .fn-src {
+    font-family: var(--mono); font-size: 10.5px; color: var(--gold-text);
+    text-transform: uppercase; letter-spacing: 0.08em; margin-right: 8px;
+  }
+
+  /* Manuskripter item */
+  .ms-item {
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 14px; border: 1px solid var(--border); border-radius: 10px;
+    background: var(--paper); text-decoration: none; margin-bottom: 6px;
+  }
+  .ms-item:hover { border-color: var(--gold-soft); background: var(--gold-bg); }
+  .ms-item .ms-t { font-family: var(--serif); font-size: 14px; color: var(--ink); font-weight: 500; }
+  .ms-item .ms-type { font-family: var(--mono); font-size: 10.5px; color: var(--muted); }
+  .ms-item .ms-d { font-family: var(--mono); font-size: 11px; color: var(--muted); margin-left: auto; }
+  .new-ms-link {
+    display: inline-flex; align-items: center; gap: 6px; margin-top: 8px;
+    font-size: 12.5px; color: var(--gold-text); text-decoration: none;
+    padding: 6px 10px; border: 1px dashed var(--gold-soft); border-radius: 8px;
+  }
+  .new-ms-link:hover { background: var(--gold-bg); }
+
+  /* sidebar tools (right column) */
+  /* context sidebar */
+  .read-context {
+    position: sticky; top: 47px; align-self: start;
+    height: calc(100vh - 47px);
+    overflow-y: auto;
+    padding: 24px 22px 40px;
+    border-left: 1px solid var(--border);
+  }
+  .ctx-block { margin-bottom: 26px; }
+  .ctx-title {
+    font-size: 11px; text-transform: uppercase; letter-spacing: 0.12em;
+    color: var(--muted); font-weight: 600; margin-bottom: 10px;
+  }
+  .chip-row { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip {
+    font-size: 12.5px; padding: 4px 10px; border-radius: 999px;
+    border: 1px solid var(--border); background: var(--paper-2);
+    color: var(--ink-2); cursor: pointer;
+  }
+  .chip:hover { border-color: var(--gold-soft); background: var(--gold-bg); }
+  .chip .num { font-family: var(--mono); color: var(--muted); font-size: 11px; margin-left: 4px; }
+
+  .xref-row {
+    display: flex; align-items: baseline; gap: 10px;
+    padding: 8px 0; border-top: 1px dashed var(--border);
+    font-size: 13px;
+  }
+  .xref-row:first-child { border-top: 0; }
+  .xref-ref { font-family: var(--mono); font-size: 12px; color: var(--gold-text); min-width: 68px; }
+  .xref-row p { color: var(--ink-2); font-family: var(--serif); line-height: 1.4; }
+
+  .mini-map {
+    position: relative; height: 90px; border-radius: 10px;
+    border: 1px solid var(--border);
+    background:
+      repeating-linear-gradient(45deg, var(--paper-2) 0 6px, transparent 6px 14px),
+      var(--paper);
+    overflow: hidden;
+  }
+  .mini-map .pin {
+    position: absolute; width: 10px; height: 10px; border-radius: 50%;
+    background: var(--gold); border: 2px solid var(--paper);
+    box-shadow: 0 0 0 1px var(--gold);
+    transform: translate(-50%, -50%);
+  }
+  .mini-map .pin-label {
+    position: absolute; transform: translate(-50%, -160%);
+    font-family: var(--mono); font-size: 10.5px; color: var(--ink-2);
+    background: var(--paper); padding: 1px 5px; border: 1px solid var(--border); border-radius: 4px;
+  }
+
+  /* Reading preferences popover (⚙) */
+  .prefs-wrap { position: relative; }
+  .prefs-pop {
+    position: absolute; top: calc(100% + 10px); right: 0;
+    width: 340px; z-index: 110;
+    background: var(--paper); border: 1px solid var(--border-strong);
+    border-radius: 14px; box-shadow: var(--shadow-md);
+    padding: 6px; display: none;
+    max-height: calc(100vh - 120px);
+    overflow-y: auto;
+  }
+  .prefs-pop.on { display: block; }
+  .prefs-pop::before {
+    content: ""; position: absolute; top: -6px; right: 14px;
+    width: 10px; height: 10px; background: var(--paper);
+    border-left: 1px solid var(--border-strong);
+    border-top: 1px solid var(--border-strong);
+    transform: rotate(45deg);
+  }
+  .prefs-sec {
+    padding: 10px 12px 8px; border-bottom: 1px solid var(--border);
+  }
+  .prefs-sec:last-child { border-bottom: 0; }
+  .prefs-sec h5 {
+    font-family: var(--sans); font-size: 10.5px; text-transform: uppercase;
+    letter-spacing: 0.11em; color: var(--muted); font-weight: 600;
+    margin: 0 0 8px;
+  }
+  .prefs-row {
+    display: flex; align-items: center; gap: 10px;
+    padding: 6px 4px; font-size: 13px; color: var(--ink-2);
+  }
+  .prefs-row > label { flex: 1; display: flex; flex-direction: column; gap: 2px; cursor: pointer; }
+  .prefs-row .hint { font-size: 11px; color: var(--muted); }
+  .prefs-select {
+    font: inherit; font-size: 12.5px; padding: 5px 8px;
+    background: var(--paper-2); border: 1px solid var(--border);
+    border-radius: 7px; color: var(--ink); cursor: pointer;
+    min-width: 130px;
+  }
+
+  /* toggle switch */
+  .tg-switch {
+    position: relative; width: 34px; height: 20px; flex: none;
+    background: var(--paper-2); border: 1px solid var(--border);
+    border-radius: 999px; cursor: pointer; transition: all .15s;
+  }
+  .tg-switch::after {
+    content: ""; position: absolute; top: 1px; left: 1px;
+    width: 16px; height: 16px; border-radius: 50%;
+    background: var(--paper); border: 1px solid var(--border-strong);
+    transition: transform .15s;
+  }
+  .tg-switch.on { background: var(--gold); border-color: var(--gold); }
+  .tg-switch.on::after { transform: translateX(14px); border-color: var(--gold); }
+
+  /* segmented control inside prefs */
+  .prefs-seg {
+    display: inline-flex; background: var(--paper-2); border-radius: 8px;
+    border: 1px solid var(--border); padding: 2px;
+  }
+  .prefs-seg button {
+    font: inherit; font-size: 11.5px; background: transparent; border: 0;
+    padding: 4px 10px; border-radius: 6px; cursor: pointer; color: var(--muted);
+    font-weight: 500;
+  }
+  .prefs-seg button.on { background: var(--paper); color: var(--ink); box-shadow: var(--shadow-sm); }
+
+  .prefs-action {
+    width: 100%; font: inherit; font-size: 12.5px; text-align: left;
+    padding: 8px 10px; background: transparent; border: 1px solid transparent;
+    border-radius: 8px; color: var(--ink-2); cursor: pointer;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .prefs-action:hover { background: var(--paper-2); border-color: var(--border); }
+  .prefs-action .ic { font-size: 14px; width: 18px; }
+  .prefs-action .right { margin-left: auto; font-family: var(--mono); font-size: 10.5px; color: var(--muted); }
+
+  /* Collapsible context block with toggle */
+  .ctx-head {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 8px; margin-bottom: 8px; cursor: pointer;
+    -webkit-user-select: none; user-select: none;
+  }
+  .ctx-head .ctx-title { margin-bottom: 0; }
+  .ctx-head .ctx-count {
+    font-family: var(--mono); font-size: 10.5px;
+    color: var(--muted); background: var(--paper-2);
+    padding: 1px 6px; border-radius: 4px; border: 1px solid var(--border);
+  }
+  .ctx-head .caret { color: var(--muted); transition: transform .15s ease; }
+  .ctx-block.collapsed .caret { transform: rotate(-90deg); }
+  .ctx-block.collapsed .ctx-body { display: none; }
+
+  /* Summary block */
+  .sum-block {
+    padding: 12px 14px; border-radius: 10px; background: var(--paper-2);
+    border: 1px solid var(--border); font-family: var(--serif);
+    font-size: 13.5px; line-height: 1.55; color: var(--ink-2);
+    font-style: italic;
+  }
+  .sum-block + .sum-block { margin-top: 8px; }
+
+  /* Tidslinje-mini (sidebar) */
+  .tl-mini {
+    position: relative; padding-left: 14px;
+  }
+  .tl-mini::before {
+    content: ""; position: absolute; left: 3px; top: 6px; bottom: 6px;
+    width: 2px; background: var(--border);
+  }
+  .tl-ev {
+    position: relative; padding: 4px 0; font-size: 12.5px;
+  }
+  .tl-ev::before {
+    content: ""; position: absolute; left: -14px; top: 9px;
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--paper); border: 2px solid var(--border-strong);
+  }
+  .tl-ev.here::before { background: var(--gold); border-color: var(--gold); }
+  .tl-ev .tl-date { font-family: var(--mono); font-size: 10.5px; color: var(--muted); }
+  .tl-ev .tl-lbl { color: var(--ink-2); }
+  .tl-ev.here .tl-lbl { color: var(--ink); font-weight: 600; }
+
+  /* Viktige ord (chapter-level list) */
+  .iw-item {
+    display: flex; align-items: baseline; gap: 8px; padding: 6px 0;
+    border-top: 1px dashed var(--border); font-size: 13px;
+  }
+  .iw-item:first-child { border-top: 0; }
+  .iw-item .iw-word { font-family: 'Times New Roman', serif; font-size: 15px; color: var(--ink); }
+  .iw-item .iw-cnt { font-family: var(--mono); font-size: 11px; color: var(--gold-text); margin-left: auto; }
+  .iw-item .iw-gloss { color: var(--muted); font-style: italic; }
+
+  /* Tools list (settings-style rows) */
+  .tools-list { display: flex; flex-direction: column; gap: 2px; }
+  .tool-row {
+    display: flex; align-items: center; gap: 10px; padding: 8px 10px;
+    border-radius: 8px; cursor: pointer; font-size: 13px; color: var(--ink-2);
+    border: 1px solid transparent;
+  }
+  .tool-row:hover { background: var(--paper-2); border-color: var(--border); }
+  .tool-row .ic { width: 18px; color: var(--muted); display: inline-flex; }
+  .tool-row .tr-right { margin-left: auto; font-family: var(--mono); font-size: 11px; color: var(--muted); }
+  .tool-row.on { background: var(--gold-bg); border-color: var(--gold-soft); color: var(--ink); }
+
+  /* Read-position / progress pill (floats over text) */
+  .read-pos {
+    position: sticky; bottom: 20px; margin: 40px auto 0;
+    width: max-content; max-width: 100%;
+    display: flex; align-items: center; gap: 10px;
+    padding: 7px 12px 7px 14px; background: var(--paper);
+    border: 1px solid var(--border-strong); border-radius: 999px;
+    box-shadow: var(--shadow-sm); font-size: 12.5px; color: var(--ink-2);
+    z-index: 10;
+  }
+  .read-pos .rp-bar {
+    width: 120px; height: 4px; border-radius: 2px; background: var(--paper-2);
+    overflow: hidden;
+  }
+  .read-pos .rp-fill {
+    height: 100%; width: 62%; background: var(--gold);
+  }
+
+  /* ================ COMMAND PALETTE ================ */
+  .cmdk-overlay {
+    position: fixed; inset: 0; z-index: 200;
+    background: rgba(30, 22, 10, 0.4);
+    backdrop-filter: blur(4px);
+    display: none; align-items: flex-start; justify-content: center;
+    padding-top: 14vh;
+  }
+  .cmdk-overlay[aria-hidden="false"] { display: flex; }
+  .cmdk {
+    width: min(620px, 92vw);
+    background: var(--paper);
+    border: 1px solid var(--border-strong);
+    border-radius: 14px; box-shadow: var(--shadow-md);
+    overflow: hidden;
+  }
+  .cmdk-input {
+    width: 100%; font: inherit; font-family: var(--sans); font-size: 16px;
+    padding: 16px 18px; border: 0; background: transparent; color: var(--ink);
+    outline: none; border-bottom: 1px solid var(--border);
+  }
+  .cmdk-input::placeholder { color: var(--muted); }
+  .cmdk-list { max-height: 60vh; overflow-y: auto; padding: 6px; }
+  .cmdk-group-label {
+    font-size: 11px; text-transform: uppercase; letter-spacing: 0.11em;
+    color: var(--muted); font-weight: 600; padding: 10px 12px 4px;
+  }
+  .cmdk-item {
+    display: flex; align-items: center; gap: 12px;
+    padding: 9px 12px; border-radius: 8px; cursor: pointer;
+    font-size: 14px;
+  }
+  .cmdk-item:hover, .cmdk-item.sel { background: var(--paper-2); }
+  .cmdk-item.sel { background: var(--gold-bg); }
+  .cmdk-item .kind {
+    font-family: var(--mono); font-size: 10.5px; color: var(--muted);
+    background: var(--paper); border: 1px solid var(--border);
+    padding: 2px 6px; border-radius: 4px;
+  }
+  .cmdk-item .ci-main { flex: 1; }
+  .cmdk-item .ci-sub { color: var(--muted); font-size: 12px; }
+  .cmdk-foot {
+    border-top: 1px solid var(--border);
+    padding: 9px 14px; font-size: 11.5px; color: var(--muted);
+    display: flex; gap: 14px; font-family: var(--sans);
+  }
+  .cmdk-foot kbd {
+    font-family: var(--mono); background: var(--paper-2);
+    padding: 1px 5px; border-radius: 4px; border: 1px solid var(--border);
+  }
+
+  /* ================ TWEAKS PANEL ================ */
+  .tweaks {
+    position: fixed; right: 16px; bottom: 16px; z-index: 120;
+    width: 280px;
+    background: var(--paper);
+    border: 1px solid var(--border-strong);
+    border-radius: 14px; box-shadow: var(--shadow-md);
+    padding: 14px 16px;
+    font-family: var(--sans); font-size: 13px;
+    display: none;
+  }
+  .tweaks.on { display: block; }
+  .tweaks h4 {
+    font-family: var(--serif); font-size: 15px; margin: 0 0 10px;
+  }
+  .tweak-row {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 10px; margin: 8px 0;
+  }
+  .tweak-row label { color: var(--muted); font-size: 12.5px; }
+  .tweak-row input[type="range"] { flex: 1; }
+  .seg {
+    display: inline-flex; background: var(--paper-2); border-radius: 8px;
+    border: 1px solid var(--border); padding: 2px;
+  }
+  .seg button {
+    font: inherit; font-size: 12px; background: transparent; border: 0;
+    padding: 4px 9px; border-radius: 6px; cursor: pointer; color: var(--muted);
+  }
+  .seg button.on { background: var(--paper); color: var(--ink); box-shadow: var(--shadow-sm); }
+
+  /* font-size presets via var */
+  body[data-verse="s"] { --verse-size: 17px; --verse-lh: 1.7; }
+  body[data-verse="m"] { --verse-size: 19px; --verse-lh: 1.75; }
+  body[data-verse="l"] { --verse-size: 22px; --verse-lh: 1.8; }
+  body[data-verse="xl"] { --verse-size: 25px; --verse-lh: 1.85; }
+
+  /* paper texture toggle */
+  body[data-paper="1"] { background:
+     radial-gradient(1200px 600px at 10% 10%, #faf4e5 0%, transparent 50%),
+     radial-gradient(1400px 500px at 90% 90%, #f3ebd8 0%, transparent 50%),
+     var(--paper); }
+
+  /* ================ ACCESSIBILITY ================ */
+  /* Visually hidden but kept for screen readers */
+  .sr-only {
+    position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+    overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0;
+  }
+
+  /* Skip link */
+  .skip-link {
+    position: absolute; top: -100px; left: 50%; transform: translateX(-50%);
+    background: var(--ink); color: var(--paper); padding: 10px 18px;
+    border-radius: 8px; z-index: 9999; text-decoration: none; font-weight: 600;
+    font-size: 14px;
+  }
+  .skip-link:focus { top: 12px; outline: 2px solid var(--gold); outline-offset: 2px; }
+
+  /* Strong focus-visible across all interactive elements */
+  :focus { outline: none; }
+  a:focus-visible,
+  button:focus-visible,
+  input:focus-visible,
+  select:focus-visible,
+  textarea:focus-visible,
+  [tabindex]:not([tabindex="-1"]):focus-visible,
+  [role="switch"]:focus-visible,
+  [role="tab"]:focus-visible,
+  [role="radio"]:focus-visible {
+    outline: 2px solid var(--gold);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+  /* Stronger ring for inputs (replaces outline:none we set elsewhere) */
+  .inp:focus-visible,
+  .cmdk-input:focus-visible {
+    outline: 2px solid var(--gold);
+    outline-offset: 1px;
+  }
+
+  /* Ensure verse-num tap target meets 24x24 (WCAG 2.5.8) — desktop sup is small */
+  .vs-num { min-width: 22px; display: inline-block; text-align: center; }
+  @media (pointer: coarse) {
+    .vs-num { min-width: 28px; padding: 4px 6px; }
+  }
+
+  /* Improve gold-on-gold contrast for chip hover/active in light mode */
+  .chip:hover { color: var(--ink); }
+  .toc-ch.current { color: #2a1f08; } /* darker text on gold pill */
+
+  /* Honor reduced motion */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+    .vpop { transition: none !important; }
+  }
+
+  /* High-contrast mode */
+  @media (prefers-contrast: more) {
+    :root {
+      --border: #999;
+      --border-strong: #555;
+      --muted: #333;
+    }
+    html.dark { --muted: #ddd; --border: #777; --border-strong: #aaa; }
+    .btn, .pill-btn, .chip, .rail-chip { border-width: 2px; }
+  }
+
+  /* ================ MOBILE OPTIMIZATIONS (must be LAST to win cascade) ================ */
+  @media (max-width: 720px) {
+    body { font-size: 15px; }
+
+    /* Demo bar: compact */
+    .demo-bar { padding: 8px 12px; gap: 8px; flex-wrap: wrap; }
+    .demo-bar .brand { font-size: 16px; }
+    .demo-bar .brand-mark { width: 20px; height: 20px; font-size: 11px; }
+    .tabs { margin-left: 4px; }
+    .tab { padding: 5px 10px; font-size: 12px; }
+    #themeBtn, #tweaksBtn { padding: 5px 9px; font-size: 11.5px; }
+
+    /* App header: collapsed search → icon-trigger */
+    .app-header { top: 41px; }
+    .app-header-inner { padding: 10px 12px; gap: 8px; }
+    .app-nav { display: none; }
+    .cmdk-trigger {
+      width: 38px; height: 38px; max-width: none; padding: 0;
+      justify-content: center; flex: none; margin-left: auto;
+      font-size: 13px;
+    }
+    .cmdk-trigger span, .cmdk-trigger kbd { display: none; }
+
+    /* === Home page mobile === */
+    .home-wrap { padding: 20px 14px 60px; }
+    .hero { gap: 16px; margin-bottom: 32px; }
+    .hero-continue { padding: 22px 20px; min-height: 0; border-radius: 14px; }
+    .hero-continue h2 { font-size: 26px; }
+    .hero-continue .last-verse { font-size: 15px; margin-top: 10px; }
+    .hero-actions { flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+    .hero-actions .btn { font-size: 13px; padding: 9px 14px; }
+
+    .card { padding: 14px 16px; border-radius: 12px; }
+    .section-title-row { margin: 32px 0 14px; flex-wrap: wrap; gap: 10px; }
+    .section-title-row h2 { font-size: 22px; }
+    .section-tabs button { padding: 5px 10px; font-size: 11.5px; }
+
+    .book-grid { grid-template-columns: repeat(2, 1fr); gap: 4px; }
+    .book { min-height: 56px; padding: 10px 11px; }
+    .book .name { font-size: 14.5px; }
+    .book .meta { font-size: 11px; }
+
+    .discover-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+    .disc { padding: 14px; min-height: 110px; }
+    .disc h4 { font-size: 14.5px; }
+    .disc p { font-size: 12px; }
+
+    /* === Reading page mobile === */
+    .read-main {
+      padding: 20px 16px 100px; max-width: none;
+    }
+    .chapter-meta {
+      font-size: 11.5px; gap: 8px;
+    }
+    .chapter-meta .plan-badge {
+      margin-left: 0; width: 100%; order: -1;
+      justify-content: space-between;
+    }
+    .chapter-title { font-size: 32px; }
+    .chapter-sub { font-size: 14.5px; }
+    .chapter-rail { gap: 6px; margin: 10px 0 22px; flex-wrap: nowrap; overflow-x: auto; padding-bottom: 4px; scrollbar-width: none; }
+    .chapter-rail::-webkit-scrollbar { display: none; }
+    .rail-chip { white-space: nowrap; flex: 0 0 auto; font-size: 12px; padding: 5px 10px; }
+
+    /* Verse popup as bottom sheet */
+    body.vpop-mobile-open { overflow: hidden; }
+    .vpop {
+      position: fixed;
+      left: 0; right: 0; bottom: 0; top: auto;
+      margin: 0; border-radius: 16px 16px 0 0;
+      z-index: 150;
+      max-height: 78vh; overflow-y: auto;
+      box-shadow: 0 -8px 32px rgba(70,50,20,.18);
+      transform: translateY(100%); transition: transform .25s ease;
+    }
+    .vpop.mobile-on { transform: translateY(0); }
+    .vpop::before {
+      content: ""; position: sticky; top: 0;
+      display: block; width: 36px; height: 4px;
+      background: var(--border-strong); border-radius: 2px;
+      margin: 8px auto 0;
+    }
+    .vpop-head { padding: 8px 14px 10px; }
+    .vpop-ref { font-size: 14px; }
+    .vpop-tools button { font-size: 10.5px; padding: 4px 7px; }
+    .vpop-body { padding: 14px 16px 24px; }
+    .orig-fullverse { font-size: 18px; padding: 10px 12px; }
+    .w4w-grid { gap: 5px; }
+    .w4w { min-width: 50px; padding: 5px 8px; }
+    .w4w .orig { font-size: 16px; }
+    .xref-item { grid-template-columns: 70px 1fr auto; gap: 10px; padding: 9px 0; }
+    .xref-item .xr-text { font-size: 13px; }
+
+    /* Bottom-sheet backdrop */
+    .vpop-backdrop {
+      position: fixed; inset: 0; background: rgba(30,22,10,.4);
+      backdrop-filter: blur(2px); z-index: 140;
+      display: none;
+    }
+    .vpop-backdrop.on { display: block; }
+
+    /* Prefs popover: full-bleed */
+    .prefs-pop {
+      position: fixed;
+      top: 84px; right: 8px; left: 8px;
+      width: auto; max-height: 70vh;
+    }
+    .prefs-pop::before { right: 18px; }
+
+    /* Command palette */
+    .cmdk { width: 92vw; }
+    .cmdk-input { padding: 14px 16px; font-size: 15px; }
+    .cmdk-overlay { padding-top: 8vh; }
+
+    /* Tweaks panel */
+    .tweaks { left: 12px; right: 12px; width: auto; bottom: 12px; }
+
+    /* Focus exit positioning */
+    .focus-exit { top: 12px; right: 12px; }
+
+    /* Read pos pill: full width */
+    .read-pos { width: calc(100% - 24px); justify-content: space-between; }
+    .read-pos .rp-bar { flex: 1; }
+
+    /* Verse text spacing */
+    .verse { margin-bottom: 8px; }
+    body[data-verse="m"] { --verse-size: 17.5px; --verse-lh: 1.7; }
+    body[data-verse="l"] { --verse-size: 20px; --verse-lh: 1.7; }
+    body[data-verse="xl"] { --verse-size: 22.5px; --verse-lh: 1.75; }
+
+    /* Verse popup tabs more touchable */
+    .vpop-tab { padding: 10px 11px; font-size: 13px; }
+    .vpop-tab .count { font-size: 10px; }
+
+    /* Larger hit targets */
+    .vs-num { padding: 2px 4px; }
+    .chip, .rail-chip, .pill-btn { min-height: 30px; }
+  }
+
+  /* Very small phones */
+  @media (max-width: 380px) {
+    .chapter-title { font-size: 28px; }
+    .book-grid { grid-template-columns: 1fr; }
+    .vpop-tools button:not(.vpop-close) span { display: none; }
+  }
+</style>
+</head>
+<body data-verse="m" data-paper="0">
+
+<!-- Skip link -->
+<a href="#main-content" class="skip-link">Hopp til innhold</a>
+
+<!-- aria-live region for status updates (oversettelses-bytte etc.) -->
+<div id="sr-status" class="sr-only" role="status" aria-live="polite"></div>
+
+<!-- Demo switcher -->
+<div class="demo-bar">
+  <div class="brand"><span class="brand-mark">B</span> Bibelen</div>
+  <div class="tabs" role="tablist">
+    <button class="tab" role="tab" aria-selected="true" data-page="home">Forside</button>
+    <button class="tab" role="tab" aria-selected="false" data-page="read">Lesevisning</button>
+  </div>
+  <div class="spacer"></div>
+  <button class="pill-btn" id="themeBtn" title="Tema" aria-label="Veksle mørkt tema" aria-pressed="false">☾ Mørk</button>
+  <button class="pill-btn" id="tweaksBtn" aria-expanded="false" aria-controls="tweaks">Tweaks</button>
+</div>
+
+<!-- ============================= HOME ============================= -->
+<section class="page active" data-page="home">
+  <!-- App header with cmdk trigger -->
+  <div class="app-header">
+    <div class="app-header-inner">
+      <nav class="app-nav">
+        <a href="#" class="current">Hjem</a>
+        <a href="#">Leseplan</a>
+        <a href="#">Studium</a>
+        <a href="#">Manuskripter</a>
+        <a href="#">Favoritter</a>
+      </nav>
+      <button class="cmdk-trigger" data-open-cmdk>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+        <span>Søk etter vers, person, tema…</span>
+        <kbd>⌘ K</kbd>
+      </button>
+      <button class="icon-btn" title="Innstillinger" aria-label="Innstillinger">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1A2 2 0 1 1 4.3 17l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1A2 2 0 1 1 7 4.3l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <div class="home-wrap">
+    <!-- Hero -->
+    <div class="hero">
+      <div class="hero-continue">
+        <div>
+          <div class="eyebrow">Fortsett å lese</div>
+          <h2>Johannes 14</h2>
+          <div class="muted" style="margin-top:4px; font-size: 13px;">Du stoppet ved vers 21 · for 2 dager siden</div>
+          <div class="last-verse">«Den som har mine bud og holder dem, han er det som elsker meg…»</div>
+        </div>
+        <div class="hero-actions">
+          <button class="btn btn-primary" data-goto-read>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+            Fortsett ved vers 21
+          </button>
+          <button class="btn btn-ghost">Neste kapittel</button>
+        </div>
+      </div>
+
+      <div class="hero-side">
+        <div class="card verse-of-day">
+          <h3>Dagens vers</h3>
+          <div class="vod-scroll" id="vodScroll">
+            <div class="vod-text" id="vodText">«Herren er min hyrde, jeg mangler ingen ting. Han lar meg ligge i grønne enger, han leder meg til vann der jeg finner hvile. Han gir meg nytt liv. Han fører meg på rettferdighets stier for sitt navns skyld. Om jeg enn skulle vandre i dødsskyggens dal, frykter jeg ikke for noe vondt. For du er med meg. Din kjepp og din stav, de trøster meg.»</div>
+          </div>
+          <div class="vod-foot">
+            <div class="vod-ref"><a href="#">Salme 23,1–4</a> · Bokmål 2011</div>
+            <div class="vod-actions">
+              <button title="Memorer" aria-label="Start memorering"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 2v20M2 12h20"/></svg></button>
+              <button title="Favoritt"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 14c-3 4-7 7-7 7s-4-3-7-7-3-8 0-10 6-1 7 2c1-3 4-4 7-2s3 6 0 10z"/></svg></button>
+              <button title="Del"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg></button>
+            </div>
+          </div>
+        </div>
+
+        <!-- MULTI-PLAN CARD -->
+        <div class="card plans-card" id="plansCard">
+          <div class="plans-head">
+            <h3>Leseplaner</h3>
+            <span class="plans-count">3 aktive</span>
+          </div>
+          <div class="plans-tabs" role="tablist" id="plansTabs">
+            <button class="plans-tab on" data-plan="yr" role="tab" aria-selected="true">Ett år <span class="streak-mini">47</span></button>
+            <button class="plans-tab" data-plan="ps" role="tab" aria-selected="false">Salmene <span class="streak-mini">12</span></button>
+            <button class="plans-tab" data-plan="nt" role="tab" aria-selected="false">NT på 90 dager <span class="streak-mini">3</span></button>
+            <button class="plans-tab add" title="Legg til leseplan">+ ny</button>
+          </div>
+
+          <div class="plan-body on" data-plan="yr">
+            <div class="streak-row">
+              <div>
+                <div class="streak-num">47</div>
+                <small>dager på rad · dag 108 av 365</small>
+              </div>
+              <div class="streak-dots" aria-hidden="true">
+                <span></span><span></span><span></span><span></span><span></span><span></span><span class="dim"></span>
+              </div>
+            </div>
+            <div class="plan-prog"><span style="width: 29.6%"></span></div>
+            <div class="plan-today"><span class="what">1 Mos 15–17 · Matt 6,1–18</span><span class="days">i dag</span></div>
+          </div>
+
+          <div class="plan-body" data-plan="ps">
+            <div class="streak-row">
+              <div>
+                <div class="streak-num">12</div>
+                <small>dager på rad · salme 38 av 150</small>
+              </div>
+              <div class="streak-dots" aria-hidden="true">
+                <span></span><span></span><span></span><span></span><span class="dim"></span><span class="dim"></span><span class="dim"></span>
+              </div>
+            </div>
+            <div class="plan-prog"><span style="width: 25.3%"></span></div>
+            <div class="plan-today"><span class="what">Salme 38–40</span><span class="days">i dag</span></div>
+          </div>
+
+          <div class="plan-body" data-plan="nt">
+            <div class="streak-row">
+              <div>
+                <div class="streak-num">3</div>
+                <small>dager på rad · dag 21 av 90</small>
+              </div>
+              <div class="streak-dots" aria-hidden="true">
+                <span></span><span></span><span></span><span class="dim"></span><span class="dim"></span><span class="dim"></span><span class="dim"></span>
+              </div>
+            </div>
+            <div class="plan-prog"><span style="width: 23.3%"></span></div>
+            <div class="plan-today"><span class="what">Rom 3 · Rom 4</span><span class="days">+2 dager etter</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Books -->
+    <div class="section-title-row">
+      <h2>Bibelens bøker</h2>
+      <div class="section-tabs" role="tablist">
+        <button class="active">Kategorier</button>
+        <button>Alfabetisk</button>
+        <button>Kronologisk</button>
+      </div>
+    </div>
+
+    <!-- OT -->
+    <div class="tax-group">
+      <div class="tax-label">Det gamle testamente · Mosebøkene</div>
+      <div class="book-grid">
+        <a class="book" href="#"><span class="name">1. Mosebok</span><span class="meta">50 kap.</span></a>
+        <a class="book" href="#"><span class="name">2. Mosebok</span><span class="meta">40 kap.</span></a>
+        <a class="book" href="#"><span class="name">3. Mosebok</span><span class="meta">27 kap.</span></a>
+        <a class="book" href="#"><span class="name">4. Mosebok</span><span class="meta">36 kap.</span></a>
+        <a class="book" href="#"><span class="name">5. Mosebok</span><span class="meta">34 kap.</span></a>
+      </div>
+    </div>
+    <div class="tax-group">
+      <div class="tax-label">Historiske bøker</div>
+      <div class="book-grid">
+        <a class="book" href="#"><span class="name">Josva</span><span class="meta">24 kap.</span></a>
+        <a class="book" href="#"><span class="name">Dommerne</span><span class="meta">21 kap.</span></a>
+        <a class="book" href="#"><span class="name">Rut</span><span class="meta">4 kap.</span></a>
+        <a class="book" href="#"><span class="name">1. Samuel</span><span class="meta">31 kap.</span></a>
+        <a class="book" href="#"><span class="name">2. Samuel</span><span class="meta">24 kap.</span></a>
+        <a class="book" href="#"><span class="name">1. Kongebok</span><span class="meta">22 kap.</span></a>
+        <a class="book" href="#"><span class="name">2. Kongebok</span><span class="meta">25 kap.</span></a>
+        <a class="book" href="#"><span class="name">1. Krønikebok</span><span class="meta">29 kap.</span></a>
+        <a class="book" href="#"><span class="name">2. Krønikebok</span><span class="meta">36 kap.</span></a>
+        <a class="book" href="#"><span class="name">Esra</span><span class="meta">10 kap.</span></a>
+        <a class="book" href="#"><span class="name">Nehemja</span><span class="meta">13 kap.</span></a>
+        <a class="book" href="#"><span class="name">Ester</span><span class="meta">10 kap.</span></a>
+      </div>
+    </div>
+    <div class="tax-group">
+      <div class="tax-label">Poetiske bøker</div>
+      <div class="book-grid">
+        <a class="book" href="#"><span class="name">Job</span><span class="meta">42 kap.</span></a>
+        <a class="book" href="#"><span class="name">Salmene</span><span class="meta">150 kap.</span></a>
+        <a class="book" href="#"><span class="name">Ordspråkene</span><span class="meta">31 kap.</span></a>
+        <a class="book" href="#"><span class="name">Forkynneren</span><span class="meta">12 kap.</span></a>
+        <a class="book" href="#"><span class="name">Høysangen</span><span class="meta">8 kap.</span></a>
+      </div>
+    </div>
+    <div class="tax-group">
+      <div class="tax-label">Profetene</div>
+      <div class="book-grid">
+        <a class="book" href="#"><span class="name">Jesaja</span><span class="meta">66 kap.</span></a>
+        <a class="book" href="#"><span class="name">Jeremia</span><span class="meta">52 kap.</span></a>
+        <a class="book" href="#"><span class="name">Klagesangene</span><span class="meta">5 kap.</span></a>
+        <a class="book" href="#"><span class="name">Esekiel</span><span class="meta">48 kap.</span></a>
+        <a class="book" href="#"><span class="name">Daniel</span><span class="meta">12 kap.</span></a>
+        <a class="book" href="#"><span class="name">Hosea</span><span class="meta">14 kap.</span></a>
+        <a class="book" href="#"><span class="name">Joel</span><span class="meta">4 kap.</span></a>
+        <a class="book" href="#"><span class="name">Amos</span><span class="meta">9 kap.</span></a>
+        <a class="book" href="#"><span class="name">Obadja</span><span class="meta">1 kap.</span></a>
+        <a class="book" href="#"><span class="name">Jona</span><span class="meta">4 kap.</span></a>
+        <a class="book" href="#"><span class="name">Mika</span><span class="meta">7 kap.</span></a>
+        <a class="book" href="#"><span class="name">Nahum</span><span class="meta">3 kap.</span></a>
+        <a class="book" href="#"><span class="name">Habakkuk</span><span class="meta">3 kap.</span></a>
+        <a class="book" href="#"><span class="name">Sefanja</span><span class="meta">3 kap.</span></a>
+        <a class="book" href="#"><span class="name">Haggai</span><span class="meta">2 kap.</span></a>
+        <a class="book" href="#"><span class="name">Sakarja</span><span class="meta">14 kap.</span></a>
+        <a class="book" href="#"><span class="name">Malaki</span><span class="meta">3 kap.</span></a>
+      </div>
+    </div>
+    <div class="tax-group">
+      <div class="tax-label">Det nye testamente · Evangeliene &amp; Apg</div>
+      <div class="book-grid">
+        <a class="book" href="#"><span class="name">Matteus</span><span class="meta">28 kap.</span></a>
+        <a class="book" href="#"><span class="name">Markus</span><span class="meta">16 kap.</span></a>
+        <a class="book" href="#"><span class="name">Lukas</span><span class="meta">24 kap.</span></a>
+        <a class="book current" href="#" data-goto-read><span class="name">Johannes</span><span class="meta">21 kap. · nå</span></a>
+        <a class="book" href="#"><span class="name">Apg</span><span class="meta">28 kap.</span></a>
+      </div>
+    </div>
+    <div class="tax-group">
+      <div class="tax-label">Paulus-brev</div>
+      <div class="book-grid">
+        <a class="book" href="#"><span class="name">Romerne</span><span class="meta">16 kap.</span></a>
+        <a class="book" href="#"><span class="name">1. Korinterne</span><span class="meta">16 kap.</span></a>
+        <a class="book" href="#"><span class="name">2. Korinterne</span><span class="meta">13 kap.</span></a>
+        <a class="book" href="#"><span class="name">Galaterne</span><span class="meta">6 kap.</span></a>
+        <a class="book" href="#"><span class="name">Efeserne</span><span class="meta">6 kap.</span></a>
+        <a class="book" href="#"><span class="name">Filipperne</span><span class="meta">4 kap.</span></a>
+        <a class="book" href="#"><span class="name">Kolosserne</span><span class="meta">4 kap.</span></a>
+        <a class="book" href="#"><span class="name">1. Tess.</span><span class="meta">5 kap.</span></a>
+        <a class="book" href="#"><span class="name">2. Tess.</span><span class="meta">3 kap.</span></a>
+        <a class="book" href="#"><span class="name">1. Timoteus</span><span class="meta">6 kap.</span></a>
+        <a class="book" href="#"><span class="name">2. Timoteus</span><span class="meta">4 kap.</span></a>
+        <a class="book" href="#"><span class="name">Titus</span><span class="meta">3 kap.</span></a>
+        <a class="book" href="#"><span class="name">Filemon</span><span class="meta">1 kap.</span></a>
+      </div>
+    </div>
+    <div class="tax-group">
+      <div class="tax-label">Øvrige brev &amp; Åpenbaringen</div>
+      <div class="book-grid">
+        <a class="book" href="#"><span class="name">Hebreerne</span><span class="meta">13 kap.</span></a>
+        <a class="book" href="#"><span class="name">Jakob</span><span class="meta">5 kap.</span></a>
+        <a class="book" href="#"><span class="name">1. Peter</span><span class="meta">5 kap.</span></a>
+        <a class="book" href="#"><span class="name">2. Peter</span><span class="meta">3 kap.</span></a>
+        <a class="book" href="#"><span class="name">1. Johannes</span><span class="meta">5 kap.</span></a>
+        <a class="book" href="#"><span class="name">2. Johannes</span><span class="meta">1 kap.</span></a>
+        <a class="book" href="#"><span class="name">3. Johannes</span><span class="meta">1 kap.</span></a>
+        <a class="book" href="#"><span class="name">Judas</span><span class="meta">1 kap.</span></a>
+        <a class="book" href="#"><span class="name">Åpenbaringen</span><span class="meta">22 kap.</span></a>
+      </div>
+    </div>
+
+    <!-- Discover -->
+    <div class="section-title-row">
+      <h2>Utforsk</h2>
+      <span class="muted" style="font-size:13px;">Studium på tvers av teksten</span>
+    </div>
+    <div class="discover-grid">
+      <a class="disc" href="#">
+        <span class="disc-icon">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12l9-9 9 9-9 9z"/><path d="M12 3v18"/></svg>
+        </span>
+        <h4>Tidslinje</h4>
+        <p>Fra skapelsen til den tidlige kirken — se hvor i historien en tekst hører hjemme.</p>
+      </a>
+      <a class="disc" href="#">
+        <span class="disc-icon">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 22c0-4 4-7 8-7s8 3 8 7"/></svg>
+        </span>
+        <h4>Personer</h4>
+        <p>436 personer med biografier, slektskap og hvor de opptrer i teksten.</p>
+      </a>
+      <a class="disc" href="#">
+        <span class="disc-icon">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3 6 6 1-4.5 4 1 6-5.5-3-5.5 3 1-6L3 9l6-1z"/></svg>
+        </span>
+        <h4>Profetier</h4>
+        <p>GT-profetier og deres oppfyllelse i NT, med kontekst og kommentar.</p>
+      </a>
+      <a class="disc" href="#">
+        <span class="disc-icon">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19h16M6 19V5h4v14M14 19V9h4v10"/></svg>
+        </span>
+        <h4>Temaer</h4>
+        <p>Følg motiver som nåde, lys, pakt eller ørken gjennom hele Bibelen.</p>
+      </a>
+      <a class="disc" href="#">
+        <span class="disc-icon">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16v12H4z"/><path d="M4 10h16M9 6v12"/></svg>
+        </span>
+        <h4>Parallelle tekster</h4>
+        <p>Se evangeliene side om side, sammenlign oversettelser og grunntekst.</p>
+      </a>
+      <a class="disc" href="#">
+        <span class="disc-icon">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h12l4 4v12H4z"/><path d="M8 12h8M8 16h6"/></svg>
+        </span>
+        <h4>Manuskripter</h4>
+        <p>Dine andakter, prekener og studienotater — koblet til vers.</p>
+      </a>
+      <a class="disc" href="#">
+        <span class="disc-icon">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18"/></svg>
+        </span>
+        <h4>Steder</h4>
+        <p>Bibelsk geografi med kart, beskrivelser og referanser.</p>
+      </a>
+      <a class="disc" href="#">
+        <span class="disc-icon">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M2 12h20"/></svg>
+        </span>
+        <h4>Memorer</h4>
+        <p>Lær vers utenat med spaced repetition — 5 minutter om dagen.</p>
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- ============================= READING ============================= -->
+<section class="page" data-page="read">
+  <div class="app-header">
+    <div class="app-header-inner">
+      <nav class="app-nav">
+        <a href="#" data-goto-home>Hjem</a>
+        <a href="#" class="current">Johannes 14</a>
+      </nav>
+      <button class="cmdk-trigger" data-open-cmdk>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+        <span>Gå til vers, person, tema…</span>
+        <kbd>⌘ K</kbd>
+      </button>
+      <button class="icon-btn" id="focusBtn" title="Fokusmodus (F)" aria-label="Veksle fokusmodus" aria-pressed="false">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9V3h6M21 9V3h-6M3 15v6h6M21 15v6h-6"/></svg>
+      </button>
+      <div class="prefs-wrap">
+        <button class="icon-btn" id="prefsBtn" title="Lesevalg" aria-label="Åpne lesevalg" aria-haspopup="dialog" aria-expanded="false">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h10M4 12h4M4 18h14"/><circle cx="18" cy="6" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="20" cy="18" r="2"/></svg>
+        </button>
+
+        <div class="prefs-pop" id="prefsPop" role="dialog" aria-label="Lesevalg">
+          <div class="prefs-sec">
+            <h5>Oversettelse</h5>
+            <div class="prefs-row">
+              <label>Hovedtekst<span class="hint">Versjonen du leser</span></label>
+              <select class="prefs-select" id="prefMain">
+                <option>Bokmål 2011</option>
+                <option>Nynorsk 2011</option>
+                <option>1930</option>
+                <option>Bibel 2024</option>
+                <option>Grunntekst (gresk/hebr.)</option>
+              </select>
+            </div>
+            <div class="prefs-row">
+              <label>Parallell<span class="hint">Vises under hvert vers</span></label>
+              <select class="prefs-select" id="prefParallel">
+                <option value="off">Av</option>
+                <option value="nn">Nynorsk 2011</option>
+                <option value="el">Gresk</option>
+                <option value="en">English (NIV)</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="prefs-sec">
+            <h5>Tekst</h5>
+            <div class="prefs-row">
+              <label>Tekststørrelse</label>
+              <div class="prefs-seg" data-seg="verse">
+                <button data-v="s">S</button>
+                <button class="on" data-v="m">M</button>
+                <button data-v="l">L</button>
+                <button data-v="xl">XL</button>
+              </div>
+            </div>
+            <div class="prefs-row">
+              <label>Papirtekstur<span class="hint">Varm bakgrunn</span></label>
+              <div class="tg-switch" id="tgPaper" role="switch" tabindex="0" aria-checked="false" aria-label="Papirtekstur"></div>
+            </div>
+          </div>
+
+          <div class="prefs-sec">
+            <h5>Visning</h5>
+            <div class="prefs-row">
+              <label>Versnummer</label>
+              <div class="tg-switch on" id="tgVnum" role="switch" tabindex="0" aria-checked="true" aria-label="Vis versnummer"></div>
+            </div>
+            <div class="prefs-row">
+              <label>Kapitteloverskrifter<span class="hint">«Jesus er veien…»</span></label>
+              <div class="tg-switch on" id="tgPericope" role="switch" tabindex="0" aria-checked="true" aria-label="Vis kapitteloverskrifter"></div>
+            </div>
+            <div class="prefs-row">
+              <label>Indikatorer (★ · notat)</label>
+              <div class="tg-switch on" id="tgInd" role="switch" tabindex="0" aria-checked="true" aria-label="Vis indikatorer"></div>
+            </div>
+            <div class="prefs-row">
+              <label>Kontekstkolonne</label>
+              <div class="tg-switch on" id="tgCtx" role="switch" tabindex="0" aria-checked="true" aria-label="Vis kontekstkolonne"></div>
+            </div>
+          </div>
+
+          <div class="prefs-sec">
+            <h5>Handlinger</h5>
+            <button class="prefs-action"><span class="ic" aria-hidden="true">🎧</span>Lytt til kapittelet<span class="right">6:42</span></button>
+            <button class="prefs-action"><span class="ic" aria-hidden="true">✎</span>Skriv manuskript om dette</button>
+            <button class="prefs-action"><span class="ic" aria-hidden="true">🖨</span>Skriv ut<span class="right">PDF</span></button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="read-wrap">
+    <!-- TOC -->
+    <aside class="read-toc">
+      <div class="toc-group-label">Johannes</div>
+      <div class="toc-chapters">
+        <span class="toc-ch read">1</span><span class="toc-ch read">2</span>
+        <span class="toc-ch read">3</span><span class="toc-ch read">4</span>
+        <span class="toc-ch read">5</span><span class="toc-ch read">6</span>
+        <span class="toc-ch read">7</span><span class="toc-ch read">8</span>
+        <span class="toc-ch read">9</span><span class="toc-ch read">10</span>
+        <span class="toc-ch read">11</span><span class="toc-ch read">12</span>
+        <span class="toc-ch read">13</span><span class="toc-ch current">14</span>
+        <span class="toc-ch">15</span><span class="toc-ch">16</span>
+        <span class="toc-ch">17</span><span class="toc-ch">18</span>
+        <span class="toc-ch">19</span><span class="toc-ch">20</span>
+        <span class="toc-ch">21</span>
+      </div>
+      <div class="toc-group-label">Evangeliene</div>
+      <a class="toc-item" href="#"><span>Matteus</span><span class="ch">28</span></a>
+      <a class="toc-item" href="#"><span>Markus</span><span class="ch">16</span></a>
+      <a class="toc-item" href="#"><span>Lukas</span><span class="ch">24</span></a>
+      <a class="toc-item active" href="#"><span>Johannes</span><span class="ch">21</span></a>
+      <a class="toc-item" href="#"><span>Apg</span><span class="ch">28</span></a>
+
+      <div class="toc-group-label">Nylig lest</div>
+      <a class="toc-item" href="#"><span>Romerne 8</span><span class="ch">i går</span></a>
+      <a class="toc-item" href="#"><span>Salme 23</span><span class="ch">tir.</span></a>
+      <a class="toc-item" href="#"><span>1 Mos 1</span><span class="ch">man.</span></a>
+    </aside>
+
+    <!-- Main reading column -->
+    <main class="read-main" id="main-content" tabindex="-1">
+      <div class="chapter-meta">
+        <span class="bc"><a href="#" data-goto-home>Hjem</a><span class="bc-sep">/</span><a href="#">Johannes</a><span class="bc-sep">/</span><span>Kap. 14</span></span>
+        <span class="plan-badge" title="Del av leseplanen «Bibelen på ett år»">
+          <span class="pb-num">108</span>
+          Dag 108 · Bibelen på ett år
+          <button>Neste lesning →</button>
+        </span>
+      </div>
+
+      <div class="chapter-head">
+        <div class="chapter-book">Johannes · Evangeliet</div>
+        <h1 class="chapter-title">Kapittel 14</h1>
+        <div class="chapter-sub">Jesus er veien til Faderen. Løftet om Talsmannen.</div>
+      </div>
+
+      <!-- Context rail -->
+      <div class="chapter-rail">
+        <button class="rail-chip"><span class="dot"></span> Avskjedstalen</button>
+        <button class="rail-chip">Parallell: Matt 26</button>
+        <button class="rail-chip">14 kryssreferanser</button>
+        <button class="rail-chip">3 profetier</button>
+        <button class="rail-chip" id="parallelToggle">+ Parallell</button>
+        <button class="rail-chip">Gresk grunntekst</button>
+        <button class="rail-chip">Lytt · 6:42</button>
+      </div>
+
+      <!-- Pericope 1 -->
+      <div class="pericope">Jesus er veien til Faderen</div>
+
+      <p class="verse paragraph">
+        <span class="vs" data-v="1"><span class="vs-num">1</span>«La ikke hjertet bli grepet av angst. Tro på Gud, og tro på meg! </span><span class="vs" data-v="2"><span class="vs-num">2</span>I min Fars hus er det mange rom. Var det ikke slik, hadde jeg sagt dere det da? For jeg går for å <mark>gjøre i stand et sted for dere</mark>. </span><span class="vs" data-v="3"><span class="vs-num">3</span>Og når jeg er gått og har gjort i stand et sted for dere, kommer jeg tilbake og tar dere til meg, så dere skal være der jeg er. </span><span class="vs" data-v="4"><span class="vs-num">4</span>Og dit jeg går, vet dere veien.»</span>
+      </p>
+
+      <!-- Verse 5-7 with Thomas — verse 6 is the featured example verse with popup -->
+      <p class="verse paragraph">
+        <span class="vs" data-v="5"><span class="vs-num">5</span>Tomas sier til ham: «Herre, vi vet ikke hvor du går. Hvordan kan vi da vite veien?» </span><span class="vs open" data-v="6" id="featureVerse"><span class="vs-num"><span class="vs-ind"><span class="fav">★</span></span>6</span>Jesus sier: «Jeg er <mark>veien, sannheten og livet</mark>. Ingen kommer til Faderen uten ved meg. </span><span class="vs" data-v="7"><span class="vs-num">7</span>Har dere kjent meg, skal dere også kjenne min Far. Fra nå av kjenner dere ham og har sett ham.»</span>
+      </p>
+
+      <!-- Parallel strip (nynorsk) under the previous paragraph — optional -->
+      <div class="parallel-strip parallel-extra" hidden>
+        <span class="ps-label">nn</span>
+        Jesus seier: «Eg er vegen, sanninga og livet. Ingen kjem til Faderen utan gjennom meg.»
+      </div>
+
+      <!-- === VERSE POPUP (expanded state for v.6) === -->
+      <div class="vpop" id="vpop6">
+        <div class="vpop-head">
+          <div class="vpop-ref">Johannes 14,6 <span class="tiny">Bokmål 2011</span></div>
+          <div class="vpop-tools">
+            <button class="on" title="Favoritt">★ Favoritt</button>
+            <button title="Del"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg> Del</button>
+            <button title="Kopier"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M4 16V6a2 2 0 0 1 2-2h10"/></svg></button>
+            <button class="vpop-close" title="Lukk (Esc)" data-close-vpop>×</button>
+          </div>
+        </div>
+
+        <div class="vpop-tabs" role="tablist">
+          <button class="vpop-tab active" data-tab="orig">Grunntekst <span class="count">gresk</span></button>
+          <button class="vpop-tab" data-tab="xref">Kryssreferanser <span class="count">7</span></button>
+          <button class="vpop-tab" data-tab="proph">Profetier <span class="count">2</span></button>
+          <button class="vpop-tab" data-tab="topics">Emner <span class="count">3</span></button>
+          <button class="vpop-tab" data-tab="notes">Notater <span class="count">1</span></button>
+          <button class="vpop-tab" data-tab="versions">Versjoner <span class="count">3</span></button>
+          <button class="vpop-tab" data-tab="ms">Manuskripter <span class="count">2</span></button>
+          <button class="vpop-tab" data-tab="fn">Fotnoter <span class="count">1</span></button>
+        </div>
+
+        <div class="vpop-body">
+          <!-- GRUNNTEKST -->
+          <div class="vpop-panel active" data-panel="orig">
+            <div class="orig-fullverse greek" dir="ltr" lang="el">
+              λέγει αὐτῷ ὁ Ἰησοῦς· ἐγώ εἰμι ἡ ὁδὸς καὶ ἡ ἀλήθεια καὶ ἡ ζωή· οὐδεὶς ἔρχεται πρὸς τὸν πατέρα εἰ μὴ διʼ ἐμοῦ.
+            </div>
+            <div style="font-size:11.5px; color:var(--muted); margin-bottom:6px; letter-spacing:.06em; text-transform:uppercase; font-weight:600;">Ord for ord — klikk for forklaring</div>
+            <div class="w4w-grid" id="w4wGrid">
+              <div class="w4w"><span class="orig">ἐγώ</span><span class="translit">egō</span><span class="gloss">jeg</span></div>
+              <div class="w4w"><span class="orig">εἰμι</span><span class="translit">eimi</span><span class="gloss">er</span></div>
+              <div class="w4w sel" id="w4wSel"><span class="orig">ὁδὸς</span><span class="translit">hodos</span><span class="gloss">veien</span></div>
+              <div class="w4w"><span class="orig">ἀλήθεια</span><span class="translit">alētheia</span><span class="gloss">sannhet</span></div>
+              <div class="w4w"><span class="orig">ζωή</span><span class="translit">zōē</span><span class="gloss">liv</span></div>
+              <div class="w4w"><span class="orig">πατέρα</span><span class="translit">patera</span><span class="gloss">far</span></div>
+            </div>
+            <div class="w4w-detail">
+              <strong>ὁδός</strong><span class="pron">(hodos)</span>
+              <p>Substantiv, femininum — «vei, sti, rute, reise». Brukes også metaforisk om «levemåte» eller «en fremgangsmåte». Her identifiserer Jesus <em>seg selv</em> som veien (med bestemt artikkel ἡ), ikke bare en lærer <em>om</em> veien.</p>
+              <button class="seek">Søk alle 101 forekomster i NT</button>
+            </div>
+          </div>
+
+          <!-- KRYSSREFERANSER -->
+          <div class="vpop-panel" data-panel="xref">
+            <a class="xref-item" href="#">
+              <span class="xr-ref">Joh 10,9</span>
+              <span class="xr-text">«Jeg er døren. Den som går inn gjennom meg, skal bli frelst, og han skal gå inn og ut og finne beite.»</span>
+              <span class="xr-go">→</span>
+            </a>
+            <a class="xref-item" href="#">
+              <span class="xr-ref">Hebr 10,20</span>
+              <span class="xr-text">«…en ny og levende vei han har innviet for oss gjennom forhenget, det vil si hans jordiske legeme.»</span>
+              <span class="xr-go">→</span>
+            </a>
+            <a class="xref-item" href="#">
+              <span class="xr-ref">1 Joh 5,20</span>
+              <span class="xr-text">«Han er den sanne Gud og det evige liv.»</span>
+              <span class="xr-go">→</span>
+            </a>
+            <a class="xref-item" href="#">
+              <span class="xr-ref">Apg 4,12</span>
+              <span class="xr-text">«Og det finnes ikke frelse i noen annen, for det er ikke gitt mennesker noe annet navn under himmelen…»</span>
+              <span class="xr-go">→</span>
+            </a>
+            <a class="xref-item" href="#">
+              <span class="xr-ref">1 Tim 2,5</span>
+              <span class="xr-text">«For det er én Gud og én mellommann mellom Gud og mennesker, mennesket Kristus Jesus.»</span>
+              <span class="xr-go">→</span>
+            </a>
+            <a class="xref-item" href="#">
+              <span class="xr-ref">Joh 1,14</span>
+              <span class="xr-text">«Og Ordet ble menneske og tok bolig iblant oss, og vi så hans herlighet… full av nåde og sannhet.»</span>
+              <span class="xr-go">→</span>
+            </a>
+            <a class="xref-item" href="#">
+              <span class="xr-ref">Kol 2,3</span>
+              <span class="xr-text">«I ham er alle visdommens og kunnskapens skatter skjult til stede.»</span>
+              <span class="xr-go">→</span>
+            </a>
+          </div>
+
+          <!-- PROFETIER -->
+          <div class="vpop-panel" data-panel="proph">
+            <a class="proph-item" href="#">
+              <div class="proph-head">
+                <span class="proph-title">Messias som den eneste vei til Gud</span>
+                <span class="proph-cat">Messias</span>
+              </div>
+              <p>Den ventede Messias skulle ikke bare vise folket Herren, men selv være åpningen inn i pakten (Jes 42,6: «Jeg gjør deg til en pakt for folket»).</p>
+              <div class="proph-flow">Jes 42,6 <span class="arrow">→</span> Joh 14,6 <span class="arrow">✓</span> Oppfylt</div>
+            </a>
+            <a class="proph-item" href="#">
+              <div class="proph-head">
+                <span class="proph-title">Livets kilde i den kommende</span>
+                <span class="proph-cat">Messias · Liv</span>
+              </div>
+              <p>Sal 36,10: «For hos deg er livets kilde, i ditt lys ser vi lys.» — Jesus tar opp i seg kildens funksjon: «ἡ ζωή».</p>
+              <div class="proph-flow">Sal 36,10 <span class="arrow">→</span> Joh 14,6 <span class="arrow">✓</span> Oppfylt</div>
+            </a>
+          </div>
+
+          <!-- EMNER -->
+          <div class="vpop-panel" data-panel="topics">
+            <div class="tags-wrap">
+              <span class="tag">Frelsesvei <button title="Fjern">×</button></span>
+              <span class="tag">Kristologi <button title="Fjern">×</button></span>
+              <span class="tag">Eksklusivitet <button title="Fjern">×</button></span>
+            </div>
+            <input class="inp" placeholder="Legg til emne… (Enter for å lagre)"/>
+            <div style="margin-top: 10px; font-size: 11.5px; color: var(--muted);">
+              Forslag: <button class="chip" style="padding: 2px 10px; font-size: 11.5px;">Faderen</button>
+              <button class="chip" style="padding: 2px 10px; font-size: 11.5px;">Pakten</button>
+              <button class="chip" style="padding: 2px 10px; font-size: 11.5px;">Avskjedstalen</button>
+            </div>
+          </div>
+
+          <!-- NOTATER -->
+          <div class="vpop-panel" data-panel="notes">
+            <div class="note-item">
+              <p>«Veien» (ὁδός) ble et tidlig navn på Jesus-bevegelsen (Apg 9,2 — «dem som hørte til Veien»). Tenk på hvordan dette verset formet selv-forståelsen til urkirken.</p>
+              <div class="note-foot">
+                <span>15. mars 2026 · mine notater</span>
+                <span class="sp"></span>
+                <button>✎</button>
+                <button>×</button>
+              </div>
+            </div>
+            <textarea class="inp" placeholder="Skriv et nytt notat…"></textarea>
+            <button class="btn btn-ghost" style="margin-top: 8px; font-size: 12.5px; padding: 6px 12px;">Legg til notat</button>
+          </div>
+
+          <!-- VERSJONER -->
+          <div class="vpop-panel" data-panel="versions">
+            <div style="font-size: 12.5px; color: var(--muted); margin-bottom: 10px;">
+              Velg hvilken oversettelse som brukes for dette verset:
+            </div>
+            <label class="ver-opt sel">
+              <input type="radio" name="ver6" checked/>
+              <div class="ver-head">
+                <span class="ver-title">Bokmål 2011 (standard)</span>
+                <span class="ver-tag tg-default">nb11</span>
+              </div>
+              <div class="ver-text">«Jeg er veien, sannheten og livet. Ingen kommer til Faderen uten ved meg.»</div>
+            </label>
+            <label class="ver-opt">
+              <input type="radio" name="ver6"/>
+              <div class="ver-head">
+                <span class="ver-title">Nynorsk 2011</span>
+                <span class="ver-tag tg-sugg">nn11</span>
+                <span class="sv-minor">Liten variasjon</span>
+              </div>
+              <div class="ver-text">«Eg er vegen, sanninga og livet. Ingen kjem til Faderen utan gjennom meg.»</div>
+              <div class="ver-expl">Ulik ortografi, samme betydning.</div>
+            </label>
+            <label class="ver-opt">
+              <input type="radio" name="ver6"/>
+              <div class="ver-head">
+                <span class="ver-title">Forslag: «Jeg er Veien»</span>
+                <span class="ver-tag tg-theo">teologisk</span>
+                <span class="sv-major">Viktig</span>
+              </div>
+              <div class="ver-text">«Jeg er Veien, Sannheten og Livet. Ingen kommer fram til Faderen uten ved meg.»</div>
+              <div class="ver-expl">Stor forbokstav fremhever at ord ene fungerer som titler / navn.</div>
+            </label>
+          </div>
+
+          <!-- MANUSKRIPTER -->
+          <div class="vpop-panel" data-panel="ms">
+            <a class="ms-item" href="#">
+              <div>
+                <div class="ms-t">Veien i mørket</div>
+                <div class="ms-type">Andakt · 2 min</div>
+              </div>
+              <span class="ms-d">15. mars</span>
+            </a>
+            <a class="ms-item" href="#">
+              <div>
+                <div class="ms-t">Bare én vei? Eksklusivitet og Kristus</div>
+                <div class="ms-type">Preken · 18 min</div>
+              </div>
+              <span class="ms-d">feb 2025</span>
+            </a>
+            <a class="new-ms-link" href="#">+ Skriv manuskript om dette verset</a>
+          </div>
+
+          <!-- FOTNOTER -->
+          <div class="vpop-panel" data-panel="fn">
+            <div class="fn-item">
+              <span class="fn-src">Note</span>
+              I noen eldre manuskripter står «til min Far» i stedet for «til Faderen» — betydningsmessig likt, men uttrykket speiler Jesu personlige tiltale andre steder i Johannesevangeliet.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- remaining verses -->
+      <p class="verse paragraph">
+        <span class="vs" data-v="8"><span class="vs-num">8</span>Filip sier: «Herre, vis oss Faderen, det er nok for oss.» </span><span class="vs" data-v="9"><span class="vs-num"><span class="vs-ind"><span class="tp" title="1 emne"></span></span>9</span>Jesus svarer: «Kjenner du meg ikke, Filip, enda jeg har vært hos dere så lenge? Den som har sett meg, har sett Faderen. Hvordan kan du da si: Vis oss Faderen? </span><span class="vs" data-v="10"><span class="vs-num">10</span>Tror du ikke at jeg er i Faderen og Faderen i meg?»</span>
+      </p>
+
+      <!-- Pericope 2 -->
+      <div class="pericope">Løftet om Talsmannen</div>
+
+      <p class="verse paragraph">
+        <span class="vs" data-v="15"><span class="vs-num">15</span>Elsker dere meg, så holder dere mine bud. </span><span class="vs" data-v="16"><span class="vs-num">16</span>Og jeg vil be Faderen, og han skal gi dere en annen <mark>talsmann</mark>, som skal være hos dere for alltid: </span><span class="vs" data-v="17"><span class="vs-num">17</span>sannhetens Ånd. Verden kan ikke ta imot ham, for den ser ham ikke og kjenner ham ikke. Men dere kjenner ham, for han blir hos dere og skal være i dere.</span>
+      </p>
+
+      <p class="verse paragraph">
+        <span class="vs" data-v="18"><span class="vs-num">18</span>Jeg lar dere ikke bli igjen som foreldreløse barn. Jeg kommer til dere. </span><span class="vs" data-v="19"><span class="vs-num">19</span>Snart ser ikke verden meg mer. Men dere ser meg, for jeg lever, og dere skal også leve. </span><span class="vs" data-v="20"><span class="vs-num">20</span>Den dagen skal dere skjønne at jeg er i min Far, og at dere er i meg og jeg i dere. </span><span class="vs" data-v="21"><span class="vs-num"><span class="vs-ind"><span class="nt" title="1 notat"></span></span>21</span>Den som har mine bud og holder dem, han er det som elsker meg. Og den som elsker meg, skal min Far elske. Også jeg skal elske ham og åpenbare meg for ham.</span>
+      </p>
+
+      <p class="verse paragraph muted" style="opacity:.6">
+        <span class="vs" data-v="22"><span class="vs-num">22</span>Judas — ikke Iskariot — sier til ham: «Herre, hvordan har det seg at du vil åpenbare deg for oss og ikke for verden?»</span>
+      </p>
+
+      <!-- Floating reading position / progress -->
+      <div class="read-pos">
+        <span>Dagens lesning · Joh 14</span>
+        <div class="rp-bar"><div class="rp-fill"></div></div>
+        <span class="muted">v. 6 / 31</span>
+      </div>
+
+      <div style="margin-top: 44px; display: flex; justify-content: space-between; gap: 20px; border-top: 1px dashed var(--border); padding-top: 20px;">
+        <a class="btn btn-ghost" href="#">← Kap. 13</a>
+        <a class="btn btn-primary" href="#">Kap. 15 →</a>
+      </div>
+    </main>
+
+    <!-- Context sidebar — now a tools panel -->
+    <aside class="read-context">
+
+      <div class="ctx-block">
+        <div class="ctx-head"><div class="ctx-title">Sammendrag</div><span class="caret">▾</span></div>
+        <div class="ctx-body">
+          <div class="sum-block">«Jeg er veien, sannheten og livet» — Jesus samler avskjedstalens håp i seg selv: rommene hos Faderen, Talsmannen som skal komme, og det indre livet «i ham». Kapittelet svarer på disiplenes redsel for å bli forlatt.</div>
+        </div>
+      </div>
+
+      <div class="ctx-block">
+        <div class="ctx-head"><div class="ctx-title">Personer</div><span class="ctx-count">4</span></div>
+        <div class="ctx-body chip-row">
+          <button class="chip">Jesus <span class="num">×9</span></button>
+          <button class="chip">Tomas <span class="num">×1</span></button>
+          <button class="chip">Filip <span class="num">×2</span></button>
+          <button class="chip">Judas (ikke Isk.) <span class="num">×1</span></button>
+          <button class="chip">Talsmannen <span class="num">×3</span></button>
+        </div>
+      </div>
+
+      <div class="ctx-block">
+        <div class="ctx-head"><div class="ctx-title">Viktige ord</div><span class="ctx-count">gresk</span></div>
+        <div class="ctx-body">
+          <div class="iw-item"><span class="iw-word">παράκλητος</span><span class="iw-gloss">talsmann, trøster</span><span class="iw-cnt">×1</span></div>
+          <div class="iw-item"><span class="iw-word">ἀλήθεια</span><span class="iw-gloss">sannhet</span><span class="iw-cnt">×3</span></div>
+          <div class="iw-item"><span class="iw-word">ὁδός</span><span class="iw-gloss">vei</span><span class="iw-cnt">×2</span></div>
+          <div class="iw-item"><span class="iw-word">ἀγαπάω</span><span class="iw-gloss">elske</span><span class="iw-cnt">×8</span></div>
+          <div class="iw-item"><span class="iw-word">εἰρήνη</span><span class="iw-gloss">fred, shalom</span><span class="iw-cnt">×2</span></div>
+        </div>
+      </div>
+
+      <div class="ctx-block">
+        <div class="ctx-head"><div class="ctx-title">Tidslinje</div><span class="caret">▾</span></div>
+        <div class="ctx-body">
+          <div class="tl-mini">
+            <div class="tl-ev"><div class="tl-date">Torsdag kveld</div><div class="tl-lbl">Nattverdsmåltidet (Joh 13)</div></div>
+            <div class="tl-ev here"><div class="tl-date">Sen kveld</div><div class="tl-lbl">Avskjedstalen · Joh 14</div></div>
+            <div class="tl-ev"><div class="tl-date">Natt</div><div class="tl-lbl">Getsemane (Joh 18)</div></div>
+            <div class="tl-ev"><div class="tl-date">Fredag</div><div class="tl-lbl">Korsfestelsen</div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="ctx-block">
+        <div class="ctx-head"><div class="ctx-title">Tid &amp; sted</div></div>
+        <div class="ctx-body">
+          <div class="mini-map" aria-hidden="true">
+            <div class="pin" style="left: 58%; top: 55%;"></div>
+            <div class="pin-label" style="left: 58%; top: 55%;">Jerusalem</div>
+            <div class="pin" style="left: 72%; top: 30%; background: var(--ink-2); box-shadow: 0 0 0 1px var(--ink-2);"></div>
+            <div class="pin-label" style="left: 72%; top: 30%; color: var(--muted);">Betania</div>
+          </div>
+          <div class="muted" style="font-size: 12px; margin-top: 8px;">Ca. år 30 e.Kr · nattverdsmåltidet</div>
+        </div>
+      </div>
+
+      <div class="ctx-block">
+        <div class="ctx-head"><div class="ctx-title">Temaer</div></div>
+        <div class="ctx-body chip-row">
+          <button class="chip">Talsmannen</button>
+          <button class="chip">Vei &amp; sannhet</button>
+          <button class="chip">Fred</button>
+          <button class="chip">Den treenige Gud</button>
+        </div>
+      </div>
+
+      <div class="ctx-block">
+        <div class="ctx-head"><div class="ctx-title">Manuskripter om kap.</div></div>
+        <div class="ctx-body">
+          <a class="ms-item" href="#">
+            <div><div class="ms-t">Å være i Ham</div><div class="ms-type">Andakt</div></div>
+            <span class="ms-d">mars</span>
+          </a>
+          <a class="ms-item" href="#">
+            <div><div class="ms-t">Fred — ikke som verden gir</div><div class="ms-type">Preken</div></div>
+            <span class="ms-d">feb</span>
+          </a>
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <button class="btn btn-ghost focus-exit" id="exitFocus">Avslutt fokus (Esc)</button>
+</section>
+
+<!-- ============================= COMMAND PALETTE ============================= -->
+<div class="cmdk-overlay" id="cmdk" aria-hidden="true">
+  <div class="cmdk" role="dialog" aria-label="Hurtigsøk">
+    <input class="cmdk-input" id="cmdkInput" placeholder="Gå til vers (Joh 3,16), søk person, tema, manuskript…"/>
+    <div class="cmdk-list" id="cmdkList"></div>
+    <div class="cmdk-foot">
+      <span><kbd>↑</kbd> <kbd>↓</kbd> naviger</span>
+      <span><kbd>↵</kbd> åpne</span>
+      <span><kbd>Esc</kbd> lukk</span>
+      <span style="margin-left:auto; opacity:.8">Tips: skriv «3mos 19» eller «nåde»</span>
+    </div>
+  </div>
+</div>
+
+<!-- ============================= TWEAKS ============================= -->
+<div class="tweaks" id="tweaks">
+  <h4>Tweaks</h4>
+  <div class="tweak-row">
+    <label>Tekststørrelse</label>
+    <div class="seg" data-seg="verse">
+      <button data-v="s">S</button>
+      <button class="on" data-v="m">M</button>
+      <button data-v="l">L</button>
+      <button data-v="xl">XL</button>
+    </div>
+  </div>
+  <div class="tweak-row">
+    <label>Papir­tekstur</label>
+    <div class="seg" data-seg="paper">
+      <button class="on" data-v="0">Av</button>
+      <button data-v="1">På</button>
+    </div>
+  </div>
+  <div class="tweak-row">
+    <label>Kontekstkolonne</label>
+    <div class="seg" data-seg="ctx">
+      <button class="on" data-v="1">På</button>
+      <button data-v="0">Av</button>
+    </div>
+  </div>
+  <div class="tweak-row">
+    <label>Verstall</label>
+    <div class="seg" data-seg="vnum">
+      <button class="on" data-v="1">Synlig</button>
+      <button data-v="0">Skjul</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ---------- Tabs (home/read) ----------
+  const tabs = document.querySelectorAll('.demo-bar .tab');
+  function setPage(name) {
+    document.querySelectorAll('section.page').forEach(p => p.classList.toggle('active', p.dataset.page === name));
+    tabs.forEach(t => t.setAttribute('aria-selected', String(t.dataset.page === name)));
+    window.scrollTo({top: 0, behavior: 'instant'});
+    localStorage.setItem('bibel-demo-page', name);
+  }
+  tabs.forEach(t => t.addEventListener('click', () => setPage(t.dataset.page)));
+  document.querySelectorAll('[data-goto-read]').forEach(el => el.addEventListener('click', e => { e.preventDefault(); setPage('read'); }));
+  document.querySelectorAll('[data-goto-home]').forEach(el => el.addEventListener('click', e => { e.preventDefault(); setPage('home'); }));
+  const savedPage = localStorage.getItem('bibel-demo-page');
+  if (savedPage) setPage(savedPage);
+
+  // ---------- Theme ----------
+  const themeBtn = document.getElementById('themeBtn');
+  function applyTheme(dark) {
+    document.documentElement.classList.toggle('dark', dark);
+    themeBtn.textContent = dark ? '☀ Lys' : '☾ Mørk';
+    themeBtn.setAttribute('aria-pressed', String(dark));
+    localStorage.setItem('bibel-demo-dark', dark ? '1' : '0');
+  }
+  applyTheme(localStorage.getItem('bibel-demo-dark') === '1');
+  themeBtn.addEventListener('click', () => applyTheme(!document.documentElement.classList.contains('dark')));
+
+  // ---------- Focus mode ----------
+  const focusBtn = document.getElementById('focusBtn');
+  const exitFocus = document.getElementById('exitFocus');
+  function setFocus(on) {
+    document.body.dataset.focus = on ? '1' : '0';
+    focusBtn.setAttribute('aria-pressed', String(on));
+  }
+  focusBtn.addEventListener('click', () => setFocus(document.body.dataset.focus !== '1'));
+  exitFocus.addEventListener('click', () => setFocus(false));
+
+  // ---------- Lesevalg popover ----------
+  const prefsBtn = document.getElementById('prefsBtn');
+  const prefsPop = document.getElementById('prefsPop');
+  if (prefsBtn && prefsPop) {
+    prefsBtn.addEventListener('click', e => {
+      e.stopPropagation();
+      const open = prefsPop.classList.toggle('on');
+      prefsBtn.setAttribute('aria-expanded', String(open));
+      if (open) {
+        // Move focus into popover for keyboard users
+        prefsPop.querySelector('select, button, [role="switch"]')?.focus();
+      }
+    });
+    document.addEventListener('click', e => {
+      if (!prefsPop.contains(e.target) && e.target !== prefsBtn) {
+        prefsPop.classList.remove('on');
+        prefsBtn.setAttribute('aria-expanded', 'false');
+      }
+    });
+    prefsPop.addEventListener('click', e => e.stopPropagation());
+  }
+
+  // Tekststørrelse (segmented inside prefs)
+  prefsPop?.querySelectorAll('.prefs-seg').forEach(seg => {
+    seg.addEventListener('click', e => {
+      const btn = e.target.closest('button'); if (!btn) return;
+      seg.querySelectorAll('button').forEach(b => b.classList.remove('on'));
+      btn.classList.add('on');
+      if (seg.dataset.seg === 'verse') document.body.dataset.verse = btn.dataset.v;
+    });
+  });
+
+  // Toggle switches
+  function bindSwitch(id, fn) {
+    const el = document.getElementById(id); if (!el) return;
+    const toggle = () => {
+      const on = !el.classList.contains('on');
+      el.classList.toggle('on', on);
+      el.setAttribute('aria-checked', String(on));
+      fn(on);
+    };
+    el.addEventListener('click', toggle);
+    el.addEventListener('keydown', e => {
+      if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); toggle(); }
+    });
+  }
+  bindSwitch('tgPaper', on => document.body.dataset.paper = on ? '1' : '0');
+  bindSwitch('tgVnum', on => {
+    document.querySelectorAll('.vs-num').forEach(n => n.style.display = on ? '' : 'none');
+  });
+  bindSwitch('tgPericope', on => {
+    document.querySelectorAll('.read-main .pericope').forEach(p => p.style.display = on ? '' : 'none');
+  });
+  bindSwitch('tgInd', on => {
+    document.querySelectorAll('.vs-ind').forEach(i => i.style.display = on ? '' : 'none');
+  });
+  bindSwitch('tgCtx', on => {
+    document.querySelectorAll('.read-context').forEach(el => el.style.display = on ? '' : 'none');
+    document.querySelectorAll('.read-wrap').forEach(el => {
+      el.style.gridTemplateColumns = on ? '' : '240px minmax(0,1fr)';
+    });
+  });
+
+  // Hovedtekst (demo: just a flag)
+  const prefMain = document.getElementById('prefMain');
+  prefMain?.addEventListener('change', () => {
+    const nav = document.querySelector('[data-page="read"] .app-nav .current');
+    const status = document.getElementById('sr-status');
+    if (status) status.textContent = `Oversettelse byttet til ${prefMain.value}`;
+    if (nav) {
+      const orig = nav.textContent;
+      nav.textContent = `Johannes 14 · ${prefMain.value}`;
+      setTimeout(() => { nav.textContent = orig; }, 1600);
+    }
+  });
+
+  // Parallell
+  const prefParallel = document.getElementById('prefParallel');
+  prefParallel?.addEventListener('change', () => {
+    const v = prefParallel.value;
+    const strips = document.querySelectorAll('.parallel-extra');
+    if (v === 'off') {
+      strips.forEach(el => el.hidden = true);
+    } else {
+      const texts = {
+        nn: { label: 'nn', text: 'Jesus seier: «Eg er vegen, sanninga og livet. Ingen kjem til Faderen utan gjennom meg.»' },
+        el: { label: 'gr', text: 'λέγει αὐτῷ ὁ Ἰησοῦς· ἐγώ εἰμι ἡ ὁδὸς καὶ ἡ ἀλήθεια καὶ ἡ ζωή· οὐδεὶς ἔρχεται πρὸς τὸν πατέρα εἰ μὴ διʼ ἐμοῦ.' },
+        en: { label: 'en', text: 'Jesus answered, "I am the way and the truth and the life. No one comes to the Father except through me."' }
+      };
+      strips.forEach(el => {
+        el.hidden = false;
+        el.innerHTML = `<span class="ps-label">${texts[v].label}</span>${texts[v].text}`;
+      });
+    }
+    // sync with chapter-rail toggle button
+    const btn = document.getElementById('parallelToggle');
+    if (btn) {
+      btn.classList.toggle('on', v !== 'off');
+      btn.textContent = v === 'off' ? '+ Parallell' : '− Skjul parallell';
+    }
+  });
+
+  // ---------- Command palette ----------
+  const cmdk = document.getElementById('cmdk');
+  const cmdkInput = document.getElementById('cmdkInput');
+  const cmdkList = document.getElementById('cmdkList');
+  const items = [
+    {kind: 'Vers', title: 'Johannes 3,16', sub: 'Så elsket Gud verden…'},
+    {kind: 'Vers', title: 'Salme 23', sub: 'Herren er min hyrde'},
+    {kind: 'Vers', title: '1 Mos 1,1', sub: 'I begynnelsen skapte Gud…'},
+    {kind: 'Kapittel', title: 'Johannes 14', sub: 'Jesus er veien'},
+    {kind: 'Person', title: 'Peter', sub: 'Apostel · 154 referanser'},
+    {kind: 'Person', title: 'Moses', sub: 'Patriark · 740 referanser'},
+    {kind: 'Tema', title: 'Nåde', sub: '87 vers · 6 underemner'},
+    {kind: 'Tema', title: 'Pakt', sub: '112 vers'},
+    {kind: 'Sted', title: 'Betlehem', sub: 'Judea · 42 referanser'},
+    {kind: 'Profeti', title: 'Jes 53 → Matt 27', sub: 'Den lidende tjener'},
+    {kind: 'Manuskript', title: 'Fred — ikke som verden gir', sub: 'Andakt · feb 2026'},
+    {kind: 'Leseplan', title: 'Bibelen på ett år', sub: 'Dag 108 av 365'},
+    {kind: 'Handling', title: 'Bytt oversettelse…', sub: 'Bokmål ↔ Nynorsk ↔ Grunntekst'},
+    {kind: 'Handling', title: 'Start memorering av dagens vers', sub: 'Salme 23,1'},
+  ];
+  let cmdkSel = 0;
+  function renderCmdk(q='') {
+    const filt = q.trim().toLowerCase();
+    const shown = filt
+      ? items.filter(i => (i.title + ' ' + i.sub + ' ' + i.kind).toLowerCase().includes(filt))
+      : items;
+    cmdkSel = 0;
+    if (!shown.length) {
+      cmdkList.innerHTML = '<div style="padding:18px; color:var(--muted); font-size:13px; text-align:center;">Ingen treff. Prøv «Joh 3,16», «nåde», eller «Peter».</div>';
+      return;
+    }
+    const groups = {};
+    shown.forEach(it => { (groups[it.kind] = groups[it.kind] || []).push(it); });
+    cmdkList.innerHTML = Object.entries(groups).map(([g, arr]) =>
+      `<div class="cmdk-group-label">${g}</div>` +
+      arr.map((it, i) =>
+        `<div class="cmdk-item" data-idx="${items.indexOf(it)}">
+           <div class="ci-main"><div>${it.title}</div><div class="ci-sub">${it.sub}</div></div>
+           <span class="kind">${it.kind}</span>
+         </div>`).join('')
+    ).join('');
+    const first = cmdkList.querySelector('.cmdk-item');
+    if (first) first.classList.add('sel');
+  }
+  function openCmdk() {
+    cmdk.setAttribute('aria-hidden', 'false');
+    cmdkInput.value = '';
+    renderCmdk();
+    setTimeout(() => cmdkInput.focus(), 10);
+  }
+  function closeCmdk() { cmdk.setAttribute('aria-hidden', 'true'); }
+  document.querySelectorAll('[data-open-cmdk]').forEach(b => b.addEventListener('click', openCmdk));
+  cmdk.addEventListener('click', e => { if (e.target === cmdk) closeCmdk(); });
+  cmdkInput.addEventListener('input', e => renderCmdk(e.target.value));
+  cmdkInput.addEventListener('keydown', e => {
+    const rows = [...cmdkList.querySelectorAll('.cmdk-item')];
+    const idx = rows.findIndex(r => r.classList.contains('sel'));
+    if (e.key === 'ArrowDown') { e.preventDefault(); rows[idx]?.classList.remove('sel'); rows[Math.min(idx+1, rows.length-1)]?.classList.add('sel'); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); rows[idx]?.classList.remove('sel'); rows[Math.max(idx-1, 0)]?.classList.add('sel'); }
+    else if (e.key === 'Enter') { closeCmdk(); }
+    else if (e.key === 'Escape') { closeCmdk(); }
+  });
+  window.addEventListener('keydown', e => {
+    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); openCmdk(); }
+    if (e.key === 'Escape') {
+      closeCmdk();
+      if (document.body.dataset.focus === '1') setFocus(false);
+      // Close verse popup
+      const pop = document.getElementById('vpop6');
+      if (pop && pop.offsetHeight > 0 && pop.style.display !== 'none') {
+        closeVpop();
+        document.getElementById('featureVerse')?.focus?.();
+      }
+      // Close prefs popover
+      const pp = document.getElementById('prefsPop');
+      if (pp?.classList.contains('on')) {
+        pp.classList.remove('on');
+        document.getElementById('prefsBtn')?.setAttribute('aria-expanded', 'false');
+        document.getElementById('prefsBtn')?.focus();
+      }
+    }
+    if (e.key.toLowerCase() === 'f' && !['INPUT','TEXTAREA'].includes(document.activeElement?.tagName) && document.querySelector('[data-page="read"].active')) {
+      setFocus(document.body.dataset.focus !== '1');
+    }
+  });
+
+  // ---------- Plans tabs ----------
+  document.querySelectorAll('.plans-tab[data-plan]').forEach(tab => {
+    tab.addEventListener('click', () => {
+      const id = tab.dataset.plan;
+      document.querySelectorAll('.plans-tab').forEach(t => { t.classList.toggle('on', t === tab); t.setAttribute('aria-selected', String(t === tab)); });
+      document.querySelectorAll('.plan-body').forEach(b => b.classList.toggle('on', b.dataset.plan === id));
+    });
+  });
+
+  // ---------- Verse-of-day fade removal when not overflowing ----------
+  const vod = document.getElementById('vodScroll');
+  if (vod) {
+    const checkVod = () => {
+      const overflow = vod.scrollHeight - 2 > vod.clientHeight;
+      vod.classList.toggle('no-fade', !overflow);
+    };
+    checkVod();
+    new ResizeObserver(checkVod).observe(vod);
+  }
+
+  // ---------- Tweaks ----------
+  const tweaksPanel = document.getElementById('tweaks');
+  document.getElementById('tweaksBtn').addEventListener('click', () => {
+    const open = tweaksPanel.classList.toggle('on');
+    document.getElementById('tweaksBtn').setAttribute('aria-expanded', String(open));
+  });
+  document.querySelectorAll('.seg').forEach(seg => {
+    seg.addEventListener('click', e => {
+      const btn = e.target.closest('button'); if (!btn) return;
+      seg.querySelectorAll('button').forEach(b => b.classList.remove('on'));
+      btn.classList.add('on');
+      const key = seg.dataset.seg, val = btn.dataset.v;
+      if (key === 'verse') document.body.dataset.verse = val;
+      if (key === 'paper') document.body.dataset.paper = val;
+      if (key === 'ctx') {
+        document.querySelectorAll('.read-context').forEach(el => el.style.display = val === '1' ? '' : 'none');
+        document.querySelectorAll('.read-wrap').forEach(el => {
+          el.style.gridTemplateColumns = val === '1' ? '' : '240px minmax(0,1fr)';
+        });
+      }
+      if (key === 'vnum') {
+        document.querySelectorAll('.verse-n, .vs-num').forEach(n => n.style.display = val === '1' ? '' : 'none');
+      }
+    });
+  });
+
+  // ---------- Verse popup tabs ----------
+  document.querySelectorAll('.vpop').forEach(pop => {
+    const tabs = pop.querySelectorAll('.vpop-tab');
+    const panels = pop.querySelectorAll('.vpop-panel');
+    tabs.forEach(t => t.addEventListener('click', () => {
+      const id = t.dataset.tab;
+      tabs.forEach(x => x.classList.toggle('active', x === t));
+      panels.forEach(p => p.classList.toggle('active', p.dataset.panel === id));
+    }));
+  });
+
+  // ---------- Verse click → toggle popup (demo: only v.6 has a popup) ----------
+  const isMobile = () => window.matchMedia('(max-width: 720px)').matches;
+
+  // Create mobile backdrop once
+  let vpopBackdrop = document.querySelector('.vpop-backdrop');
+  if (!vpopBackdrop) {
+    vpopBackdrop = document.createElement('div');
+    vpopBackdrop.className = 'vpop-backdrop';
+    document.body.appendChild(vpopBackdrop);
+    vpopBackdrop.addEventListener('click', () => closeVpop());
+  }
+
+  function openVpop() {
+    const pop = document.getElementById('vpop6');
+    if (isMobile()) {
+      pop.style.display = '';
+      requestAnimationFrame(() => pop.classList.add('mobile-on'));
+      vpopBackdrop.classList.add('on');
+      document.body.classList.add('vpop-mobile-open');
+    } else {
+      pop.style.display = '';
+      pop.scrollIntoView({block: 'center', behavior: 'smooth'});
+    }
+    document.getElementById('featureVerse')?.classList.add('open');
+  }
+  function closeVpop() {
+    const pop = document.getElementById('vpop6');
+    pop.classList.remove('mobile-on');
+    vpopBackdrop.classList.remove('on');
+    document.body.classList.remove('vpop-mobile-open');
+    if (isMobile()) {
+      setTimeout(() => { pop.style.display = 'none'; }, 260);
+    } else {
+      pop.style.display = 'none';
+    }
+    document.getElementById('featureVerse')?.classList.remove('open');
+  }
+
+  document.querySelectorAll('.vs').forEach(v => {
+    v.addEventListener('click', e => {
+      if (e.target.closest('mark')) return;
+      const num = v.dataset.v;
+      if (num === '6') {
+        const pop = document.getElementById('vpop6');
+        const isOpen = pop.style.display !== 'none' && (pop.offsetHeight > 0);
+        if (isOpen) closeVpop(); else openVpop();
+      } else {
+        v.style.background = 'var(--gold-bg)';
+        setTimeout(() => v.style.background = '', 500);
+      }
+    });
+  });
+
+  // Initial state: on mobile, hide the demo popup until tapped
+  if (isMobile()) {
+    document.getElementById('vpop6').style.display = 'none';
+    document.getElementById('featureVerse')?.classList.remove('open');
+  }
+
+  // Close verse popup
+  document.querySelectorAll('[data-close-vpop]').forEach(b => b.addEventListener('click', e => {
+    e.stopPropagation();
+    closeVpop();
+  }));
+
+  // ---------- Word-for-word selection ----------
+  document.querySelectorAll('#w4wGrid .w4w').forEach(w => {
+    w.addEventListener('click', () => {
+      document.querySelectorAll('#w4wGrid .w4w').forEach(x => x.classList.remove('sel'));
+      w.classList.add('sel');
+      const orig = w.querySelector('.orig').textContent;
+      const tr = w.querySelector('.translit').textContent;
+      const gloss = w.querySelector('.gloss').textContent;
+      const det = document.querySelector('.w4w-detail');
+      if (det) {
+        det.innerHTML = `<strong>${orig}</strong><span class="pron">(${tr})</span>
+          <p>«${gloss}» — klikk på andre ord for definisjon, bøying og forekomster i grunnteksten.</p>
+          <button class="seek">Søk alle forekomster i NT</button>`;
+      }
+    });
+  });
+
+  // ---------- Parallel translation toggle ----------
+  const parallelBtn = document.getElementById('parallelToggle');
+  if (parallelBtn) {
+    parallelBtn.addEventListener('click', () => {
+      const sel = document.getElementById('prefParallel');
+      if (sel.value === 'off') { sel.value = 'nn'; }
+      else { sel.value = 'off'; }
+      sel.dispatchEvent(new Event('change'));
+    });
+  }
+
+  // ---------- Sidebar collapse ----------
+  document.querySelectorAll('.read-context .ctx-head').forEach(h => {
+    h.addEventListener('click', () => h.parentElement.classList.toggle('collapsed'));
+  });
+
+  // Host-driven tweaks toggle
+  window.addEventListener('message', e => {
+    if (e.data?.type === '__activate_edit_mode') tweaksPanel.classList.add('on');
+    if (e.data?.type === '__deactivate_edit_mode') tweaksPanel.classList.remove('on');
+  });
+  window.parent.postMessage({type: '__edit_mode_available'}, '*');
+</script>
+</body>
+</html>

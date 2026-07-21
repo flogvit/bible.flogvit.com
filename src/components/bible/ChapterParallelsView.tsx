@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import styles from './ChapterParallelsView.module.scss';
 import type { GospelParallel, GospelParallelPassage } from '@/lib/bible';
@@ -40,17 +40,27 @@ interface ChapterParallelsViewProps {
   bible?: string;
 }
 
-function useIsMobile(breakpoint = 768) {
-  const [isMobile, setIsMobile] = useState(false);
+function useIsNarrow(ref: React.RefObject<HTMLElement | null>, breakpoint = 500) {
+  const [isNarrow, setIsNarrow] = useState(false);
 
   useEffect(() => {
-    const checkMobile = () => setIsMobile(window.innerWidth <= breakpoint);
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
-  }, [breakpoint]);
+    const el = ref.current;
+    if (!el) return;
 
-  return isMobile;
+    const check = () => setIsNarrow(el.offsetWidth <= breakpoint);
+    check();
+
+    if (typeof ResizeObserver !== 'undefined') {
+      const observer = new ResizeObserver(check);
+      observer.observe(el);
+      return () => observer.disconnect();
+    } else {
+      window.addEventListener('resize', check);
+      return () => window.removeEventListener('resize', check);
+    }
+  }, [ref, breakpoint]);
+
+  return isNarrow;
 }
 
 function getPassageUrl(passage: GospelParallelPassage): string {
@@ -110,7 +120,8 @@ export function ChapterParallelsView({ bookId, chapter, parallels, bible = 'osnb
   const [loadedVerses, setLoadedVerses] = useState<LoadedVerses>({});
   const [loadingVerses, setLoadingVerses] = useState<{ [parallelId: string]: boolean }>({});
   const [mobileGospel, setMobileGospel] = useState<Gospel>(BOOK_ID_TO_GOSPEL[bookId] || 'matthew');
-  const isMobile = useIsMobile();
+  const containerRef = useRef<HTMLDivElement>(null);
+  const useTabs = useIsNarrow(containerRef);
 
   const currentGospel = BOOK_ID_TO_GOSPEL[bookId];
 
@@ -172,7 +183,7 @@ export function ChapterParallelsView({ bookId, chapter, parallels, bible = 'osnb
   }
 
   return (
-    <div className={styles.container}>
+    <div className={styles.container} ref={containerRef}>
       <div className={styles.header}>
         <h3 className={styles.title}>Parallelle tekster</h3>
         <p className={styles.subtitle}>
@@ -216,7 +227,7 @@ export function ChapterParallelsView({ bookId, chapter, parallels, bible = 'osnb
                     <p className={styles.notes}>{parallel.notes}</p>
                   )}
 
-                  {isMobile ? (
+                  {useTabs ? (
                     /* Mobile: Tabs */
                     <div className={styles.mobileTabs}>
                       <div className={styles.tabButtons}>

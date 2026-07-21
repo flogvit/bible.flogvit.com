@@ -4,12 +4,13 @@
 .sidebar {
   display: flex;
   flex-direction: column;
-  background: $color-paper;
-  border-left: 1px solid $color-border;
+  background: var(--paper);
+  border-left: 1px solid var(--border);
   position: sticky;
-  top: 3.75rem;
-  height: calc(100vh - 3.75rem);
+  top: 3.25rem;
+  height: calc(100vh - 3.25rem);
   overflow: hidden;
+  font-family: var(--sans);
 
   @include tablet {
     display: none;
@@ -35,32 +36,38 @@
 
 .tabs {
   display: flex;
-  border-bottom: 1px solid $color-border;
-  padding: $spacing-xs $spacing-xs 0;
+  border-bottom: 1px solid var(--border);
+  padding: 4px 8px 0;
   gap: 2px;
   flex-shrink: 0;
+  background: var(--paper-2);
 }
 
 .tab {
   flex: 1;
-  padding: $spacing-sm $spacing-xs;
+  padding: 8px 10px;
   border: none;
   background: transparent;
-  font-size: $font-size-xs;
-  color: $color-text-muted;
+  font-family: var(--sans);
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--muted);
   cursor: pointer;
   border-bottom: 2px solid transparent;
   transition: all $transition-fast;
   white-space: nowrap;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: -1px;
 
   &:hover {
-    color: $color-text;
-    background: $color-background;
+    color: var(--ink);
   }
 
   &.active {
-    color: $color-primary;
-    border-bottom-color: $color-secondary;
+    color: var(--ink);
+    border-bottom-color: var(--gold);
+    background: var(--paper);
   }
 }
 

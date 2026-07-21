@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSettings } from '@/components/SettingsContext';
-import type { SidebarTab } from '@/lib/settings';
+import type { LayoutMode } from '@/lib/offline/userData';
 
 interface ChapterKeyboardShortcutsProps {
   bookSlug: string;
@@ -11,12 +11,7 @@ interface ChapterKeyboardShortcutsProps {
   bibleQuery?: string;
 }
 
-const tabMap: Record<string, SidebarTab> = {
-  '1': 'timeline',
-  '2': 'context',
-  '3': 'resources',
-  '4': 'lookup',
-};
+// Sidebar no longer has tabs — number keys are reserved for jump-to-verse.
 
 export function ChapterKeyboardShortcuts({
   bookSlug,
@@ -26,7 +21,7 @@ export function ChapterKeyboardShortcuts({
   bibleQuery = '',
 }: ChapterKeyboardShortcutsProps) {
   const navigate = useNavigate();
-  const { updateSetting } = useSettings();
+  const { settings, updateSetting } = useSettings();
 
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
@@ -63,15 +58,16 @@ export function ChapterKeyboardShortcuts({
         return;
       }
 
-      // Number keys 1-4: sidebar tab switching
-      if (!e.metaKey && !e.ctrlKey && !e.altKey && !e.shiftKey && tabMap[e.key]) {
+      // F: toggle focus mode (layoutMode: reading <-> normal)
+      if ((e.key === 'f' || e.key === 'F') && !e.metaKey && !e.ctrlKey && !e.altKey && !e.shiftKey) {
         e.preventDefault();
-        updateSetting('sidebarTab', tabMap[e.key]);
+        const next: LayoutMode = settings.layoutMode === 'reading' ? 'normal' : 'reading';
+        updateSetting('layoutMode', next);
         return;
       }
 
-      // Number keys 5-9: jump to verse
-      if (!e.metaKey && !e.ctrlKey && !e.altKey && !e.shiftKey && /^[5-9]$/.test(e.key)) {
+      // Number keys 1-9: jump to verse
+      if (!e.metaKey && !e.ctrlKey && !e.altKey && !e.shiftKey && /^[1-9]$/.test(e.key)) {
         const verseElement = document.getElementById(`v${e.key}`);
         if (verseElement) {
           e.preventDefault();
@@ -84,7 +80,7 @@ export function ChapterKeyboardShortcuts({
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [bookSlug, currentChapter, maxChapter, nextBookSlug, bibleQuery, navigate, updateSetting]);
+  }, [bookSlug, currentChapter, maxChapter, nextBookSlug, bibleQuery, navigate, updateSetting, settings.layoutMode]);
 
   // This component doesn't render anything - it just adds keyboard handlers
   return null;

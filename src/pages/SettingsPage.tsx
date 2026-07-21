@@ -87,7 +87,7 @@ export function SettingsPage() {
 
   return (
     <main className={styles.main}>
-      <div className="reading-container">
+      <div className="container">
       <Breadcrumbs items={[
         { label: 'Hjem', href: '/' },
         { label: 'Innstillinger' },

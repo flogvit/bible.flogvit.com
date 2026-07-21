@@ -285,7 +285,7 @@ export const defaultSearchResultTypes: SearchResultTypes = {
 };
 
 export type LayoutMode = 'normal' | 'reading' | 'panel';
-export type SidebarTab = 'timeline' | 'context' | 'resources' | 'lookup';
+export type SidebarTab = 'studium' | 'timeline' | 'context' | 'resources' | 'lookup';
 
 export interface BibleSettings {
   showBookSummary: boolean;
@@ -317,6 +317,10 @@ export interface BibleSettings {
   showVerseFootnotes: boolean;
   showTodaysDay: boolean;
   showReadingTexts: boolean;
+  // Open/closed state of each Studium block, keyed by block id, persists
+  // across tab and chapter changes so users only have to organise the
+  // sidebar once.
+  studyPanelOpen: Record<string, boolean>;
 }
 
 export const defaultSettings: BibleSettings = {
@@ -335,7 +339,7 @@ export const defaultSettings: BibleSettings = {
   showDailyVerse: true,
   readingMode: false,
   layoutMode: 'normal',
-  sidebarTab: 'timeline',
+  sidebarTab: 'studium',
   sidebarWidth: 280,
   showContextInline: false,
   fontSize: 'medium',
@@ -349,6 +353,20 @@ export const defaultSettings: BibleSettings = {
   showVerseFootnotes: true,
   showTodaysDay: true,
   showReadingTexts: true,
+  studyPanelOpen: {
+    oppslag: false,
+    sammendrag: true,
+    personer: true,
+    'viktige-ord': false,
+    tidslinje: false,
+    temaer: false,
+    profetier: false,
+    historier: false,
+    paralleller: false,
+    tall: false,
+    lesetekster: false,
+    manuskripter: true,
+  },
 };
 
 export async function getSettings(): Promise<BibleSettings> {
@@ -369,6 +387,7 @@ export interface ReadingPlanProgress {
   startDate: string;
   completedDays: number[];
   lastReadDate: string | null;
+  pacing?: 'scheduled' | 'openended';
 }
 
 export async function getActivePlanId(): Promise<string | null> {

@@ -15,7 +15,10 @@
   justify-content: space-between;
   gap: $spacing-sm;
 
-  @include tablet {
+  // Show whenever the right sidebar is hidden (mobile, tablet, AND narrow
+  // desktop ≤1100px — chapter.module.scss hides .rightSidebar at the same
+  // breakpoint, so this is the panel access point from there down).
+  @media (max-width: 1100px) {
     display: flex;
   }
 
@@ -31,6 +34,8 @@
   color: $color-primary;
   width: 44px;
   height: 44px;
+  padding: 0;
+  flex-shrink: 0;
   font-size: $font-size-lg;
   text-decoration: none;
 
@@ -52,12 +57,41 @@
   color: $color-primary;
 }
 
+.titleButton {
+  flex: 1;
+  min-width: 0;
+  text-align: center;
+  font-family: $font-serif;
+  font-size: $font-size-base;
+  color: $color-primary;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: $spacing-xs $spacing-sm;
+  border-radius: $radius-sm;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+
+  &:hover {
+    background: $color-background;
+  }
+}
+
+.titleArrow {
+  font-size: 0.6em;
+  opacity: 0.5;
+  margin-left: 2px;
+}
+
 .sidebarButton {
   @include button;
   background: $color-secondary;
   color: white;
   width: 44px;
   height: 44px;
+  padding: 0;
+  flex-shrink: 0;
   font-size: $font-size-lg;
 
   &:hover {
@@ -71,6 +105,8 @@
   color: white;
   width: 44px;
   height: 44px;
+  padding: 0;
+  flex-shrink: 0;
   font-size: $font-size-lg;
 
   &:hover {
@@ -107,6 +143,119 @@
   }
 }
 
+.pickerSheet {
+  background: $color-paper;
+  width: 100%;
+  border-radius: $radius-lg $radius-lg 0 0;
+  max-height: 85vh;
+  overflow-y: auto;
+  animation: slideUp 0.3s ease;
+  padding: $spacing-lg;
+}
+
+.pickerHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: $spacing-md;
+
+  h3 {
+    margin: 0;
+    font-family: $font-serif;
+    font-size: $font-size-xl;
+    color: $color-primary;
+  }
+}
+
+.pickerClose {
+  background: none;
+  border: none;
+  font-size: $font-size-lg;
+  color: $color-text-muted;
+  cursor: pointer;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: $radius-sm;
+
+  &:hover {
+    background: $color-background;
+  }
+}
+
+.chapterGrid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: $spacing-xs;
+  margin-bottom: $spacing-xl;
+}
+
+.chapterCell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 44px;
+  border-radius: $radius-sm;
+  background: $color-background;
+  color: $color-primary;
+  text-decoration: none;
+  font-size: $font-size-sm;
+  font-weight: 500;
+  transition: background $transition-fast;
+
+  &:hover {
+    background: $color-border;
+  }
+
+  &.chapterActive {
+    background: $color-secondary;
+    color: white;
+  }
+}
+
+.bookPicker {
+  border-top: 1px solid $color-border;
+  padding-top: $spacing-md;
+
+  h4 {
+    margin: 0 0 $spacing-sm 0;
+    font-size: $font-size-sm;
+    color: $color-text-muted;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+
+    &:not(:first-child) {
+      margin-top: $spacing-md;
+    }
+  }
+}
+
+.bookGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: $spacing-xs;
+}
+
+.bookCell {
+  @include button;
+  background: $color-background;
+  color: $color-primary;
+  font-size: $font-size-xs;
+  padding: $spacing-xs $spacing-xs;
+  min-height: 36px;
+
+  &:hover {
+    background: $color-border;
+  }
+
+  &.bookActive {
+    background: $color-secondary;
+    color: white;
+  }
+}
+
 // Dark mode
 :global(html.dark) {
   .toolbar {
@@ -125,6 +274,66 @@
 
   .title {
     color: $dark-color-primary;
+  }
+
+  .titleButton {
+    color: $dark-color-primary;
+
+    &:hover {
+      background: $dark-color-background;
+    }
+  }
+
+  .pickerSheet {
+    background: $dark-color-paper;
+  }
+
+  .pickerHeader h3 {
+    color: $dark-color-primary;
+  }
+
+  .pickerClose {
+    color: $dark-color-text-muted;
+
+    &:hover {
+      background: $dark-color-background;
+    }
+  }
+
+  .chapterCell {
+    background: $dark-color-background;
+    color: $dark-color-primary;
+
+    &:hover {
+      background: $dark-color-border;
+    }
+
+    &.chapterActive {
+      background: $dark-color-secondary;
+      color: white;
+    }
+  }
+
+  .bookPicker {
+    border-top-color: $dark-color-border;
+
+    h4 {
+      color: $dark-color-text-muted;
+    }
+  }
+
+  .bookCell {
+    background: $dark-color-background;
+    color: $dark-color-primary;
+
+    &:hover {
+      background: $dark-color-border;
+    }
+
+    &.bookActive {
+      background: $dark-color-secondary;
+      color: white;
+    }
   }
 
   .sidebarButton {

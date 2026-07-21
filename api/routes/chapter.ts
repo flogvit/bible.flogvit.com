@@ -64,7 +64,7 @@ chapterRouter.get('/', (req: Request, res: Response) => {
         res.status(400).json({ error: `Unknown mapping: ${mapping}` });
         return;
       }
-      const mapped = mapChapter(bookId, chapter, resolvedMapping);
+      const mapped = mapChapter(bookId, chapter, resolvedMapping, bible);
 
       if (mapped.length === 0) {
         res.status(404).json({ error: 'Chapter not found' });

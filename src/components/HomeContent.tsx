@@ -1,65 +1,25 @@
-import { Link } from 'react-router-dom';
-import { booksData } from '@/lib/books-data';
 import { useSettings } from '@/components/SettingsContext';
-import { ContinueReading } from '@/components/ContinueReading';
-import { DailyVerse } from '@/components/DailyVerse';
-import { TodaysDay } from '@/components/TodaysDay';
+import { HomeHero } from '@/components/home/HomeHero';
+import { BookCategories } from '@/components/home/BookCategories';
+import { DiscoverGrid } from '@/components/home/DiscoverGrid';
 import { TodaysReadingText } from '@/components/TodaysReadingText';
-import { TodaysReading } from '@/components/TodaysReading';
-import { toUrlSlug } from '@/lib/url-utils';
 import styles from '@/styles/pages/home.module.scss';
 
 export function HomeContent() {
   const { settings } = useSettings();
-  const otBooks = booksData.filter(b => b.testament === 'OT');
-  const ntBooks = booksData.filter(b => b.testament === 'NT');
 
   return (
-    <div className={styles.main}>
-      <div className="container">
-        <header className={styles.header}>
-          <h1>Bibelen</h1>
-          <p className="text-muted">Velg en bok for å begynne å lese</p>
-        </header>
-
-        {(settings.showContinueReading ?? true) && <ContinueReading />}
-        {(settings.showTodaysDay ?? true) && <TodaysDay />}
-        {(settings.showReadingTexts ?? true) && <TodaysReadingText />}
-        {(settings.showDailyVerse ?? true) && <DailyVerse />}
-        <TodaysReading />
-
-        <section className={styles.testament}>
-          <h2>Det gamle testamente</h2>
-          <div className={styles.bookGrid}>
-            {otBooks.map(book => (
-              <Link
-                key={book.id}
-                to={`/${toUrlSlug(book.short_name)}/1`}
-                className={styles.bookCard}
-              >
-                <span className={styles.bookName}>{book.name_no}</span>
-                <span className={styles.chapters}>{book.chapters} kapitler</span>
-              </Link>
-            ))}
+    <main className={styles.main}>
+      <div className={styles.wrap}>
+        <HomeHero />
+        {(settings.showReadingTexts ?? true) && (
+          <div className={styles.lesetekster}>
+            <TodaysReadingText />
           </div>
-        </section>
-
-        <section className={styles.testament}>
-          <h2>Det nye testamente</h2>
-          <div className={styles.bookGrid}>
-            {ntBooks.map(book => (
-              <Link
-                key={book.id}
-                to={`/${toUrlSlug(book.short_name)}/1`}
-                className={styles.bookCard}
-              >
-                <span className={styles.bookName}>{book.name_no}</span>
-                <span className={styles.chapters}>{book.chapters} kapitler</span>
-              </Link>
-            ))}
-          </div>
-        </section>
+        )}
+        <BookCategories />
+        <DiscoverGrid />
       </div>
-    </div>
+    </main>
   );
 }

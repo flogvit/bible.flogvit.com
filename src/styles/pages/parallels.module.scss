@@ -7,7 +7,7 @@
 
 // Wider container for parallels - needs space for side-by-side columns
 .wideContainer {
-  max-width: 1100px;
+  max-width: $max-width-content;
   margin: 0 auto;
   padding: 0 $spacing-lg;
 

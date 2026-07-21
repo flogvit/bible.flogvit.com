@@ -9,6 +9,8 @@ import {
   getPersonsByChapter, getPropheciesForChapter,
   getNumberSymbolismByChapter, getThemesByChapter, getStoriesByChapter,
   getReadingTextsByChapter,
+  getGospelParallelsForChapter,
+  getImportantWords,
 } from '../../src/lib/bible';
 
 export const searchRouter = Router();
@@ -162,8 +164,17 @@ searchRouter.get('/chapter-resources', (req: Request, res: Response) => {
         : rt.verse_start ? [rt.verse_start] : [],
     }));
 
+    const parallels = getGospelParallelsForChapter(bookId, chapter).map(p => ({
+      id: p.id,
+      title: p.title,
+      section: p.section,
+      gospels: Object.keys(p.passages || {}).filter(g => p.passages?.[g as keyof typeof p.passages]),
+    }));
+
+    const words = getImportantWords(bookId, chapter);
+
     res.set('Cache-Control', 'no-cache');
-    res.json({ persons, prophecies, numbers, themes, stories, readingTexts });
+    res.json({ persons, prophecies, numbers, themes, stories, readingTexts, parallels, words });
   } catch (error) {
     console.error('Error fetching chapter resources:', error);
     res.status(500).json({ error: 'Internal server error' });

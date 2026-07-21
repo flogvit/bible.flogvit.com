@@ -9,15 +9,23 @@ import { Summary } from '@/components/bible/Summary';
 import { ImportantWords } from '@/components/bible/ImportantWords';
 import { ChapterInsightsPanel } from '@/components/bible/ChapterInsightsPanel';
 import { ChapterParallelsView } from '@/components/bible/ChapterParallelsView';
-import { ToolsPanel } from '@/components/bible/ToolsPanel';
+
 import { MobileToolbar } from '@/components/bible/MobileToolbar';
 import { ScrollToVerse } from '@/components/bible/ScrollToVerse';
 import { ReadingSidebar } from '@/components/bible/ReadingSidebar';
+import { ChapterToc } from '@/components/bible/ChapterToc';
 import { ChapterKeyboardShortcuts } from '@/components/bible/ChapterKeyboardShortcuts';
 import { Breadcrumbs } from '@/components/Breadcrumbs';
 import { ReadingModeWrapper } from '@/components/bible/ReadingModeWrapper';
 import { ReadingPositionTracker } from '@/components/bible/ReadingPositionTracker';
 import { useSettings } from '@/components/SettingsContext';
+import { useReadingPlan } from '@/components/ReadingPlanContext';
+import { PrefsPopover } from '@/components/bible/PrefsPopover';
+import { useSearchParams, useLocation, useNavigate } from 'react-router-dom';
+import { getUserBibles } from '@/lib/offline/userBibles';
+import { bibleVersions } from '@/lib/settings';
+import { getBookInfoById as getBookById2 } from '@/lib/books-data';
+import { toUrlSlug } from '@/lib/url-utils';
 import styles from '@/styles/pages/chapter.module.scss';
 
 interface ChapterContentProps {
@@ -58,7 +66,7 @@ export function ChapterContent({
   initialData,
 }: ChapterContentProps) {
   const bibleQuery = bible !== 'osnb2' ? `?bible=${bible}` : '';
-  const { settings } = useSettings();
+  const { settings, updateSetting } = useSettings();
 
   const secondaryBible = settings.showOriginalText ? settings.secondaryBible : undefined;
   const mapping = settings.numberingSystem || 'osnb2';
@@ -127,6 +135,37 @@ export function ChapterContent({
   const handleSidebarWidthChange = useCallback((width: number) => {
     layoutRef.current?.style.setProperty('--sidebar-width', `${width}px`);
   }, []);
+
+  // Active reading plan badge — show only when the current chapter is in today's reading
+  const { activePlan, todaysReading, currentDay } = useReadingPlan();
+  const chapterIsInTodaysPlan = !!todaysReading?.chapters?.some(
+    (c) => c.bookId === bookId && c.chapter === chapter
+  );
+
+  // Build bible options for PrefsPopover
+  const [bibleOpts, setBibleOpts] = useState<{ id: string; name: string }[]>(
+    bibleVersions.map(v => ({ id: v.value, name: v.label })),
+  );
+  useEffect(() => {
+    getUserBibles().then(userBibles => {
+      setBibleOpts([
+        ...bibleVersions.map(v => ({ id: v.value, name: v.label })),
+        ...userBibles.map(ub => ({ id: ub.id, name: ub.name })),
+      ]);
+    });
+  }, []);
+
+  const [searchParams] = useSearchParams();
+  const location = useLocation();
+  const navigate = useNavigate();
+  function handleBibleChange(newBible: string) {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set('bible', newBible);
+    updateSetting('bible', newBible);
+    const hash = typeof window !== 'undefined' ? window.location.hash : '';
+    navigate(`${location.pathname}?${params.toString()}${hash}`);
+  }
+  const isFocus = settings.layoutMode === 'reading';
 
   // Copy handler: intercept copy events to include verse numbers and clean formatting
   const versesRef = useRef<HTMLElement>(null);
@@ -257,50 +296,103 @@ export function ChapterContent({
         className={styles.layout}
         style={{ '--sidebar-width': `${settings.sidebarWidth || 280}px` } as React.CSSProperties}
       >
-        <aside className={styles.sidebar} aria-label="Kapittelnavigasjon og innstillinger">
-          <nav className={styles.nav} aria-label="Kapittelliste">
-            <Link to="/" className={styles.backLink}>← Alle bøker</Link>
-            <span className={styles.navTitle}>{bookName}</span>
-            <div className={styles.chapterList}>
-              {Array.from({ length: maxChapter }, (_, i) => i + 1).map(ch => (
-                <Link
-                  key={ch}
-                  to={`/${bookSlug}/${ch}${bibleQuery}`}
-                  className={`${styles.chapterLink} ${ch === chapter ? styles.active : ''}`}
-                >
-                  {ch}
-                </Link>
-              ))}
-            </div>
-          </nav>
-          <ToolsPanel hasParallels={hasParallels} />
+        <aside className={styles.sidebar} aria-label="Kapittelnavigasjon">
+          <ChapterToc
+            bookId={bookId}
+            bookName={bookName}
+            bookSlug={bookSlug}
+            chapter={chapter}
+            maxChapter={maxChapter}
+            bibleQuery={bibleQuery}
+          />
         </aside>
 
         <article className={styles.content}>
-          <Breadcrumbs items={[
-            { label: 'Hjem', href: '/' },
-            { label: bookName, href: `/${bookSlug}/1${bibleQuery}` },
-            { label: `Kapittel ${chapter}` }
-          ]} />
+          <div className={styles.chapterMeta}>
+            <Breadcrumbs items={[
+              { label: 'Hjem', href: '/' },
+              { label: bookName, href: `/${bookSlug}/1${bibleQuery}` },
+              { label: `Kap. ${chapter}` }
+            ]} />
+            {activePlan && chapterIsInTodaysPlan && (
+              <Link to="/leseplan" className={styles.planBadge} title={`Del av leseplanen «${activePlan.name}»`}>
+                <span className={styles.planBadgeNum}>{currentDay}</span>
+                Dag {currentDay} · {activePlan.name}
+              </Link>
+            )}
+            <span className={styles.chapterMetaActions}>
+              <button
+                type="button"
+                className={`${styles.focusBtn} ${isFocus ? styles.focusBtnOn : ''}`}
+                onClick={() => updateSetting('layoutMode', isFocus ? 'normal' : 'reading')}
+                aria-label="Fokusmodus (F)"
+                aria-pressed={isFocus}
+                title="Fokusmodus (F)"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                  <path d="M3 9V3h6M21 9V3h-6M3 15v6h6M21 15v6h-6" />
+                </svg>
+              </button>
+              <PrefsPopover
+                bibleOptions={bibleOpts}
+                currentBible={bible}
+                onBibleChange={handleBibleChange}
+              />
+            </span>
+          </div>
+
           <header className={styles.header}>
-            <h1>{bookName} {chapter}</h1>
-            <div className={styles.navButtons}>
-              {chapter > 1 && (
-                <Link to={`/${bookSlug}/${chapter - 1}${bibleQuery}`} className={styles.navButton}>
-                  ← Forrige
-                </Link>
-              )}
-              {chapter < maxChapter ? (
-                <Link to={`/${bookSlug}/${chapter + 1}${bibleQuery}`} className={styles.navButton}>
-                  Neste →
-                </Link>
-              ) : nextBookSlug && (
-                <Link to={`/${nextBookSlug}/1${bibleQuery}`} className={styles.navButton}>
-                  {nextBookName} →
-                </Link>
-              )}
-            </div>
+            <div className={styles.chapterBook}>{bookName}</div>
+            <h1 className={styles.chapterTitle}>Kapittel {chapter}</h1>
           </header>
+
+          <div className={styles.chapterRail}>
+            <button
+              type="button"
+              className={`${styles.railChip} ${settings.showOriginalText && settings.secondaryBible !== 'original' ? styles.railChipOn : ''}`}
+              onClick={() => {
+                const undertekstOn = settings.showOriginalText && settings.secondaryBible !== 'original';
+                if (undertekstOn) {
+                  updateSetting('showOriginalText', false);
+                  return;
+                }
+                // Pick a sensible default: the "other" Norwegian translation.
+                let nextSecondary = settings.secondaryBible;
+                if (!nextSecondary || nextSecondary === 'original') {
+                  nextSecondary = bible === 'osnn1' ? 'osnb2' : 'osnn1';
+                }
+                updateSetting('secondaryBible', nextSecondary);
+                updateSetting('showOriginalText', true);
+              }}
+              aria-pressed={!!settings.showOriginalText && settings.secondaryBible !== 'original'}
+              title="Undertekst under hvert vers (velg oversettelse i ⚙)"
+            >
+              + Undertekst
+            </button>
+            <button
+              type="button"
+              className={`${styles.railChip} ${settings.showOriginalText && settings.secondaryBible === 'original' ? styles.railChipOn : ''}`}
+              onClick={() => {
+                if (settings.showOriginalText && settings.secondaryBible === 'original') {
+                  updateSetting('showOriginalText', false);
+                } else {
+                  updateSetting('secondaryBible', 'original');
+                  updateSetting('showOriginalText', true);
+                }
+              }}
+              aria-pressed={!!settings.showOriginalText && settings.secondaryBible === 'original'}
+            >
+              Grunntekst
+            </button>
+            {chapter > 1 && (
+              <Link to={`/${bookSlug}/${chapter - 1}${bibleQuery}`} className={styles.railChip}>← Forrige</Link>
+            )}
+            {chapter < maxChapter ? (
+              <Link to={`/${bookSlug}/${chapter + 1}${bibleQuery}`} className={styles.railChip}>Neste →</Link>
+            ) : nextBookSlug && (
+              <Link to={`/${nextBookSlug}/1${bibleQuery}`} className={styles.railChip}>{nextBookName} →</Link>
+            )}
+          </div>
 
           {settings.showContextInline && (
             <>
@@ -403,6 +495,7 @@ export function ChapterContent({
         bookSlug={bookSlug}
         bookId={bookId}
         timelineEvents={timelineEvents}
+        chapterEventIds={chapterEventIds}
         hasParallels={hasParallels}
         bookSummary={bookSummary}
         chapterSummary={summary}

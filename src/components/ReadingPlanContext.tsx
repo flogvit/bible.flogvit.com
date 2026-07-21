@@ -36,9 +36,12 @@ interface ReadingPlanContextType {
   streak: number;
   completionPercentage: number;
 
+  // Pacing mode
+  isOpenEnded: boolean;
+
   // Actions
   selectPlan: (planId: string) => Promise<void>;
-  startPlan: (planId: string) => void;
+  startPlan: (planId: string, pacing?: 'scheduled' | 'openended') => void;
   markComplete: (dayNumber: number) => void;
   markIncomplete: (dayNumber: number) => void;
   reset: () => void;
@@ -112,8 +115,8 @@ export function ReadingPlanProvider({ children }: { children: ReactNode }) {
     await loadPlan(planId);
   }, []);
 
-  const startPlan = useCallback((planId: string) => {
-    const progress = startReadingPlan(planId);
+  const startPlan = useCallback((planId: string, pacing: 'scheduled' | 'openended' = 'scheduled') => {
+    const progress = startReadingPlan(planId, pacing);
     setActiveProgress(progress);
     setActivePlanId(planId);
     loadPlan(planId);
@@ -150,6 +153,8 @@ export function ReadingPlanProvider({ children }: { children: ReactNode }) {
   }, [activePlan]);
 
   // Computed values
+  const isOpenEnded = activeProgress?.pacing === 'openended';
+
   const todaysReading = activePlan && activeProgress
     ? getTodaysReading(activePlan, activeProgress)
     : null;
@@ -178,6 +183,7 @@ export function ReadingPlanProvider({ children }: { children: ReactNode }) {
         currentDay,
         streak,
         completionPercentage,
+        isOpenEnded,
         selectPlan,
         startPlan,
         markComplete,

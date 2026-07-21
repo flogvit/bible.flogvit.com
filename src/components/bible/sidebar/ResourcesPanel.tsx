@@ -29,6 +29,7 @@ const typeLabels: Record<string, string> = {
   number: 'Tall',
   day: 'Dager',
   readingText: 'Lesetekster',
+  plan: 'Leseplaner',
 };
 
 export function ResourcesPanel({ bookId, chapter, bookName }: ResourcesPanelProps) {
@@ -66,7 +67,7 @@ export function ResourcesPanel({ bookId, chapter, bookName }: ResourcesPanelProp
         }));
         if (data.prophecies) data.prophecies.forEach((p: any) => items.push({
           type: 'prophecy', id: p.id, title: p.title, subtitle: p.category_name,
-          description: p.explanation, verses: p.verses,
+          description: p.explanation, url: '/profetier', verses: p.verses,
         }));
         if (data.themes) data.themes.forEach((t: any) => items.push({
           type: 'theme', id: t.id, title: t.title || t.name,
@@ -84,6 +85,15 @@ export function ResourcesPanel({ bookId, chapter, bookName }: ResourcesPanelProp
           type: 'readingText', id: rt.id, title: rt.name,
           subtitle: rt.date, description: rt.title,
           url: `/lesetekster/${rt.id}`, verses: rt.verses,
+        }));
+        if (data.parallels) data.parallels.forEach((p: any) => items.push({
+          type: 'parallel', id: p.id, title: p.title,
+          subtitle: p.gospels?.join(', '),
+          url: '/paralleller',
+        }));
+        if (data.words) data.words.forEach((w: any, i: number) => items.push({
+          type: 'word', id: i, title: w.word,
+          description: w.explanation,
         }));
         setChapterResults(items);
         setLoading(false);
@@ -112,6 +122,7 @@ export function ResourcesPanel({ bookId, chapter, bookName }: ResourcesPanelProp
       }));
       if (data.prophecies) data.prophecies.forEach((p: any) => items.push({
         type: 'prophecy', id: p.id, title: p.title, subtitle: p.category_name,
+        url: '/profetier',
       }));
       if (data.themes) data.themes.forEach((t: any) => items.push({
         type: 'theme', id: t.id, title: t.name, url: `/temaer/${t.id}`,
@@ -124,10 +135,28 @@ export function ResourcesPanel({ bookId, chapter, bookName }: ResourcesPanelProp
       }));
       if (data.timeline) data.timeline.forEach((t: any) => items.push({
         type: 'timeline', id: t.id, title: t.title, subtitle: t.year_display,
+        url: '/tidslinje',
       }));
       if (data.readingTexts) data.readingTexts.forEach((rt: any) => items.push({
         type: 'readingText', id: rt.id, title: rt.name, subtitle: rt.date,
         url: `/lesetekster/${rt.id}`,
+      }));
+      if (data.plans) data.plans.forEach((p: any) => items.push({
+        type: 'plan', id: p.id, title: p.name, subtitle: `${p.total_days} dager`,
+        url: `/leseplan`,
+      }));
+      if (data.words) data.words.forEach((w: any) => items.push({
+        type: 'word', id: `${w.bookId}-${w.chapter}-${w.word}`, title: w.word,
+        subtitle: w.bookName ? `${w.bookName} ${w.chapter}` : undefined,
+        description: w.explanation,
+      }));
+      if (data.numberSymbolism) data.numberSymbolism.forEach((n: any) => items.push({
+        type: 'number', id: n.number, title: `${n.number}`, subtitle: n.meaning,
+        url: `/tall/${n.number}`,
+      }));
+      if (data.days) data.days.forEach((d: any) => items.push({
+        type: 'day', id: d.id, title: d.name, subtitle: d.category,
+        url: `/dager/${d.id}`,
       }));
 
       setSearchResults(items);

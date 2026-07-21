@@ -109,7 +109,7 @@ export function DaysListPage() {
   if (isLoading) {
     return (
       <div className={styles.main}>
-        <div className="reading-container">
+        <div className="container">
           <Breadcrumbs items={[{ label: 'Hjem', href: '/' }, { label: 'Dager' }]} />
           <h1>Kirkelige dager og høytider</h1>
           <p>Laster...</p>
@@ -121,7 +121,7 @@ export function DaysListPage() {
   if (error) {
     return (
       <div className={styles.main}>
-        <div className="reading-container">
+        <div className="container">
           <Breadcrumbs items={[{ label: 'Hjem', href: '/' }, { label: 'Dager' }]} />
           <h1>Kirkelige dager og høytider</h1>
           <p className={styles.error}>{error}</p>
@@ -132,7 +132,7 @@ export function DaysListPage() {
 
   return (
     <div className={styles.main}>
-      <div className="reading-container">
+      <div className="container">
         <Breadcrumbs items={[{ label: 'Hjem', href: '/' }, { label: 'Dager' }]} />
 
         <h1>Kirkelige dager og høytider</h1>

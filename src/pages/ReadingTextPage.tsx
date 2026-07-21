@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useSettings } from '@/components/SettingsContext';
+import { Reference } from '@/components/Reference';
 import { Breadcrumbs } from '@/components/Breadcrumbs';
 import styles from '@/styles/pages/day.module.scss';
 
@@ -11,15 +12,32 @@ interface EnrichedVerse {
   part?: string;
 }
 
-interface ReadingRef {
-  id: number;
-  title: string | null;
-  display_ref: string;
+interface VerseRange {
   book_id: number;
-  chapter: number;
-  verse_start: number;
-  verse_end: number | null;
-  sort_order: number;
+}
+
+interface PartResponse {
+  title: string | null;
+  display_ref: string;       // unique key for verses lookup
+  refs: string[];            // individual ref markups (with @source) for the Reference component
+  ranges: VerseRange[];
+}
+
+interface OptionResponse {
+  parts: PartResponse[];
+}
+
+function getReadingType(bookId: number): string {
+  if (bookId === 19) return 'Salme';
+  if (bookId <= 39) return 'GT-tekst';
+  if (bookId === 44) return 'Lesning fra Apostlene';
+  if (bookId >= 40 && bookId <= 43) return 'Evangelium';
+  if (bookId === 66) return 'Åpenbaringen';
+  return 'Brev';
+}
+
+interface SlotResponse {
+  options: OptionResponse[];
 }
 
 interface ReadingTextResponse {
@@ -27,13 +45,8 @@ interface ReadingTextResponse {
   date: string;
   name: string;
   series: string | null;
-  readings: ReadingRef[];
+  slots: SlotResponse[];
   verses: Record<string, EnrichedVerse[]>;
-}
-
-function extractDisplayText(displayRef: string): string {
-  const match = displayRef.match(/\|([^\]]+)\]/);
-  return match ? match[1] : displayRef.replace(/^\[ref:|@\w+\]$/g, '').replace(/\]$/, '');
 }
 
 function formatDate(date: string): string {
@@ -47,6 +60,55 @@ function formatDate(date: string): string {
 
 function formatVerseNum(v: EnrichedVerse): string {
   return `${v.verse}${v.part || ''}`;
+}
+
+function PartView({ part, verses }: { part: PartResponse; verses: EnrichedVerse[] }) {
+  const readingType = part.ranges.length > 0 ? getReadingType(part.ranges[0].book_id) : '';
+  return (
+    <div className={styles.partBlock}>
+      {readingType && (
+        <div style={{
+          fontSize: '0.75rem',
+          textTransform: 'uppercase',
+          letterSpacing: '0.08em',
+          color: 'var(--color-secondary, #8b7355)',
+          fontWeight: 600,
+          marginBottom: '0.25rem',
+        }}>
+          {readingType}
+        </div>
+      )}
+      <h2 style={{ marginTop: 0 }}>{part.title || part.refs.join('; ')}</h2>
+      <p className={styles.nextDate} style={{ marginTop: '-0.5rem', marginBottom: '1rem' }}>
+        {part.refs.map((r, i) => (
+          <span key={i}>
+            {i > 0 && '; '}
+            <Reference text={r} />
+          </span>
+        ))}
+      </p>
+      {verses.length > 0 ? (
+        <div style={{ lineHeight: 1.8, fontSize: '1.05rem' }}>
+          {verses.map((v, vi) => {
+            const prevChapter = vi > 0 ? verses[vi - 1].chapter : v.chapter;
+            const showChapter = vi === 0 || v.chapter !== prevChapter;
+            return (
+              <span key={vi}>
+                <sup style={{ color: 'var(--color-secondary, #8b7355)', marginRight: '0.25rem', fontSize: '0.75rem' }}>
+                  {showChapter ? `${v.chapter}:` : ''}{formatVerseNum(v)}
+                </sup>
+                {v.text}{' '}
+              </span>
+            );
+          })}
+        </div>
+      ) : (
+        <p style={{ color: 'var(--color-text-muted, #999)', fontStyle: 'italic' }}>
+          Verstekst ikke tilgjengelig for denne oversettelsen.
+        </p>
+      )}
+    </div>
+  );
 }
 
 export function ReadingTextPage() {
@@ -76,17 +138,7 @@ export function ReadingTextPage() {
   }, [id, bible, mapping]);
 
   if (loading) return <main className={styles.main}><div className="reading-container"><p>Laster...</p></div></main>;
-  if (!data || !data.readings) return <main className={styles.main}><div className="reading-container"><p>Fant ikke leseteksten.</p></div></main>;
-
-  // Group readings by unique display_ref
-  const uniqueReadings: { displayRef: string; title: string | null }[] = [];
-  const seen = new Set<string>();
-  for (const r of data.readings) {
-    if (!seen.has(r.display_ref)) {
-      seen.add(r.display_ref);
-      uniqueReadings.push({ displayRef: r.display_ref, title: r.title });
-    }
-  }
+  if (!data || !data.slots) return <main className={styles.main}><div className="reading-container"><p>Fant ikke leseteksten.</p></div></main>;
 
   return (
     <main className={styles.main}>
@@ -102,30 +154,49 @@ export function ReadingTextPage() {
           {data.series && <span className={styles.categoryBadge}>Rekke {data.series}</span>}
         </div>
 
-        {uniqueReadings.map((reading, i) => {
-          const verseData = data.verses[reading.displayRef] || [];
+        {data.slots.map((slot, slotIdx) => {
+          const hasAlternatives = slot.options.length > 1;
           return (
-            <section key={i} className={styles.contentSection}>
-              <h2>{reading.title || extractDisplayText(reading.displayRef)}</h2>
-              <p className={styles.nextDate} style={{ marginTop: '-0.5rem', marginBottom: '1rem' }}>
-                {extractDisplayText(reading.displayRef)}
-              </p>
-              {verseData.length > 0 ? (
-                <div style={{ lineHeight: 1.8, fontSize: '1.05rem' }}>
-                  {verseData.map((v, vi) => (
-                    <span key={vi}>
-                      <sup style={{ color: 'var(--color-secondary, #8b7355)', marginRight: '0.25rem', fontSize: '0.75rem' }}>
-                        {formatVerseNum(v)}
-                      </sup>
-                      {v.text}{' '}
-                    </span>
+            <section key={slotIdx} className={styles.contentSection}>
+              {slot.options.map((option, optIdx) => (
+                <div
+                  key={optIdx}
+                  style={hasAlternatives ? {
+                    borderLeft: '3px solid var(--color-accent, #c9a959)',
+                    paddingLeft: '1rem',
+                    marginBottom: optIdx < slot.options.length - 1 ? '1rem' : 0,
+                  } : undefined}
+                >
+                  {optIdx > 0 && (
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.75rem',
+                      margin: '1.25rem 0',
+                    }}>
+                      <span style={{ flex: 1, height: 1, background: 'var(--color-border, #e5e0d8)' }} />
+                      <span style={{
+                        padding: '0.25rem 0.75rem',
+                        background: 'var(--color-accent, #c9a959)',
+                        color: '#fff',
+                        borderRadius: '12px',
+                        fontSize: '0.75rem',
+                        fontWeight: 600,
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.08em',
+                      }}>eller</span>
+                      <span style={{ flex: 1, height: 1, background: 'var(--color-border, #e5e0d8)' }} />
+                    </div>
+                  )}
+                  {option.parts.map((part, partIdx) => (
+                    <PartView
+                      key={partIdx}
+                      part={part}
+                      verses={data.verses[part.display_ref] || []}
+                    />
                   ))}
                 </div>
-              ) : (
-                <p style={{ color: 'var(--color-text-muted, #999)', fontStyle: 'italic' }}>
-                  Verstekst ikke tilgjengelig for denne oversettelsen.
-                </p>
-              )}
+              ))}
             </section>
           );
         })}

@@ -1,6 +1,51 @@
 @use 'variables' as *;
 @use 'mixins' as *;
 
+// Redesign 2026-05: CSS custom properties exposed for new components and
+// runtime theme switching. SCSS variables (above) mirror these for legacy
+// code and for color.adjust() at compile time.
+:root {
+  --paper: #faf8f5;
+  --paper-2: #f3eee5;
+  --ink: #1f1b16;
+  --ink-2: #3a342c;
+  --muted: #6b6258;
+  --border: #e6dfd2;
+  --border-strong: #d6cdba;
+  --gold: #b48a3a;
+  --gold-text: #7a5818;
+  --gold-soft: #e9d9b1;
+  --gold-bg: #f7efd9;
+  --verse-num: #8f6a1f;
+  --shadow-sm: 0 1px 2px rgba(70, 50, 20, 0.06), 0 1px 1px rgba(70, 50, 20, 0.04);
+  --shadow-md: 0 6px 20px rgba(70, 50, 20, 0.08), 0 2px 6px rgba(70, 50, 20, 0.05);
+  --shadow-lg: 0 12px 32px rgba(70, 50, 20, 0.12), 0 4px 10px rgba(70, 50, 20, 0.06);
+  --radius: 10px;
+  --radius-sm: 6px;
+  --radius-lg: 14px;
+  --serif: 'Source Serif 4', 'Iowan Old Style', Georgia, 'Times New Roman', serif;
+  --sans: 'Inter Tight', system-ui, -apple-system, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+  --mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+}
+
+html.dark {
+  --paper: #17161c;
+  --paper-2: #1e1d25;
+  --ink: #ece6d8;
+  --ink-2: #d5cebd;
+  --muted: #8f8778;
+  --border: #2b2932;
+  --border-strong: #3a3744;
+  --gold: #d9b766;
+  --gold-text: #d9b766;
+  --gold-soft: #3b301b;
+  --gold-bg: #2a2316;
+  --verse-num: #d9b766;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 8px 26px rgba(0, 0, 0, 0.45);
+  --shadow-lg: 0 14px 36px rgba(0, 0, 0, 0.55);
+}
+
 *, *::before, *::after {
   box-sizing: border-box;
   margin: 0;
@@ -24,21 +69,23 @@ html {
 }
 
 body {
-  font-family: $font-sans;
+  font-family: var(--sans);
   font-size: $font-size-base;
   line-height: $line-height-base;
-  color: $color-text;
-  background: $color-background;
+  color: var(--ink-2);
+  background: var(--paper);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 }
 
 // Headings
 h1, h2, h3, h4, h5, h6 {
-  font-family: $font-serif;
-  font-weight: 400;
+  font-family: var(--serif);
+  font-weight: 600;
   line-height: $line-height-heading;
-  color: $color-primary;
+  color: var(--ink);
+  letter-spacing: -0.015em;
 }
 
 h1 {
@@ -63,18 +110,18 @@ h3 {
 
 // Links
 a {
-  color: $color-secondary;
+  color: var(--gold-text);
   text-decoration: none;
   transition: color $transition-fast;
 
   &:hover {
-    color: $color-primary;
+    color: var(--ink);
   }
 
   &:focus-visible {
-    outline: 2px solid $color-accent;
+    outline: 2px solid var(--gold);
     outline-offset: 2px;
-    border-radius: 2px;
+    border-radius: 4px;
   }
 }
 
@@ -86,8 +133,9 @@ textarea,
 a,
 [tabindex]:not([tabindex="-1"]) {
   &:focus-visible {
-    outline: 2px solid $color-accent;
+    outline: 2px solid var(--gold);
     outline-offset: 2px;
+    border-radius: 4px;
   }
 
   // WCAG 2.4.11: Ensure focused elements scroll into view with margin from sticky header
@@ -132,17 +180,18 @@ p {
   top: -100px;
   left: 50%;
   transform: translateX(-50%);
-  background: $color-primary;
-  color: white;
+  background: var(--ink);
+  color: var(--paper);
   padding: $spacing-sm $spacing-lg;
-  border-radius: $radius-md;
+  border-radius: var(--radius);
   z-index: 10000;
   text-decoration: none;
+  font-family: var(--sans);
   font-weight: 500;
 
   &:focus {
     top: $spacing-sm;
-    outline: 2px solid $color-accent;
+    outline: 2px solid var(--gold);
     outline-offset: 2px;
   }
 }

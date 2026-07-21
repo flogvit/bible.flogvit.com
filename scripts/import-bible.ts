@@ -511,6 +511,9 @@ db.exec(`
   CREATE TABLE IF NOT EXISTS reading_text_refs (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     reading_text_id INTEGER NOT NULL,
+    slot_index INTEGER NOT NULL DEFAULT 0,
+    option_index INTEGER NOT NULL DEFAULT 0,
+    part_index INTEGER NOT NULL DEFAULT 0,
     title TEXT,
     display_ref TEXT NOT NULL,
     book_id INTEGER NOT NULL,
@@ -550,6 +553,18 @@ try {
 } catch {
   // Column already exists
 }
+for (const col of ['slot_index', 'option_index', 'part_index']) {
+  try {
+    db.exec(`ALTER TABLE reading_text_refs ADD COLUMN ${col} INTEGER NOT NULL DEFAULT 0`);
+    console.log(`Migrering: La til ${col}-kolonne i reading_text_refs`);
+  } catch {
+    // Column already exists
+  }
+}
+db.exec(`
+  CREATE INDEX IF NOT EXISTS idx_reading_text_refs_hierarchy
+    ON reading_text_refs(reading_text_id, slot_index, option_index, part_index);
+`);
 
 // Importer bøker
 console.log('Importerer bøker...');
@@ -1897,8 +1912,8 @@ const insertReadingText = db.prepare(`
   INSERT INTO reading_texts (date, name, series) VALUES (?, ?, ?)
 `);
 const insertReadingTextRef = db.prepare(`
-  INSERT INTO reading_text_refs (reading_text_id, title, display_ref, book_id, chapter, verse_start, verse_end, part_start, part_end, sort_order)
-  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  INSERT INTO reading_text_refs (reading_text_id, slot_index, option_index, part_index, title, display_ref, book_id, chapter, verse_start, verse_end, part_start, part_end, sort_order)
+  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 `);
 
 // Cache UkvnMappers for converting translation→osmain
@@ -1912,11 +1927,12 @@ function getKvnMapper(mappingId: string): UkvnMapper {
 
 /**
  * Normalize comma notation (Sal 24,1-10) to colon notation (Sal 24:1-10)
- * in the ref part of a [ref:...] markup.
+ * in the ref part of a [ref:...] markup. Replaces every chapter,verse comma
+ * (needed for cross-chapter ranges like "1 Mos 1,26-2,2").
  */
 function normalizeRefComma(markup: string): string {
   return markup.replace(/\[ref:([^|@\]]+)/, (_, refPart: string) => {
-    const normalized = refPart.replace(/(\d+),(\d)/, '$1:$2');
+    const normalized = refPart.replace(/(\d+),(\d)/g, '$1:$2');
     return '[ref:' + normalized;
   });
 }
@@ -1982,6 +1998,100 @@ if (fs.existsSync(leseteksterPath)) {
     let totalTexts = 0;
     let totalRefs = 0;
 
+    function insertOneRef(
+      readingTextId: number,
+      slotIdx: number,
+      optionIdx: number,
+      partIdx: number,
+      refMarkup: string,
+      title: string,
+      sortOrderBase: number,
+    ): number {
+      const displayRef = refMarkup;
+      try {
+        const normalized = normalizeRefComma(refMarkup);
+        let parsed;
+        try {
+          parsed = parseRefMarkup(normalized);
+        } catch {
+          const match = normalized.match(/^\[ref:([^\]]+)\]$/);
+          if (!match) throw new Error(`Invalid ref: ${refMarkup}`);
+          let refPart = match[1].trim();
+          let system: string | undefined;
+          const atIdx = refPart.lastIndexOf('@');
+          if (atIdx !== -1) {
+            system = refPart.slice(atIdx + 1).trim();
+            refPart = refPart.slice(0, atIdx).trim();
+          }
+          const bookMatch = refPart.match(/^(.+?)\s+(\d.*)$/);
+          if (!bookMatch) throw new Error(`Invalid ref: ${refMarkup}`);
+          const book = bookMatch[1].trim();
+          const chapterVerse = bookMatch[2].trim();
+          const colonIdx = chapterVerse.indexOf(':');
+          if (colonIdx === -1) {
+            parsed = { book, chapter: parseInt(chapterVerse, 10), verseSpec: '', system, displayText: refPart };
+          } else {
+            parsed = { book, chapter: parseInt(chapterVerse.slice(0, colonIdx), 10), verseSpec: chapterVerse.slice(colonIdx + 1).trim(), system, displayText: refPart };
+          }
+        }
+        const bookId = BOOK_IDS[parsed.book];
+        if (bookId === undefined) {
+          console.warn(`  Ukjent bok: ${parsed.book} i ${refMarkup}`);
+          return 0;
+        }
+        const mappingId = parsed.system ? (resolveMappingId(parsed.system) || parsed.system) : 'osnb2';
+        const ranges = parseVerseRanges(parsed.verseSpec);
+
+        let inserted = 0;
+        if (ranges.length === 0) {
+          const osmain = toOsmain(bookId, parsed.chapter, 1, mappingId);
+          insertReadingTextRef.run(
+            readingTextId, slotIdx, optionIdx, partIdx,
+            title, displayRef, bookId, osmain.chapter, 1, null, null, null,
+            sortOrderBase,
+          );
+          inserted++;
+        } else {
+          for (let rangeIdx = 0; rangeIdx < ranges.length; rangeIdx++) {
+            const range = ranges[rangeIdx];
+            const mappedVerses: { chapter: number; verse: number }[] = [];
+            for (let v = range.start; v <= range.end; v++) {
+              mappedVerses.push(toOsmain(bookId, parsed.chapter, v, mappingId));
+            }
+            const groups: { chapter: number; verseStart: number; verseEnd: number; isFirst: boolean; isLast: boolean }[] = [];
+            let currentGroup: typeof groups[0] | null = null;
+            for (let vi = 0; vi < mappedVerses.length; vi++) {
+              const mv = mappedVerses[vi];
+              if (!currentGroup || mv.chapter !== currentGroup.chapter || mv.verse !== currentGroup.verseEnd + 1) {
+                if (currentGroup) groups.push(currentGroup);
+                currentGroup = { chapter: mv.chapter, verseStart: mv.verse, verseEnd: mv.verse, isFirst: vi === 0, isLast: vi === mappedVerses.length - 1 };
+              } else {
+                currentGroup.verseEnd = mv.verse;
+                currentGroup.isLast = vi === mappedVerses.length - 1;
+              }
+            }
+            if (currentGroup) groups.push(currentGroup);
+            for (let gi = 0; gi < groups.length; gi++) {
+              const g = groups[gi];
+              insertReadingTextRef.run(
+                readingTextId, slotIdx, optionIdx, partIdx,
+                title, displayRef, bookId,
+                g.chapter, g.verseStart, g.verseEnd,
+                g.isFirst ? range.partStart : null,
+                g.isLast ? range.partEnd : null,
+                sortOrderBase + rangeIdx * 10 + gi,
+              );
+              inserted++;
+            }
+          }
+        }
+        return inserted;
+      } catch (e) {
+        console.warn(`  Kunne ikke parse referanse: ${refMarkup} — ${(e as Error).message}`);
+        return 0;
+      }
+    }
+
     for (let fileIdx = 0; fileIdx < jsonFiles.length; fileIdx++) {
       const content = allContent[fileIdx];
       try {
@@ -1989,7 +2099,11 @@ if (fs.existsSync(leseteksterPath)) {
           name: string;
           date: string;
           series: string;
-          readings: Array<{ reference: string; title: string }>;
+          slots: Array<{
+            options: Array<{
+              parts: Array<{ refs: string[]; title: string }>;
+            }>;
+          }>;
         }>;
 
         for (const entry of entries) {
@@ -1997,100 +2111,18 @@ if (fs.existsSync(leseteksterPath)) {
           const readingTextId = result.lastInsertRowid as number;
           totalTexts++;
 
-          for (let i = 0; i < entry.readings.length; i++) {
-            const reading = entry.readings[i];
-            const displayRef = reading.reference; // Keep original [ref:...@mapping|display] format
-
-            try {
-              const normalized = normalizeRefComma(reading.reference);
-              // Handle both [ref:...|display] and [ref:...] formats
-              let parsed;
-              try {
-                parsed = parseRefMarkup(normalized);
-              } catch {
-                // No pipe — parse the ref part directly
-                const match = normalized.match(/^\[ref:([^\]]+)\]$/);
-                if (!match) throw new Error(`Invalid ref: ${reading.reference}`);
-                let refPart = match[1].trim();
-                let system: string | undefined;
-                const atIdx = refPart.lastIndexOf('@');
-                if (atIdx !== -1) {
-                  system = refPart.slice(atIdx + 1).trim();
-                  refPart = refPart.slice(0, atIdx).trim();
-                }
-                const bookMatch = refPart.match(/^(.+?)\s+(\d.*)$/);
-                if (!bookMatch) throw new Error(`Invalid ref: ${reading.reference}`);
-                const book = bookMatch[1].trim();
-                const chapterVerse = bookMatch[2].trim();
-                const colonIdx = chapterVerse.indexOf(':');
-                if (colonIdx === -1) {
-                  parsed = { book, chapter: parseInt(chapterVerse, 10), verseSpec: '', system, displayText: refPart };
-                } else {
-                  parsed = { book, chapter: parseInt(chapterVerse.slice(0, colonIdx), 10), verseSpec: chapterVerse.slice(colonIdx + 1).trim(), system, displayText: refPart };
+          for (let slotIdx = 0; slotIdx < entry.slots.length; slotIdx++) {
+            const slot = entry.slots[slotIdx];
+            for (let optionIdx = 0; optionIdx < slot.options.length; optionIdx++) {
+              const option = slot.options[optionIdx];
+              for (let partIdx = 0; partIdx < option.parts.length; partIdx++) {
+                const part = option.parts[partIdx];
+                for (let refIdx = 0; refIdx < part.refs.length; refIdx++) {
+                  const refMarkup = part.refs[refIdx];
+                  const sortBase = (slotIdx * 10000) + (optionIdx * 1000) + (partIdx * 100) + (refIdx * 10);
+                  totalRefs += insertOneRef(readingTextId, slotIdx, optionIdx, partIdx, refMarkup, part.title, sortBase);
                 }
               }
-              const bookId = BOOK_IDS[parsed.book];
-
-              if (bookId === undefined) {
-                console.warn(`  Ukjent bok: ${parsed.book} i ${reading.reference}`);
-                continue;
-              }
-
-              // Resolve mapping system
-              const mappingId = parsed.system ? (resolveMappingId(parsed.system) || parsed.system) : 'osnb2';
-
-              // Parse verse ranges (dot-separated)
-              const ranges = parseVerseRanges(parsed.verseSpec);
-
-              if (ranges.length === 0) {
-                // Whole chapter reference
-                const osmain = toOsmain(bookId, parsed.chapter, 1, mappingId);
-                insertReadingTextRef.run(readingTextId, reading.title, displayRef, bookId, osmain.chapter, 1, null, null, null, i);
-                totalRefs++;
-              } else {
-                for (let rangeIdx = 0; rangeIdx < ranges.length; rangeIdx++) {
-                  const range = ranges[rangeIdx];
-                  // Map each verse individually to detect cross-chapter splits
-                  const mappedVerses: { chapter: number; verse: number }[] = [];
-                  for (let v = range.start; v <= range.end; v++) {
-                    mappedVerses.push(toOsmain(bookId, parsed.chapter, v, mappingId));
-                  }
-
-                  // Group consecutive verses by chapter
-                  const groups: { chapter: number; verseStart: number; verseEnd: number; isFirst: boolean; isLast: boolean }[] = [];
-                  let currentGroup: typeof groups[0] | null = null;
-                  for (let vi = 0; vi < mappedVerses.length; vi++) {
-                    const mv = mappedVerses[vi];
-                    if (!currentGroup || mv.chapter !== currentGroup.chapter || mv.verse !== currentGroup.verseEnd + 1) {
-                      if (currentGroup) groups.push(currentGroup);
-                      currentGroup = { chapter: mv.chapter, verseStart: mv.verse, verseEnd: mv.verse, isFirst: vi === 0, isLast: vi === mappedVerses.length - 1 };
-                    } else {
-                      currentGroup.verseEnd = mv.verse;
-                      currentGroup.isLast = vi === mappedVerses.length - 1;
-                    }
-                  }
-                  if (currentGroup) groups.push(currentGroup);
-
-                  for (let gi = 0; gi < groups.length; gi++) {
-                    const g = groups[gi];
-                    insertReadingTextRef.run(
-                      readingTextId,
-                      reading.title,
-                      displayRef,
-                      bookId,
-                      g.chapter,
-                      g.verseStart,
-                      g.verseEnd,
-                      g.isFirst ? range.partStart : null,
-                      g.isLast ? range.partEnd : null,
-                      i * 100 + rangeIdx * 10 + gi,
-                    );
-                    totalRefs++;
-                  }
-                }
-              }
-            } catch (e) {
-              console.warn(`  Kunne ikke parse referanse: ${reading.reference} — ${(e as Error).message}`);
             }
           }
         }
