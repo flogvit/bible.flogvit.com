@@ -280,6 +280,14 @@ function Footer() {
             <span class="fv-dot">.</span>bibel
           </a>
         </span>
+        <nav class="site-footer-nav" aria-label="Bunnmeny">
+          <a href="/">Forside</a>
+          <a href="/om">Om siden</a>
+          <a href="/om#hjelp">Hjelp</a>
+          <a href="/innstillinger">Innstillinger</a>
+          <a href="/offline">Offline</a>
+          <a href="/tilgjengelighet">Tilgjengelighet</a>
+        </nav>
         <p class="site-footer-note">© {new Date().getFullYear()} FLOGVIT</p>
       </div>
     </footer>
