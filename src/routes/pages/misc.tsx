@@ -288,19 +288,22 @@ r.get('/tilgjengelighet', (c) =>
           <section class="about-section">
             <h2>Om tilgjengelighet på denne siden</h2>
             <p>
-              bibel.flogvit.no er utviklet for å være tilgjengelig for alle, uavhengig av
-              funksjonsevne. Siden oppfyller kravene i WCAG 2.2 på nivå AA.
+              bibel.flogvit.com er utviklet for å være tilgjengelig for alle, uavhengig av
+              funksjonsevne. Siden er bygget med server-rendret HTML: alt innhold er lesbart
+              uten JavaScript, og navigasjon er vanlige sidelastinger.
             </p>
           </section>
 
           <section class="about-section">
             <h2>Status</h2>
             <p>
-              <strong>Samsvarsstatus:</strong> Delvis i samsvar med WCAG 2.2 AA
+              <strong>Samsvarsstatus:</strong> Delvis i samsvar med WCAG 2.1 AA
             </p>
             <p>
-              Siden er testet og utviklet med tanke på tilgjengelighet. Manuell testing med
-              skjermlesere gjenstår.
+              Sist testet juli 2026: automatisk testing med axe-core (WCAG 2.0/2.1 nivå A og AA)
+              på alle sidetyper ga ingen brudd, og en maskinell gjennomgang av over 250 sider
+              bekreftet struktur (overskrifter, landemerker, alt-tekster, lenker). Manuell
+              testing med skjermlesere gjenstår — derfor «delvis i samsvar».
             </p>
           </section>
 
@@ -309,6 +312,8 @@ r.get('/tilgjengelighet', (c) =>
             <p>Vi er klar over følgende områder som kan ha tilgjengelighetsproblemer:</p>
             <ul>
               <li>Ikke alle funksjoner er testet med skjermlesere (VoiceOver/NVDA)</li>
+              <li>Fargekontrast i mørk modus er ikke revidert separat</li>
+              <li>Offline-funksjonalitet og opplasting av egne oversettelser er under utvikling</li>
             </ul>
             <p>Vi jobber aktivt med å teste og utbedre eventuelle problemer.</p>
           </section>
@@ -375,8 +380,9 @@ r.get('/tilgjengelighet', (c) =>
 
             <h3>Testing og kvalitetssikring</h3>
             <ul>
-              <li>Automatisk tilgjengelighetstesting</li>
-              <li>Validert HTML</li>
+              <li>Automatisk tilgjengelighetstesting med axe-core (WCAG A/AA), sist juli 2026</li>
+              <li>Maskinell gjennomgang av alle sider: struktur, overskrifter, alt-tekster, lenker</li>
+              <li>Alt innhold fungerer uten JavaScript (server-rendret)</li>
             </ul>
           </section>
 
