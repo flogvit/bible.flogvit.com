@@ -357,7 +357,12 @@ trengs kun for import, ikke runtime — vurder). MySQL-tilkobling via env: secre
 (feedback-durable-secrets — aldri write-only). db-flogvit: ny database `bibel` + bruker; sjekk
 eksisterende state før endring (gcloud/Scaleway-regelen gjelder db-flogvit også).
 
-## #18 Verifisering + evt. cutover — ÅPEN (driftsmodell endret 2026-07-20)
+## #18 Verifisering + evt. cutover — FERDIG 2026-07-22 (ingen cutover — Vegards beslutning)
+
+**Lukket 2026-07-22:** All verifisering er fullført (full audit, side-ved-side, sync roundtrip
+live, offline). **Vegard har besluttet at det IKKE blir cutover på .no** — parallell drift er
+modellen: .com er kanonisk og videreutvikles, .no står urørt på branch bibel-no. Ingen 301,
+ingen opprydding av gammel app. Skulle det noen gang endre seg, er det en ny beslutning.
 
 **Side-ved-side-diff kjørt 2026-07-22:** full crawl av alle 1199 sitemap-URL-er på begge
 domener, lenkegraf fra forsiden, browser-test av ~15 nøkkelsider + øyer (⌘K, versdetaljer,
