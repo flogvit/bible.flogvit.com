@@ -55,7 +55,10 @@ function reflectTheme() {
 }
 
 document.querySelectorAll('#fv-theme .fvmenu-segBtn').forEach((b) => {
-  b.addEventListener('click', () => setPref('theme', b.dataset.theme));
+  b.addEventListener('click', () => {
+    setPref('theme', b.dataset.theme);
+    reflectTheme();
+  });
 });
 
 // Ikon-knappen veksler mellom lys/mørk med utgangspunkt i det som faktisk vises.
@@ -67,6 +70,7 @@ if (themeToggle) {
       ? explicit === 'dark'
       : window.matchMedia('(prefers-color-scheme: dark)').matches;
     setPref('theme', dark ? 'light' : 'dark');
+    reflectTheme();
   });
 }
 

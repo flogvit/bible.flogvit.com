@@ -324,8 +324,28 @@ r.get('/innstillinger', (c) => {
   const user = c.var.user;
   const mappings = getAvailableMappings();
   return c.html(
-    <UserPage title="Innstillinger" crumb="Innstillinger" heading="Innstillinger" page="settings" intro="Lagres i nettleseren. Tema og språk styres fra FLOGVIT-menyen øverst.">
+    <UserPage title="Innstillinger" crumb="Innstillinger" heading="Innstillinger" page="settings" intro="Lagres i nettleseren; innlogget synker de mot kontoen din.">
       <form data-settings-form class="settings-form">
+        <fieldset class="settings-group">
+          <legend>Utseende</legend>
+          {/* Global familie-pref (portal/PREFS.md). chrome.js speiler verdien
+              og persisterer til cookie + konto — samme #fv-theme som før,
+              flyttet hit fra FLOGVIT-menyen. */}
+          <label class="settings-row">
+            <span>Tema</span>
+            <span class="fvmenu-seg" id="fv-theme" role="group" aria-label="Tema">
+              <button type="button" class="fvmenu-segBtn" data-theme="system" aria-pressed="false">
+                System
+              </button>
+              <button type="button" class="fvmenu-segBtn" data-theme="light" aria-pressed="false">
+                Lys
+              </button>
+              <button type="button" class="fvmenu-segBtn" data-theme="dark" aria-pressed="false">
+                Mørk
+              </button>
+            </span>
+          </label>
+        </fieldset>
         <fieldset class="settings-group">
           <legend>Konto og synkronisering</legend>
           {user ? (

@@ -92,23 +92,8 @@ function FlogvitMenu() {
             Konto og innstillinger
           </a>
         </nav>
-        {/* Familie-tema (portal/PREFS.md). chrome.js speiler verdien og
-            persisterer endringer til cookie + konto. Språk og kontoadmin bor
-            i de globale innstillingene på flogvit.com/konto/. */}
-        <div class="fvmenu-prefs">
-          <span class="fvmenu-prefs-label">Tema</span>
-          <span class="fvmenu-seg" id="fv-theme" role="group" aria-label="Tema">
-            <button type="button" class="fvmenu-segBtn" data-theme="system" aria-pressed="false">
-              System
-            </button>
-            <button type="button" class="fvmenu-segBtn" data-theme="light" aria-pressed="false">
-              Lys
-            </button>
-            <button type="button" class="fvmenu-segBtn" data-theme="dark" aria-pressed="false">
-              Mørk
-            </button>
-          </span>
-        </div>
+        {/* Tema (og øvrige prefs) bor på innstillinger-siden — FLOGVIT-menyen
+            er kun for produktbytte (portal/SETTINGS.md). */}
       </details>
       <a class="fvmenu-product" href="/" aria-label="FLOGVIT.bible – til forsiden">
         <span class="fvmenu-productDot">.</span>bible

@@ -35,7 +35,7 @@ else
 fi
 
 echo "==> Rsyncer bibel-hono og server-konfig"
-rsync -az --delete --exclude node_modules --exclude .git --exclude .env \
+rsync -az --delete --exclude node_modules --exclude .git --exclude .env --exclude data --exclude dist \
   "$SRC/" $VM:$SRV/bibel-hono/
 rsync -az --inplace "$ROOT/server/Caddyfile" "$ROOT/server/compose.yml" $VM:$SRV/server/
 
