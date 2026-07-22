@@ -52,7 +52,7 @@ function UserPage(props: {
 // ---------- /favoritter ----------
 r.get('/favoritter', (c) =>
   c.html(
-    <UserPage title="Favoritter" crumb="Favoritter" heading="Favorittvers" page="favorites" intro="Dine merkede vers. Lagres i nettleseren; synkroniseres mellom enheter med FLOGVIT.plus.">
+    <UserPage title="Favoritter" crumb="Favoritter" heading="Favorittvers" page="favorites" intro="Dine merkede vers. Husking er en del av FLOGVIT.plus.">
       <div class="user-list" data-list></div>
       <p class="user-empty" data-empty hidden>Du har ingen favoritter ennå. Klikk hjertet på et vers for å legge det til.</p>
     </UserPage>,
@@ -107,7 +107,7 @@ r.get('/leseplan', async (c) => {
           <h1>Leseplaner</h1>
           <p class="user-intro">
             Velg en plan for systematisk bibellesing. Fremdrift og rekke lagres i nettleseren og
-            synkroniseres mellom enheter med FLOGVIT.plus.
+            husking er en del av FLOGVIT.plus.
           </p>
           <div data-user-page="readingplan">
             <div class="plan-grid">
@@ -254,17 +254,16 @@ r.get('/innstillinger', (c) => {
                   Innlogget som <strong>{user.displayName || user.email}</strong>.
                 </p>
                 <p class="settings-sync">
-                  Synkronisering mellom enheter («husking») er en del av{' '}
-                  <a href="https://flogvit.com/plus/">FLOGVIT.plus</a>. Alt du gjør lagres uansett
-                  lokalt i nettleseren din.
+                  Husking — lagring av favoritter, notater m.m., både i nettleseren og mellom
+                  enheter — er en del av <a href="https://flogvit.com/plus/">FLOGVIT.plus</a>.
                 </p>
               </>
             )
           ) : (
             <p class="settings-account">
-              Du er ikke innlogget. Med <a href={ACCOUNT_URL}>FLOGVIT-konto</a> og{' '}
-              <a href="https://flogvit.com/plus/">FLOGVIT.plus</a> synkroniseres favoritter,
-              notater og innstillinger mellom enheter.
+              Du er ikke innlogget. Husking — lagring av favoritter, notater m.m. — krever{' '}
+              <a href={ACCOUNT_URL}>FLOGVIT-konto</a> med{' '}
+              <a href="https://flogvit.com/plus/">FLOGVIT.plus</a>.
             </p>
           )}
         </fieldset>
@@ -378,7 +377,7 @@ r.get('/offline', (c) =>
       crumb="Offline"
       heading="Offline-tilgang"
       page="offline"
-      intro="Last ned bibeltekst og støttedata for lesing uten internett."
+      intro="Last ned bibeltekst og støttedata for lesing uten internett. Nedlasting er en del av FLOGVIT.plus."
       styles={['offline.css']}
       scripts={['offline.js']}
     >

@@ -150,6 +150,11 @@ r.get('/om', (c) =>
             </ul>
 
             <h3>Personlige verktøy</h3>
+            <p>
+              Husking — lagring av personlige data som favoritter, notater og egne oversettelser,
+              samt offline-nedlasting — er en del av{' '}
+              <a href="https://flogvit.com/plus/">FLOGVIT.plus</a>.
+            </p>
             <ul>
               <li><strong>Favoritter</strong> - Lagre dine favorittvers</li>
               <li><strong>Emner</strong> - Tag vers med egne emner</li>
@@ -237,7 +242,7 @@ r.get('/om', (c) =>
 
             <h3>Last ned hele Bibelen</h3>
             <p>
-              Du kan også laste ned hele Bibelen på forhånd. Gå til{' '}
+              Du kan også laste ned hele Bibelen på forhånd (en del av FLOGVIT.plus). Gå til{' '}
               <a href="/offline">offline-siden</a> for å:
             </p>
             <ul>

@@ -123,6 +123,7 @@ if (root) {
         const input = form.querySelector('input');
         const name = input.value.trim();
         if (!name) return;
+        if (!window.fvPlus?.gate('verslister')) return;
         const lists = read(KEYS.verseLists, []);
         const now = Date.now();
         lists.push({ id: `list-${now}`, name, refs: [], createdAt: now, updatedAt: now });
@@ -162,6 +163,7 @@ if (root) {
       }
       if (btn) {
         btn.addEventListener('click', () => {
+          if (!window.fvPlus?.gate('leseplaner')) return;
           write(KEYS.activePlan, id);
           location.reload();
         });

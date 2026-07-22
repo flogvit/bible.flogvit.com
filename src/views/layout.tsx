@@ -346,6 +346,7 @@ export function Layout(props: LayoutProps) {
           <Footer />
           <script type="module" src="/js/chrome.js" />
           <script type="module" src="/js/shortcuts.js" />
+          <script type="module" src="/js/plus.js" />
           <script type="module" src="/js/sync.js" />
           <script type="module" src="/js/cmdk.js" />
           <script type="module" src="/js/pwa.js" />

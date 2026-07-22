@@ -119,6 +119,7 @@ async function downloadSupportData(signal) {
 }
 
 async function startDownload() {
+  if (!window.fvPlus?.gate('offline-nedlasting')) return;
   const bibles = [...document.querySelectorAll('[data-dl-bible]:checked')].map((i) => i.dataset.dlBible);
   if (bibles.length === 0) return;
   const startBtn = $('[data-dl-start]');
