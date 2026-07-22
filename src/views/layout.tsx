@@ -140,6 +140,7 @@ const NAV_GROUPS: { label: string; links: { href: string; label: string }[] }[] 
     label: 'Oversikt',
     links: [
       { href: '/tidslinje', label: 'Tidslinje' },
+      { href: '/dager', label: 'Dager' },
       { href: '/lesetekster', label: 'Lesetekster' },
       { href: '/statistikk', label: 'Statistikk' },
       { href: '/oversettelser', label: 'Oversettelser' },

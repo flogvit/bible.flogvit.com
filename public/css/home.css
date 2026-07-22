@@ -120,3 +120,40 @@
 @media (max-width: 768px) {
   .home-hero { grid-template-columns: 1fr; }
 }
+
+/* Dagens helligdag (GitHub #3) — samme kortspråk som dagens lesetekst */
+.home-todays-days { display: flex; flex-direction: column; gap: 12px; }
+.home-todays-day {
+  padding: 16px 20px;
+  background: var(--paper-2);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+}
+.home-todays-day-head { display: flex; align-items: baseline; gap: 12px; justify-content: space-between; }
+.home-todays-day-head h3 { font-size: 18px; margin: 0; }
+.home-todays-day-head a { color: var(--ink); }
+.home-todays-day-head a:hover { color: var(--gold-text); }
+.home-todays-day-cat {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  font-family: var(--font-mono);
+  white-space: nowrap;
+}
+.home-todays-day-desc { color: var(--ink-2); font-size: 14px; margin: 6px 0 10px; line-height: 1.5; }
+.home-todays-day-refs { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-bottom: 8px; }
+.home-todays-day-reflabel { font-size: 13px; color: var(--muted); }
+.home-todays-day-ref {
+  padding: 3px 10px;
+  font-size: 13px;
+  background: var(--paper);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--gold-text);
+  text-decoration: none;
+}
+.home-todays-day-ref:hover { background: var(--gold-bg); color: var(--ink); }
+.home-todays-day-ref.is-secondary { color: var(--ink-2); }
+.home-todays-day-more { font-size: 14px; color: var(--gold-text); text-decoration: none; }
+.home-todays-day-more:hover { text-decoration: underline; }

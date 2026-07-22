@@ -363,16 +363,54 @@ r.get('/tall/:number', async (c) => {
 
 // ---------- /dager ----------
 
+// Kronologisk/tematisk-visning som i gamle DaysListPage; SSR via ?visning=.
+const DAY_CATEGORY_ORDER = ['advent', 'christmas', 'epiphany', 'lent', 'easter', 'ascension', 'pentecost', 'trinity', 'special', 'jewish'];
+
+function nextDayDate(dates: Record<string, string> | undefined): string | null {
+  if (!dates) return null;
+  const today = new Date().toISOString().slice(0, 10);
+  const future = Object.values(dates).filter((d) => d >= today).sort();
+  return future[0] ?? null;
+}
+
+function formatDayDate(iso: string): string {
+  return new Date(`${iso}T12:00:00`).toLocaleDateString('nb-NO', { day: 'numeric', month: 'long', year: 'numeric' });
+}
+
 r.get('/dager', async (c) => {
+  const thematic = c.req.query('visning') === 'tematisk';
   const days = await getAllDays();
   const items = days.map((d) => {
     try {
       const data = JSON.parse(d.content) as DayData;
-      return { id: d.id, name: data.name, category: data.category, description: data.description, search: `${data.name} ${data.description}`.toLowerCase() };
+      return { id: d.id, name: data.name, category: data.category, description: data.description, nextDate: nextDayDate(data.dates), search: `${data.name} ${data.description}`.toLowerCase() };
     } catch {
-      return { id: d.id, name: d.name, category: '', description: '', search: d.name.toLowerCase() };
+      return { id: d.id, name: d.name, category: '', description: '', nextDate: null as string | null, search: d.name.toLowerCase() };
     }
   });
+
+  const byNextDate = (a: (typeof items)[number], b: (typeof items)[number]) => {
+    if (a.nextDate && b.nextDate) return a.nextDate.localeCompare(b.nextDate);
+    if (a.nextDate) return -1;
+    if (b.nextDate) return 1;
+    return a.name.localeCompare(b.name, 'nb');
+  };
+
+  const DayCard = ({ d }: { d: (typeof items)[number] }) => (
+    <a href={`/dager/${d.id}`} class="study-card" data-search={d.search}>
+      {d.category && <span class="study-card-cat">{DAY_CATEGORIES[d.category] || d.category}</span>}
+      <h2 class="study-card-title">{d.name}</h2>
+      {d.description && <p class="study-card-desc">{d.description}</p>}
+      {d.nextDate && <p class="study-card-date">{formatDayDate(d.nextDate)}</p>}
+    </a>
+  );
+
+  const groups = thematic
+    ? DAY_CATEGORY_ORDER.map((cat) => ({
+        title: DAY_CATEGORIES[cat] || cat,
+        items: items.filter((d) => d.category === cat).sort(byNextDate),
+      })).filter((g) => g.items.length > 0)
+    : [{ title: '', items: [...items].sort(byNextDate) }];
 
   return c.html(
     <Layout title="Helligdager og merkedager — FLOGVIT.bibel" description="Helligdager og merkedager i kristen tradisjon." styles={['study.css']} scripts={['card-filter.js']}>
@@ -380,16 +418,23 @@ r.get('/dager', async (c) => {
         <div class="container">
           <Breadcrumbs items={[{ label: 'Hjem', href: '/' }, { label: 'Dager' }]} />
           <h1>Helligdager og merkedager</h1>
+          <nav class="study-view-tabs" aria-label="Visning">
+            <a href="/dager" class={`study-view-tab ${thematic ? '' : 'is-active'}`} aria-current={thematic ? undefined : 'true'}>Kronologisk</a>
+            <a href="/dager?visning=tematisk" class={`study-view-tab ${thematic ? 'is-active' : ''}`} aria-current={thematic ? 'true' : undefined}>Tematisk</a>
+          </nav>
           <div class="study-search-container">
             <input type="text" class="study-search-input" data-card-search placeholder="Søk etter dag..." aria-label="Søk" autocomplete="off" />
           </div>
-          <div class="study-grid" data-card-list>
-            {items.map((d) => (
-              <a href={`/dager/${d.id}`} class="study-card" data-search={d.search}>
-                {d.category && <span class="study-card-cat">{DAY_CATEGORIES[d.category] || d.category}</span>}
-                <h2 class="study-card-title">{d.name}</h2>
-                {d.description && <p class="study-card-desc">{d.description}</p>}
-              </a>
+          <div data-card-list>
+            {groups.map((g) => (
+              <section class="study-group">
+                {g.title && <h2 class="study-group-title">{g.title}</h2>}
+                <div class="study-grid">
+                  {g.items.map((d) => (
+                    <DayCard d={d} />
+                  ))}
+                </div>
+              </section>
             ))}
           </div>
           <p class="study-empty" data-card-empty hidden>Ingen dager matcher søket.</p>

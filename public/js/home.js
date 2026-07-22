@@ -13,6 +13,15 @@ function readJSON(key) {
   }
 }
 
+// Forside-toggles fra innstillinger: seksjoner med data-setting-show skjules
+// når nøkkelen er satt til false (default på). SSR viser alt uten JS.
+{
+  const settings = readJSON('bible-settings') || {};
+  document.querySelectorAll('[data-setting-show]').forEach((el) => {
+    if (settings[el.dataset.settingShow] === false) el.hidden = true;
+  });
+}
+
 const cont = document.getElementById('home-continue');
 if (cont) {
   const settings = readJSON('bible-settings') || {};

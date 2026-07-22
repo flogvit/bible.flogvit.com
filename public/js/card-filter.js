@@ -6,7 +6,9 @@ const list = document.querySelector('[data-card-list]');
 if (list) {
   const search = document.querySelector('[data-card-search]');
   const empty = document.querySelector('[data-card-empty]');
-  const cards = Array.from(list.children);
+  // Kortene kan ligge rett i lista eller i grupper (.study-group på /dager).
+  const cards = Array.from(list.querySelectorAll('[data-search]'));
+  const groups = Array.from(list.querySelectorAll('.study-group'));
   let query = '';
   let cat = '';
 
@@ -19,6 +21,9 @@ if (list) {
       const show = matchCat && matchQ;
       card.hidden = !show;
       if (show) visible++;
+    }
+    for (const group of groups) {
+      group.hidden = !group.querySelector('[data-search]:not([hidden])');
     }
     if (empty) empty.hidden = visible !== 0;
   }
