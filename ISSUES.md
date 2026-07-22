@@ -263,13 +263,44 @@ Favoritter, leseplaner, leseposisjon/ContinueReading, notater, andakter, emnetag
 til sync-motoren (vanilla-port av `src/lib/sync/`, idb-wrapperen erstattes med rå IndexedDB).
 Innlogget tilstand fra konto-sesjonen.
 
-## #13 Notat-/andaktseditor — ÅPEN
+## #13 Notat-/andaktseditor — FERDIG (levert i #9, verifisert i audit 2026-07-22)
+
+Levert som del av brukersidene (#9): manuskript-editoren i user.tsx/user.js er textarea +
+preview med egen CodeMirror-fri markdown-renderer. Browser-verifisert i prod under audit
+2026-07-22 (/manuskripter/ny: textarea, preview og Lagre fungerer).
 
 Erstatt CodeMirror-stacken (@uiw/react-codemirror, @codemirror/*, @lezer) med egen lettvekts
 markdown-editor (textarea + preview; rendering med `marked` som i photosuite, eller egen renderer).
 NotesPage, DevotionalEditor/View/List, react-markdown-visning erstattes av samme renderer.
 
-## #14 Offline/PWA — ÅPEN
+## #14 Offline/PWA — FERDIG 2026-07-22
+
+**Ferdig 2026-07-22:** Full offline/PWA-flate portert til SSR-arkitekturen:
+- `public/manifest.json` + `public/sw.js` (statisk cache-first, HTML network-first m/fallback,
+  utvalgte GET-API-er network-first m/cache; SKIP_WAITING/CLEAR_CACHE-meldinger) +
+  `public/js/pwa.js` globalt (registrering, oppdaterings-banner, offline/online-indikator).
+- `public/js/offline-db.js`: samme IndexedDB-skjema som gamle appen (bibel-offline v4,
+  chapters keyet [bookId, chapter, bible]).
+- `/offline` + `offline.js`: nedlasting av hele bibelen per oversettelse (batch 5, pause/
+  gjenopptak, 404-skip) + tidslinje/profetier/personer/leseplaner; status (antall, plass,
+  versjon) og sletting. Verifisert lokalt: 1189/1189 kapitler (~200MB), gjenopptak plukket
+  kun manglende kapittel.
+- `/offline-fallback` + `offline-reader.js`: SW serverer siden for navigasjoner uten nett;
+  kapitler rendres fra IndexedDB (verifisert: 1 Mos 1, 31 vers), ellers bokoversikt.
+- `/oversettelser` + `translations.js` + `bible-text-parser.js` (4 tester): fil/innliming →
+  «Analyser tekst» (mapping-bookNames, greedy prefiks, advarsler) → import til IndexedDB.
+  NYTT vs gamle appen: egne bibler synces til kontoen når innlogget (POST /api/sync/
+  user-bibles + chunket user-bible-chapters; pull av kontobibler ved sidelast) — gamle
+  appen hadde serverendepunktene men aldri klientkoblingen.
+- Egne bibler på lesesiden (`user-bibles.js`): ?bible=user:<id> SSR-er osnb2 som grunnlag
+  (studieverktøyene følger osnb2, som i gamle appen) og øya bytter versteksten fra
+  IndexedDB; ?secondary=user:<id> som undertekst; bibelvelgeren utvides og respekterer
+  settings.hiddenBibles (per-oversettelse-toggles i innstillinger, inkl. egne bibler +
+  valgbare i primær/sekundær).
+- DATAFIKS: books.chapters for Joel var 3 i DB (verses har 4) — rettet lokalt med UPDATE;
+  prod rettes ved deploy. Kilden bør sjekkes i free-bible/generate-verse-counts (#3).
+
+Full paritet-beskrivelsen (opprinnelig):
 
 Full paritet: service worker (native), nedlasting av hele bibelen til IndexedDB
 (`src/lib/offline/`, 104K — rå IndexedDB uten idb), CacheStatus, OfflineIndicator, OfflinePage,

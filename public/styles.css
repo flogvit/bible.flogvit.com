@@ -839,3 +839,51 @@ a.fvmenu-item:hover { background: color-mix(in oklab, var(--ink) 6%, var(--surfa
 }
 .tagging-suggestion:hover { background: var(--paper-2); }
 .tagging-new-label { color: var(--gold-text); font-size: 0.85em; margin-left: 4px; }
+
+/* PWA-chrome (#14): oppdaterings-banner + nettstatus-indikator (pwa.js, global) */
+.pwa-update {
+  position: fixed;
+  left: 50%;
+  bottom: 16px;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding: 10px 16px;
+  background: var(--ink);
+  color: var(--paper);
+  border-radius: var(--radius);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+  z-index: 300;
+  font-size: 14px;
+}
+.pwa-update-btn {
+  font: inherit;
+  padding: 6px 12px;
+  background: var(--gold);
+  color: var(--ink);
+  border: 0;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-weight: 600;
+}
+.pwa-update-later {
+  font: inherit;
+  background: none;
+  border: 0;
+  color: var(--paper);
+  opacity: 0.7;
+  cursor: pointer;
+}
+.pwa-net {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+  z-index: 300;
+}
+.pwa-net[data-state='offline'] { background: #b3261e; color: #fff; }
+.pwa-net[data-state='online'] { background: #2e7d32; color: #fff; }

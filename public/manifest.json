@@ -1,0 +1,14 @@
+{
+  "name": "FLOGVIT.bibel",
+  "short_name": "Bibel",
+  "description": "Norsk bibel med grunntekst, oppslagsverk og verktøy for bibellesning",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#faf9f6",
+  "theme_color": "#7a4a21",
+  "icons": [{ "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }],
+  "categories": ["books", "education", "lifestyle"],
+  "lang": "nb",
+  "dir": "ltr"
+}

@@ -1574,10 +1574,17 @@ r.get('/:book/:chapter', async (c) => {
   if (isNaN(chapter) || chapter < 1 || !/^\d+$/.test(chapterStr)) return c.notFound();
   if (chapter > book.chapters) return c.notFound();
 
-  const bible = c.req.query('bible') || 'osnb2';
+  // Egne opplastede bibler ('user:<uuid>') bor i IndexedDB på klienten: SSR
+  // rendrer osnb2 som grunnlag (studieverktøyene hentes derfra uansett, som i
+  // gamle appen), og reading.js bytter ut versteksten fra IndexedDB (#14).
+  const requestedBible = c.req.query('bible') || 'osnb2';
+  const userBible = requestedBible.startsWith('user:') ? requestedBible : undefined;
+  const bible = userBible ? 'osnb2' : requestedBible;
   const mappingParam = c.req.query('mapping');
   const mapping = (mappingParam && mappingParam !== 'osnb2' ? resolveMappingId(mappingParam) : null) ?? null;
-  const secondary = c.req.query('secondary') || undefined;
+  const requestedSecondary = c.req.query('secondary') || undefined;
+  const userSecondary = requestedSecondary?.startsWith('user:') ? requestedSecondary : undefined;
+  const secondary = userSecondary ? undefined : requestedSecondary;
 
   const canonicalSlug = toUrlSlug(book.short_name);
   const data = await loadChapterData(book.id, chapter, bible, mapping, secondary);
@@ -1586,7 +1593,8 @@ r.get('/:book/:chapter', async (c) => {
   const maxChapter = book.chapters;
   const nextBook = getBookInfoById(book.id + 1);
   const nextBookSlug = nextBook ? toUrlSlug(nextBook.short_name) : undefined;
-  const query = buildQuery(bible, mapping ?? undefined, secondary);
+  // Lenker bevarer det FORESPURTE valget (inkl. user:-bibler).
+  const query = buildQuery(requestedBible, mapping ?? undefined, requestedSecondary);
 
   const title = `${book.name_no} ${chapter} — FLOGVIT.bibel`;
   const description = data.summary
@@ -1600,7 +1608,9 @@ r.get('/:book/:chapter', async (c) => {
   // Kontrakten mot shortcuts.js: data-attributter på <body>.
   const bodyData = `(function(d){d.bookSlug=${JSON.stringify(canonicalSlug)};d.chapter='${chapter}';d.maxChapter='${maxChapter}';${
     nextBookSlug ? `d.nextBookSlug=${JSON.stringify(nextBookSlug)};` : ''
-  }d.bibleQuery=${JSON.stringify(query)};d.bookId='${book.id}';d.bookName=${JSON.stringify(book.name_no)};})(document.body.dataset);`;
+  }d.bibleQuery=${JSON.stringify(query)};d.bookId='${book.id}';d.bookName=${JSON.stringify(book.name_no)};${
+    userBible ? `d.userBible=${JSON.stringify(userBible)};` : ''
+  }${userSecondary ? `d.userSecondary=${JSON.stringify(userSecondary)};` : ''}})(document.body.dataset);`;
 
   return c.html(
     <Layout
@@ -1608,7 +1618,7 @@ r.get('/:book/:chapter', async (c) => {
       description={description}
       canonical={`${SITE}/${canonicalSlug}/${chapter}`}
       styles={['reading.css', 'studium.css']}
-      scripts={['reading.js', 'studium.js', 'ref-preview.js', 'tagging.js']}
+      scripts={['reading.js', 'studium.js', 'ref-preview.js', 'tagging.js', 'user-bibles.js']}
     >
       {raw(`<script>${bodyData}</script>`)}
       <div class="chapter-page" data-reading-root>

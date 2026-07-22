@@ -1509,3 +1509,14 @@ a.ins-hero-name:hover {
     grid-template-columns: 1fr;
   }
 }
+
+/* Egne oversettelser (#14) */
+.user-bible-note {
+  font-size: 13px;
+  color: var(--muted);
+  background: var(--paper-2);
+  border-radius: var(--radius-sm);
+  padding: 6px 12px;
+  margin: 0 0 16px;
+}
+.user-bible-missing [data-verse-plain] { opacity: 0.55; }

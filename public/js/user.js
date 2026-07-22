@@ -195,6 +195,63 @@ if (root) {
       });
     });
 
+    // Egne bibler i primær/sekundær-valgene + synlighets-toggles per
+    // oversettelse (settings.hiddenBibles, #14). Egne bibler bor i IndexedDB.
+    (async () => {
+      let userBibles = [];
+      try {
+        const idb = await import('./offline-db.js');
+        userBibles = await idb.getUserBibles();
+      } catch {}
+      for (const sel of ['bible', 'secondaryBible']) {
+        const select = root.querySelector(`[data-setting="${sel}"]`);
+        if (!select) continue;
+        for (const b of userBibles) {
+          const opt = el('option');
+          opt.value = b.id;
+          opt.textContent = b.name;
+          select.append(opt);
+        }
+        const cur = getPath(s, sel);
+        if (cur !== undefined) select.value = cur;
+      }
+      const box = root.querySelector('[data-bible-visibility]');
+      if (box) {
+        box.textContent = '';
+        const versions = [
+          { value: 'osnb2', label: 'Bokmål (osnb2)' },
+          { value: 'osnn1', label: 'Nynorsk (osnn1)' },
+          ...userBibles.map((b) => ({ value: b.id, label: b.name })),
+        ];
+        const hidden = new Set((read(KEYS.settings, {}).hiddenBibles || []));
+        for (const v of versions) {
+          const label = el('label');
+          label.className = 'settings-toggle';
+          const input = el('input');
+          input.type = 'checkbox';
+          input.checked = !hidden.has(v.value);
+          const active = (read(KEYS.settings, {}).bible || 'osnb2') === v.value;
+          if (active) {
+            input.checked = true;
+            input.disabled = true;
+            input.title = 'Aktiv oversettelse kan ikke skjules';
+          }
+          input.addEventListener('change', () => {
+            const next = read(KEYS.settings, {});
+            const set = new Set(next.hiddenBibles || []);
+            if (input.checked) set.delete(v.value);
+            else set.add(v.value);
+            next.hiddenBibles = [...set];
+            write(KEYS.settings, next);
+          });
+          const span = el('span');
+          span.textContent = v.label;
+          label.append(input, ' ', span);
+          box.append(label);
+        }
+      }
+    })();
+
     // Eksport/import av alle brukerdata (samme localStorage-nøkler).
     const EXPORT_KEYS = [
       'bible-favorites', 'bible-notes', 'bible-topics', 'bible-settings',

@@ -323,6 +323,8 @@ export function Layout(props: LayoutProps) {
           <meta name="author" content="Vegard Hanssen" />
           {props.canonical && <link rel="canonical" href={props.canonical} />}
           <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+          <link rel="manifest" href="/manifest.json" />
+          <meta name="theme-color" content="#7a4a21" />
           <link rel="preconnect" href="https://fonts.googleapis.com" />
           <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="" />
           <link rel="stylesheet" href={GOOGLE_FONTS} />
@@ -346,6 +348,7 @@ export function Layout(props: LayoutProps) {
           <script type="module" src="/js/shortcuts.js" />
           <script type="module" src="/js/sync.js" />
           <script type="module" src="/js/cmdk.js" />
+          <script type="module" src="/js/pwa.js" />
           {(props.scripts ?? []).map((s) => (
             <script type="module" src={`/js/${s}`} />
           ))}

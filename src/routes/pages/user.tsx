@@ -27,9 +27,16 @@ function UserPage(props: {
   page: string;
   children?: Child;
   wide?: boolean;
+  styles?: string[];
+  scripts?: string[];
 }) {
   return (
-    <Layout title={`${props.title} — FLOGVIT.bibel`} description={props.intro || props.heading} styles={['user.css']} scripts={['user.js']}>
+    <Layout
+      title={`${props.title} — FLOGVIT.bibel`}
+      description={props.intro || props.heading}
+      styles={['user.css', ...(props.styles ?? [])]}
+      scripts={['user.js', ...(props.scripts ?? [])]}
+    >
       <div class="user-main">
         <div class={props.wide ? 'container' : 'reading-container'}>
           <Breadcrumbs items={[{ label: 'Hjem', href: '/' }, { label: props.crumb }]} />
@@ -292,6 +299,16 @@ r.get('/innstillinger', (c) => {
           </p>
         </fieldset>
         <fieldset class="settings-group">
+          <legend>Oversettelser</legend>
+          <p class="user-note">
+            Velg hvilke oversettelser som vises i bibelvelgeren på lesesidene. Egne bibler lastes
+            opp på <a href="/oversettelser">Oversettelser</a>-siden.
+          </p>
+          <div data-bible-visibility>
+            <p class="user-note">Laster…</p>
+          </div>
+        </fieldset>
+        <fieldset class="settings-group">
           <legend>Visning</legend>
           <label class="settings-row">
             <span>Standard visningsmodus</span>
@@ -342,15 +359,59 @@ r.get('/innstillinger', (c) => {
 // ---------- /offline ----------
 r.get('/offline', (c) =>
   c.html(
-    <UserPage title="Offline" crumb="Offline" heading="Offline-tilgang" page="offline" intro="Last ned bibeltekst for lesing uten internett.">
-      <div data-offline-status class="offline-status">
-        <p>Sjekker lagringsstatus…</p>
-      </div>
-      {/* TODO(#14): service worker + full nedlasting av bibelversjoner til IndexedDB. */}
-      <p class="user-note">
-        Nedlasting av hele bibelversjoner kommer i en oppdatering. Kapitler du leser mens du er på
-        nett blir tilgjengelige i nettleserens buffer.
-      </p>
+    <UserPage
+      title="Offline"
+      crumb="Offline"
+      heading="Offline-tilgang"
+      page="offline"
+      intro="Last ned bibeltekst og støttedata for lesing uten internett."
+      styles={['offline.css']}
+      scripts={['offline.js']}
+    >
+      <section class="offline-section">
+        <h2>Status</h2>
+        <div data-offline-status class="offline-status">
+          <p>Sjekker lagringsstatus…</p>
+        </div>
+      </section>
+
+      <section class="offline-section">
+        <h2>Last ned</h2>
+        <div class="offline-download" data-offline-download>
+          <label class="settings-toggle">
+            <input type="checkbox" data-dl-bible="osnb2" checked /> <span>Bokmål (osnb2)</span>
+          </label>
+          <label class="settings-toggle">
+            <input type="checkbox" data-dl-bible="osnn1" /> <span>Nynorsk (osnn1)</span>
+          </label>
+          <div class="offline-actions">
+            <button type="button" class="user-btn" data-dl-start>Last ned for offline-bruk</button>
+            <button type="button" class="user-btn-ghost" data-dl-pause hidden>Pause</button>
+          </div>
+          <div class="offline-progress" data-dl-progress hidden>
+            <div class="offline-progress-bar"><div class="offline-progress-fill" data-dl-fill></div></div>
+            <p class="user-note" data-dl-text></p>
+          </div>
+        </div>
+        <p class="user-note">
+          Nedlastingen henter alle 1189 kapitler per valgt oversettelse (med grunntekst, ord-for-ord
+          og kryssreferanser) pluss tidslinje, profetier, personer og leseplaner. Regn med noen
+          minutter og et par hundre MB lagringsplass.
+        </p>
+      </section>
+
+      <section class="offline-section">
+        <h2>Nedlastet innhold</h2>
+        <div data-offline-content>
+          <p class="user-note">Laster…</p>
+        </div>
+        <div class="offline-actions">
+          <button type="button" class="user-btn-ghost" data-dl-clear>Slett nedlastet innhold</button>
+        </div>
+      </section>
+      <noscript>
+        <p class="user-note">Offline-nedlasting krever JavaScript.</p>
+      </noscript>
     </UserPage>,
   ),
 );
@@ -358,7 +419,15 @@ r.get('/offline', (c) =>
 // ---------- /oversettelser ----------
 r.get('/oversettelser', (c) =>
   c.html(
-    <UserPage title="Oversettelser" crumb="Oversettelser" heading="Oversettelser" page="translations" intro="Innebygde oversettelser og dine egne opplastede bibler.">
+    <UserPage
+      title="Oversettelser"
+      crumb="Oversettelser"
+      heading="Oversettelser"
+      page="translations"
+      intro="Innebygde oversettelser og dine egne opplastede bibler."
+      styles={['translations.css']}
+      scripts={['translations.js']}
+    >
       <section class="trans-section">
         <h2>Innebygde</h2>
         <ul class="trans-builtin">
@@ -368,14 +437,51 @@ r.get('/oversettelser', (c) =>
           <li>Gresk grunntekst (SBLGNT)</li>
         </ul>
       </section>
+
       <section class="trans-section">
         <h2>Dine oversettelser</h2>
-        <div class="user-list" data-list></div>
-        <p class="user-empty" data-empty hidden>Du har ikke lastet opp egne oversettelser ennå.</p>
-        {/* TODO(#12/#14): opplasting + parsing (bibleTextParser) + lagring til
-            IndexedDB/sync. Skallet lister eksisterende brukerbibler fra sync. */}
-        <p class="user-note">Opplasting av egne oversettelser kommer i en oppdatering.</p>
+        <div class="user-list" data-trans-list></div>
+        <p class="user-empty" data-trans-empty hidden>Du har ikke lastet opp egne oversettelser ennå.</p>
       </section>
+
+      <section class="trans-section" data-trans-upload>
+        <h2>Last opp ny</h2>
+        <p class="user-note">
+          Last opp en tekstfil (eller lim inn) der hver linje er «Boknavn kapittel,vers tekst», f.eks.
+          «1 Mos 1,1 I begynnelsen skapte Gud himmelen og jorden.» Ulike oversettelser kan ha
+          forskjellig versinndeling — velg riktig nummerering, så kobles versene til kryssreferanser
+          og verktøy automatisk.
+        </p>
+        <div class="trans-form">
+          <label class="settings-row">
+            <span>Versnummerering</span>
+            <select class="user-input" data-trans-mapping></select>
+          </label>
+          <label class="settings-row">
+            <span>Navn</span>
+            <input type="text" class="user-input" data-trans-name placeholder="F.eks. Bibelen 2024" />
+          </label>
+          <div class="trans-file-row">
+            <label class="user-btn-ghost settings-import-label">
+              Velg fil
+              <input type="file" accept=".txt,.text,text/plain" data-trans-file hidden />
+            </label>
+            <span class="user-note" data-trans-filename></span>
+          </div>
+          <textarea class="user-input trans-textarea" data-trans-text rows={6} placeholder="…eller lim inn teksten her"></textarea>
+          <div class="offline-actions">
+            <button type="button" class="user-btn" data-trans-parse>Analyser tekst</button>
+            <button type="button" class="user-btn" data-trans-import hidden>Importer</button>
+          </div>
+          <div data-trans-result hidden></div>
+          <div class="offline-progress" data-trans-progress hidden>
+            <div class="offline-progress-bar"><div class="offline-progress-fill" data-trans-fill></div></div>
+          </div>
+        </div>
+      </section>
+      <noscript>
+        <p class="user-note">Opplasting av egne oversettelser krever JavaScript.</p>
+      </noscript>
     </UserPage>,
   ),
 );

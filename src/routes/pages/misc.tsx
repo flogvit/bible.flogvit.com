@@ -432,6 +432,29 @@ r.get('/tilgjengelighet', (c) =>
 );
 
 /** 404-siden — koblet via app.notFound i app.ts. */
+// Offline-fallback (#14): SW-en serverer denne siden for navigasjoner uten
+// nett. offline-reader.js rendrer nedlastede kapitler fra IndexedDB basert på
+// location.pathname (SW-en svarer med denne siden på original-URL-en).
+r.get('/offline-fallback', (c) =>
+  c.html(
+    <Layout title="Offline — FLOGVIT.bibel" description="Du er offline." styles={['offline.css']} scripts={['offline-reader.js']}>
+      <div class="offline-reader-main">
+        <div class="reading-container">
+          <div data-offline-reader>
+            <h1>Du er offline</h1>
+            <p class="user-note">
+              Denne siden er ikke tilgjengelig uten nett. Nedlastede kapitler kan leses — laster…
+            </p>
+            <noscript>
+              <p>Offline-lesing krever JavaScript.</p>
+            </noscript>
+          </div>
+        </div>
+      </div>
+    </Layout>,
+  ),
+);
+
 export function NotFoundPage() {
   return (
     <Layout title="Siden finnes ikke — FLOGVIT.bibel">

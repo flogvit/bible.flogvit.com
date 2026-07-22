@@ -1,0 +1,27 @@
+/* /oversettelser (#14): opplasting og liste over egne bibler */
+
+.trans-section { margin: 0 0 28px; }
+.trans-section h2 { font-size: 18px; margin: 0 0 10px; }
+.trans-builtin { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.trans-builtin li { color: var(--ink-2); font-size: 14px; }
+
+.trans-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: var(--paper-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  margin-bottom: 8px;
+}
+.trans-row-info { display: flex; flex-direction: column; gap: 2px; }
+
+.trans-form { display: flex; flex-direction: column; gap: 12px; max-width: 640px; }
+.trans-file-row { display: flex; align-items: center; gap: 12px; }
+.trans-textarea { font-family: var(--font-mono); font-size: 13px; resize: vertical; }
+.trans-error { color: #b3261e; }
+.trans-warnings summary { cursor: pointer; color: var(--gold-text); font-size: 14px; }
+.trans-warnings ul { margin: 8px 0 0; padding-left: 20px; }
+.trans-warnings li { font-size: 13px; color: var(--ink-2); }
