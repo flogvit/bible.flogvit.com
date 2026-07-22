@@ -191,7 +191,7 @@ if (rootPage) {
   }
   document.querySelectorAll('[data-fav-toggle]').forEach((btn) => {
     btn.addEventListener('click', () => {
-      if (!window.fvPlus?.gate('favoritter')) return;
+      if (!window.fvPlus?.gate('Favoritter')) return;
       const f = favKeyOf(btn.closest('.verse'));
       let favs = read(KEYS.favorites, []);
       const on = isFav(f, favs);
@@ -250,7 +250,7 @@ if (rootPage) {
       add.disabled = input.value.trim() === '';
     });
     add.addEventListener('click', () => {
-      if (!window.fvPlus?.gate('notater')) return;
+      if (!window.fvPlus?.gate('Notater')) return;
       const detail = box.closest('.verse-detail');
       const { bookId: b, chapter: c2, verse: v } = noteRef(detail);
       const now = Date.now();

@@ -42,7 +42,7 @@ function showCta(what) {
   cta.className = 'plus-cta';
   cta.setAttribute('role', 'status');
   const text = document.createElement('span');
-  text.textContent = `Husking — å lagre ${what} — er en del av FLOGVIT.plus.`;
+  text.textContent = `${what} krever FLOGVIT.plus.`;
   const link = document.createElement('a');
   link.className = 'plus-cta-link';
   link.href = 'https://flogvit.com/plus/';

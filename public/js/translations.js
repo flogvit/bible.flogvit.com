@@ -197,7 +197,7 @@ async function handleParse() {
 
 async function handleImport() {
   if (!parsed) return;
-  if (!window.fvPlus?.gate('egne oversettelser')) return;
+  if (!window.fvPlus?.gate('Egne oversettelser')) return;
   const progress = $('[data-trans-progress]');
   const fill = $('[data-trans-fill]');
   const result = $('[data-trans-result]');

@@ -140,7 +140,7 @@ if (root) {
         const input = form.querySelector('input');
         const name = input.value.trim();
         if (!name) return;
-        if (!window.fvPlus?.gate('verslister')) return;
+        if (!window.fvPlus?.gate('Verslister')) return;
         const lists = read(KEYS.verseLists, []);
         const now = Date.now();
         lists.push({ id: `list-${now}`, name, refs: [], createdAt: now, updatedAt: now });
@@ -158,7 +158,7 @@ if (root) {
       a.addEventListener('click', (e) => {
         if (window.fvPlus?.has()) return;
         e.preventDefault();
-        window.fvPlus?.cta('manuskripter');
+        window.fvPlus?.cta('Manuskripter');
       });
     });
     const renderDevotionals = () => {
@@ -193,7 +193,7 @@ if (root) {
       }
       if (btn) {
         btn.addEventListener('click', () => {
-          if (!window.fvPlus?.gate('leseplaner')) return;
+          if (!window.fvPlus?.gate('Leseplaner')) return;
           write(KEYS.activePlan, id);
           location.reload();
         });
@@ -373,12 +373,12 @@ if (root) {
     // deaktiver Lagre — den stille lagringsgaten ville ellers latt «Lagre»
     // se ut som den virket.
     if (!window.fvPlus?.has()) {
-      window.fvPlus?.cta('manuskripter');
+      window.fvPlus?.cta('Manuskripter');
       saveBtn.disabled = true;
       saveBtn.title = 'Manuskripter krever FLOGVIT.plus';
     }
     saveBtn.addEventListener('click', () => {
-      if (!window.fvPlus?.gate('manuskripter')) return;
+      if (!window.fvPlus?.gate('Manuskripter')) return;
       const devs = read(KEYS.devotionals, []);
       const now = Date.now();
       const title = titleEl.value.trim() || 'Uten tittel';

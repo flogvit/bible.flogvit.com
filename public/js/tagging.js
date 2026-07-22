@@ -174,7 +174,7 @@ function initContainer(container) {
   function commitAdd(existingTopic) {
     const value = input.value.trim();
     if (!value && !existingTopic) return;
-    if (!window.fvPlus?.gate('emner')) return;
+    if (!window.fvPlus?.gate('Emner')) return;
     const data = loadData();
     const topic = existingTopic ? existingTopic : addTopic(data, value);
     addTopicToItem(data, itemType, itemId, topic.id);
