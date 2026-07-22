@@ -1,4 +1,4 @@
-// FLOGVIT.bibel — Hono + Bun, samme familie-stack som konto/puzzles/photosuite.
+// FLOGVIT.bible — Hono + Bun, samme familie-stack som konto/puzzles/photosuite.
 // Alle API-ruter fra Express-utgaven er montert på samme stier med samme
 // JSON-kontrakt (bibel-hono/ISSUES.md #7). Gamle /api/auth finnes ikke lenger —
 // innlogging bor sentralt i konto (#5). Sidene rendres server-side i hono/jsx.

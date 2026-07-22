@@ -1,7 +1,7 @@
 # Bibel — Bun + Hono (main)
 
 Full omskriving av bibel-appen: Bun + Hono + hono/jsx SSR + vanilla JS-øyer, Bun.sql
-(mysql-adapter) mot MySQL. Kjører på **bibel.flogvit.com** (deploy: `deploy/deploy-bibel.sh`).
+(mysql-adapter) mot MySQL. Kjører på **bible.flogvit.com** (bibel.flogvit.com 301-er dit) (deploy: `deploy/deploy-bibel.sh`).
 Den gamle appen (Vite+React+Express+SQLite) ligger fryst på branchen **`bibel-no`** og
 serverer bibel.flogvit.no inntil videre — deploy til .no må skje fra en checkout av den
 branchen (`../server/deploy-bibel.sh`).

@@ -1,7 +1,7 @@
 // Sesjonsvalidering mot den sentrale FLOGVIT-kontotjenesten (konto) — samme
 // mønster som puzzles/lab/photosuite. Bibel eier ingen brukere selv:
 // fv-session-cookien settes av konto på .flogvit.com (kanonisk domene er nå
-// bibel.flogvit.com), og hver request valideres her via kontoens session-API.
+// bible.flogvit.com), og hver request valideres her via kontoens session-API.
 // I prod deler containerne docker-nettverk (http://konto:3020); lokalt kjører
 // konto på localhost:3020. Alt er best-effort — feiler kallet, er man utlogget.
 

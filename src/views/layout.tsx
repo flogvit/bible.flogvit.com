@@ -1,4 +1,4 @@
-// App-skall for FLOGVIT.bibel — hono/jsx, server-rendret, progressiv
+// App-skall for FLOGVIT.bible — hono/jsx, server-rendret, progressiv
 // forbedring (nedtrekk og mobilmeny er <details> og virker uten JS; chrome.js
 // legger på lukk-ved-klikk-utenfor og temabryteren).
 //
@@ -37,7 +37,7 @@ const PRODUCTS: { prod: string; dot: string; href?: string; current?: boolean }[
   { prod: 'foto', dot: 'dotFoto' },
   { prod: 'lab', dot: 'dotLab', href: 'https://lab.flogvit.com/' },
   { prod: 'books', dot: 'dotBooks', href: 'https://books.flogvit.com/' },
-  { prod: 'bibel', dot: 'dotBibel', href: '/', current: true },
+  { prod: 'bible', dot: 'dotBibel', href: '/', current: true },
 ];
 
 function FlogvitMenu() {
@@ -104,8 +104,8 @@ function FlogvitMenu() {
           </span>
         </div>
       </details>
-      <a class="fvmenu-product" href="/" aria-label="FLOGVIT.bibel – til forsiden">
-        <span class="fvmenu-productDot">.</span>bibel
+      <a class="fvmenu-product" href="/" aria-label="FLOGVIT.bible – til forsiden">
+        <span class="fvmenu-productDot">.</span>bible
       </a>
     </span>
   );
@@ -277,8 +277,8 @@ function Footer() {
           <a class="fv-brand" href="https://flogvit.com" aria-label="FLOGVIT – alle produkter">
             FLOGVIT
           </a>
-          <a class="fv-product" href="/" aria-label="FLOGVIT.bibel – til forsiden">
-            <span class="fv-dot">.</span>bibel
+          <a class="fv-product" href="/" aria-label="FLOGVIT.bible – til forsiden">
+            <span class="fv-dot">.</span>bible
           </a>
         </span>
         <nav class="site-footer-nav" aria-label="Bunnmeny">

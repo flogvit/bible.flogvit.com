@@ -10,7 +10,7 @@ const r = new Hono<AppEnv>();
 
 r.get('/om', (c) =>
   c.html(
-    <Layout title="Om — FLOGVIT.bibel" description="Om bibelprosjektet: åpen kildekode, bibeloversettelser, KVN-versnummerering og hjelpemidler." styles={['about.css']}>
+    <Layout title="Om — FLOGVIT.bible" description="Om bibelprosjektet: åpen kildekode, bibeloversettelser, KVN-versnummerering og hjelpemidler." styles={['about.css']}>
       <div class="about-main">
         <div class="reading-container">
           <Breadcrumbs items={[{ label: 'Hjem', href: '/' }, { label: 'Om' }]} />
@@ -278,7 +278,7 @@ r.get('/om', (c) =>
 
 r.get('/tilgjengelighet', (c) =>
   c.html(
-    <Layout title="Tilgjengelighet — FLOGVIT.bibel" description="Tilgjengelighetserklæring for bibelsiden: WCAG 2.2 AA, tastaturnavigasjon, skjermleserstøtte." styles={['about.css']}>
+    <Layout title="Tilgjengelighet — FLOGVIT.bible" description="Tilgjengelighetserklæring for bibelsiden: WCAG 2.2 AA, tastaturnavigasjon, skjermleserstøtte." styles={['about.css']}>
       <div class="about-main">
         <div class="reading-container">
           <Breadcrumbs items={[{ label: 'Hjem', href: '/' }, { label: 'Tilgjengelighet' }]} />
@@ -288,7 +288,7 @@ r.get('/tilgjengelighet', (c) =>
           <section class="about-section">
             <h2>Om tilgjengelighet på denne siden</h2>
             <p>
-              bibel.flogvit.com er utviklet for å være tilgjengelig for alle, uavhengig av
+              bible.flogvit.com er utviklet for å være tilgjengelig for alle, uavhengig av
               funksjonsevne. Siden er bygget med server-rendret HTML: alt innhold er lesbart
               uten JavaScript, og navigasjon er vanlige sidelastinger.
             </p>
@@ -437,7 +437,7 @@ r.get('/tilgjengelighet', (c) =>
 // location.pathname (SW-en svarer med denne siden på original-URL-en).
 r.get('/offline-fallback', (c) =>
   c.html(
-    <Layout title="Offline — FLOGVIT.bibel" description="Du er offline." styles={['offline.css']} scripts={['offline-reader.js']}>
+    <Layout title="Offline — FLOGVIT.bible" description="Du er offline." styles={['offline.css']} scripts={['offline-reader.js']}>
       <div class="offline-reader-main">
         <div class="reading-container">
           <div data-offline-reader>
@@ -457,7 +457,7 @@ r.get('/offline-fallback', (c) =>
 
 export function NotFoundPage() {
   return (
-    <Layout title="Siden finnes ikke — FLOGVIT.bibel">
+    <Layout title="Siden finnes ikke — FLOGVIT.bible">
       <div class="reading-container" style="text-align: center; padding: 4rem 1rem;">
         <h1>404 - Siden finnes ikke</h1>
         <p>Beklager, vi finner ikke siden du leter etter.</p>

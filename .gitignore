@@ -5,3 +5,7 @@ kvn-package/
 tmp/
 *.tsbuildinfo
 .idea/
+
+# Gammel apps artefakter (fryst på bibel-no; skal ikke inn på main)
+data/
+dist/

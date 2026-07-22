@@ -65,7 +65,7 @@ import { mapChapter, resolveMappingId, getAvailableMappings } from '../../lib/ve
 
 const r = new Hono<AppEnv>();
 
-const SITE = 'https://bibel.flogvit.com';
+const SITE = 'https://bible.flogvit.com';
 
 // ── Hjelpere ──────────────────────────────────────────────────────────
 
@@ -1596,7 +1596,7 @@ r.get('/:book/:chapter', async (c) => {
   // Lenker bevarer det FORESPURTE valget (inkl. user:-bibler).
   const query = buildQuery(requestedBible, mapping ?? undefined, requestedSecondary);
 
-  const title = `${book.name_no} ${chapter} — FLOGVIT.bibel`;
+  const title = `${book.name_no} ${chapter} — FLOGVIT.bible`;
   const description = data.summary
     ? excerpt(data.summary)
     : `${book.name_no} kapittel ${chapter} — les med grunntekst, referanser og studieverktøy.`;
@@ -1860,7 +1860,7 @@ r.get('/tekst', async (c) => {
 
   return c.html(
     <Layout
-      title="Bibelpassasjer — FLOGVIT.bibel"
+      title="Bibelpassasjer — FLOGVIT.bible"
       description="Vis utvalgte bibelpassasjer samlet på én side."
       canonical={`${SITE}/tekst`}
       styles={['reading.css']}

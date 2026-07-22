@@ -1,4 +1,4 @@
-// Service worker for FLOGVIT.bibel (#14).
+// Service worker for FLOGVIT.bible (#14).
 //
 // - Statiske filer: stale-while-revalidate (rask fra cache, oppdateres i
 //   bakgrunnen så deploys når klientene ved neste last).

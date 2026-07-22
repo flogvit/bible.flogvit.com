@@ -127,7 +127,7 @@ r.get('/', async (c) => {
 
   return c.html(
     <Layout
-      title="FLOGVIT.bibel — Bibelen på nett"
+      title="FLOGVIT.bible — Bibelen på nett"
       description="Les, studér og søk i Bibelen med grunntekst, kryssreferanser, tidslinje, temaer og personer."
       styles={['home.css']}
       scripts={['home.js']}
@@ -393,7 +393,7 @@ r.get('/sok', async (c) => {
 
   return c.html(
     <Layout
-      title={query ? `Søk: ${query} — FLOGVIT.bibel` : 'Søk — FLOGVIT.bibel'}
+      title={query ? `Søk: ${query} — FLOGVIT.bible` : 'Søk — FLOGVIT.bible'}
       description="Søk i bibelteksten."
       styles={['search.css']}
       scripts={['search.js']}
@@ -474,7 +474,7 @@ r.get('/sok/original', async (c) => {
 
   return c.html(
     <Layout
-      title={query ? `Grunntekstsøk: ${query} — FLOGVIT.bibel` : 'Søk i originalspråk — FLOGVIT.bibel'}
+      title={query ? `Grunntekstsøk: ${query} — FLOGVIT.bible` : 'Søk i originalspråk — FLOGVIT.bible'}
       description="Søk i den hebraiske og greske grunnteksten."
       styles={['search.css']}
     >

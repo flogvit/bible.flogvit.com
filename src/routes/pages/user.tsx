@@ -32,7 +32,7 @@ function UserPage(props: {
 }) {
   return (
     <Layout
-      title={`${props.title} — FLOGVIT.bibel`}
+      title={`${props.title} — FLOGVIT.bible`}
       description={props.intro || props.heading}
       styles={['user.css', ...(props.styles ?? [])]}
       scripts={['user.js', ...(props.scripts ?? [])]}
@@ -100,7 +100,7 @@ r.get('/leseplan', async (c) => {
   `) as { id: string; name: string; description: string | null; category: string | null; days: number }[];
 
   return c.html(
-    <Layout title="Leseplaner — FLOGVIT.bibel" description="Ulike planer for systematisk bibellesing." styles={['user.css']} scripts={['user.js']}>
+    <Layout title="Leseplaner — FLOGVIT.bible" description="Ulike planer for systematisk bibellesing." styles={['user.css']} scripts={['user.js']}>
       <div class="user-main">
         <div class="reading-container">
           <Breadcrumbs items={[{ label: 'Hjem', href: '/' }, { label: 'Leseplan' }]} />
@@ -151,7 +151,7 @@ r.get('/manuskripter', (c) =>
 // Editor (ny + rediger) — CodeMirror erstattet av textarea + markdown-preview i user.js.
 function DevotionalEditor(props: { slug?: string }) {
   return (
-    <Layout title="Rediger manuskript — FLOGVIT.bibel" description="Skriv andakt, preken eller bibeltime." styles={['user.css']} scripts={['user.js']}>
+    <Layout title="Rediger manuskript — FLOGVIT.bible" description="Skriv andakt, preken eller bibeltime." styles={['user.css']} scripts={['user.js']}>
       <div class="user-main">
         <div class="container">
           <Breadcrumbs items={[{ label: 'Hjem', href: '/' }, { label: 'Manuskripter', href: '/manuskripter' }, { label: props.slug ? 'Rediger' : 'Nytt' }]} />
@@ -182,7 +182,7 @@ r.get('/manuskripter/ny', (c) => c.html(<DevotionalEditor />));
 r.get('/manuskripter/:slug/rediger', (c) => c.html(<DevotionalEditor slug={c.req.param('slug')} />));
 r.get('/manuskripter/:slug', (c) =>
   c.html(
-    <Layout title="Manuskript — FLOGVIT.bibel" description="Manuskript." styles={['user.css']} scripts={['user.js']}>
+    <Layout title="Manuskript — FLOGVIT.bible" description="Manuskript." styles={['user.css']} scripts={['user.js']}>
       <div class="user-main">
         <div class="reading-container">
           <Breadcrumbs items={[{ label: 'Hjem', href: '/' }, { label: 'Manuskripter', href: '/manuskripter' }, { label: '…' }]} />

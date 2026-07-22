@@ -42,7 +42,7 @@ r.get('/personer', async (c) => {
 
   return c.html(
     <Layout
-      title="Bibelske personer — FLOGVIT.bibel"
+      title="Bibelske personer — FLOGVIT.bible"
       description="Utforsk sentrale skikkelser i Bibelen — deres liv, roller, epoke og relevante bibelvers."
       styles={['persons.css']}
       scripts={['person-filter.js']}
@@ -173,7 +173,7 @@ r.get('/personer/:personId', async (c) => {
 
   return c.html(
     <Layout
-      title={`${person.name} — FLOGVIT.bibel`}
+      title={`${person.name} — FLOGVIT.bible`}
       description={person.summary.slice(0, 155)}
       styles={['persons.css']}
       scripts={['tagging.js']}

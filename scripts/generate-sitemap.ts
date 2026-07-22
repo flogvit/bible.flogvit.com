@@ -10,7 +10,7 @@ import { booksData } from '../src/lib/books-data.ts';
 import { toUrlSlug } from '../src/lib/url-utils.ts';
 import { getBookInfoBySlug } from '../src/lib/books-data.ts';
 
-const BASE_URL = 'https://bibel.flogvit.com';
+const BASE_URL = 'https://bible.flogvit.com';
 
 const staticUrls: [path: string, changefreq: string, priority: string][] = [
   ['/', 'weekly', '1.0'],

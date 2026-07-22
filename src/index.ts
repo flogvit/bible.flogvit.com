@@ -1,4 +1,4 @@
-// Entry point for bibel.flogvit.com (Bun + Hono rewrite of the Vite/React +
+// Entry point for bible.flogvit.com (Bun + Hono rewrite of the Vite/React +
 // Express app).
 
 import { createApp } from './app.ts';

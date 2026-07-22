@@ -64,7 +64,7 @@ r.get('/kjente-vers', async (c) => {
 
   return c.html(
     <Layout
-      title="Kjente bibelvers — FLOGVIT.bibel"
+      title="Kjente bibelvers — FLOGVIT.bible"
       description="En samling kjente og ofte siterte bibelvers. Klikk på et vers for å lese det i kontekst."
       styles={['overview.css']}
     >
@@ -125,7 +125,7 @@ r.get('/lesetekster', async (c) => {
 
   return c.html(
     <Layout
-      title="Lesetekster — FLOGVIT.bibel"
+      title="Lesetekster — FLOGVIT.bible"
       description="Lesetekster fra Den norske kirkes tekstrekkesystem — GT, brev og evangelium for hver søndag og helligdag."
       styles={['overview.css']}
     >
@@ -187,7 +187,7 @@ r.get('/lesetekster/:id', async (c) => {
 
   return c.html(
     <Layout
-      title={`${text.name} — Lesetekster — FLOGVIT.bibel`}
+      title={`${text.name} — Lesetekster — FLOGVIT.bible`}
       description={`Lesetekster for ${text.name}: GT, brev og evangelium.`}
       styles={['overview.css']}
     >
@@ -275,7 +275,7 @@ r.get('/profetier', async (c) => {
 
   return c.html(
     <Layout
-      title="Profetier og oppfyllelser — FLOGVIT.bibel"
+      title="Profetier og oppfyllelser — FLOGVIT.bible"
       description="Profetier i Det gamle testamente og hvordan de ble oppfylt i Det nye testamente."
       styles={['overview.css', 'persons.css']}
       scripts={['card-filter.js', 'tagging.js']}
@@ -392,7 +392,7 @@ r.get('/paralleller', async (c) => {
 
   return c.html(
     <Layout
-      title="Parallelle evangelietekster — FLOGVIT.bibel"
+      title="Parallelle evangelietekster — FLOGVIT.bible"
       description="Sammenlign parallelle tekster fra de fire evangeliene side ved side."
       styles={['overview.css', 'persons.css']}
       scripts={['card-filter.js']}
@@ -489,7 +489,7 @@ r.get('/tidslinje', async (c) => {
 
   return c.html(
     <Layout
-      title="Bibelens tidslinje — FLOGVIT.bibel"
+      title="Bibelens tidslinje — FLOGVIT.bible"
       description="En kronologisk oversikt over de viktigste hendelsene i Bibelen og verdenshistorien."
       styles={['overview.css']}
       scripts={['timeline-filter.js']}
@@ -608,7 +608,7 @@ r.get('/statistikk', async (c) => {
 
   return c.html(
     <Layout
-      title="Bibelstatistikk — FLOGVIT.bibel"
+      title="Bibelstatistikk — FLOGVIT.bible"
       description="Oversikt over bøker, kapitler, vers og ord i Bibelen, samt de hyppigste ordene."
       styles={['overview.css']}
       scripts={['statistics.js']}
