@@ -941,3 +941,12 @@ a.fvmenu-item:hover { background: color-mix(in oklab, var(--ink) 6%, var(--surfa
   cursor: pointer;
   padding: 0 2px;
 }
+
+/* Uniform «Konto og språk»-oppføring i familiemenyen (portal/STYLE.md) */
+.fvmenu-kontoitem {
+  font-size: 13px;
+  color: var(--gold-text);
+  border-top: 1px solid var(--border);
+  margin-top: 4px;
+  padding-top: 10px;
+}

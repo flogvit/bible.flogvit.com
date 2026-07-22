@@ -86,9 +86,15 @@ function FlogvitMenu() {
               </a>
             );
           })}
+          {/* Uniform familie-oppføring (portal/STYLE.md): globale innstillinger
+              — konto, språk — nås fra samme plass i alle produktene. */}
+          <a class="fvmenu-item fvmenu-kontoitem" href="https://flogvit.com/konto/">
+            Konto og språk
+          </a>
         </nav>
         {/* Familie-tema (portal/PREFS.md). chrome.js speiler verdien og
-            persisterer endringer til cookie + konto. */}
+            persisterer endringer til cookie + konto. Språk og kontoadmin bor
+            i de globale innstillingene på flogvit.com/konto/. */}
         <div class="fvmenu-prefs">
           <span class="fvmenu-prefs-label">Tema</span>
           <span class="fvmenu-seg" id="fv-theme" role="group" aria-label="Tema">
@@ -286,6 +292,7 @@ function Footer() {
           <a href="/om">Om siden</a>
           <a href="/om#hjelp">Hjelp</a>
           <a href="/innstillinger">Innstillinger</a>
+          <a href="/konto">Konto</a>
           <a href="/offline">Offline</a>
           <a href="/tilgjengelighet">Tilgjengelighet</a>
         </nav>
