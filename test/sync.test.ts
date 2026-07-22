@@ -31,6 +31,19 @@ beforeAll(async () => {
             email: 'sync-test@flogvit.com',
             displayName: 'Sync-test',
             verified: true,
+            plus: true, // husking (sync) er plus-gated — sync-testene kjører som plus-bruker
+            plusUntil: '2099-01-01T00:00:00.000Z',
+          },
+          csrf: 'csrf',
+        });
+      }
+      if (cookie.includes('fv-session=uten-plus')) {
+        return Response.json({
+          user: {
+            id: TEST_USER_ID + 1,
+            email: 'gratis@flogvit.com',
+            displayName: 'Gratis',
+            verified: true,
             plus: false,
             plusUntil: null,
           },
@@ -56,6 +69,16 @@ describe('sync-API', () => {
   test('krever innlogging', async () => {
     const res = await app.request('/api/sync', { method: 'POST' });
     expect(res.status).toBe(401);
+  });
+
+  test('innlogget uten plus får 402 (husking er plus-gated)', async () => {
+    const res = await app.request('/api/sync', {
+      method: 'POST',
+      headers: { cookie: 'fv-session=uten-plus', 'content-type': 'application/json' },
+      body: JSON.stringify({ deviceId: 'x', lastSyncAt: 0, changes: [] }),
+    });
+    expect(res.status).toBe(402);
+    expect((await res.json()).error).toBe('plus_required');
   });
 
   test('krever deviceId', async () => {

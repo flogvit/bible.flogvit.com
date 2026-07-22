@@ -74,9 +74,11 @@ export async function getCentralSession(cookieHeader: string): Promise<SessionUs
   }
 }
 
-// Ikke-HttpOnly markørcookie som bare speiler OM man er innlogget, slik at
-// klient-øyer (sync.js) kan la være å kalle API-er som uansett gir 401.
-// Innholdet er verdiløst for en angriper; selve sesjonen ligger i fv-session.
+// Ikke-HttpOnly markørcookie som speiler innloggings- og plus-status, slik at
+// klient-øyer (sync.js) kan la være å kalle API-er som uansett gir 401/402.
+// '1' = innlogget, '2' = innlogget med FLOGVIT.plus. Innholdet er verdiløst
+// for en angriper; selve sesjonen ligger i fv-session, og all gating skjer
+// server-side.
 const AUTH_MARKER = 'fv-auth';
 
 /** Løser konto-sesjonen inn på c.var.user for hver request (null = anonym). */
@@ -84,10 +86,11 @@ export async function withSession(c: Context<AppEnv>, next: Next): Promise<void>
   const cookieHeader = c.req.header('cookie') ?? '';
   const user = await getCentralSession(cookieHeader);
   c.set('user', user);
-  const hasMarker = new RegExp(`(?:^|;\\s*)${AUTH_MARKER}=1`).test(cookieHeader);
-  if (user && !hasMarker) {
-    c.header('Set-Cookie', `${AUTH_MARKER}=1; Path=/; SameSite=Lax; Max-Age=2592000`);
-  } else if (!user && hasMarker) {
+  const current = cookieHeader.match(new RegExp(`(?:^|;\\s*)${AUTH_MARKER}=([^;]+)`))?.[1] ?? null;
+  const desired = user ? (user.plus ? '2' : '1') : null;
+  if (desired && current !== desired) {
+    c.header('Set-Cookie', `${AUTH_MARKER}=${desired}; Path=/; SameSite=Lax; Max-Age=2592000`);
+  } else if (!desired && current) {
     c.header('Set-Cookie', `${AUTH_MARKER}=; Path=/; SameSite=Lax; Max-Age=0`);
   }
   await next();
@@ -96,5 +99,17 @@ export async function withSession(c: Context<AppEnv>, next: Next): Promise<void>
 /** 401 for API-ruter som krever innlogget bruker (sync m.m.). */
 export async function requireUser(c: Context<AppEnv>, next: Next): Promise<Response | void> {
   if (!c.var.user) return c.json({ error: 'unauthorized' }, 401);
+  await next();
+}
+
+/**
+ * 402 for API-ruter som krever FLOGVIT.plus — «husking» (skylagring/sync) er
+ * en del av plus-abonnementet (Vegards beslutning 2026-07-22). Samme
+ * responsform som kontos sync-API. Alt lokalt (localStorage/IndexedDB) er
+ * gratis; kildekoden er åpen så selvhosting uten gating kan komme senere.
+ */
+export async function requirePlus(c: Context<AppEnv>, next: Next): Promise<Response | void> {
+  if (!c.var.user) return c.json({ error: 'unauthorized' }, 401);
+  if (!c.var.user.plus) return c.json({ error: 'plus_required' }, 402);
   await next();
 }

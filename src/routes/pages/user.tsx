@@ -52,7 +52,7 @@ function UserPage(props: {
 // ---------- /favoritter ----------
 r.get('/favoritter', (c) =>
   c.html(
-    <UserPage title="Favoritter" crumb="Favoritter" heading="Favorittvers" page="favorites" intro="Dine merkede vers. Lagres i nettleseren og synkroniseres når du er innlogget.">
+    <UserPage title="Favoritter" crumb="Favoritter" heading="Favorittvers" page="favorites" intro="Dine merkede vers. Lagres i nettleseren; synkroniseres mellom enheter med FLOGVIT.plus.">
       <div class="user-list" data-list></div>
       <p class="user-empty" data-empty hidden>Du har ingen favoritter ennå. Klikk hjertet på et vers for å legge det til.</p>
     </UserPage>,
@@ -107,7 +107,7 @@ r.get('/leseplan', async (c) => {
           <h1>Leseplaner</h1>
           <p class="user-intro">
             Velg en plan for systematisk bibellesing. Fremdrift og rekke lagres i nettleseren og
-            synkroniseres når du er innlogget.
+            synkroniseres mellom enheter med FLOGVIT.plus.
           </p>
           <div data-user-page="readingplan">
             <div class="plan-grid">
@@ -239,18 +239,32 @@ r.get('/innstillinger', (c) => {
         <fieldset class="settings-group">
           <legend>Konto og synkronisering</legend>
           {user ? (
-            <>
-              <p class="settings-account">
-                Innlogget som <strong>{user.displayName || user.email}</strong>.
-              </p>
-              <p class="settings-sync" data-sync-status>
-                Synkronisering er på — favoritter, notater og innstillinger lagres til kontoen din.
-              </p>
-            </>
+            user.plus ? (
+              <>
+                <p class="settings-account">
+                  Innlogget som <strong>{user.displayName || user.email}</strong> (FLOGVIT.plus).
+                </p>
+                <p class="settings-sync" data-sync-status>
+                  Synkronisering er på — favoritter, notater og innstillinger lagres til kontoen din.
+                </p>
+              </>
+            ) : (
+              <>
+                <p class="settings-account">
+                  Innlogget som <strong>{user.displayName || user.email}</strong>.
+                </p>
+                <p class="settings-sync">
+                  Synkronisering mellom enheter («husking») er en del av{' '}
+                  <a href="https://flogvit.com/plus/">FLOGVIT.plus</a>. Alt du gjør lagres uansett
+                  lokalt i nettleseren din.
+                </p>
+              </>
+            )
           ) : (
             <p class="settings-account">
-              Du er ikke innlogget. <a href={ACCOUNT_URL}>Logg inn med FLOGVIT-konto</a> for å
-              synkronisere favoritter, notater og innstillinger mellom enheter.
+              Du er ikke innlogget. Med <a href={ACCOUNT_URL}>FLOGVIT-konto</a> og{' '}
+              <a href="https://flogvit.com/plus/">FLOGVIT.plus</a> synkroniseres favoritter,
+              notater og innstillinger mellom enheter.
             </p>
           )}
         </fieldset>

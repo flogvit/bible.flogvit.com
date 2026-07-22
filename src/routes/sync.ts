@@ -1,6 +1,6 @@
 // Sync-API — port av gamle api/routes/sync.ts (Express/mysql2) til Hono +
 // Bun.sql, med EKSAKT samme JSON-kontrakt. user_id er nå konto-bruker-id
-// (requireUser fra session.ts); bibels egen users-tabell finnes ikke lenger.
+// (requirePlus fra session.ts — husking er plus-gated); bibels egen users-tabell finnes ikke lenger.
 // ÅPEN BESLUTNING (ISSUES.md #6): ev. plus-gating — da legges én
 // entitlement-sjekk (c.var.user.plus) i middleware her.
 
@@ -8,7 +8,7 @@ import { Hono } from 'hono';
 import type { SQL } from 'bun';
 import { getSql } from '../lib/db.ts';
 import type { AppEnv } from '../lib/session.ts';
-import { requireUser } from '../lib/session.ts';
+import { requirePlus } from '../lib/session.ts';
 
 // Enkel rate-limit per bruker i minnet (som originalen).
 const rateLimitMap = new Map<number, { count: number; resetAt: number }>();
@@ -64,7 +64,8 @@ function mergeReadingPlanProgress(clientData: unknown, serverData: unknown): Pla
 
 const sync = new Hono<AppEnv>();
 
-sync.use('*', requireUser);
+// Husking (skylagring/sync) er en del av FLOGVIT.plus (2026-07-22).
+sync.use('*', requirePlus);
 
 /** POST / — hovedsync: push klientendringer, pull serverendringer. */
 sync.post('/', async (c) => {

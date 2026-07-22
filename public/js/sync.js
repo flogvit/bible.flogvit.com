@@ -163,20 +163,21 @@ function setStatus(text) {
   if (box && text) box.textContent = text;
 }
 
-// Serveren setter fv-auth=1 (ikke-HttpOnly markør) når man er innlogget —
-// uten den dropper vi API-kallet helt i stedet for å provosere en 401 i
-// konsollen på hver sidelast. 401-håndteringen under står som fallback for
-// en foreldet markør (utlogget i en annen fane/på konto).
-function hasAuthMarker() {
+// Serveren setter fv-auth (ikke-HttpOnly markør): '1' = innlogget, '2' =
+// innlogget med FLOGVIT.plus. Husking (sync) krever plus, så uten '2' dropper
+// vi API-kallet helt i stedet for å provosere 401/402 i konsollen på hver
+// sidelast. Statuskode-håndteringen under står som fallback for en foreldet
+// markør (utlogget/plus utløpt i en annen fane).
+function hasPlusMarker() {
   try {
-    return /(?:^|;\s*)fv-auth=1/.test(document.cookie);
+    return /(?:^|;\s*)fv-auth=2/.test(document.cookie);
   } catch {
     return false;
   }
 }
 
 async function syncNow() {
-  if (loggedOut || syncing || !hasAuthMarker()) return;
+  if (loggedOut || syncing || !hasPlusMarker()) return;
   syncing = true;
   try {
     const lastSyncAt = read(LAST_SYNC_KEY, 0);
@@ -188,7 +189,7 @@ async function syncNow() {
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ deviceId, lastSyncAt, changes }),
     });
-    if (res.status === 401) {
+    if (res.status === 401 || res.status === 402) {
       loggedOut = true;
       try {
         sessionStorage.setItem('bible-sync-401', '1');

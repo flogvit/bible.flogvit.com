@@ -25,9 +25,10 @@ function el(tag, cls, text) {
   return node;
 }
 
-function loggedIn() {
+// Skylagring av egne bibler («husking») krever FLOGVIT.plus — fv-auth=2.
+function hasPlus() {
   try {
-    return /(?:^|;\s*)fv-auth=1/.test(document.cookie);
+    return /(?:^|;\s*)fv-auth=2/.test(document.cookie);
   } catch {
     return false;
   }
@@ -51,7 +52,7 @@ async function renderList() {
     del.addEventListener('click', async () => {
       if (!confirm(`Slette «${bible.name}»?`)) return;
       await deleteUserBible(bible.id);
-      if (loggedIn()) pushMetadata().catch(() => {});
+      if (hasPlus()) pushMetadata().catch(() => {});
       renderList();
     });
     row.append(info, del);
@@ -202,7 +203,7 @@ async function handleImport() {
   result.textContent = '';
   result.append(el('p', '', `«${name}» er importert og kan velges som oversettelse på lesesidene.`));
   renderList();
-  if (loggedIn()) {
+  if (hasPlus()) {
     result.append(el('p', 'user-note', 'Laster opp til kontoen din…'));
     try {
       await pushMetadata();
@@ -227,5 +228,5 @@ function init() {
   });
   $('[data-trans-parse]')?.addEventListener('click', handleParse);
   $('[data-trans-import]')?.addEventListener('click', handleImport);
-  if (loggedIn()) pullFromAccount().catch(() => {});
+  if (hasPlus()) pullFromAccount().catch(() => {});
 }
