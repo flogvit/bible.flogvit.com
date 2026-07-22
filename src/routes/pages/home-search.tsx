@@ -9,8 +9,24 @@ import type { AppEnv } from '../../lib/session.ts';
 import { Layout } from '../../views/layout.tsx';
 import { Breadcrumbs } from '../../views/breadcrumbs.tsx';
 import { getSql } from '../../lib/db.ts';
-import { searchVerses, searchOriginalWord, getTodaysReadingTexts } from '../../lib/bible.ts';
-import { booksData, type BookInfo } from '../../lib/books-data.ts';
+import {
+  searchVerses,
+  searchOriginalWord,
+  getTodaysReadingTexts,
+  getTodaysDays,
+  searchStories,
+  searchThemes,
+  searchPersons,
+  searchProphecies,
+  searchTimelineEvents,
+  searchGospelParallels,
+  searchReadingPlans,
+  searchImportantWords,
+  searchNumberSymbolism,
+  searchDays,
+  type DayReference,
+} from '../../lib/bible.ts';
+import { booksData, getBookInfoById, type BookInfo } from '../../lib/books-data.ts';
 import { toUrlSlug } from '../../lib/url-utils.ts';
 
 const r = new Hono<AppEnv>();
@@ -86,9 +102,28 @@ const DISCOVER: { to: string; title: string; desc: string }[] = [
   { to: '/oversettelser', title: 'Oversettelser', desc: 'Tilgjengelige bibeloversettelser og last ned for offline-bruk.' },
 ];
 
+const DAY_CATEGORY_LABELS: Record<string, string> = {
+  advent: 'Advent', christmas: 'Jul', epiphany: 'Åpenbaring', lent: 'Faste',
+  easter: 'Påske', ascension: 'Himmelfart', pentecost: 'Pinse',
+  trinity: 'Treenighetstiden', special: 'Spesielle dager', jewish: 'Jødiske høytider',
+};
+
+function dayRefLabel(ref: DayReference): string {
+  const name = getBookInfoById(ref.bookId)?.name_no || `Bok ${ref.bookId}`;
+  return ref.fromVerseId === ref.toVerseId
+    ? `${name} ${ref.chapterId}:${ref.fromVerseId}`
+    : `${name} ${ref.chapterId}:${ref.fromVerseId}-${ref.toVerseId}`;
+}
+
+function dayRefUrl(ref: DayReference): string {
+  const book = getBookInfoById(ref.bookId);
+  return `/${book ? toUrlSlug(book.short_name) : ''}/${ref.chapterId}#v${ref.fromVerseId}`;
+}
+
 r.get('/', async (c) => {
   const verse = await loadDailyVerse();
   const todaysReading = await getTodaysReadingTexts();
+  const todaysDays = await getTodaysDays();
 
   return c.html(
     <Layout
@@ -116,7 +151,7 @@ r.get('/', async (c) => {
           </div>
 
           <div class="home-side">
-            <div class="home-card home-vod">
+            <div class="home-card home-vod" data-setting-show="showDailyVerse">
               <h3>Dagens vers</h3>
               {verse ? (
                 <>
@@ -147,8 +182,40 @@ r.get('/', async (c) => {
           </div>
         </div>
 
+        {todaysDays.length > 0 && (
+          <div class="home-todays-days" data-setting-show="showTodaysDay">
+            {todaysDays.map((day) => (
+              <div class="home-todays-day">
+                <div class="home-todays-day-head">
+                  <h3>
+                    <a href={`/dager/${day.id}`}>{day.name}</a>
+                  </h3>
+                  <span class="home-todays-day-cat">{DAY_CATEGORY_LABELS[day.category] || day.category}</span>
+                </div>
+                <p class="home-todays-day-desc">{day.description}</p>
+                {(day.references ?? []).length > 0 && (
+                  <div class="home-todays-day-refs">
+                    <span class="home-todays-day-reflabel">Dagens tekster:</span>
+                    {(day.references ?? [])
+                      .filter((ref) => ref.relevance === 'primary')
+                      .map((ref) => (
+                        <a href={dayRefUrl(ref)} class="home-todays-day-ref">{dayRefLabel(ref)}</a>
+                      ))}
+                    {(day.references ?? [])
+                      .filter((ref) => ref.relevance === 'secondary')
+                      .map((ref) => (
+                        <a href={dayRefUrl(ref)} class="home-todays-day-ref is-secondary">{dayRefLabel(ref)}</a>
+                      ))}
+                  </div>
+                )}
+                <a href={`/dager/${day.id}`} class="home-todays-day-more">Les mer om {day.name} →</a>
+              </div>
+            ))}
+          </div>
+        )}
+
         {todaysReading.length > 0 && (
-          <div class="home-lesetekster">
+          <div class="home-lesetekster" data-setting-show="showReadingTexts">
             {todaysReading.map((t) => (
               <div class="home-todays-reading">
                 <div class="home-todays-eyebrow">
@@ -204,6 +271,116 @@ r.get('/', async (c) => {
 
 const PAGE_SIZE = 50;
 
+// ---------- ekstra søkeresultattyper (GitHub #2, paritet med gamle SearchPage) ----------
+
+interface ExtraCard {
+  href: string;
+  title: string;
+  badge?: string;
+  meta?: string;
+  desc?: string | null;
+}
+
+const EXTRA_MAX = 6;
+
+function trunc(text: string | null | undefined, max = 100): string | undefined {
+  if (!text) return undefined;
+  return text.length > max ? `${text.slice(0, max)}…` : text;
+}
+
+/** Én resultatseksjon; skjules per brukerinnstilling av search.js (data-search-type). */
+function ExtraSection({ title, typeKey, cards, moreLabel }: { title: string; typeKey: string; cards: ExtraCard[]; moreLabel: string }) {
+  if (cards.length === 0) return null;
+  const Card = ({ card }: { card: ExtraCard }) => (
+    <a href={card.href} class="search-extra-card">
+      <span class="search-extra-card-title">
+        {card.title}
+        {card.badge && <span class="search-type-badge">{card.badge}</span>}
+      </span>
+      {card.meta && <span class="search-extra-card-meta">{card.meta}</span>}
+      {card.desc && <span class="search-extra-card-desc">{card.desc}</span>}
+    </a>
+  );
+  return (
+    <section class="search-extra-section" data-search-type={typeKey}>
+      <h2 class="search-extra-title">{title}</h2>
+      <div class="search-extra-cards">
+        {cards.slice(0, EXTRA_MAX).map((card) => (
+          <Card card={card} />
+        ))}
+      </div>
+      {cards.length > EXTRA_MAX && (
+        <details class="search-extra-more">
+          <summary>Vis alle {cards.length} {moreLabel}</summary>
+          <div class="search-extra-cards">
+            {cards.slice(EXTRA_MAX).map((card) => (
+              <Card card={card} />
+            ))}
+          </div>
+        </details>
+      )}
+    </section>
+  );
+}
+
+async function loadExtraResults(query: string) {
+  const [stories, themes, persons, prophecies, timeline, parallels, plans, words, numbers, days] = await Promise.all([
+    searchStories(query),
+    searchThemes(query),
+    searchPersons(query),
+    searchProphecies(query),
+    searchTimelineEvents(query),
+    searchGospelParallels(query),
+    searchReadingPlans(query),
+    searchImportantWords(query),
+    searchNumberSymbolism(query),
+    searchDays(query),
+  ]);
+  const sections: { title: string; typeKey: string; moreLabel: string; cards: ExtraCard[] }[] = [
+    {
+      title: 'Bibelhistorier', typeKey: 'stories', moreLabel: 'historier',
+      cards: stories.map((s) => ({ href: `/historier/${s.slug}`, title: s.title, desc: trunc(s.description) })),
+    },
+    {
+      title: 'Temaer', typeKey: 'themes', moreLabel: 'temaer',
+      cards: themes.map((t) => ({ href: `/temaer/${encodeURIComponent(t.name)}`, title: t.name })),
+    },
+    {
+      title: 'Personer', typeKey: 'persons', moreLabel: 'personer',
+      cards: persons.map((p) => ({ href: `/personer/${p.id}`, title: p.name, badge: 'Person', meta: p.title || undefined, desc: trunc(p.summary) })),
+    },
+    {
+      title: 'Profetier', typeKey: 'prophecies', moreLabel: 'profetier',
+      cards: prophecies.map((p) => ({ href: '/profetier', title: p.title, badge: 'Profeti', meta: `${p.category_name} · ${p.prophecy_ref}`, desc: trunc(p.explanation) })),
+    },
+    {
+      title: 'Tidslinje', typeKey: 'timeline', moreLabel: 'hendelser',
+      cards: timeline.map((e) => ({ href: '/tidslinje', title: e.title, badge: 'Tidslinje', meta: e.year_display || undefined, desc: trunc(e.description) })),
+    },
+    {
+      title: 'Evangelieparalleller', typeKey: 'parallels', moreLabel: 'paralleller',
+      cards: parallels.map((p) => ({ href: '/paralleller', title: p.title, badge: 'Parallell', meta: p.section_name })),
+    },
+    {
+      title: 'Leseplaner', typeKey: 'plans', moreLabel: 'leseplaner',
+      cards: plans.map((p) => ({ href: '/leseplan', title: p.name, badge: 'Leseplan', meta: p.category ? `${p.category} · ${p.days} dager` : undefined, desc: trunc(p.description) })),
+    },
+    {
+      title: 'Viktige ord', typeKey: 'words', moreLabel: 'viktige ord',
+      cards: words.map((w) => ({ href: `/${toUrlSlug(w.book_short_name)}/${w.chapter}`, title: w.word, badge: 'Viktig ord', meta: `${w.book_name_no} ${w.chapter}`, desc: trunc(w.explanation) })),
+    },
+    {
+      title: 'Tall', typeKey: 'numberSymbolism', moreLabel: 'tall',
+      cards: numbers.map((n) => ({ href: `/tall/${n.number}`, title: `Tallet ${n.number}`, badge: 'Tall', meta: n.meaning, desc: trunc(n.description) })),
+    },
+    {
+      title: 'Dager', typeKey: 'days', moreLabel: 'dager',
+      cards: days.map((d) => ({ href: `/dager/${d.id}`, title: d.name, badge: 'Dag', desc: trunc(d.description) })),
+    },
+  ];
+  return sections.filter((s) => s.cards.length > 0);
+}
+
 r.get('/sok', async (c) => {
   const query = (c.req.query('q') || '').trim();
   const side = Math.max(1, parseInt(c.req.query('side') || '1', 10) || 1);
@@ -211,12 +388,15 @@ r.get('/sok', async (c) => {
   const bible = c.req.query('bible') || 'osnb2';
 
   const res = query.length >= 2 ? await searchVerses(query, PAGE_SIZE, offset, bible) : null;
+  // Andre ressurstyper vises kun på side 1 (som i gamle appen).
+  const extra = query.length >= 2 && side === 1 ? await loadExtraResults(query) : [];
 
   return c.html(
     <Layout
       title={query ? `Søk: ${query} — FLOGVIT.bibel` : 'Søk — FLOGVIT.bibel'}
       description="Søk i bibelteksten."
       styles={['search.css']}
+      scripts={['search.js']}
     >
       <div class="search-main">
         <div class="reading-container">
@@ -238,6 +418,14 @@ r.get('/sok', async (c) => {
             Søker du etter et bestemt vers? Skriv f.eks. «Joh 3,16» i hurtigsøket (⌘K). For
             grunntekst, se <a href="/sok/original">søk i originalspråk</a>.
           </p>
+
+          {extra.length > 0 && (
+            <div class="search-extra">
+              {extra.map((s) => (
+                <ExtraSection title={s.title} typeKey={s.typeKey} cards={s.cards} moreLabel={s.moreLabel} />
+              ))}
+            </div>
+          )}
 
           {query.length >= 2 && res && (
             <>
