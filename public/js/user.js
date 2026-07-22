@@ -172,14 +172,26 @@ if (root) {
   // ---- innstillinger ----
   if (page === 'settings') {
     const s = read(KEYS.settings, {});
+    // data-setting støtter dot-path for nestede objekter (searchResultTypes.stories).
+    const getPath = (obj, path) => path.split('.').reduce((o, k) => (o == null ? undefined : o[k]), obj);
+    const setPath = (obj, path, value) => {
+      const keys = path.split('.');
+      let o = obj;
+      for (const k of keys.slice(0, -1)) {
+        if (typeof o[k] !== 'object' || o[k] === null) o[k] = {};
+        o = o[k];
+      }
+      o[keys[keys.length - 1]] = value;
+    };
     root.querySelectorAll('[data-setting]').forEach((input) => {
       const key = input.dataset.setting;
-      if (input.type === 'checkbox') input.checked = s[key] !== false;
-      else if (key in s) input.value = s[key];
+      const cur = getPath(s, key);
+      if (input.type === 'checkbox') input.checked = cur !== false;
+      else if (cur !== undefined) input.value = cur;
       input.addEventListener('change', () => {
-        const cur = read(KEYS.settings, {});
-        cur[key] = input.type === 'checkbox' ? input.checked : input.value;
-        write(KEYS.settings, cur);
+        const next = read(KEYS.settings, {});
+        setPath(next, key, input.type === 'checkbox' ? input.checked : input.value);
+        write(KEYS.settings, next);
       });
     });
 

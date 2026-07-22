@@ -115,12 +115,17 @@ if (rootPage) {
     if (s.showParallels === false) hide('.parallels-container');
     if (s.showTimeline === false) hide('.st-block[data-block-id="tidslinje"]');
     if (s.showBookSummary === false && s.showChapterSummary === false) hide('.st-block[data-block-id="sammendrag"]');
+    if (s.showChapterSummary === false) hide('[data-summary-kind="chapter"]');
+    if (s.showBookSummary === false) hide('[data-summary-kind="book"]');
+    if (s.showChapterContext === false) hide('[data-summary-kind="context"]');
+    if (s.showImportantWords === false) hide('.st-block[data-block-id="viktige-ord"]');
     if (s.showVerseFootnotes === false) hide('.footnotes');
   }
 
   // ── Versdetaljer: åpne/lukk (én åpen om gangen, som gamle appen) ──
   document.querySelectorAll('[data-verse-toggle]').forEach((btn) => {
     btn.addEventListener('click', () => {
+      if (settings().showVerseDetails === false) return;
       const verse = btn.closest('.verse');
       const detail = verse && verse.querySelector('.verse-detail');
       if (!detail) return;

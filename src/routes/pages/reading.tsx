@@ -1072,9 +1072,9 @@ function StudyBlock({
   );
 }
 
-function SummaryItem({ title, content }: { title: string; content: string }) {
+function SummaryItem({ title, content, kind }: { title: string; content: string; kind?: string }) {
   return (
-    <div class="st-summary-item">
+    <div class="st-summary-item" data-summary-kind={kind}>
       <h4 class="st-summary-sub">{title}</h4>
       <div class="st-summary-text">
         <Markdown text={content} />
@@ -1116,9 +1116,9 @@ function StudyPanel({
       </StudyBlock>
 
       <StudyBlock id="sammendrag" title="Sammendrag" count={summaryCount} defaultOpen>
-        {data.summary && <SummaryItem title={`Kapittel ${chapter}`} content={data.summary} />}
-        {data.bookSummary && <SummaryItem title={`Om ${book.name_no}`} content={data.bookSummary} />}
-        {data.context && <SummaryItem title="Historisk kontekst" content={data.context} />}
+        {data.summary && <SummaryItem title={`Kapittel ${chapter}`} content={data.summary} kind="chapter" />}
+        {data.bookSummary && <SummaryItem title={`Om ${book.name_no}`} content={data.bookSummary} kind="book" />}
+        {data.context && <SummaryItem title="Historisk kontekst" content={data.context} kind="context" />}
         {!data.summary && !data.bookSummary && !data.context && (
           <p class="st-empty">Ingen sammendrag for dette kapittelet ennå.</p>
         )}
@@ -1645,8 +1645,11 @@ r.get('/:book/:chapter', async (c) => {
             </div>
 
             <header class="chapter-header">
-              <div class="chapter-book">{book.name_no}</div>
-              <h1 class="chapter-title">Kapittel {chapter}</h1>
+              {/* Én h1 med bok + kapittel (SEO/skjermleser); visuelt to linjer som før. */}
+              <h1 class="chapter-title">
+                <span class="chapter-book">{book.name_no}</span>
+                <span class="chapter-number">Kapittel {chapter}</span>
+              </h1>
             </header>
 
             <div class="chapter-rail">

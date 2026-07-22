@@ -193,15 +193,35 @@ r.get('/manuskripter/:slug', (c) =>
 const TOGGLES: { key: string; label: string }[] = [
   { key: 'showBookSummary', label: 'Vis boksammendrag' },
   { key: 'showChapterSummary', label: 'Vis kapittelsammendrag' },
+  { key: 'showChapterContext', label: 'Vis historisk kontekst' },
   { key: 'showChapterInsights', label: 'Vis kapittelinnsikter' },
+  { key: 'showImportantWords', label: 'Vis viktige ord i sidepanelet' },
+  { key: 'showVerseDetails', label: 'Åpne versdetaljer ved klikk på vers' },
   { key: 'showWord4Word', label: 'Vis ord-for-ord (grunntekst)' },
   { key: 'showOriginalText', label: 'Vis grunntekst under vers' },
   { key: 'showTimeline', label: 'Vis tidslinje i sidepanel' },
+  { key: 'showParallels', label: 'Vis parallelle tekster' },
   { key: 'showDailyVerse', label: 'Vis dagens vers på forsiden' },
+  { key: 'showTodaysDay', label: 'Vis dagens helligdag på forsiden' },
   { key: 'showReadingTexts', label: 'Vis dagens lesetekst på forsiden' },
   { key: 'showVerseFootnotes', label: 'Vis fotnoter' },
   { key: 'copyVerseNumbers', label: 'Ta med versnummer ved kopiering' },
   { key: 'showContinueReading', label: 'Vis «fortsett lesing» på forsiden' },
+];
+
+// Søkeresultat-typer (GitHub #2) — samme nøkler som gamle appen
+// (bible-settings.searchResultTypes.*, default på).
+const SEARCH_TYPE_TOGGLES: { key: string; label: string }[] = [
+  { key: 'stories', label: 'Bibelhistorier' },
+  { key: 'themes', label: 'Temaer' },
+  { key: 'persons', label: 'Personer' },
+  { key: 'prophecies', label: 'Profetier' },
+  { key: 'timeline', label: 'Tidslinje' },
+  { key: 'parallels', label: 'Evangelieparalleller' },
+  { key: 'plans', label: 'Leseplaner' },
+  { key: 'words', label: 'Viktige ord' },
+  { key: 'numberSymbolism', label: 'Tall' },
+  { key: 'days', label: 'Dager' },
 ];
 r.get('/innstillinger', (c) => {
   const user = c.var.user;
@@ -273,9 +293,27 @@ r.get('/innstillinger', (c) => {
         </fieldset>
         <fieldset class="settings-group">
           <legend>Visning</legend>
+          <label class="settings-row">
+            <span>Standard visningsmodus</span>
+            <select data-setting="layoutMode" class="user-input">
+              <option value="normal">Normal</option>
+              <option value="reading">Lesemodus</option>
+              <option value="panel">Panelmodus</option>
+            </select>
+          </label>
           {TOGGLES.map((t) => (
             <label class="settings-toggle">
               <input type="checkbox" data-setting={t.key} />
+              <span>{t.label}</span>
+            </label>
+          ))}
+        </fieldset>
+        <fieldset class="settings-group">
+          <legend>Søkeresultater</legend>
+          <p class="user-note">Velg hvilke resultattyper som vises på søkesiden i tillegg til bibelteksten.</p>
+          {SEARCH_TYPE_TOGGLES.map((t) => (
+            <label class="settings-toggle">
+              <input type="checkbox" data-setting={`searchResultTypes.${t.key}`} />
               <span>{t.label}</span>
             </label>
           ))}
