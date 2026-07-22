@@ -11,9 +11,10 @@
   font-size: 15px;
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  background: var(--surface);
+  background-color: var(--surface);
   color: var(--ink);
 }
+select.user-input { padding-right: 36px; }
 .user-input:focus { outline: none; border-color: var(--gold); box-shadow: 0 0 0 3px var(--gold-bg); }
 .user-btn {
   display: inline-block;

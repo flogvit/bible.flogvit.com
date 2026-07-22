@@ -1392,10 +1392,10 @@ a.ins-hero-name:hover {
 }
 .tools-select {
   width: 100%;
-  padding: 8px;
+  padding: 8px 36px 8px 10px;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  background: var(--paper);
+  background-color: var(--paper);
   color: var(--ink);
 }
 .tools-settings-link {

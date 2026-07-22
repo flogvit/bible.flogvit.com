@@ -1,6 +1,7 @@
 // Service worker for FLOGVIT.bibel (#14).
 //
-// - Statiske filer: cache-first med runtime-fylling.
+// - Statiske filer: stale-while-revalidate (rask fra cache, oppdateres i
+//   bakgrunnen så deploys når klientene ved neste last).
 // - HTML-navigasjon: network-first; offline serveres sist sette versjon fra
 //   cache, ellers /offline-fallback (offline-leseren rendrer da kapitler fra
 //   IndexedDB på klientsiden — SW-en rører aldri IndexedDB selv).
@@ -59,15 +60,18 @@ function isStatic(url) {
   );
 }
 
-async function cacheFirst(request) {
-  const hit = await caches.match(request);
-  if (hit) return hit;
-  const res = await fetch(request);
-  if (res.ok) {
-    const cache = await caches.open(STATIC_CACHE);
-    cache.put(request, res.clone());
-  }
-  return res;
+// Stale-while-revalidate: svar fra cache med en gang, men hent ny versjon i
+// bakgrunnen — ellers når deploys aldri klienter som alt har cachet filene.
+async function staleWhileRevalidate(request) {
+  const cache = await caches.open(STATIC_CACHE);
+  const hit = await cache.match(request);
+  const refresh = fetch(request)
+    .then((res) => {
+      if (res.ok) cache.put(request, res.clone());
+      return res;
+    })
+    .catch(() => undefined);
+  return hit || refresh.then((res) => res || new Response('', { status: 504 }));
 }
 
 async function networkFirstPage(request) {
@@ -117,7 +121,7 @@ self.addEventListener('fetch', (event) => {
   if (url.origin !== self.location.origin) return;
 
   if (isStatic(url)) {
-    event.respondWith(cacheFirst(request));
+    event.respondWith(staleWhileRevalidate(request));
     return;
   }
   if (url.pathname.startsWith('/api/')) {
