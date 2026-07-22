@@ -193,6 +193,8 @@
   margin-bottom: 14px;
 }
 .chapter-book {
+  display: block;
+  font-family: var(--sans);
   font-size: 12px;
   text-transform: uppercase;
   letter-spacing: 0.12em;
@@ -207,6 +209,9 @@
   letter-spacing: -0.02em;
   color: var(--ink);
   line-height: 1.2;
+}
+.chapter-number {
+  display: block;
 }
 
 .chapter-rail {

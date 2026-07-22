@@ -74,9 +74,22 @@ export async function getCentralSession(cookieHeader: string): Promise<SessionUs
   }
 }
 
+// Ikke-HttpOnly markørcookie som bare speiler OM man er innlogget, slik at
+// klient-øyer (sync.js) kan la være å kalle API-er som uansett gir 401.
+// Innholdet er verdiløst for en angriper; selve sesjonen ligger i fv-session.
+const AUTH_MARKER = 'fv-auth';
+
 /** Løser konto-sesjonen inn på c.var.user for hver request (null = anonym). */
 export async function withSession(c: Context<AppEnv>, next: Next): Promise<void> {
-  c.set('user', await getCentralSession(c.req.header('cookie') ?? ''));
+  const cookieHeader = c.req.header('cookie') ?? '';
+  const user = await getCentralSession(cookieHeader);
+  c.set('user', user);
+  const hasMarker = new RegExp(`(?:^|;\\s*)${AUTH_MARKER}=1`).test(cookieHeader);
+  if (user && !hasMarker) {
+    c.header('Set-Cookie', `${AUTH_MARKER}=1; Path=/; SameSite=Lax; Max-Age=2592000`);
+  } else if (!user && hasMarker) {
+    c.header('Set-Cookie', `${AUTH_MARKER}=; Path=/; SameSite=Lax; Max-Age=0`);
+  }
   await next();
 }
 

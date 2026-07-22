@@ -492,6 +492,7 @@ r.get('/tidslinje', async (c) => {
       title="Bibelens tidslinje — FLOGVIT.bibel"
       description="En kronologisk oversikt over de viktigste hendelsene i Bibelen og verdenshistorien."
       styles={['overview.css']}
+      scripts={['timeline-filter.js']}
     >
       <div class="overview-main">
         <div class="reading-container">
@@ -502,11 +503,21 @@ r.get('/tidslinje', async (c) => {
             skapelsen til den tidlige kirkens tid.
           </p>
 
+          {/* Periodefilter (GitHub #6) — uten JS vises alle periodene. */}
+          <div class="timeline-filter" data-timeline-filter hidden>
+            <button type="button" class="timeline-filter-btn is-active" data-value="">Alle perioder</button>
+            {data.bible.periods
+              .filter((p) => (byPeriod.get(p.id) || []).length > 0)
+              .map((p) => (
+                <button type="button" class="timeline-filter-btn" data-value={p.id}>{p.name}</button>
+              ))}
+          </div>
+
           {data.bible.periods.map((period) => {
             const events = byPeriod.get(period.id) || [];
             if (events.length === 0) return null;
             return (
-              <section class="timeline-period">
+              <section class="timeline-period" data-period={period.id}>
                 <h2 class="timeline-period-name" style={period.color ? `border-left-color: ${period.color}` : ''}>
                   {period.name}
                 </h2>

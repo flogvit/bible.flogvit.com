@@ -253,3 +253,23 @@
 .stat-word { color: var(--ink); }
 .stat-word-count { color: var(--muted); font-variant-numeric: tabular-nums; }
 .stat-word-loading { color: var(--muted); font-style: italic; }
+
+/* Tidslinje-periodefilter (GitHub #6) */
+.timeline-filter { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 24px; }
+.timeline-filter-btn {
+  padding: 6px 12px;
+  font: inherit;
+  font-size: 13px;
+  color: var(--ink-2);
+  background: var(--paper-2);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  cursor: pointer;
+}
+.timeline-filter-btn:hover { color: var(--ink); border-color: var(--gold); }
+.timeline-filter-btn.is-active {
+  background: var(--gold-bg);
+  border-color: var(--gold);
+  color: var(--ink);
+  font-weight: 600;
+}

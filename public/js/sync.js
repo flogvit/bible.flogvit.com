@@ -163,8 +163,20 @@ function setStatus(text) {
   if (box && text) box.textContent = text;
 }
 
+// Serveren setter fv-auth=1 (ikke-HttpOnly markør) når man er innlogget —
+// uten den dropper vi API-kallet helt i stedet for å provosere en 401 i
+// konsollen på hver sidelast. 401-håndteringen under står som fallback for
+// en foreldet markør (utlogget i en annen fane/på konto).
+function hasAuthMarker() {
+  try {
+    return /(?:^|;\s*)fv-auth=1/.test(document.cookie);
+  } catch {
+    return false;
+  }
+}
+
 async function syncNow() {
-  if (loggedOut || syncing) return;
+  if (loggedOut || syncing || !hasAuthMarker()) return;
   syncing = true;
   try {
     const lastSyncAt = read(LAST_SYNC_KEY, 0);
