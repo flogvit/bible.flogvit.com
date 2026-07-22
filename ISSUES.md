@@ -321,8 +321,91 @@ eksisterende state før endring (gcloud/Scaleway-regelen gjelder db-flogvit ogs�
 
 ## #18 Verifisering + evt. cutover — ÅPEN (driftsmodell endret 2026-07-20)
 
+**Side-ved-side-diff kjørt 2026-07-22:** full crawl av alle 1199 sitemap-URL-er på begge
+domener, lenkegraf fra forsiden, browser-test av ~15 nøkkelsider + øyer (⌘K, versdetaljer,
+editor, innstillinger) på begge, API-diff (version/daily-verse/books), kildekode-diff main vs
+bibel-no. Alle 36 ruter finnes og svarer på .com. Funnene er lagt som #19–#24 (.no røres ikke —
+Vegards beslutning 2026-07-22). Gjenstår i #18: sync roundtrip mot konto-innlogget bruker,
+offline når #14 er bygget.
+
 **Ny modell (Vegard 2026-07-20): parallell drift.** .com er live med hono-varianten (#17);
 .no beholdes som den er inntil videre — INGEN 301/cutover planlagt nå. Gjenstående
 verifisering skjer mot live .com: side-ved-side-diff mot .no, sync roundtrip mot
 konto-innlogget bruker, offline når #14 er bygget. Hvis/når .no skal over: merge `hono` →
 `main`, snu Caddy (.no → 301 .com), rydd gammel app — men det er en egen fremtidig beslutning.
+
+**Alle seks FERDIG 2026-07-22** — detaljer og verifisering i GitHub-issuene. Kortversjon:
+#19 sitemap genereres nå fra statisk booksData med norske slugs (= canonical, ingen DB-avhengighet;
+alle 1200 URL-er verifisert 200 lokalt, +/joel/4 som manglet — books.chapters i DB sier 3, verses
+har 4) + bindestrek-aliaser for engelske navn. #20 /sok SSR-er alle 10 ekstra resultattypene via
+samme lib-funksjoner som /api/search/all + search.js-øy som respekterer searchResultTypes-toggles.
+#21 Dager i Oversikt-menyen, kronologisk/tematisk via ?visning= (card-filter.js gjort
+descendant-basert), TodaysDay-ekvivalent SSR på forsiden m/showTodaysDay-toggle (betingede
+forsideseksjoner skjules nå faktisk av home.js via data-setting-show — toggles var før uten
+konsumenter). #22 src/lib/page-cache.ts: mikrocache for anonyme GET-HTML (TTL 5 min, 48MB tak,
+fv-session omgår, /api/* urørt) + Cache-Control public/max-age=300/swr — 30 samtidige Sal 119
+på 1,1s lokalt; 5 tester. #23 nye toggles: historisk kontekst, viktige ord, versdetaljer-klikk,
+parallelle tekster, standard visningsmodus (select) + Søkeresultater-seksjon; user.js data-setting
+støtter dot-path. #24 fv-auth-markørcookie (withSession) så sync.js dropper 401-kallet uinnlogget;
+h1 = bok + kapittel; Ressurser/Oppslag VERIFISERT dekket (alle 12 StudyBlocks finnes — ingen
+endring); tidslinje-periodefilter som øy (SSR-knapper, skjult uten JS). showVerseIndicators fra
+gamle appen er IKKE portert — redesignet har ingen versindikator-funksjon å skru av/på.
+
+## #19 Sitemap peker på 237 døde kapittel-URL-er — FERDIG 2026-07-22 → [GitHub #1](https://github.com/flogvit/bibel.flogvit.no/issues/1)
+
+Funnet i audit 2026-07-22 (full crawl): sitemap-generatoren lager kapittel-slugs fra
+`books.name` (ENGELSK i DB, mellomrom→bindestrek: `/1-chronicles/1`), men
+`src/lib/book-aliases.ts` har kun varianter uten bindestrek (`1chronicles`). 18 bøker med
+flerords engelsk navn (1/2 Krønikebok, Samuel, Kongebok, Korinter, Tess, Tim, Pet, Joh,
+Høysangen m.fl.) = 237 av 1199 sitemap-URL-er gir 404. Gamle appen har SAMME feil (klientside
+soft-404, «Bok ikke funnet» med HTTP 200) — feilen er arvet, ikke innført av omskrivingen.
+Canonical bruker norske slugs (`/1mos/1`) og spriker mot sitemapen også der engelsk slug
+virker (`/genesis/1` → canonical `/1mos/1`).
+**Fiks:** generer sitemapen med norske slugs (= canonical) i `scripts/generate-sitemap.ts`
+(slug fra `short_name` som appen selv, ASCII-foldet som i dag: 1krøn→1kron virker via alias).
+Vurder i tillegg bindestrek-aliaser (`1-chronicles`, `song-of-solomon`, …) i book-aliases.ts
+så gamle indekserte engelske URL-er fortsatt treffer. Regenerér og deploy sitemap.
+
+## #20 Søk: manglende resultattyper — FERDIG 2026-07-22 → [GitHub #2](https://github.com/flogvit/bibel.flogvit.no/issues/2)
+
+Gamle søket viser 10 resultattyper utover bibeltekst: bibelhistorier, temaer, personer,
+profetier, tidslinje, evangelieparalleller, leseplaner, viktige ord, tall, dager — med
+per-type på/av-toggles i innstillinger («Søkeresultater»-seksjonen). Nye `/sok` har kun
+bibeltekst (181 treff «kjærlighet» er verifisert paritet for selve teksten). Portér de øvrige
+typene som SSR-seksjoner på søkesiden + toggles i innstillinger (→ #23).
+
+## #21 Dager: menypunkt, faner og forsidekomponent — FERDIG 2026-07-22 → [GitHub #3](https://github.com/flogvit/bibel.flogvit.no/issues/3)
+
+Audit 2026-07-22: «Dager» mangler i Oversikt-menyen i layout.tsx (gamle appen har den) —
+`/dager` nås i dag kun via Alt+Shift+D. Siden selv virker (48 kort, paritet), men mangler
+gamle appens Kronologisk/Tematisk-faner. Gamle forsiden har dessuten betinget «Dagens
+helligdag»-komponent (vises søndag/høytid; TodaysDay) med egen forside-toggle i innstillinger
+— mangler i ny forside. Fiks: menypunkt i NAV_GROUPS, faner på /dager, TodaysDay-ekvivalent
+SSR på forsiden (betinget på dagens dato mot days-tabellen).
+
+## #22 Cache/ytelse på SSR-HTML — FERDIG 2026-07-22 → [GitHub #4](https://github.com/flogvit/bibel.flogvit.no/issues/4)
+
+Audit 2026-07-22: kapittelsider er 385KB–1.1MB rå HTML (Sal 119 størst; gzip ~156KB over
+nett). Ingen Cache-Control på HTML-svar. ~16 samtidige forespørsler ga 502 + 9s responstid
+(3 samtidige gikk fint) — sårbart for bot-crawling. Tiltak: Cache-Control på innholdssider
+(innholdet endres kun ved import — kan caches aggressivt med import-versjon som nøkkel),
+vurder slanking av word4word-SSR-payloaden, ev. mikrocaching/samtidighetsgrense i Caddy.
+
+## #23 Innstillinger: resterende paritet — FERDIG 2026-07-22 → [GitHub #5](https://github.com/flogvit/bibel.flogvit.no/issues/5)
+
+Utover det som alt er levert i #12 og utsatt til #14: gamle visnings-toggles som mangler i ny
+(versindikatorer, parallelle tekster, viktige ord, versdetaljer, lesemodus som standard),
+søkeresultat-toggles (leveres med #20), «Dagens helligdag»-forsidetoggle (leveres med #21).
+Per-oversettelse på/av-toggles hører fortsatt til #14 (krever oversettelses-infrastrukturen).
+
+## #24 Småpuss fra audit 2026-07-22 — FERDIG 2026-07-22 → [GitHub #6](https://github.com/flogvit/bibel.flogvit.no/issues/6)
+
+- `sync.js` kaller `/api/sync` også uinnlogget → 401-konsollfeil på hver eneste sidelast.
+  Sjekk SSR-login-state (data-attributt fra layout?) før kall.
+- h1 på kapittelside er «Kapittel 1» — gamle hadde «1. Mosebok 1» (bokinfo finnes i konteksten;
+  paritet + tydeligere SEO).
+- Studium-sidebar: ny har Studium/Tidslinje/Paralleller/Innsikt, gamle hadde
+  Tidslinje/Kontekst/Ressurser/Oppslag — verifiser at Ressurser- og Oppslag-innholdet er
+  dekket, ellers portér det som mangler.
+- Tidslinje: gamle hadde interaktive periodefilter-knapper; ny er statisk SSR-gruppering.
+  Tas ev. sammen med MultiTimelineView-øya (notert i #9).

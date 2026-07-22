@@ -26,4 +26,8 @@ bun scripts/import-bible.ts   # importer innhold fra ../free-bible/generate/ (in
 ## Regler
 - Minimal deps: innebygd/web-standard fremfor npm-pakker. Aldri React/Express/ORM-er.
 - Bibeldata er derivert og regenererbar — aldri inn i Docker-imaget; import kjøres separat mot DB-en.
-- Oppdater `ISSUES.md` når issues endrer status.
+- **Issues spores på GitHub** (`flogvit/bibel.flogvit.no` — repo-navnet henger igjen fra før
+  domenebyttet; main er .com-appen). Som i resten av flogvit.com-produktene. Nye funn/oppgaver
+  → GitHub-issue. `ISSUES.md` dekker omskrivings-historikken #1–#18 (+ #19–#24 som er speilet
+  til GitHub #1–#6) — oppdater den kun når disse endrer status.
+- .no (branch `bibel-no`) skal IKKE røres — parallell drift til cutover-beslutning.
