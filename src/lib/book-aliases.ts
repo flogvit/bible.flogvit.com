@@ -34,18 +34,18 @@ export const bookAliases: Record<string, number> = {
   'rut': 8, 'ruth': 8,
 
   // Samuel
-  '1sam': 9, '1 sam': 9, '1.sam': 9, '1. sam': 9, '1.samuel': 9, '1. samuel': 9,
-  '2sam': 10, '2 sam': 10, '2.sam': 10, '2. sam': 10, '2.samuel': 10, '2. samuel': 10,
+  '1sam': 9, '1 sam': 9, '1.sam': 9, '1. sam': 9, '1.samuel': 9, '1. samuel': 9, '1-samuel': 9,
+  '2sam': 10, '2 sam': 10, '2.sam': 10, '2. sam': 10, '2.samuel': 10, '2. samuel': 10, '2-samuel': 10,
 
   // Kongebøkene
-  '1kong': 11, '1 kong': 11, '1.kong': 11, '1. kong': 11, '1.kongebok': 11, '1. kongebok': 11, '1kings': 11,
-  '2kong': 12, '2 kong': 12, '2.kong': 12, '2. kong': 12, '2.kongebok': 12, '2. kongebok': 12, '2kings': 12,
+  '1kong': 11, '1 kong': 11, '1.kong': 11, '1. kong': 11, '1.kongebok': 11, '1. kongebok': 11, '1kings': 11, '1-kings': 11,
+  '2kong': 12, '2 kong': 12, '2.kong': 12, '2. kong': 12, '2.kongebok': 12, '2. kongebok': 12, '2kings': 12, '2-kings': 12,
 
   // Krønikebøkene
   '1krøn': 13, '1 krøn': 13, '1.krøn': 13, '1. krøn': 13, '1.krønikebok': 13, '1. krønikebok': 13,
-  '1kron': 13, '1 kron': 13, '1.kron': 13, '1. kron': 13, '1chronicles': 13,
+  '1kron': 13, '1 kron': 13, '1.kron': 13, '1. kron': 13, '1chronicles': 13, '1-chronicles': 13,
   '2krøn': 14, '2 krøn': 14, '2.krøn': 14, '2. krøn': 14, '2.krønikebok': 14, '2. krønikebok': 14,
-  '2kron': 14, '2 kron': 14, '2.kron': 14, '2. kron': 14, '2chronicles': 14,
+  '2kron': 14, '2 kron': 14, '2.kron': 14, '2. kron': 14, '2chronicles': 14, '2-chronicles': 14,
 
   // Esra
   'esr': 15, 'esra': 15, 'ezra': 15,
@@ -69,7 +69,7 @@ export const bookAliases: Record<string, number> = {
   'fork': 21, 'forkynneren': 21, 'ecclesiastes': 21, 'eccl': 21,
 
   // Høysangen
-  'høy': 22, 'høysangen': 22, 'song': 22, 'sos': 22,
+  'høy': 22, 'høysangen': 22, 'song': 22, 'sos': 22, 'song-of-solomon': 22,
   'hoy': 22, 'hoysangen': 22,
 
   // Jesaja
@@ -142,8 +142,8 @@ export const bookAliases: Record<string, number> = {
   'rom': 45, 'romerne': 45, 'romans': 45,
 
   // Korinterbrevene
-  '1kor': 46, '1 kor': 46, '1.kor': 46, '1. kor': 46, '1.korinter': 46, '1. korinter': 46, '1corinthians': 46,
-  '2kor': 47, '2 kor': 47, '2.kor': 47, '2. kor': 47, '2.korinter': 47, '2. korinter': 47, '2corinthians': 47,
+  '1kor': 46, '1 kor': 46, '1.kor': 46, '1. kor': 46, '1.korinter': 46, '1. korinter': 46, '1corinthians': 46, '1-corinthians': 46,
+  '2kor': 47, '2 kor': 47, '2.kor': 47, '2. kor': 47, '2.korinter': 47, '2. korinter': 47, '2corinthians': 47, '2-corinthians': 47,
 
   // Galaterne
   'gal': 48, 'galaterne': 48, 'galatians': 48,
@@ -158,12 +158,12 @@ export const bookAliases: Record<string, number> = {
   'kol': 51, 'kolosserne': 51, 'colossians': 51, 'col': 51,
 
   // Tessalonikerbrevene
-  '1tess': 52, '1 tess': 52, '1.tess': 52, '1. tess': 52, '1.tessaloniker': 52, '1. tessaloniker': 52,
-  '2tess': 53, '2 tess': 53, '2.tess': 53, '2. tess': 53, '2.tessaloniker': 53, '2. tessaloniker': 53,
+  '1tess': 52, '1 tess': 52, '1.tess': 52, '1. tess': 52, '1.tessaloniker': 52, '1. tessaloniker': 52, '1thessalonians': 52, '1-thessalonians': 52,
+  '2tess': 53, '2 tess': 53, '2.tess': 53, '2. tess': 53, '2.tessaloniker': 53, '2. tessaloniker': 53, '2thessalonians': 53, '2-thessalonians': 53,
 
   // Timoteusbrevene
-  '1tim': 54, '1 tim': 54, '1.tim': 54, '1. tim': 54, '1.timoteus': 54, '1. timoteus': 54,
-  '2tim': 55, '2 tim': 55, '2.tim': 55, '2. tim': 55, '2.timoteus': 55, '2. timoteus': 55,
+  '1tim': 54, '1 tim': 54, '1.tim': 54, '1. tim': 54, '1.timoteus': 54, '1. timoteus': 54, '1timothy': 54, '1-timothy': 54,
+  '2tim': 55, '2 tim': 55, '2.tim': 55, '2. tim': 55, '2.timoteus': 55, '2. timoteus': 55, '2timothy': 55, '2-timothy': 55,
 
   // Titus
   'tit': 56, 'titus': 56,
@@ -178,13 +178,13 @@ export const bookAliases: Record<string, number> = {
   'jak': 59, 'jakob': 59, 'james': 59, 'jas': 59,
 
   // Peters brev
-  '1pet': 60, '1 pet': 60, '1.pet': 60, '1. pet': 60, '1.peter': 60, '1. peter': 60,
-  '2pet': 61, '2 pet': 61, '2.pet': 61, '2. pet': 61, '2.peter': 61, '2. peter': 61,
+  '1pet': 60, '1 pet': 60, '1.pet': 60, '1. pet': 60, '1.peter': 60, '1. peter': 60, '1peter': 60, '1-peter': 60,
+  '2pet': 61, '2 pet': 61, '2.pet': 61, '2. pet': 61, '2.peter': 61, '2. peter': 61, '2peter': 61, '2-peter': 61,
 
   // Johannes' brev
-  '1joh': 62, '1 joh': 62, '1.joh': 62, '1. joh': 62, '1.johannes': 62, '1. johannes': 62,
-  '2joh': 63, '2 joh': 63, '2.joh': 63, '2. joh': 63, '2.johannes': 63, '2. johannes': 63,
-  '3joh': 64, '3 joh': 64, '3.joh': 64, '3. joh': 64, '3.johannes': 64, '3. johannes': 64,
+  '1joh': 62, '1 joh': 62, '1.joh': 62, '1. joh': 62, '1.johannes': 62, '1. johannes': 62, '1john': 62, '1-john': 62,
+  '2joh': 63, '2 joh': 63, '2.joh': 63, '2. joh': 63, '2.johannes': 63, '2. johannes': 63, '2john': 63, '2-john': 63,
+  '3joh': 64, '3 joh': 64, '3.joh': 64, '3. joh': 64, '3.johannes': 64, '3. johannes': 64, '3john': 64, '3-john': 64,
 
   // Judas
   'jud': 65, 'judas': 65, 'jude': 65,

@@ -1,26 +1,16 @@
-// Genererer public/sitemap.xml — port av gamle scripts/generate-sitemap.ts
-// (better-sqlite3 → Bun.sql). Kjør: bun scripts/generate-sitemap.ts
+// Genererer public/sitemap.xml. Kjør: bun scripts/generate-sitemap.ts
+//
+// Kapittel-URL-ene bruker samme slugs som canonical på lesesidene
+// (toUrlSlug(short_name), dvs. norske slugs som /1mos/1 og /1krøn/1) — tidligere
+// genererte vi fra books.name (engelsk, mellomrom→bindestrek), som ga 237 URL-er
+// appen ikke løste opp (GitHub #1). Bokdata leses fra den statiske books-data.ts,
+// så scriptet trenger ingen DB.
 
-import { getSql, closeSql } from '../src/lib/db.ts';
+import { booksData } from '../src/lib/books-data.ts';
+import { toUrlSlug } from '../src/lib/url-utils.ts';
+import { getBookInfoBySlug } from '../src/lib/books-data.ts';
 
 const BASE_URL = 'https://bibel.flogvit.com';
-
-// Sitemapens egen slug-variant (ASCII-folder æøå) — beholdt som i originalen.
-function toUrlSlug(name: string): string {
-  return name
-    .toLowerCase()
-    .replace(/\s+/g, '-')
-    .replace(/[æ]/g, 'ae')
-    .replace(/[ø]/g, 'o')
-    .replace(/[å]/g, 'a');
-}
-
-const sql = getSql();
-const books = (await sql`SELECT id, name, chapters FROM books ORDER BY id`) as {
-  id: number;
-  name: string;
-  chapters: number;
-}[];
 
 const staticUrls: [path: string, changefreq: string, priority: string][] = [
   ['/', 'weekly', '1.0'],
@@ -40,10 +30,11 @@ let xml = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sit
 for (const [p, changefreq, priority] of staticUrls) {
   xml += `  <url>\n    <loc>${BASE_URL}${p}</loc>\n    <changefreq>${changefreq}</changefreq>\n    <priority>${priority}</priority>\n  </url>\n`;
 }
-for (const book of books) {
-  const slug = toUrlSlug(book.name);
+for (const book of booksData) {
+  const slug = toUrlSlug(book.short_name);
+  if (!getBookInfoBySlug(slug)) throw new Error(`Slug løses ikke opp av appen: ${slug}`);
   for (let chapter = 1; chapter <= book.chapters; chapter++) {
-    xml += `  <url>\n    <loc>${BASE_URL}/${slug}/${chapter}</loc>\n    <changefreq>monthly</changefreq>\n    <priority>0.8</priority>\n  </url>\n`;
+    xml += `  <url>\n    <loc>${BASE_URL}/${encodeURI(slug)}/${chapter}</loc>\n    <changefreq>monthly</changefreq>\n    <priority>0.8</priority>\n  </url>\n`;
   }
 }
 xml += `</urlset>\n`;
@@ -51,4 +42,3 @@ xml += `</urlset>\n`;
 await Bun.write('public/sitemap.xml', xml);
 const urlCount = (xml.match(/<url>/g) || []).length;
 console.log(`Sitemap generert: public/sitemap.xml (${urlCount} URL-er)`);
-await closeSql();
