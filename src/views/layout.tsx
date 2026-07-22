@@ -34,7 +34,7 @@ const PRODUCTS: { prod: string; dot: string; href?: string; current?: boolean }[
   { prod: 'puzzles', dot: 'dotPuzzles', href: 'https://puzzles.flogvit.com/' },
   { prod: 'photosuite', dot: 'dotPhotosuite', href: 'https://photosuite.flogvit.com/' },
   { prod: 'image', dot: 'dotImage', href: 'https://image.flogvit.com/' },
-  { prod: 'foto', dot: 'dotFoto' },
+  { prod: 'photo', dot: 'dotFoto' },
   { prod: 'lab', dot: 'dotLab', href: 'https://lab.flogvit.com/' },
   { prod: 'books', dot: 'dotBooks', href: 'https://books.flogvit.com/' },
   { prod: 'bible', dot: 'dotBibel', href: '/', current: true },
