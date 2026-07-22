@@ -98,9 +98,23 @@ async function pushChapters(bibleId) {
   }
 }
 
+/** Sørg for at lokale bibler er fullt opplastet (retry etter nettbrudd). */
+async function pushUnsynced() {
+  for (const bible of await getUserBibles()) {
+    if (bible.syncedAt && bible.syncedAt >= bible.uploadedAt) continue;
+    try {
+      await pushChapters(bible.id);
+      await addUserBible({ ...bible, syncedAt: Date.now() });
+    } catch {
+      return; // nett borte — prøver ved neste last
+    }
+  }
+}
+
 /** Hent bibler som finnes på kontoen, men ikke lokalt. */
 async function pullFromAccount() {
   const server = await pushMetadata(); // sender lokale + får full serverliste
+  await pushUnsynced();
   const local = new Map((await getUserBibles()).map((b) => [b.id, b]));
   for (const bible of server.bibles || []) {
     if (bible.deleted || local.has(bible.id)) continue;
@@ -114,6 +128,7 @@ async function pullFromAccount() {
       mappingId: bible.mappingId,
       verseCounts: bible.verseCounts ?? null,
       uploadedAt: Number(bible.uploadedAt) || Date.now(),
+      syncedAt: Date.now(),
     });
   }
   renderList();
@@ -209,9 +224,10 @@ async function handleImport() {
     try {
       await pushMetadata();
       await pushChapters(bibleId);
+      await addUserBible({ id: bibleId, name, mappingId, verseCounts, uploadedAt: Date.now(), syncedAt: Date.now() });
       result.lastChild.textContent = 'Synkronisert til kontoen din.';
     } catch {
-      result.lastChild.textContent = 'Kunne ikke synkronisere til kontoen nå — den ligger lokalt.';
+      result.lastChild.textContent = 'Kunne ikke laste opp til kontoen nå — prøver igjen automatisk neste gang du er på nett.';
     }
   }
 }
