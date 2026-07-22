@@ -219,8 +219,8 @@ if (root) {
       if (box) {
         box.textContent = '';
         const versions = [
-          { value: 'osnb2', label: 'Bokmål (osnb2)' },
-          { value: 'osnn1', label: 'Nynorsk (osnn1)' },
+          { value: 'osnb2', label: 'OSNB2 (bokmål)' },
+          { value: 'osnn1', label: 'OSNN1 (nynorsk)' },
           ...userBibles.map((b) => ({ value: b.id, label: b.name })),
         ];
         const hidden = new Set((read(KEYS.settings, {}).hiddenBibles || []));

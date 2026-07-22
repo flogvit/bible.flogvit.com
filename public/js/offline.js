@@ -52,7 +52,7 @@ async function renderStatus() {
   };
   statusBox.textContent = '';
   const list = el('ul', 'offline-status-list');
-  list.append(el('li', '', `Nedlastede kapitler: ${total} (Bokmål: ${nb}, Nynorsk: ${nn})`));
+  list.append(el('li', '', `Nedlastede kapitler: ${total} (OSNB2: ${nb}, OSNN1: ${nn})`));
   const supportText = Object.entries(support)
     .map(([name, ok]) => `${name} ${ok ? '✓' : '—'}`)
     .join(' · ');

@@ -34,7 +34,7 @@ async function applyUserPrimary(userBibleId, bibles) {
   const note = document.createElement('p');
   note.className = 'user-bible-note';
   if (!stored) {
-    note.textContent = `«${name}» har ikke dette kapittelet — viser Bokmål.`;
+    note.textContent = `«${name}» har ikke dette kapittelet — viser OSNB2.`;
     rail?.after(note);
     return;
   }
@@ -51,7 +51,7 @@ async function applyUserPrimary(userBibleId, bibles) {
       verseEl.classList.add('user-bible-missing');
     }
   });
-  note.textContent = `Viser «${name}» (egen oversettelse). Studieverktøyene følger Bokmål.`;
+  note.textContent = `Viser «${name}» (egen oversettelse). Studieverktøyene følger OSNB2.`;
   rail?.after(note);
 }
 

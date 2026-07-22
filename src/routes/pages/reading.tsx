@@ -1485,13 +1485,13 @@ function MobileToolbar({
                 href={`/${bookSlug}/${chapter}${buildQuery('osnb2', mapping, secondary)}`}
                 class={`tools-bible-button ${bible === 'osnb2' ? 'is-active' : ''}`}
               >
-                Bokmål
+                OSNB2 (bokmål)
               </a>
               <a
                 href={`/${bookSlug}/${chapter}${buildQuery('osnn1', mapping, secondary)}`}
                 class={`tools-bible-button ${bible === 'osnn1' ? 'is-active' : ''}`}
               >
-                Nynorsk
+                OSNN1 (nynorsk)
               </a>
             </div>
           </div>
@@ -1505,10 +1505,10 @@ function MobileToolbar({
                 Grunntekst
               </option>
               <option value="osnb2" selected={secondary === 'osnb2'}>
-                Bokmål
+                OSNB2 (bokmål)
               </option>
               <option value="osnn1" selected={secondary === 'osnn1'}>
-                Nynorsk
+                OSNN1 (nynorsk)
               </option>
             </select>
           </div>

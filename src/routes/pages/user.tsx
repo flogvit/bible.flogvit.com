@@ -270,8 +270,8 @@ r.get('/innstillinger', (c) => {
           <label class="settings-row">
             <span>Bibeloversettelse</span>
             <select data-setting="bible" class="user-input">
-              <option value="osnb2">Bokmål</option>
-              <option value="osnn1">Nynorsk</option>
+              <option value="osnb2">OSNB2 (bokmål)</option>
+              <option value="osnn1">OSNN1 (nynorsk)</option>
             </select>
           </label>
           <label class="settings-row">
@@ -279,8 +279,8 @@ r.get('/innstillinger', (c) => {
             <select data-setting="secondaryBible" class="user-input">
               <option value="">Ingen</option>
               <option value="original">Grunntekst</option>
-              <option value="osnb2">Bokmål</option>
-              <option value="osnn1">Nynorsk</option>
+              <option value="osnb2">OSNB2 (bokmål)</option>
+              <option value="osnn1">OSNN1 (nynorsk)</option>
             </select>
           </label>
           {mappings.length > 0 && (
@@ -379,10 +379,10 @@ r.get('/offline', (c) =>
         <h2>Last ned</h2>
         <div class="offline-download" data-offline-download>
           <label class="settings-toggle">
-            <input type="checkbox" data-dl-bible="osnb2" checked /> <span>Bokmål (osnb2)</span>
+            <input type="checkbox" data-dl-bible="osnb2" checked /> <span>OSNB2 (bokmål)</span>
           </label>
           <label class="settings-toggle">
-            <input type="checkbox" data-dl-bible="osnn1" /> <span>Nynorsk (osnn1)</span>
+            <input type="checkbox" data-dl-bible="osnn1" /> <span>OSNN1 (nynorsk)</span>
           </label>
           <div class="offline-actions">
             <button type="button" class="user-btn" data-dl-start>Last ned for offline-bruk</button>
@@ -431,8 +431,8 @@ r.get('/oversettelser', (c) =>
       <section class="trans-section">
         <h2>Innebygde</h2>
         <ul class="trans-builtin">
-          <li>Bokmål (osnb2)</li>
-          <li>Nynorsk (osnn1)</li>
+          <li>OSNB2 (bokmål)</li>
+          <li>OSNN1 (nynorsk)</li>
           <li>Hebraisk grunntekst (Tanach)</li>
           <li>Gresk grunntekst (SBLGNT)</li>
         </ul>
