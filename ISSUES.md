@@ -51,7 +51,14 @@ user_bibles — keyed på konto-bruker-id, se #6). Kolonnetyper/indekser tilpass
 LIKE-søk trenger fornuftige indekser). Lokal utvikling mot lokal MySQL (DBngin — spør Vegard om å
 starte den, aldri Docker).
 
-## #3 Import-pipeline til MySQL — PÅGÅR
+## #3 Import-pipeline til MySQL — FERDIG 2026-07-22
+
+**Resten portert 2026-07-22 (3b76171):** `generate-verse-counts.ts` + `enrich-story-references.ts`
+på Bun.sql; `split-stories` var et engangsscript som alt er kjørt (292 enkeltfiler i free-bible).
+Kjørt: verse-counts.ts regenerert (fanger Joel 4 etter books.chapters-fiksen), 16 historier
+beriket med 57 parallellreferanser (committet i free-bible), inkrementell import lastet til
+lokal + prod-DB (syncVersion 11; prod-lasting: mysqldump → engangs mysql:8-klientcontainer på
+server_default — se CLAUDE.md «Innholdsoppdatering til prod»).
 
 **Bootstrap ferdig 2026-07-19:** `scripts/copy-sqlite.ts` (bun:sqlite → Bun.sql, null nye pakker)
 kopierte alle 35 innholdstabeller fra `bibel/data/bible.db` med identiske radantall (93 480 vers,
@@ -356,8 +363,12 @@ eksisterende state før endring (gcloud/Scaleway-regelen gjelder db-flogvit ogs�
 domener, lenkegraf fra forsiden, browser-test av ~15 nøkkelsider + øyer (⌘K, versdetaljer,
 editor, innstillinger) på begge, API-diff (version/daily-verse/books), kildekode-diff main vs
 bibel-no. Alle 36 ruter finnes og svarer på .com. Funnene er lagt som #19–#24 (.no røres ikke —
-Vegards beslutning 2026-07-22). Gjenstår i #18: sync roundtrip mot konto-innlogget bruker,
-offline når #14 er bygget.
+Vegards beslutning 2026-07-22). **Sync roundtrip VERIFISERT LIVE 2026-07-22** med egenopprettet
+testbruker (claude-sync-test@menneske.no, id 5 i konto — kan slettes): push fra enhet A → pull
+fra enhet B (favoritter + settings), user-bibles push/pull, 401 uinnlogget, fv-auth-markør.
+Testdata i bibel-DB-en er ryddet; konto-brukeren står. Offline (#14) er levert og live.
+Lokal login-flyt uten DB er dokumentert i CLAUDE.md (konto med DB_DISABLED=1).
+Gjenstår i #18 kun selve cutover-beslutningen for .no.
 
 **Ny modell (Vegard 2026-07-20): parallell drift.** .com er live med hono-varianten (#17);
 .no beholdes som den er inntil videre — INGEN 301/cutover planlagt nå. Gjenstående

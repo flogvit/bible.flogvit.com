@@ -21,7 +21,27 @@ bun test               # tester
 bun run typecheck      # tsc --noEmit
 bun scripts/init-db.ts        # opprett skjema
 bun scripts/import-bible.ts   # importer innhold fra ../free-bible/generate/ (inkrementell, --full for alt)
+bun scripts/generate-sitemap.ts       # regenerer sitemap (statisk booksData, ingen DB)
+bun scripts/generate-verse-counts.ts  # regenerer src/lib/verse-counts.ts fra DB
+bun scripts/enrich-story-references.ts # berik historier i free-bible med evangelieparalleller
 ```
+
+## Lokal innlogging (konto uten DB)
+konto kan kjøres lokalt med in-memory store — full login/sync-flyt uten å røre noen DB:
+```bash
+cd ../konto && DB_DISABLED=1 PORT=3020 bun src/index.ts   # kontoer forsvinner ved restart
+```
+bibel-dev peker allerede på http://localhost:3020 (session.ts). Registrer en bruker med
+`POST http://localhost:3020/api/auth/register {email, password}` (eller via UI-et) —
+fv-session-cookien deles på localhost på tvers av porter, så bibel ser innloggingen og
+sync mot lokal MySQL virker.
+
+## Innholdsoppdatering til prod
+Innhold importeres LOKALT (`import-bible.ts` mot lokal DB), deretter dumpes endrede
+tabeller og lastes via VM-en (ingen mysql-klient der — bruk et engangs
+mysql:8-klientcontainer på docker-nettet `server_default` med env fra
+`/srv/flogvit.com/server/bibel.env`). Restart `bibel-hono` etterpå hvis books-tabellen
+er endret (minnecache fra boot).
 
 ## Regler
 - Minimal deps: innebygd/web-standard fremfor npm-pakker. Aldri React/Express/ORM-er.
