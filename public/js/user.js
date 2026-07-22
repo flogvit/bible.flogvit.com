@@ -153,6 +153,14 @@ if (root) {
 
   // ---- manuskripter (liste) ----
   if (page === 'devotionals' && list) {
+    // Husking er plus — stopp ved inngangen, ikke etter at teksten er skrevet.
+    root.querySelectorAll('a[href="/manuskripter/ny"]').forEach((a) => {
+      a.addEventListener('click', (e) => {
+        if (window.fvPlus?.has()) return;
+        e.preventDefault();
+        window.fvPlus?.cta('manuskripter');
+      });
+    });
     const renderDevotionals = () => {
       list.textContent = '';
       const devs = read(KEYS.devotionals, []);
@@ -361,7 +369,16 @@ if (root) {
     contentEl.addEventListener('input', renderPreview);
     renderPreview();
 
+    // Uten plus: si fra MED EN GANG (før noen skriver en hel andakt) og
+    // deaktiver Lagre — den stille lagringsgaten ville ellers latt «Lagre»
+    // se ut som den virket.
+    if (!window.fvPlus?.has()) {
+      window.fvPlus?.cta('manuskripter');
+      saveBtn.disabled = true;
+      saveBtn.title = 'Manuskripter krever FLOGVIT.plus';
+    }
     saveBtn.addEventListener('click', () => {
+      if (!window.fvPlus?.gate('manuskripter')) return;
       const devs = read(KEYS.devotionals, []);
       const now = Date.now();
       const title = titleEl.value.trim() || 'Uten tittel';
