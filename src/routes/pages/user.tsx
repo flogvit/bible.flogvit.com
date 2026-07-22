@@ -333,7 +333,7 @@ r.get('/innstillinger', (c) => {
               <>
                 <p class="settings-account">
                   Innlogget som <strong>{user.displayName || user.email}</strong> (FLOGVIT.plus).{' '}
-                  <a href={ACCOUNT_URL}>Administrer konto og språk</a>
+                  <a href={ACCOUNT_URL}>Administrer konto og innstillinger</a>
                 </p>
                 <p class="settings-sync" data-sync-status>
                   Synkronisering er på — favoritter, notater og innstillinger lagres til kontoen din.
@@ -343,7 +343,7 @@ r.get('/innstillinger', (c) => {
               <>
                 <p class="settings-account">
                   Innlogget som <strong>{user.displayName || user.email}</strong>.{' '}
-                  <a href={ACCOUNT_URL}>Administrer konto og språk</a>
+                  <a href={ACCOUNT_URL}>Administrer konto og innstillinger</a>
                 </p>
                 <p class="settings-sync">
                   Husking — lagring av favoritter, notater m.m., både i nettleseren og mellom

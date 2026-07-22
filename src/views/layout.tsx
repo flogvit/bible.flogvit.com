@@ -89,7 +89,7 @@ function FlogvitMenu() {
           {/* Uniform familie-oppføring (portal/STYLE.md): globale innstillinger
               — konto, språk — nås fra samme plass i alle produktene. */}
           <a class="fvmenu-item fvmenu-kontoitem" href="https://flogvit.com/konto/">
-            Konto og språk
+            Konto og innstillinger
           </a>
         </nav>
         {/* Familie-tema (portal/PREFS.md). chrome.js speiler verdien og
