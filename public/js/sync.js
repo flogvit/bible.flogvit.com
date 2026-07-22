@@ -1,10 +1,11 @@
-// Sync-klient (#12) — global øy mot /api/sync (konto-innlogget; 401 = hopp
-// over, alt fungerer lokalt). Samme protokoll og dataTypes som gamle
-// syncService/changeTracker: singletons (settings/topics/activePlan/
-// readingPosition/verseVersions), per-item (favorites/notes/verseLists/
-// devotionals) og per-plan (planProgress). Endringer fanges ved å patche
-// localStorage.setItem for bibel-nøklene; slettinger oppdages mot et
-// skygge-snapshot av sist synkede itemId-er.
+// Sync-klient — SERVER-FØRST husking (Vegards modell 2026-07-22): serveren
+// er sannhetskilden. Ved sidelast gjøres ett kall som pusher utboksen
+// (uflushede lokale endringer, typisk fra offline) OG henter full servertilstand
+// (lastSyncAt=0); serveren anvender push før pull med last-write-wins per item,
+// så en les kan aldri overskrive offline-endringer. Lokal lagring er cache +
+// utboks. Endringer underveis pushes i bakgrunnen umiddelbart (250 ms
+// koalesering) — UI-et oppdateres optimistisk lokalt først, så alt føles raskt.
+// Samme protokoll og dataTypes som gamle syncService/changeTracker.
 
 const DEVICE_KEY = 'bible-device-id';
 const LAST_SYNC_KEY = 'bible-last-sync';
@@ -130,6 +131,9 @@ function applyServerChanges(changes) {
         const arr = Array.isArray(cur) ? cur : [];
         for (const ch of list) {
           const idx = arr.findIndex((i) => String(spec.id(i)) === ch.itemId);
+          // Ikke overskriv en lokal endring som er nyere enn serverversjonen
+          // (kan skje for redigeringer gjort mens et synkkall var underveis).
+          if (idx >= 0 && !ch.deleted && (spec.at(arr[idx]) || 0) > ch.updatedAt) continue;
           if (ch.deleted) {
             if (idx >= 0) arr.splice(idx, 1);
           } else if (idx >= 0) arr[idx] = ch.data;
@@ -176,13 +180,15 @@ function hasPlusMarker() {
   }
 }
 
-async function syncNow() {
+async function syncNow(full) {
   if (loggedOut || syncing || !hasPlusMarker()) return;
   syncing = true;
   try {
-    const lastSyncAt = read(LAST_SYNC_KEY, 0);
+    // Full sync (sidelast): server er sannhetskilden — les alt (lastSyncAt=0)
+    // og push utboksen i SAMME kall, så offline-endringer aldri overskrives.
+    const lastSyncAt = full ? 0 : read(LAST_SYNC_KEY, 0);
     let pending = read(PENDING_KEY, []);
-    if (!lastSyncAt) pending = Object.keys(MAP); // førstegangs: push alt
+    if (full && !read(LAST_SYNC_KEY, 0)) pending = Object.keys(MAP); // helt førstegangs: push alt lokalt
     const changes = buildChanges(pending);
     const res = await fetch('/api/sync', {
       method: 'POST',
@@ -196,9 +202,11 @@ async function syncNow() {
       } catch {}
       return;
     }
-    if (!res.ok) return; // prøver igjen ved neste endring/last
+    if (!res.ok) return; // utboksen står — prøver igjen ved neste endring/online
     const result = await res.json();
-    if (Array.isArray(result.changes) && result.changes.length > 0) {
+    if (full) {
+      rebuildFromServer(result.changes || [], changes);
+    } else if (Array.isArray(result.changes) && result.changes.length > 0) {
       applyServerChanges(result.changes);
     }
     writeRaw(LAST_SYNC_KEY, result.syncedAt || Date.now());
@@ -215,11 +223,66 @@ async function syncNow() {
 function scheduleSync() {
   if (loggedOut) return;
   clearTimeout(timer);
-  timer = setTimeout(syncNow, 3000);
+  timer = setTimeout(() => syncNow(false), 250);
 }
 
-// Ved last: synk (pull + ev. pending push). Ved skjuling: flush.
-setTimeout(syncNow, 1000);
+// ── Server-tilstand → lokal kopi (full sync ved sidelast) ──────────
+// Svaret inneholder alt på serveren UNNTATT det vi selv pushet i kallet
+// (serveren ekskluderer dem) — de beholdes fra lokal kopi. Var serveren
+// nyere enn en pushet endring, ligger serverversjonen i svaret og vinner.
+function rebuildFromServer(serverChanges, pushedChanges) {
+  const pushedIds = new Set(pushedChanges.map((ch) => `${ch.dataType}:${ch.itemId}`));
+  const byType = new Map();
+  for (const ch of serverChanges) {
+    if (!byType.has(ch.dataType)) byType.set(ch.dataType, new Map());
+    byType.get(ch.dataType).set(ch.itemId, ch);
+  }
+  applying = true;
+  try {
+    for (const [key, spec] of Object.entries(MAP)) {
+      const serverItems = byType.get(spec.type) || new Map();
+      if (spec.kind === 'singleton') {
+        const ch = serverItems.get('_singleton');
+        if (ch) {
+          if (ch.deleted || ch.data == null) localStorage.removeItem(key);
+          else writeRaw(key, ch.data);
+        } else if (!pushedIds.has(`${spec.type}:_singleton`)) {
+          localStorage.removeItem(key);
+        }
+      } else if (spec.kind === 'record') {
+        const cur = read(key, {}) || {};
+        const next = {};
+        for (const [id, value] of Object.entries(cur)) {
+          if (pushedIds.has(`${spec.type}:${id}`)) next[id] = value; // vår push beholdes
+        }
+        for (const [id, ch] of serverItems) {
+          if (ch.deleted) delete next[id];
+          else next[id] = ch.data;
+        }
+        if (Object.keys(next).length > 0) writeRaw(key, next);
+        else localStorage.removeItem(key);
+      } else {
+        const cur = read(key, []);
+        const arr = (Array.isArray(cur) ? cur : []).filter((i) => pushedIds.has(`${spec.type}:${spec.id(i)}`));
+        for (const [id, ch] of serverItems) {
+          if (ch.deleted) continue;
+          const idx = arr.findIndex((i) => String(spec.id(i)) === id);
+          if (idx >= 0) arr[idx] = ch.data;
+          else arr.push(ch.data);
+        }
+        writeRaw(key, arr);
+      }
+    }
+  } finally {
+    applying = false;
+  }
+  document.dispatchEvent(new CustomEvent('bibel:sync-rebuilt'));
+}
+
+// Ved last: full server-først-sync (push utboks + les alt). Ved skjuling:
+// flush utboksen. Når nettet kommer tilbake: flush med en gang.
+setTimeout(() => syncNow(true), 300);
+window.addEventListener('online', () => syncNow(false));
 document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'hidden' && read(PENDING_KEY, []).length > 0) syncNow();
+  if (document.visibilityState === 'hidden' && read(PENDING_KEY, []).length > 0) syncNow(false);
 });

@@ -14,6 +14,7 @@ import { Layout } from '../../views/layout.tsx';
 import { Breadcrumbs } from '../../views/breadcrumbs.tsx';
 import type { Child } from 'hono/jsx';
 import { getSql } from '../../lib/db.ts';
+import { getUserItems, getUserSingleton } from '../../lib/user-data.ts';
 import { getAvailableMappings } from '../../lib/verse-mapper.ts';
 
 const r = new Hono<AppEnv>();
@@ -50,54 +51,132 @@ function UserPage(props: {
 }
 
 // ---------- /favoritter ----------
-r.get('/favoritter', (c) =>
-  c.html(
+// Server-først (2026-07-22): for plus-brukere SSR-es innholdet fra sync_items;
+// user.js re-rendrer identisk fra lokal kopi etter full sync.
+interface FavoriteItem { bookId: number; chapter: number; verse: number; addedAt?: number }
+
+r.get('/favoritter', async (c) => {
+  const user = c.var.user;
+  let cards: { href: string; ref: string; text: string }[] = [];
+  if (user?.plus) {
+    const favs = await getUserItems<FavoriteItem>(user.id, 'favorites');
+    const sql = getSql();
+    cards = (
+      await Promise.all(
+        favs
+          .sort((a, b) => (b.addedAt ?? 0) - (a.addedAt ?? 0))
+          .map(async (f) => {
+            const [v] = (await sql`
+              SELECT v.text, b.name_no, b.short_name FROM verses v
+              JOIN books b ON v.book_id = b.id
+              WHERE v.book_id = ${f.bookId} AND v.chapter = ${f.chapter}
+                AND v.verse = ${f.verse} AND v.bible = 'osnb2'
+            `) as { text: string; name_no: string; short_name: string }[];
+            if (!v) return null;
+            return {
+              href: `/${v.short_name.toLowerCase()}/${f.chapter}#v${f.verse}`,
+              ref: `${v.name_no} ${f.chapter}:${f.verse}`,
+              text: v.text,
+            };
+          }),
+      )
+    ).filter((x): x is NonNullable<typeof x> => x !== null);
+  }
+  return c.html(
     <UserPage title="Favoritter" crumb="Favoritter" heading="Favorittvers" page="favorites" intro="Dine merkede vers. Husking er en del av FLOGVIT.plus.">
-      <div class="user-list" data-list></div>
-      <p class="user-empty" data-empty hidden>Du har ingen favoritter ennå. Klikk hjertet på et vers for å legge det til.</p>
+      <div class="user-list" data-list>
+        {cards.map((card) => (
+          <a class="user-card" href={card.href}>
+            <span class="user-card-ref">{card.ref}</span>
+            <p class="user-card-text">{card.text}</p>
+          </a>
+        ))}
+      </div>
+      <p class="user-empty" data-empty hidden={cards.length > 0}>Du har ingen favoritter ennå. Klikk hjertet på et vers for å legge det til.</p>
     </UserPage>,
-  ),
-);
+  );
+});
 
 // ---------- /emner ----------
-r.get('/emner', (c) =>
-  c.html(
+interface TopicsData { topics?: { id: string; name: string }[]; verseTopics?: { topicId: string }[]; itemTopics?: { topicId: string }[] }
+
+r.get('/emner', async (c) => {
+  const user = c.var.user;
+  const data: TopicsData = (user?.plus ? await getUserSingleton<TopicsData>(user.id, 'topics') : null) ?? {};
+  const topics = (data.topics ?? []).map((t) => ({
+    name: t.name,
+    count:
+      (data.itemTopics ?? []).filter((it) => it.topicId === t.id).length +
+      (data.verseTopics ?? []).filter((vt) => vt.topicId === t.id).length,
+  }));
+  return c.html(
     <UserPage title="Emner" crumb="Emner" heading="Emner" page="topics" intro="Egne emner du har tagget vers, personer og annet innhold med.">
-      <div class="user-list" data-list></div>
-      <p class="user-empty" data-empty hidden>Du har ingen emner ennå. Tag innhold med «Emner»-knappen på vers- og innholdssider.</p>
+      <div class="user-list" data-list>
+        {topics.map((t) => (
+          <div class="user-card">
+            <span class="user-card-title">{t.name}</span>
+            <span class="user-card-meta">{t.count} merket</span>
+          </div>
+        ))}
+      </div>
+      <p class="user-empty" data-empty hidden={topics.length > 0}>Du har ingen emner ennå. Tag innhold med «Emner»-knappen på vers- og innholdssider.</p>
     </UserPage>,
-  ),
-);
+  );
+});
 
 // ---------- /notater ----------
-r.get('/notater', (c) =>
-  c.html(
+interface NoteItem { id: string; bookId: number; chapter: number; verse: number; content: string; updatedAt: number }
+
+r.get('/notater', async (c) => {
+  const user = c.var.user;
+  const notes = user?.plus ? (await getUserItems<NoteItem>(user.id, 'notes')).sort((a, b) => b.updatedAt - a.updatedAt) : [];
+  return c.html(
     <UserPage title="Notater" crumb="Notater" heading="Notater" page="notes" intro="Dine notater på vers.">
-      <div class="user-list" data-list></div>
-      <p class="user-empty" data-empty hidden>Du har ingen notater ennå.</p>
+      <div class="user-list" data-list>
+        {notes.map((n) => (
+          <div class="user-card">
+            <span class="user-card-ref">{`${n.bookId}-${n.chapter}-${n.verse}`}</span>
+            <p class="user-card-text">{n.content}</p>
+          </div>
+        ))}
+      </div>
+      <p class="user-empty" data-empty hidden={notes.length > 0}>Du har ingen notater ennå.</p>
     </UserPage>,
-  ),
-);
+  );
+});
 
 // ---------- /lister ----------
-r.get('/lister', (c) =>
-  c.html(
+interface VerseListItem { id: string; name: string; refs?: unknown[]; updatedAt: number }
+
+r.get('/lister', async (c) => {
+  const user = c.var.user;
+  const lists = user?.plus ? (await getUserItems<VerseListItem>(user.id, 'verseLists')).sort((a, b) => b.updatedAt - a.updatedAt) : [];
+  return c.html(
     <UserPage title="Verslister" crumb="Verslister" heading="Verslister" page="verselists" intro="Samle vers i navngitte lister for manuskripter, bibeltimer og studier.">
       <form class="user-create" data-create-list>
         <input type="text" name="name" placeholder="Navn på ny liste…" aria-label="Navn på liste" class="user-input" />
         <button type="submit" class="user-btn">Opprett liste</button>
       </form>
-      <div class="user-list" data-list></div>
-      <p class="user-empty" data-empty hidden>Du har ingen verslister ennå.</p>
+      <div class="user-list" data-list>
+        {lists.map((l) => (
+          <div class="user-card">
+            <span class="user-card-title">{l.name}</span>
+            <span class="user-card-meta">{(l.refs ?? []).length} vers</span>
+          </div>
+        ))}
+      </div>
+      <p class="user-empty" data-empty hidden={lists.length > 0}>Du har ingen verslister ennå.</p>
     </UserPage>,
-  ),
-);
+  );
+});
 
 // ---------- /leseplan ----------
 r.get('/leseplan', async (c) => {
   const plans = (await getSql()`
     SELECT id, name, description, category, days FROM reading_plans ORDER BY days, seq
   `) as { id: string; name: string; description: string | null; category: string | null; days: number }[];
+  const user = c.var.user;
+  const activePlan = user?.plus ? await getUserSingleton<string>(user.id, 'activePlan') : null;
 
   return c.html(
     <Layout title="Leseplaner — FLOGVIT.bible" description="Ulike planer for systematisk bibellesing." styles={['user.css']} scripts={['user.js']}>
@@ -121,9 +200,9 @@ r.get('/leseplan', async (c) => {
                   </div>
                   <div class="plan-actions">
                     <button type="button" class="user-btn plan-activate" data-plan={p.id}>
-                      Velg denne
+                      {activePlan === p.id ? 'Aktiv plan' : 'Velg denne'}
                     </button>
-                    <span class="plan-active-badge" hidden>Aktiv</span>
+                    <span class="plan-active-badge" hidden={activePlan !== p.id}>Aktiv</span>
                   </div>
                 </div>
               ))}
@@ -136,17 +215,28 @@ r.get('/leseplan', async (c) => {
 });
 
 // ---------- /manuskripter ----------
-r.get('/manuskripter', (c) =>
-  c.html(
+interface DevotionalItem { id: string; slug: string; title?: string; type?: string; updatedAt: number }
+
+r.get('/manuskripter', async (c) => {
+  const user = c.var.user;
+  const devs = user?.plus ? (await getUserItems<DevotionalItem>(user.id, 'devotionals')).sort((a, b) => b.updatedAt - a.updatedAt) : [];
+  return c.html(
     <UserPage title="Manuskripter" crumb="Manuskripter" heading="Manuskripter" page="devotionals" intro="Andakter, prekener og bibeltimer med versreferanser." wide>
       <div class="user-toolbar">
         <a href="/manuskripter/ny" class="user-btn">Skriv nytt manuskript</a>
       </div>
-      <div class="user-list" data-list></div>
-      <p class="user-empty" data-empty hidden>Du har ingen manuskripter ennå.</p>
+      <div class="user-list" data-list>
+        {devs.map((d) => (
+          <a class="user-card" href={`/manuskripter/${d.slug}`}>
+            <span class="user-card-title">{d.title || '(uten tittel)'}</span>
+            <span class="user-card-meta">{d.type || ''}</span>
+          </a>
+        ))}
+      </div>
+      <p class="user-empty" data-empty hidden={devs.length > 0}>Du har ingen manuskripter ennå.</p>
     </UserPage>,
-  ),
-);
+  );
+});
 
 // Editor (ny + rediger) — CodeMirror erstattet av textarea + markdown-preview i user.js.
 function DevotionalEditor(props: { slug?: string }) {

@@ -46,9 +46,11 @@ if (root) {
 
   // ---- favoritter (henter verstekst fra /api/favorites) ----
   if (page === 'favorites' && list) {
+    const renderFavorites = () => {
     const favs = read(KEYS.favorites, []);
     showList(root, favs.length > 0);
-    if (favs.length) {
+    if (!favs.length) { list.textContent = ''; return; }
+    {
       fetch('/api/favorites', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
@@ -56,6 +58,7 @@ if (root) {
       })
         .then((r) => r.json())
         .then((verses) => {
+          list.textContent = '';
           for (const v of verses) {
             const a = el('a', 'user-card');
             a.href = `/${v.bookShortName.toLowerCase()}/${v.chapter}#v${v.verse}`;
@@ -66,37 +69,50 @@ if (root) {
         })
         .catch(() => {});
     }
+    };
+    renderFavorites();
+    document.addEventListener('bibel:sync-rebuilt', renderFavorites);
   }
 
   // ---- notater ----
   if (page === 'notes' && list) {
-    const notes = read(KEYS.notes, []);
-    showList(root, notes.length > 0);
-    notes
-      .slice()
-      .sort((a, b) => b.updatedAt - a.updatedAt)
-      .forEach((n) => {
-        const card = el('div', 'user-card');
-        card.appendChild(el('span', 'user-card-ref', `${n.bookId}-${n.chapter}-${n.verse}`));
-        card.appendChild(el('p', 'user-card-text', n.content));
-        list.appendChild(card);
-      });
+    const renderNotes = () => {
+      list.textContent = '';
+      const notes = read(KEYS.notes, []);
+      showList(root, notes.length > 0);
+      notes
+        .slice()
+        .sort((a, b) => b.updatedAt - a.updatedAt)
+        .forEach((n) => {
+          const card = el('div', 'user-card');
+          card.appendChild(el('span', 'user-card-ref', `${n.bookId}-${n.chapter}-${n.verse}`));
+          card.appendChild(el('p', 'user-card-text', n.content));
+          list.appendChild(card);
+        });
+    };
+    renderNotes();
+    document.addEventListener('bibel:sync-rebuilt', renderNotes);
   }
 
   // ---- emner ----
   if (page === 'topics' && list) {
-    const data = read(KEYS.topics, { topics: [], verseTopics: [], itemTopics: [] });
-    const topics = data.topics || [];
-    showList(root, topics.length > 0);
-    topics.forEach((t) => {
-      const count =
-        (data.itemTopics || []).filter((it) => it.topicId === t.id).length +
-        (data.verseTopics || []).filter((vt) => vt.topicId === t.id).length;
-      const card = el('div', 'user-card');
-      card.appendChild(el('span', 'user-card-title', t.name));
-      card.appendChild(el('span', 'user-card-meta', `${count} merket`));
-      list.appendChild(card);
-    });
+    const renderTopics = () => {
+      list.textContent = '';
+      const data = read(KEYS.topics, { topics: [], verseTopics: [], itemTopics: [] });
+      const topics = data.topics || [];
+      showList(root, topics.length > 0);
+      topics.forEach((t) => {
+        const count =
+          (data.itemTopics || []).filter((it) => it.topicId === t.id).length +
+          (data.verseTopics || []).filter((vt) => vt.topicId === t.id).length;
+        const card = el('div', 'user-card');
+        card.appendChild(el('span', 'user-card-title', t.name));
+        card.appendChild(el('span', 'user-card-meta', `${count} merket`));
+        list.appendChild(card);
+      });
+    };
+    renderTopics();
+    document.addEventListener('bibel:sync-rebuilt', renderTopics);
   }
 
   // ---- verslister ----
@@ -116,6 +132,7 @@ if (root) {
         });
     };
     render();
+    document.addEventListener('bibel:sync-rebuilt', render);
     const form = root.querySelector('[data-create-list]');
     if (form) {
       form.addEventListener('submit', (e) => {
@@ -136,18 +153,23 @@ if (root) {
 
   // ---- manuskripter (liste) ----
   if (page === 'devotionals' && list) {
-    const devs = read(KEYS.devotionals, []);
-    showList(root, devs.length > 0);
-    devs
-      .slice()
-      .sort((a, b) => b.updatedAt - a.updatedAt)
-      .forEach((d) => {
-        const a = el('a', 'user-card');
-        a.href = `/manuskripter/${d.slug}`;
-        a.appendChild(el('span', 'user-card-title', d.title || '(uten tittel)'));
-        a.appendChild(el('span', 'user-card-meta', d.type || ''));
-        list.appendChild(a);
-      });
+    const renderDevotionals = () => {
+      list.textContent = '';
+      const devs = read(KEYS.devotionals, []);
+      showList(root, devs.length > 0);
+      devs
+        .slice()
+        .sort((a, b) => b.updatedAt - a.updatedAt)
+        .forEach((d) => {
+          const a = el('a', 'user-card');
+          a.href = `/manuskripter/${d.slug}`;
+          a.appendChild(el('span', 'user-card-title', d.title || '(uten tittel)'));
+          a.appendChild(el('span', 'user-card-meta', d.type || ''));
+          list.appendChild(a);
+        });
+    };
+    renderDevotionals();
+    document.addEventListener('bibel:sync-rebuilt', renderDevotionals);
   }
 
   // ---- leseplan (marker aktiv) ----
