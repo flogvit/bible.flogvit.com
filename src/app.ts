@@ -7,6 +7,7 @@ import { Hono } from 'hono';
 import { serveStatic } from 'hono/bun';
 import type { AppEnv } from './lib/session.ts';
 import { ACCOUNT_URL, withSession } from './lib/session.ts';
+import { withPageCache } from './lib/page-cache.ts';
 import pages from './routes/pages.tsx';
 import { NotFoundPage } from './routes/pages/misc.tsx';
 import sync from './routes/sync.ts';
@@ -41,6 +42,10 @@ export function createApp() {
   const app = new Hono<AppEnv>();
 
   app.get('/api/health', (c) => c.json({ ok: true }));
+
+  // Mikrocache for anonyme sidevisninger — FØR withSession, så cache-treff
+  // hverken rendrer eller validerer sesjon (GitHub #4).
+  app.use('*', withPageCache);
 
   // Konto-sesjonen løses inn på c.var.user for hver request (fail-open til
   // anonym). Login/konto bor sentralt — vi bare redirecter dit.
