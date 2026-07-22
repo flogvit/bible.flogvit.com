@@ -44,7 +44,6 @@ er endret (minnecache fra boot).
 ## Regler
 - Minimal deps: innebygd/web-standard fremfor npm-pakker. Aldri React/Express/ORM-er.
 - Bibeldata er derivert og regenererbar — aldri inn i Docker-imaget; import kjøres separat mot DB-en.
-- **Issues spores KUN på GitHub** (`flogvit/bibel.flogvit.no` — repo-navnet henger igjen fra
-  før domenebyttet; main er .com-appen). Som i resten av flogvit.com-produktene. Omskrivingens
+- **Issues spores KUN på GitHub** (`flogvit/bible.flogvit.com`; main er .com-appen). Som i resten av flogvit.com-produktene. Omskrivingens
   historikk (#1–#18) lå i ISSUES.md — slettet 2026-07-22, se git-historikken ved behov.
 - .no (branch `bibel-no`) skal IKKE røres — parallell drift til cutover-beslutning.

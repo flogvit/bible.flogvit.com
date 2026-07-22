@@ -25,8 +25,8 @@ r.get('/om', (c) =>
               tilgjengelig.
             </p>
             <p>
-              <a href="https://github.com/flogvit/bibel.flogvit.no" target="_blank" rel="noopener noreferrer">
-                github.com/flogvit/bibel.flogvit.no
+              <a href="https://github.com/flogvit/bible.flogvit.com" target="_blank" rel="noopener noreferrer">
+                github.com/flogvit/bible.flogvit.com
               </a>{' '}
               &ndash; kildekoden til denne nettsiden
             </p>
@@ -180,7 +180,7 @@ r.get('/om', (c) =>
               <li><kbd>R</kbd> - Lesemodus på/av</li>
               <li><kbd>←</kbd> / <kbd>→</kbd> - Forrige/neste kapittel</li>
               <li><kbd>1-9</kbd> - Hopp til vers 1-9</li>
-              <li><kbd>Alt</kbd>+<kbd>Shift</kbd>+bokstav - Hurtignavigasjon (H=Hjem, S=Søk, L=Leseplan, T=Tidslinje, P=Profetier, F=Favoritter, E=Emner, N=Notater, K=Kjente vers, O=Personer, V=Verslister, A=Paralleller, I=Statistikk, M=Manuskripter, C=Temaer)</li>
+              <li><kbd>Alt</kbd>+<kbd>Shift</kbd>+bokstav - Hurtignavigasjon (H=Hjem, S=Søk, L=Leseplan, T=Tidslinje, P=Profetier, F=Favoritter, E=Emner, N=Notater, K=Kjente vers, O=Personer, V=Verslister, A=Paralleller, I=Statistikk, M=Manuskripter, C=Temaer, D=Dager, Y=Tall)</li>
             </ul>
 
             <h3>Versinteraksjon</h3>
@@ -237,20 +237,22 @@ r.get('/om', (c) =>
 
             <h3>Last ned hele Bibelen</h3>
             <p>
-              Du kan også laste ned hele bibelversjoner på forhånd. Gå til{' '}
+              Du kan også laste ned hele Bibelen på forhånd. Gå til{' '}
               <a href="/offline">offline-siden</a> for å:
             </p>
             <ul>
-              <li>Se hvilke kapitler som er lagret</li>
-              <li>Laste ned hele bibelversjoner (bokmål, nynorsk, gresk, hebraisk)</li>
-              <li>Se hvor mye lagringsplass som brukes</li>
+              <li>Laste ned OSNB2 (bokmål) og/eller OSNN1 (nynorsk) — grunnteksten (hebraisk/gresk med ord-for-ord), kryssreferanser og sammendrag følger med hvert kapittel</li>
+              <li>Laste ned tidslinje, profetier, personer og leseplaner for offline-bruk</li>
+              <li>Se hvilke kapitler som er lagret og hvor mye lagringsplass som brukes</li>
               <li>Slette lagrede data</li>
             </ul>
 
             <h3>Oppdateringer</h3>
             <p>
-              Når bibeldataene oppdateres på serveren, får du en melding om å oppdatere de
-              lagrede kapitlene. Du kan velge å oppdatere med en gang eller vente til senere.
+              Når selve appen oppdateres, får du et varsel med mulighet til å laste den nye
+              versjonen med en gang. Offline-siden viser hvilken innholdsversjon du har lastet
+              ned; kommer det nytt bibelinnhold, oppdaterer du ved å slette lagrede data og
+              laste ned på nytt.
             </p>
           </section>
 
