@@ -203,39 +203,8 @@ function Header() {
           ))}
         </nav>
 
-        <button
-          type="button"
-          class="icon-btn"
-          id="theme-toggle"
-          aria-label="Bytt mellom lys og mørk modus"
-          title="Lys/mørk modus"
-        >
-          <svg
-            class="theme-icon-sun"
-            width="18"
-            height="18"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            aria-hidden="true"
-          >
-            <circle cx="12" cy="12" r="5" />
-            <path d="M12 1v2M12 21v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M1 12h2M21 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4" />
-          </svg>
-          <svg
-            class="theme-icon-moon"
-            width="18"
-            height="18"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            aria-hidden="true"
-          >
-            <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z" />
-          </svg>
-        </button>
+        {/* Tema bor i FLOGVIT-menyens prefs-område (familie-mønsteret) —
+            ikke som eget header-ikon (2026-07-22). */}
 
         <a href="/innstillinger" class="icon-btn" aria-label="Innstillinger" title="Innstillinger">
           <svg
