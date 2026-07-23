@@ -5,6 +5,7 @@
 
 import { Hono } from 'hono';
 import { serveStatic } from 'hono/bun';
+import { contextStorage } from 'hono/context-storage';
 import type { AppEnv } from './lib/session.ts';
 import { ACCOUNT_URL, withSession } from './lib/session.ts';
 import { withPageCache } from './lib/page-cache.ts';
@@ -42,6 +43,11 @@ export function createApp() {
   const app = new Hono<AppEnv>();
 
   app.get('/api/health', (c) => c.json({ ok: true }));
+
+  // AsyncLocalStorage for request-konteksten, så chrome-komponentene (headerens
+  // konto-chip) kan lese c.var.user server-side uten å tres gjennom hvert
+  // Layout-kall. Ytterst, så den omslutter både cache og sesjon.
+  app.use('*', contextStorage());
 
   // Mikrocache for anonyme sidevisninger — FØR withSession, så cache-treff
   // hverken rendrer eller validerer sesjon (GitHub #4).

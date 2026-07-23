@@ -11,6 +11,9 @@
 
 import { raw } from 'hono/html';
 import type { Child } from 'hono/jsx';
+import { getContext } from 'hono/context-storage';
+import type { AppEnv } from '../lib/session.ts';
+import { ACCOUNT_URL } from '../lib/session.ts';
 
 const GOOGLE_FONTS =
   'https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;700;800&family=IBM+Plex+Mono:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&display=swap';
@@ -139,6 +142,40 @@ const NAV_GROUPS: { label: string; links: { href: string; label: string }[] }[] 
   },
 ];
 
+// Konto-chip (portal/SETTINGS.md): obligatorisk, server-synlig innloggings-
+// inngang rett før tannhjulet. Bibel kjenner sesjonen server-side (fv-session
+// via konto), så innlogget tilstand rendres direkte — ingen «hidden-til-JS».
+// Utlogget: «Logg inn». Innlogget: visningsnavn/e-post (+ plus-merke).
+function AccountChip() {
+  // Request-konteksten hentes fra AsyncLocalStorage (contextStorage-middleware
+  // i app.ts), så vi slipper å tre user gjennom hvert Layout-kall.
+  let user: AppEnv['Variables']['user'] = null;
+  try {
+    user = getContext<AppEnv>().var.user;
+  } catch {
+    user = null; // rendret utenfor request-kontekst (f.eks. test) → utlogget
+  }
+  if (!user) {
+    return (
+      <a class="account-chip" href={ACCOUNT_URL} aria-label="Logg inn">
+        Logg inn
+      </a>
+    );
+  }
+  const name = user.displayName || user.email;
+  return (
+    <a
+      class="account-chip account-chip-in"
+      href={ACCOUNT_URL}
+      aria-label={`Konto: ${name}`}
+      title={user.email}
+    >
+      <span class="account-chip-name">{name}</span>
+      {user.plus && <span class="account-chip-plus">plus</span>}
+    </a>
+  );
+}
+
 function Header() {
   return (
     <header class="site-header">
@@ -188,8 +225,11 @@ function Header() {
           ))}
         </nav>
 
-        {/* Tema bor i FLOGVIT-menyens prefs-område (familie-mønsteret) —
-            ikke som eget header-ikon (2026-07-22). */}
+        {/* Tema bor på innstillinger-siden (portal/SETTINGS.md) — ikke som eget
+            header-ikon (2026-07-22). */}
+
+        {/* Konto-chip: fast plass rett før tannhjulet (portal/SETTINGS.md). */}
+        <AccountChip />
 
         <a href="/innstillinger" class="icon-btn" aria-label="Innstillinger" title="Innstillinger">
           <svg
@@ -233,24 +273,35 @@ function Footer() {
   return (
     <footer class="site-footer">
       <div class="site-footer-inner">
-        <span class="fv-wordmark">
-          <a class="fv-brand" href="https://flogvit.com" aria-label="FLOGVIT – alle produkter">
-            FLOGVIT
-          </a>
-          <a class="fv-product" href="/" aria-label="FLOGVIT.bible – til forsiden">
-            <span class="fv-dot">.</span>bible
-          </a>
-        </span>
+        {/* Produkt-tillegg (valgfritt) — over den faste raden (portal/FOOTER.md). */}
         <nav class="site-footer-nav" aria-label="Bunnmeny">
           <a href="/">Forside</a>
           <a href="/om">Om siden</a>
           <a href="/om#hjelp">Hjelp</a>
           <a href="/innstillinger">Innstillinger</a>
-          <a href="/konto">Konto</a>
+          <a href="https://flogvit.com/konto/">Konto</a>
           <a href="/offline">Offline</a>
           <a href="/tilgjengelighet">Tilgjengelighet</a>
         </nav>
-        <p class="site-footer-note">© {new Date().getFullYear()} FLOGVIT</p>
+
+        {/* Fast legal-rad (portal/FOOTER.md): FLOGVIT.bible · Vilkår · Personvern ·
+            Konto · © år. Ingen Refusjon — bibel tar ikke betaling. */}
+        <div class="site-footer-legal">
+          <span class="fv-wordmark">
+            <a class="fv-brand" href="https://flogvit.com" aria-label="FLOGVIT – alle produkter">
+              FLOGVIT
+            </a>
+            <a class="fv-product" href="/" aria-label="FLOGVIT.bible – til forsiden">
+              <span class="fv-dot">.</span>bible
+            </a>
+          </span>
+          <nav class="site-footer-legalnav" aria-label="Juridisk">
+            <a href="https://flogvit.com/vilkar">Vilkår</a>
+            <a href="https://flogvit.com/personvern">Personvern</a>
+            <a href="https://flogvit.com/konto/">Konto</a>
+          </nav>
+          <p class="site-footer-note">© {new Date().getFullYear()} FLOGVIT</p>
+        </div>
       </div>
     </footer>
   );
