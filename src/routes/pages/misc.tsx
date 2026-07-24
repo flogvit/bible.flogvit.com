@@ -263,12 +263,9 @@ r.get('/om', (c) =>
 
           <section class="about-section">
             <h2>Kontakt</h2>
-            <p>Vegard Hanssen</p>
+            <p>FLOGVIT</p>
             <p>
-              E-post: <a href="mailto:Vegard.Hanssen@menneske.no">Vegard.Hanssen@menneske.no</a>
-            </p>
-            <p>
-              Tlf: <a href="tel:+4740401214">+47 404 01 214</a>
+              E-post: <a href="mailto:support@flogvit.com">support@flogvit.com</a>
             </p>
             <p>
               Feil og forslag kan også meldes inn på GitHub:{' '}
@@ -403,7 +400,7 @@ r.get('/tilgjengelighet', (c) =>
               <strong>Kontakt:</strong>
             </p>
             <p>
-              E-post: <a href="mailto:Vegard.Hanssen@menneske.no">Vegard.Hanssen@menneske.no</a>
+              E-post: <a href="mailto:support@flogvit.com">support@flogvit.com</a>
             </p>
             <p>
               Du kan også melde inn problemer på GitHub:{' '}

@@ -332,7 +332,7 @@ export function Layout(props: LayoutProps) {
           {raw(PREFS_READ_SNIPPET)}
           <title>{props.title}</title>
           <meta name="description" content={desc} />
-          <meta name="author" content="Vegard Hanssen" />
+          <meta name="author" content="FLOGVIT" />
           {props.canonical && <link rel="canonical" href={props.canonical} />}
           <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
           <link rel="manifest" href="/manifest.json" />
