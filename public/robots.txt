@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://bibel.flogvit.com/sitemap.xml
+Sitemap: https://bible.flogvit.com/sitemap.xml
