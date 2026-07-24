@@ -35,11 +35,26 @@ fv-session-cookien deles på localhost på tvers av porter, så bibel ser innlog
 sync mot lokal MySQL virker.
 
 ## Innholdsoppdatering til prod
-Innhold importeres LOKALT (`import-bible.ts` mot lokal DB), deretter dumpes endrede
-tabeller og lastes via VM-en (ingen mysql-klient der — bruk et engangs
-mysql:8-klientcontainer på docker-nettet `server_default` med env fra
-`/srv/flogvit.com/server/bibel.env`). Restart `bibel-hono` etterpå hvis books-tabellen
-er endret (minnecache fra boot).
+**Bruk `deploy/deploy-bibel-data.sh`** — data-motstykket til `deploy-bibel.sh`. Det
+gjør hele flyten i én kommando: import lokalt → atomisk per-tabell replace til prod
+(`START TRANSACTION; DELETE; INSERT…; COMMIT`, ingen nedetid, håndterer sletninger) →
+restart `bibel-hono`.
+```bash
+deploy/deploy-bibel-data.sh                          # full innholds-paritet (alle tabeller)
+deploy/deploy-bibel-data.sh references_ persons stories content_hashes db_meta  # kun endrede
+```
+Under panseret: prod-DB nås via engangs `mysql:8`-klientcontainer på docker-nettet
+`server_default` med env fra `/srv/flogvit.com/server/bibel.env`. Kun import-eide
+innholdstabeller røres — aldri brukertabeller. Ta gjerne `mysqldump --skip-lock-tables`
+av tabellene fra prod først (prod-brukeren mangler `RELOAD`, så `--single-transaction`
+feiler der).
+
+### KILDE: pass på riktig free-bible
+Import leser `$FREE_BIBLE_DIR` (default: `flogvit.com/free-bible`, som er en **symlink**
+→ det ekte `../free-bible`-repoet). Historisk felle: `flogvit.com/free-bible` var en
+egen, stale klon — standard-importen leste da feil data og rapporterte «0 endringer».
+Symlinken fikser dette; `deploy-bibel-data.sh` setter i tillegg `FREE_BIBLE_DIR`
+eksplisitt til den resolverte stien.
 
 ## Regler
 - Minimal deps: innebygd/web-standard fremfor npm-pakker. Aldri React/Express/ORM-er.
