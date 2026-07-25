@@ -11,7 +11,7 @@
   },
   "dependencies": {
     "@free-bible/kvn": "file:kvn-package",
-    "hono": "^4.7.0"
+    "hono": "^4.12.32"
   },
   "devDependencies": {
     "@types/bun": "^1.2.0",
