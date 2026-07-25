@@ -15,6 +15,7 @@ import { Breadcrumbs } from '../../views/breadcrumbs.tsx';
 import type { Child } from 'hono/jsx';
 import { getSql } from '../../lib/db.ts';
 import { getUserItems, getUserSingleton } from '../../lib/user-data.ts';
+import { getBibleEditions } from '../../lib/bible.ts';
 import { getAvailableMappings } from '../../lib/verse-mapper.ts';
 
 const r = new Hono<AppEnv>();
@@ -542,8 +543,13 @@ r.get('/offline', (c) =>
 );
 
 // ---------- /oversettelser ----------
-r.get('/oversettelser', (c) =>
-  c.html(
+// «Innebygde» kommer fra bible_editions (fylt av importøren for hver oversettelse
+// vi henter tekst for), ikke fra en hardkodet liste — en ny oversettelse dukker
+// opp her og får info-side under /oversettelser/:id av seg selv.
+r.get('/oversettelser', async (c) => {
+  const editions = await getBibleEditions();
+
+  return c.html(
     <UserPage
       title="Oversettelser"
       crumb="Oversettelser"
@@ -556,10 +562,15 @@ r.get('/oversettelser', (c) =>
       <section class="trans-section">
         <h2>Innebygde</h2>
         <ul class="trans-builtin">
-          <li>OSNB2 (bokmål)</li>
-          <li>OSNN1 (nynorsk)</li>
-          <li>Hebraisk grunntekst (Tanach)</li>
-          <li>Gresk grunntekst (SBLGNT)</li>
+          {editions.map((e) => (
+            <li>
+              <a href={`/oversettelser/${e.id}`}>
+                {e.name_native}
+                {e.abbreviation ? ` (${e.abbreviation})` : ''}
+              </a>
+              {e.license_name ? <span class="trans-license"> {e.license_name}</span> : null}
+            </li>
+          ))}
         </ul>
       </section>
 
@@ -608,7 +619,7 @@ r.get('/oversettelser', (c) =>
         <p class="user-note">Opplasting av egne oversettelser krever JavaScript.</p>
       </noscript>
     </UserPage>,
-  ),
-);
+  );
+});
 
 export default r;

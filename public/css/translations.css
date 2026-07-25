@@ -25,3 +25,5 @@
 .trans-warnings summary { cursor: pointer; color: var(--gold-text); font-size: 14px; }
 .trans-warnings ul { margin: 8px 0 0; padding-left: 20px; }
 .trans-warnings li { font-size: 13px; color: var(--ink-2); }
+.trans-builtin a { color: var(--ink); }
+.trans-license { font-family: var(--font-mono); font-size: 12px; color: var(--muted); }

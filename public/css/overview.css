@@ -273,3 +273,43 @@
   color: var(--ink);
   font-weight: 600;
 }
+
+/* --- /oversettelser/:id (info per oversettelse) --- */
+.edition-facts { display: flex; flex-direction: column; gap: 2px; margin: 0; }
+.edition-row {
+  display: grid;
+  grid-template-columns: minmax(140px, 220px) 1fr;
+  gap: 8px 20px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line);
+}
+.edition-row dt { color: var(--muted); font-size: 14px; }
+.edition-row dd { margin: 0; color: var(--ink); }
+.edition-spdx { font-family: var(--font-mono); font-size: 12px; color: var(--muted); }
+.edition-notes { margin: 0; padding-left: 20px; color: var(--ink-2); line-height: 1.6; }
+.edition-notes li { margin-bottom: 6px; }
+
+/* Krediteringskrav og manglende lisens skal være umulig å overse — taushet her
+   ville blitt lest som «fritt å bruke». */
+.edition-license-required,
+.edition-license-missing {
+  margin: 16px 0 0;
+  padding: 12px 16px;
+  border-left: 3px solid var(--gold);
+  background: var(--gold-bg);
+  color: var(--ink);
+  line-height: 1.6;
+}
+.edition-license-statement {
+  margin: 12px 0 0;
+  padding: 12px 16px;
+  border-left: 3px solid var(--line);
+  font-size: 14px;
+  color: var(--ink-2);
+  line-height: 1.6;
+}
+.edition-license-inherited { margin: 16px 0 0; color: var(--ink-2); line-height: 1.6; }
+
+@media (max-width: 640px) {
+  .edition-row { grid-template-columns: 1fr; gap: 2px; padding: 8px 0; }
+}

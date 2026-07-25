@@ -22,6 +22,8 @@ import {
   getVerses,
   getMultiTimeline,
   getBibleStatistics,
+  getBibleEditions,
+  getBibleEditionById,
   getTopWords,
   type ProphecyReference,
   type VerseRef,
@@ -40,6 +42,238 @@ function toVerseRef(ref: ProphecyReference): VerseRef {
 function prophecyRefUrl(ref: ProphecyReference): string {
   return `/${toUrlSlug(ref.book_short_name || '')}/${ref.chapter}#v${ref.verse_start}`;
 }
+
+// ---------- /oversettelser/:id (info per oversettelse) ----------
+//
+// Listen over oversettelser bor på brukersiden /oversettelser (der egne bibler
+// lastes opp); dette er den offentlige INFO-siden per utgave. Radene kommer fra
+// bible_editions, som importøren fyller for hver oversettelse vi henter tekst
+// for — en ny oversettelse gir altså info-side automatisk.
+
+const TESTAMENT_LABELS: Record<string, string> = {
+  both: 'Hele Bibelen', ot: 'Det gamle testamente', nt: 'Det nye testamente',
+};
+const PHILOSOPHY_LABELS: Record<string, string> = {
+  formal: 'Ordnær (formal equivalence)',
+  dynamic: 'Meningsnær (dynamisk)',
+  paraphrase: 'Parafrase',
+  optimal: 'Balansert',
+  source_text: 'Grunntekst',
+};
+const TRADITION_LABELS: Record<string, string> = {
+  nondenominational: 'Tverrkirkelig',
+  protestant: 'Protestantisk',
+  catholic: 'Katolsk',
+  orthodox: 'Ortodoks',
+  jewish: 'Jødisk',
+};
+const METHOD_LABELS: Record<string, string> = {
+  ai_assisted: 'KI-assistert',
+  single_translator: 'Én oversetter',
+  committee: 'Oversetterkomité',
+  revision: 'Revisjon',
+};
+const BASIS_LABELS: Record<string, string> = {
+  mt: 'Masoretisk tekst', sblgnt: 'SBLGNT', na28: 'Nestle-Aland 28', ubs5: 'UBS5',
+  tr: 'Textus Receptus', maj: 'Majoritetsteksten', lxx: 'Septuaginta', vg: 'Vulgata',
+};
+const label = (map: Record<string, string>, key: string | null | undefined) =>
+  key ? (map[key] ?? key) : null;
+
+function EditionRow({ term, children }: { term: string; children?: unknown }) {
+  return (
+    <div class="edition-row">
+      <dt>{term}</dt>
+      <dd>{children as never}</dd>
+    </div>
+  );
+}
+
+r.get('/oversettelser/:id', async (c) => {
+  const edition = await getBibleEditionById(c.req.param('id'));
+  if (!edition) return c.notFound();
+
+  const { meta, license } = edition;
+  const name = edition.name_native;
+  const basis = [
+    ...(meta.textual_basis?.ot ?? []).map((b) => ({ testament: 'GT', module: b })),
+    ...(meta.textual_basis?.nt ?? []).map((b) => ({ testament: 'NT', module: b })),
+  ];
+
+  // Krediteringskravet forplanter seg til oversettelser som bygger på kilden, så
+  // vi lenker til kildeutgavene som HAR info-side hos oss.
+  const known = new Set((await getBibleEditions()).map((e) => e.id));
+  const sourceModules = [
+    ...basis.map((b) => b.module),
+    ...(meta.derived_from?.module ? [meta.derived_from.module] : []),
+  ].filter((m, i, arr) => arr.indexOf(m) === i);
+  const attributionSources = sourceModules.filter((m) => known.has(m) && m !== edition.id);
+
+  return c.html(
+    <Layout
+      title={`${name} — Oversettelser — FLOGVIT.bible`}
+      description={`Om ${name}${edition.abbreviation ? ` (${edition.abbreviation})` : ''}: tekstgrunnlag, oversettelsesmetode, dekning og lisens.`}
+      styles={['overview.css']}
+      canonical={`https://bible.flogvit.com/oversettelser/${edition.id}`}
+    >
+      <div class="overview-main">
+        <div class="container">
+          <Breadcrumbs
+            items={[
+              { label: 'Hjem', href: '/' },
+              { label: 'Oversettelser', href: '/oversettelser' },
+              { label: edition.abbreviation ?? name },
+            ]}
+          />
+          <header>
+            <h1>{name}</h1>
+            {meta.name?.en && meta.name.en !== name ? (
+              <p class="overview-intro" lang="en">{meta.name.en}</p>
+            ) : null}
+          </header>
+
+          <section class="overview-section">
+            <h2>Om utgaven</h2>
+            <dl class="edition-facts">
+              {edition.abbreviation ? <EditionRow term="Forkortelse">{edition.abbreviation}</EditionRow> : null}
+              <EditionRow term="Språk">
+                {[edition.lang_iso639_1, edition.lang_iso639_3].filter(Boolean).join(' / ')}
+                {edition.script ? ` — skrift ${edition.script}` : ''}
+                {edition.direction === 'rtl' ? ' (høyre-til-venstre)' : ''}
+              </EditionRow>
+              {label(PHILOSOPHY_LABELS, edition.philosophy)
+                ? <EditionRow term="Oversettelsessyn">{label(PHILOSOPHY_LABELS, edition.philosophy)}</EditionRow> : null}
+              {label(TRADITION_LABELS, edition.tradition)
+                ? <EditionRow term="Tradisjon">{label(TRADITION_LABELS, edition.tradition)}</EditionRow> : null}
+              {edition.body ? <EditionRow term="Utgiver / organ">{edition.body}</EditionRow> : null}
+              {meta.publisher ? <EditionRow term="Forlag">{meta.publisher}</EditionRow> : null}
+              {meta.translators?.length
+                ? <EditionRow term={meta.translators.length > 1 ? 'Oversettere' : 'Oversetter'}>{meta.translators.join(', ')}</EditionRow> : null}
+              {edition.year_published
+                ? <EditionRow term="Utgitt">{edition.year_published}{meta.year?.revised ? `, revidert ${meta.year.revised}` : ''}</EditionRow> : null}
+              {meta.work?.method?.length
+                ? <EditionRow term="Metode">{meta.work.method.map((m) => label(METHOD_LABELS, m)).join(', ')}</EditionRow> : null}
+              {meta.work?.source_languages?.length
+                ? <EditionRow term="Oversatt fra">{meta.work.source_languages.join(', ')}</EditionRow> : null}
+              {basis.length
+                ? <EditionRow term="Tekstgrunnlag">
+                    {basis.map((b) => `${b.testament}: ${label(BASIS_LABELS, b.module)}`).join(' · ')}
+                  </EditionRow> : null}
+              {meta.derived_from?.module
+                ? <EditionRow term="Bygger på">
+                    {known.has(meta.derived_from.module)
+                      ? <a href={`/oversettelser/${meta.derived_from.module}`}>{meta.derived_from.module}</a>
+                      : meta.derived_from.module}
+                    {meta.derived_from.relation === 'revision_of' ? ' (revisjon)' : ''}
+                  </EditionRow> : null}
+              {meta.links?.homepage
+                ? <EditionRow term="Hjemmeside">
+                    <a href={meta.links.homepage} target="_blank" rel="noopener noreferrer">{meta.links.homepage}</a>
+                  </EditionRow> : null}
+            </dl>
+          </section>
+
+          {edition.books ? (
+            <section class="overview-section">
+              <h2>Dekning</h2>
+              <dl class="edition-facts">
+                <EditionRow term="Omfang">{label(TESTAMENT_LABELS, edition.testament)}</EditionRow>
+                <EditionRow term="Bøker">{edition.books}</EditionRow>
+                {edition.chapters ? <EditionRow term="Kapitler">{edition.chapters}</EditionRow> : null}
+                {edition.verses ? <EditionRow term="Vers">{edition.verses}</EditionRow> : null}
+                <EditionRow term="Deuterokanoniske bøker">
+                  {meta.coverage?.deuterocanonical ? 'Ja' : 'Nei'}
+                </EditionRow>
+                {meta.features?.strongs ? <EditionRow term="Strong-numre">Ja</EditionRow> : null}
+              </dl>
+            </section>
+          ) : null}
+
+          {meta.legacy?.length ? (
+            <section class="overview-section">
+              <h2>Særpreg</h2>
+              <ul class="edition-notes">
+                {meta.legacy.map((l) => <li>{l.text}</li>)}
+              </ul>
+            </section>
+          ) : null}
+
+          {/* Lisensseksjonen rendres ALLTID. En utelatt seksjon leses som «ingen
+              begrensninger», og det er nettopp den feilen vi ikke skal gjøre. */}
+          <section class="overview-section">
+            <h2>Lisens og kreditering</h2>
+            {license ? (
+              <>
+                <dl class="edition-facts">
+                  <EditionRow term="Lisens">
+                    {license.license}
+                    {license.spdx ? <span class="edition-spdx"> {license.spdx}</span> : null}
+                  </EditionRow>
+                  <EditionRow term="Kreditering">
+                    {license.attribution_required ? 'Påkrevd' : 'Ikke påkrevd'}
+                  </EditionRow>
+                  <EditionRow term="Kommersiell bruk">
+                    {license.noncommercial ? 'Ikke tillatt' : 'Tillatt'}
+                  </EditionRow>
+                </dl>
+                {license.attribution_required ? (
+                  <p class="edition-license-required">
+                    Denne teksten <strong>krever kreditering</strong>. Notisen under må følge
+                    teksten og alt som er avledet fra den.
+                  </p>
+                ) : null}
+                {license.statement ? (
+                  <blockquote class="edition-license-statement" lang="en">{license.statement}</blockquote>
+                ) : null}
+              </>
+            ) : (
+              <p class="edition-license-missing">
+                Lisensen for denne utgaven er <strong>ikke registrert</strong> i kildedataene
+                ennå. Det betyr ikke at teksten er fri — sjekk kilden før du gjenbruker den.
+              </p>
+            )}
+
+            {attributionSources.length ? (
+              <p class="edition-license-inherited">
+                Utgaven bygger på{' '}
+                {attributionSources.map((m, i) => (
+                  <>
+                    {i > 0 ? ', ' : ''}
+                    <a href={`/oversettelser/${m}`}>{m}</a>
+                  </>
+                ))}
+                . Lisensvilkårene der — inkludert eventuelle krediteringskrav — gjelder også for
+                denne teksten.
+              </p>
+            ) : null}
+          </section>
+
+          {meta.provenance ? (
+            <section class="overview-section">
+              <h2>Kilder for opplysningene</h2>
+              <p class="overview-intro">
+                Feltene over er {meta.provenance.method === 'manual' ? 'manuelt kontrollert' : 'maskinelt hentet'}
+                {meta.provenance.generated ? `, sist oppdatert ${meta.provenance.generated}` : ''}.
+              </p>
+              {meta.provenance.sources?.length ? (
+                <ul class="edition-notes">
+                  {meta.provenance.sources.map((s) => (
+                    <li>
+                      {s.url ? (
+                        <a href={s.url} target="_blank" rel="noopener noreferrer">{s.url}</a>
+                      ) : 'ukjent kilde'}
+                      {s.fields?.length ? <span class="edition-spdx"> {s.fields.join(', ')}</span> : null}
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+            </section>
+          ) : null}
+        </div>
+      </div>
+    </Layout>,
+  );
+});
 
 // ---------- /kjente-vers ----------
 
