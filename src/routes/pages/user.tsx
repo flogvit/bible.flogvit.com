@@ -17,7 +17,7 @@ import { getSql } from '../../lib/db.ts';
 import { getUserItems, getUserSingleton } from '../../lib/user-data.ts';
 import { getBibleEditions } from '../../lib/bible.ts';
 import { getAvailableMappings } from '../../lib/verse-mapper.ts';
-import { layoutProps, type Locale } from '../../lib/i18n.ts';
+import { layoutProps, makeT, tFor, type Locale } from '../../lib/i18n.ts';
 
 const r = new Hono<AppEnv>();
 
@@ -60,6 +60,7 @@ function UserPage(props: {
 interface FavoriteItem { bookId: number; chapter: number; verse: number; addedAt?: number }
 
 r.get('/favoritter', async (c) => {
+  const t = tFor(c);
   const user = c.var.user;
   let cards: { href: string; ref: string; text: string }[] = [];
   if (user?.plus) {
@@ -87,7 +88,7 @@ r.get('/favoritter', async (c) => {
     ).filter((x): x is NonNullable<typeof x> => x !== null);
   }
   return c.html(
-    <UserPage {...layoutProps(c)} title="Favoritter" crumb="Favoritter" heading="Favorittvers" page="favorites" intro="Dine merkede vers. Husking er en del av FLOGVIT.plus.">
+    <UserPage {...layoutProps(c)} title={t('nav.favorites')} crumb={t('nav.favorites')} heading={t('u.favVerses')} page="favorites" intro="Dine merkede vers. Husking er en del av FLOGVIT.plus.">
       <div class="user-list" data-list>
         {cards.map((card) => (
           <a class="user-card" href={card.href}>
@@ -105,6 +106,7 @@ r.get('/favoritter', async (c) => {
 interface TopicsData { topics?: { id: string; name: string }[]; verseTopics?: { topicId: string }[]; itemTopics?: { topicId: string }[] }
 
 r.get('/emner', async (c) => {
+  const t = tFor(c);
   const user = c.var.user;
   const data: TopicsData = (user?.plus ? await getUserSingleton<TopicsData>(user.id, 'topics') : null) ?? {};
   const topics = (data.topics ?? []).map((t) => ({
@@ -114,7 +116,7 @@ r.get('/emner', async (c) => {
       (data.verseTopics ?? []).filter((vt) => vt.topicId === t.id).length,
   }));
   return c.html(
-    <UserPage {...layoutProps(c)} title="Emner" crumb="Emner" heading="Emner" page="topics" intro="Egne emner du har tagget vers, personer og annet innhold med.">
+    <UserPage {...layoutProps(c)} title={t('nav.topicsMine')} crumb={t('nav.topicsMine')} heading={t('nav.topicsMine')} page="topics" intro="Egne emner du har tagget vers, personer og annet innhold med.">
       <div class="user-list" data-list>
         {topics.map((t) => (
           <div class="user-card">
@@ -132,10 +134,11 @@ r.get('/emner', async (c) => {
 interface NoteItem { id: string; bookId: number; chapter: number; verse: number; content: string; updatedAt: number }
 
 r.get('/notater', async (c) => {
+  const t = tFor(c);
   const user = c.var.user;
   const notes = user?.plus ? (await getUserItems<NoteItem>(user.id, 'notes')).sort((a, b) => b.updatedAt - a.updatedAt) : [];
   return c.html(
-    <UserPage {...layoutProps(c)} title="Notater" crumb="Notater" heading="Notater" page="notes" intro="Dine notater på vers.">
+    <UserPage {...layoutProps(c)} title={t('nav.notes')} crumb={t('nav.notes')} heading={t('nav.notes')} page="notes" intro="Dine notater på vers.">
       <div class="user-list" data-list>
         {notes.map((n) => (
           <div class="user-card">
@@ -144,7 +147,7 @@ r.get('/notater', async (c) => {
           </div>
         ))}
       </div>
-      <p class="user-empty" data-empty hidden={notes.length > 0}>Du har ingen notater ennå.</p>
+      <p class="user-empty" data-empty hidden={notes.length > 0}>{t('u.noNotes')}</p>
     </UserPage>,
   );
 });
@@ -153,13 +156,14 @@ r.get('/notater', async (c) => {
 interface VerseListItem { id: string; name: string; refs?: unknown[]; updatedAt: number }
 
 r.get('/lister', async (c) => {
+  const t = tFor(c);
   const user = c.var.user;
   const lists = user?.plus ? (await getUserItems<VerseListItem>(user.id, 'verseLists')).sort((a, b) => b.updatedAt - a.updatedAt) : [];
   return c.html(
-    <UserPage {...layoutProps(c)} title="Verslister" crumb="Verslister" heading="Verslister" page="verselists" intro="Samle vers i navngitte lister for manuskripter, bibeltimer og studier.">
+    <UserPage {...layoutProps(c)} title={t('nav.verseLists')} crumb={t('nav.verseLists')} heading={t('nav.verseLists')} page="verselists" intro="Samle vers i navngitte lister for manuskripter, bibeltimer og studier.">
       <form class="user-create" data-create-list>
-        <input type="text" name="name" placeholder="Navn på ny liste…" aria-label="Navn på liste" class="user-input" />
-        <button type="submit" class="user-btn">Opprett liste</button>
+        <input type="text" name="name" placeholder={t('u.newListPh')} aria-label="Navn på liste" class="user-input" />
+        <button type="submit" class="user-btn">{t('u.createList')}</button>
       </form>
       <div class="user-list" data-list>
         {lists.map((l) => (
@@ -169,13 +173,14 @@ r.get('/lister', async (c) => {
           </div>
         ))}
       </div>
-      <p class="user-empty" data-empty hidden={lists.length > 0}>Du har ingen verslister ennå.</p>
+      <p class="user-empty" data-empty hidden={lists.length > 0}>{t('u.noLists')}</p>
     </UserPage>,
   );
 });
 
 // ---------- /leseplan ----------
 r.get('/leseplan', async (c) => {
+  const t = tFor(c);
   const plans = (await getSql()`
     SELECT id, name, description, category, days FROM reading_plans ORDER BY days, seq
   `) as { id: string; name: string; description: string | null; category: string | null; days: number }[];
@@ -183,11 +188,11 @@ r.get('/leseplan', async (c) => {
   const activePlan = user?.plus ? await getUserSingleton<string>(user.id, 'activePlan') : null;
 
   return c.html(
-    <Layout {...layoutProps(c)} title="Leseplaner — FLOGVIT.bible" description="Ulike planer for systematisk bibellesing." styles={['user.css']} scripts={['user.js']}>
+    <Layout {...layoutProps(c)} title={`${t('home.readingPlans')} — FLOGVIT.bible`} description="Ulike planer for systematisk bibellesing." styles={['user.css']} scripts={['user.js']}>
       <div class="user-main">
         <div class="reading-container">
           <Breadcrumbs items={[{ label: 'Hjem', href: '/' }, { label: 'Leseplan' }]} />
-          <h1>Leseplaner</h1>
+          <h1>{t('home.readingPlans')}</h1>
           <p class="user-intro">
             Velg en plan for systematisk bibellesing. Fremdrift og rekke lagres i nettleseren og
             husking er en del av FLOGVIT.plus.
@@ -206,7 +211,7 @@ r.get('/leseplan', async (c) => {
                     <button type="button" class="user-btn plan-activate" data-plan={p.id}>
                       {activePlan === p.id ? 'Aktiv plan' : 'Velg denne'}
                     </button>
-                    <span class="plan-active-badge" hidden={activePlan !== p.id}>Aktiv</span>
+                    <span class="plan-active-badge" hidden={activePlan !== p.id}>{t('u.active')}</span>
                   </div>
                 </div>
               ))}
@@ -222,12 +227,13 @@ r.get('/leseplan', async (c) => {
 interface DevotionalItem { id: string; slug: string; title?: string; type?: string; updatedAt: number }
 
 r.get('/manuskripter', async (c) => {
+  const t = tFor(c);
   const user = c.var.user;
   const devs = user?.plus ? (await getUserItems<DevotionalItem>(user.id, 'devotionals')).sort((a, b) => b.updatedAt - a.updatedAt) : [];
   return c.html(
-    <UserPage {...layoutProps(c)} title="Manuskripter" crumb="Manuskripter" heading="Manuskripter" page="devotionals" intro="Andakter, prekener og bibeltimer med versreferanser." wide>
+    <UserPage {...layoutProps(c)} title={t('nav.manuscripts')} crumb={t('nav.manuscripts')} heading={t('nav.manuscripts')} page="devotionals" intro="Andakter, prekener og bibeltimer med versreferanser." wide>
       <div class="user-toolbar">
-        <a href="/manuskripter/ny" class="user-btn">Skriv nytt manuskript</a>
+        <a href="/manuskripter/ny" class="user-btn">{t('u.newManuscript')}</a>
       </div>
       <div class="user-list" data-list>
         {devs.map((d) => (
@@ -237,25 +243,26 @@ r.get('/manuskripter', async (c) => {
           </a>
         ))}
       </div>
-      <p class="user-empty" data-empty hidden={devs.length > 0}>Du har ingen manuskripter ennå.</p>
+      <p class="user-empty" data-empty hidden={devs.length > 0}>{t('u.noManuscripts')}</p>
     </UserPage>,
   );
 });
 
 // Editor (ny + rediger) — CodeMirror erstattet av textarea + markdown-preview i user.js.
 function DevotionalEditor(props: { slug?: string; locale: Locale; path: string }) {
+  const t = makeT(props.locale);
   return (
-    <Layout locale={props.locale} path={props.path} title="Rediger manuskript — FLOGVIT.bible" description="Skriv andakt, preken eller bibeltime." styles={['user.css']} scripts={['user.js']}>
+    <Layout locale={props.locale} path={props.path} title={`${t('u.editManuscript')} — FLOGVIT.bible`} description="Skriv andakt, preken eller bibeltime." styles={['user.css']} scripts={['user.js']}>
       <div class="user-main">
         <div class="container">
           <Breadcrumbs items={[{ label: 'Hjem', href: '/' }, { label: 'Manuskripter', href: '/manuskripter' }, { label: props.slug ? 'Rediger' : 'Nytt' }]} />
           <h1 class="sr-only">{props.slug ? 'Rediger manuskript' : 'Nytt manuskript'}</h1>
           <div data-user-page="devotional-editor" data-slug={props.slug || ''}>
             <div class="editor-head">
-              <input type="text" data-editor-title placeholder="Tittel…" class="user-input editor-title" aria-label="Tittel" />
+              <input type="text" data-editor-title placeholder={t('u.titlePh')} class="user-input editor-title" aria-label="Tittel" />
               <div class="editor-actions">
-                <button type="button" class="user-btn" data-editor-save>Lagre</button>
-                <a href="/manuskripter" class="user-btn-ghost">Avbryt</a>
+                <button type="button" class="user-btn" data-editor-save>{t('common.save')}</button>
+                <a href="/manuskripter" class="user-btn-ghost">{t('common.cancel')}</a>
               </div>
             </div>
             <p class="editor-hint">
@@ -263,7 +270,7 @@ function DevotionalEditor(props: { slug?: string; locale: Locale; path: string }
               <b>fet</b>, <i>kursiv</i>, lister).
             </p>
             <div class="editor-split">
-              <textarea data-editor-content class="editor-textarea" placeholder="Skriv her…" aria-label="Innhold"></textarea>
+              <textarea data-editor-content class="editor-textarea" placeholder={t('u.writeHerePh')} aria-label="Innhold"></textarea>
               <div class="editor-preview" data-editor-preview aria-live="polite"></div>
             </div>
           </div>
@@ -274,21 +281,22 @@ function DevotionalEditor(props: { slug?: string; locale: Locale; path: string }
 }
 r.get('/manuskripter/ny', (c) => c.html(<DevotionalEditor {...layoutProps(c)} />));
 r.get('/manuskripter/:slug/rediger', (c) => c.html(<DevotionalEditor {...layoutProps(c)} slug={c.req.param('slug')} />));
-r.get('/manuskripter/:slug', (c) =>
-  c.html(
-    <Layout {...layoutProps(c)} title="Manuskript — FLOGVIT.bible" description="Manuskript." styles={['user.css']} scripts={['user.js']}>
+r.get('/manuskripter/:slug', (c) => {
+  const t = tFor(c);
+  return c.html(
+    <Layout {...layoutProps(c)} title={`${t('nav.manuscripts')} — FLOGVIT.bible`} description="Manuskript." styles={['user.css']} scripts={['user.js']}>
       <div class="user-main">
         <div class="reading-container">
           <Breadcrumbs items={[{ label: 'Hjem', href: '/' }, { label: 'Manuskripter', href: '/manuskripter' }, { label: '…' }]} />
           <div data-user-page="devotional-view" data-slug={c.req.param('slug')}>
             <article class="devotional-article" data-article></article>
-            <p class="user-empty" data-empty hidden>Fant ikke manuskriptet.</p>
+            <p class="user-empty" data-empty hidden>{t('u.manuscriptNotFound')}</p>
           </div>
         </div>
       </div>
     </Layout>,
-  ),
-);
+  );
+});
 
 // ---------- /innstillinger ----------
 const TOGGLES: { key: string; label: string }[] = [
@@ -325,10 +333,11 @@ const SEARCH_TYPE_TOGGLES: { key: string; label: string }[] = [
   { key: 'days', label: 'Dager' },
 ];
 r.get('/innstillinger', (c) => {
+  const t = tFor(c);
   const user = c.var.user;
   const mappings = getAvailableMappings();
   return c.html(
-    <UserPage {...layoutProps(c)} title="Innstillinger" crumb="Innstillinger" heading="Innstillinger" page="settings" intro="Lagres i nettleseren; innlogget synker de mot kontoen din.">
+    <UserPage {...layoutProps(c)} title={t('chrome.settings')} crumb={t('chrome.settings')} heading={t('chrome.settings')} page="settings" intro="Lagres i nettleseren; innlogget synker de mot kontoen din.">
       <form data-settings-form class="settings-form">
         <fieldset class="settings-group">
           <legend>Utseende</legend>
@@ -357,7 +366,7 @@ r.get('/innstillinger', (c) => {
               <>
                 <p class="settings-account">
                   Innlogget som <strong>{user.displayName || user.email}</strong> (FLOGVIT.plus).{' '}
-                  <a href={ACCOUNT_URL}>Administrer konto og innstillinger</a>
+                  <a href={ACCOUNT_URL}>{t('u.manageAccount')}</a>
                 </p>
                 <p class="settings-sync" data-sync-status>
                   Synkronisering er på — favoritter, notater og innstillinger lagres til kontoen din.
@@ -367,7 +376,7 @@ r.get('/innstillinger', (c) => {
               <>
                 <p class="settings-account">
                   Innlogget som <strong>{user.displayName || user.email}</strong>.{' '}
-                  <a href={ACCOUNT_URL}>Administrer konto og innstillinger</a>
+                  <a href={ACCOUNT_URL}>{t('u.manageAccount')}</a>
                 </p>
                 <p class="settings-sync">
                   Husking — lagring av favoritter, notater m.m., både i nettleseren og mellom
@@ -384,37 +393,37 @@ r.get('/innstillinger', (c) => {
           )}
         </fieldset>
         <fieldset class="settings-group">
-          <legend>Tekst</legend>
+          <legend>{t('u.text')}</legend>
           <label class="settings-row">
-            <span>Skriftstørrelse</span>
+            <span>{t('u.fontSize')}</span>
             <select data-setting="fontSize" class="user-input">
-              <option value="small">Liten</option>
-              <option value="medium">Medium</option>
-              <option value="large">Stor</option>
+              <option value="small">{t('u.small')}</option>
+              <option value="medium">{t('u.medium')}</option>
+              <option value="large">{t('u.large')}</option>
             </select>
           </label>
         </fieldset>
         <fieldset class="settings-group">
-          <legend>Oversettelse og nummerering</legend>
+          <legend>{t('u.translationAndNumbering')}</legend>
           <label class="settings-row">
-            <span>Bibeloversettelse</span>
+            <span>{t('u.bibleEdition')}</span>
             <select data-setting="bible" class="user-input">
               <option value="osnb2">OSNB2 (bokmål)</option>
               <option value="osnn1">OSNN1 (nynorsk)</option>
             </select>
           </label>
           <label class="settings-row">
-            <span>Undertekst (sekundær)</span>
+            <span>{t('u.secondaryText')}</span>
             <select data-setting="secondaryBible" class="user-input">
-              <option value="">Ingen</option>
-              <option value="original">Grunntekst</option>
+              <option value="">{t('common.none')}</option>
+              <option value="original">{t('u.originalText')}</option>
               <option value="osnb2">OSNB2 (bokmål)</option>
               <option value="osnn1">OSNN1 (nynorsk)</option>
             </select>
           </label>
           {mappings.length > 0 && (
             <label class="settings-row">
-              <span>Versnummerering</span>
+              <span>{t('u.versification')}</span>
               <select data-setting="verseMapping" class="user-input">
                 {mappings.map((m) => (
                   <option value={m.id}>{m.displayName}</option>
@@ -428,21 +437,21 @@ r.get('/innstillinger', (c) => {
           </p>
         </fieldset>
         <fieldset class="settings-group">
-          <legend>Oversettelser</legend>
+          <legend>{t('nav.translations')}</legend>
           <p class="user-note">
             Velg hvilke oversettelser som vises i bibelvelgeren på lesesidene. Egne bibler lastes
-            opp på <a href="/oversettelser">Oversettelser</a>-siden.
+            opp på <a href="/oversettelser">{t('nav.translations')}</a>-siden.
           </p>
           <div data-bible-visibility>
-            <p class="user-note">Laster…</p>
+            <p class="user-note">{t('common.loading')}</p>
           </div>
         </fieldset>
         <fieldset class="settings-group">
-          <legend>Visning</legend>
+          <legend>{t('u.display')}</legend>
           <label class="settings-row">
-            <span>Standard visningsmodus</span>
+            <span>{t('u.defaultView')}</span>
             <select data-setting="layoutMode" class="user-input">
-              <option value="normal">Normal</option>
+              <option value="normal">{t('u.normal')}</option>
               <option value="reading">Lesemodus</option>
               <option value="panel">Panelmodus</option>
             </select>
@@ -486,8 +495,9 @@ r.get('/innstillinger', (c) => {
 });
 
 // ---------- /offline ----------
-r.get('/offline', (c) =>
-  c.html(
+r.get('/offline', (c) => {
+  const t = tFor(c);
+  return c.html(
     <UserPage {...layoutProps(c)}
       title="Offline"
       crumb="Offline"
@@ -532,7 +542,7 @@ r.get('/offline', (c) =>
       <section class="offline-section">
         <h2>Nedlastet innhold</h2>
         <div data-offline-content>
-          <p class="user-note">Laster…</p>
+          <p class="user-note">{t('common.loading')}</p>
         </div>
         <div class="offline-actions">
           <button type="button" class="user-btn-ghost" data-dl-clear>Slett nedlastet innhold</button>
@@ -542,14 +552,15 @@ r.get('/offline', (c) =>
         <p class="user-note">Offline-nedlasting krever JavaScript.</p>
       </noscript>
     </UserPage>,
-  ),
-);
+  );
+});
 
 // ---------- /oversettelser ----------
 // «Innebygde» kommer fra bible_editions (fylt av importøren for hver oversettelse
 // vi henter tekst for), ikke fra en hardkodet liste — en ny oversettelse dukker
 // opp her og får info-side under /oversettelser/:id av seg selv.
 r.get('/oversettelser', async (c) => {
+  const t = tFor(c);
   const editions = await getBibleEditions();
 
   return c.html(
@@ -593,7 +604,7 @@ r.get('/oversettelser', async (c) => {
         </p>
         <div class="trans-form">
           <label class="settings-row">
-            <span>Versnummerering</span>
+            <span>{t('u.versification')}</span>
             <select class="user-input" data-trans-mapping></select>
           </label>
           <label class="settings-row">
