@@ -62,7 +62,7 @@ import type {
   VerseRef,
 } from '../../lib/bible.ts';
 import { mapChapter, resolveMappingId, getAvailableMappings } from '../../lib/verse-mapper.ts';
-import { layoutProps } from '../../lib/i18n.ts';
+import { layoutProps, tFor, type Translator } from '../../lib/i18n.ts';
 
 const r = new Hono<AppEnv>();
 
@@ -286,17 +286,19 @@ function ChapterToc({
   bookSlug,
   chapter,
   query,
+  t,
 }: {
   book: BookInfo;
   bookSlug: string;
   chapter: number;
   query: string;
+  t: Translator;
 }) {
   const category = TOC_CATEGORIES.find((c) => book.id >= c.range[0] && book.id <= c.range[1]);
   const siblings = category ? booksData.filter((b) => b.id >= category.range[0] && b.id <= category.range[1]) : [];
 
   return (
-    <nav class="chapter-toc-nav" aria-label="Kapittelnavigasjon">
+    <nav class="chapter-toc-nav" aria-label={t('rd.chapterNavAria')}>
       <div class="toc-group-label">{book.name_no}</div>
       <div class="toc-chapter-grid">
         {Array.from({ length: book.chapters }, (_, i) => i + 1).map((ch) => (
@@ -325,9 +327,9 @@ function ChapterToc({
         </>
       )}
 
-      <div class="toc-group-label">Alle bøker</div>
+      <div class="toc-group-label">{t('rd.allBooks')}</div>
       <a href="/" class="toc-item">
-        <span class="toc-item-name">Forsiden →</span>
+        <span class="toc-item-name">{t('rd.toFrontPage')}</span>
       </a>
     </nav>
   );
@@ -339,7 +341,7 @@ function ChapterToc({
 // creation/faith-heroes). Rendres som <details> (virker uten JS).
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
-function ChapterInsights({ insight }: { insight: any }) {
+function ChapterInsights({ t, insight }: { t: Translator; insight: any }) {
   if (!insight || typeof insight !== 'object' || !insight.type) return null;
   return (
     <details class="insights-panel">
@@ -354,13 +356,13 @@ function ChapterInsights({ insight }: { insight: any }) {
         <p class="insights-intro">
           <TemplateText text={insight.intro || ''} />
         </p>
-        <InsightContent insight={insight} />
+        <InsightContent t={t} insight={insight} />
       </div>
     </details>
   );
 }
 
-function InsightContent({ insight }: { insight: any }) {
+function InsightContent({ t, insight }: { t: Translator; insight: any }) {
   switch (insight.type) {
     case 'genealogy':
       return <GenealogyContent insight={insight} />;
@@ -371,7 +373,7 @@ function InsightContent({ insight }: { insight: any }) {
     case 'person-list':
       return <PersonListContent insight={insight} />;
     case 'creation':
-      return <CreationContent insight={insight} />;
+      return <CreationContent t={t} insight={insight} />;
     case 'faith-heroes':
       return <FaithHeroesContent insight={insight} />;
     default:
@@ -519,7 +521,7 @@ function PersonListContent({ insight }: { insight: any }) {
   );
 }
 
-function CreationContent({ insight }: { insight: any }) {
+function CreationContent({ t, insight }: { t: Translator; insight: any }) {
   return (
     <div class="ins-creation">
       {(insight.days || []).map((day: any) => (
@@ -542,10 +544,10 @@ function CreationContent({ insight }: { insight: any }) {
       ))}
       <div class="ins-creation-day">
         <div class="ins-day-number ins-day-rest">
-          <span>Dag 7</span>
+          <span>{t('rd.day7')}</span>
         </div>
         <div class="ins-day-content">
-          <h4 class="ins-day-title">Hvile</h4>
+          <h4 class="ins-day-title">{t('rd.rest')}</h4>
           <p class="ins-day-description">
             Gud fullførte sitt verk og hvilte. Han velsignet og helliget den sjuende dagen.
           </p>
@@ -647,11 +649,13 @@ function ChapterParallels({
   chapter,
   parallels,
   bible,
+  t,
 }: {
   bookId: number;
   chapter: number;
   parallels: GospelParallel[];
   bible: string;
+  t: Translator;
 }) {
   const currentGospel = BOOK_ID_TO_GOSPEL[bookId];
   if (!currentGospel) return null;
@@ -664,7 +668,7 @@ function ChapterParallels({
   return (
     <details class="parallels-container">
       <summary class="parallels-header">
-        <span class="parallels-title">Parallelle tekster</span>
+        <span class="parallels-title">{t('rd.parallels')}</span>
         <span class="parallels-subtitle">
           {relevant.length} {relevant.length === 1 ? 'parallell' : 'paralleller'} i dette kapitlet
         </span>
@@ -752,10 +756,12 @@ function VerseDetailPanel({
   data,
   bookId,
   hebrew,
+  t,
 }: {
   data: DisplayVerse;
   bookId: number;
   hebrew: boolean;
+  t: Translator;
 }) {
   const v = data.verse;
   const n = v.verse;
@@ -821,7 +827,7 @@ function VerseDetailPanel({
           )}
           {data.word4word.length > 0 ? (
             <>
-              <h3 class="vd-section-title">Ord for ord</h3>
+              <h3 class="vd-section-title">{t('rd.wordByWord')}</h3>
               <div
                 class={`w4w-words ${hebrew ? 'hebrew-words' : ''}`}
                 dir={hebrew ? 'rtl' : 'ltr'}
@@ -853,7 +859,7 @@ function VerseDetailPanel({
               </div>
             </>
           ) : (
-            <p class="text-muted">Ingen orddata tilgjengelig</p>
+            <p class="text-muted">{t('rd.noWordData')}</p>
           )}
         </div>
 
@@ -875,7 +881,7 @@ function VerseDetailPanel({
                 </a>
               ))
             ) : (
-              <p class="text-muted">Ingen referanser</p>
+              <p class="text-muted">{t('rd.noRefs')}</p>
             )}
           </div>
         </div>
@@ -912,8 +918,8 @@ function VerseDetailPanel({
               <textarea
                 class="note-textarea"
                 rows={3}
-                placeholder="Skriv et notat..."
-                aria-label="Skriv et notat for dette verset"
+                placeholder={t('rd.notePh')}
+                aria-label={t('rd.noteAria')}
                 data-note-input
               ></textarea>
               <button type="button" class="note-add-button" data-note-add disabled>
@@ -921,7 +927,7 @@ function VerseDetailPanel({
               </button>
             </div>
             <noscript>
-              <p class="text-muted">Notater krever JavaScript.</p>
+              <p class="text-muted">{t('rd.notesNeedJs')}</p>
             </noscript>
           </div>
         </div>
@@ -930,7 +936,7 @@ function VerseDetailPanel({
         <div class="vd-pane" data-vd-pane="devotionals" hidden>
           <div class="vd-devotionals" data-verse-devotionals data-verse-ref={verseRef}>
             <div data-devotionals-list>
-              <p class="text-muted">Ingen manuskripter for dette verset</p>
+              <p class="text-muted">{t('rd.noManuscripts')}</p>
             </div>
             <a href={`/manuskripter/ny?vers=${verseRef}`} class="write-devotional-link">
               Skriv manuskript om dette verset
@@ -947,7 +953,7 @@ function VerseDetailPanel({
                 <label class="version-label">
                   <input type="radio" name={`version-${key}`} value="" checked data-version-radio />
                   <span class="version-text">
-                    <span class="version-title">Standard versjon</span>
+                    <span class="version-title">{t('rd.defaultVersion')}</span>
                     <span class="version-preview">{v.text}</span>
                   </span>
                 </label>
@@ -1005,10 +1011,12 @@ function VerseDetailPanel({
 }
 
 function VerseBlock({
+  t,
   data,
   bookId,
   secondary,
 }: {
+  t: Translator;
   data: DisplayVerse;
   bookId: number;
   secondary: string | undefined;
@@ -1039,7 +1047,7 @@ function VerseBlock({
         secondary={secondary}
         hebrew={hebrew}
       />
-      <VerseDetailPanel data={data} bookId={bookId} hebrew={hebrew} />
+      <VerseDetailPanel t={t} data={data} bookId={bookId} hebrew={hebrew} />
     </div>
   );
 }
@@ -1088,23 +1096,25 @@ function StudyPanel({
   data,
   book,
   chapter,
+  t,
 }: {
   data: ChapterData;
   book: BookInfo;
   chapter: number;
+  t: Translator;
 }) {
   const summaryCount = [data.bookSummary, data.summary, data.context].filter(Boolean).length;
   const newManuscriptRef = `${book.short_name.toLowerCase()}-${chapter}-1`;
 
   return (
     <div class="study-panel">
-      <StudyBlock id="oppslag" title="Oppslag" defaultOpen={false}>
+      <StudyBlock id="oppslag" title={t('rd.lookup')} defaultOpen={false}>
         <div class="st-lookup" data-lookup>
           <input
             type="search"
             class="st-lookup-input"
             placeholder='"Joh 3,16", "Abraham", "nåde"…'
-            aria-label="Oppslag"
+            aria-label={t('rd.lookup')}
             data-lookup-input
           />
           <div data-lookup-results></div>
@@ -1116,16 +1126,16 @@ function StudyPanel({
         </div>
       </StudyBlock>
 
-      <StudyBlock id="sammendrag" title="Sammendrag" count={summaryCount} defaultOpen>
+      <StudyBlock id="sammendrag" title={t('rd.summary')} count={summaryCount} defaultOpen>
         {data.summary && <SummaryItem title={`Kapittel ${chapter}`} content={data.summary} kind="chapter" />}
         {data.bookSummary && <SummaryItem title={`Om ${book.name_no}`} content={data.bookSummary} kind="book" />}
-        {data.context && <SummaryItem title="Historisk kontekst" content={data.context} kind="context" />}
+        {data.context && <SummaryItem title={t('rd.historicalContext')} content={data.context} kind="context" />}
         {!data.summary && !data.bookSummary && !data.context && (
-          <p class="st-empty">Ingen sammendrag for dette kapittelet ennå.</p>
+          <p class="st-empty">{t('rd.noSummary')}</p>
         )}
       </StudyBlock>
 
-      <StudyBlock id="personer" title="Personer" count={data.persons.length} defaultOpen>
+      <StudyBlock id="personer" title={t('nav.persons')} count={data.persons.length} defaultOpen>
         {data.persons.length > 0 ? (
           <>
             <div class="st-chip-row">
@@ -1141,11 +1151,11 @@ function StudyPanel({
             </a>
           </>
         ) : (
-          <p class="st-empty">Ingen kjente personer i dette kapittelet.</p>
+          <p class="st-empty">{t('rd.noPersons')}</p>
         )}
       </StudyBlock>
 
-      <StudyBlock id="viktige-ord" title="Viktige ord" count={data.importantWords.length} defaultOpen={false}>
+      <StudyBlock id="viktige-ord" title={t('rd.keyWords')} count={data.importantWords.length} defaultOpen={false}>
         {data.importantWords.length > 0 ? (
           <ul class="st-word-list">
             {data.importantWords.slice(0, 8).map((w) => (
@@ -1164,11 +1174,11 @@ function StudyPanel({
             )}
           </ul>
         ) : (
-          <p class="st-empty">Ingen viktige ord ennå for dette kapittelet.</p>
+          <p class="st-empty">{t('rd.noKeyWords')}</p>
         )}
       </StudyBlock>
 
-      <StudyBlock id="tidslinje" title="Tidslinje" count={data.timelineEvents.length} defaultOpen={false}>
+      <StudyBlock id="tidslinje" title={t('nav.timeline')} count={data.timelineEvents.length} defaultOpen={false}>
         {data.timelineEvents.length > 0 && (
           <ol class="st-timeline-list">
             {data.timelineEvents.slice(0, 6).map((e) => (
@@ -1186,7 +1196,7 @@ function StudyPanel({
         </a>
       </StudyBlock>
 
-      <StudyBlock id="temaer" title="Temaer" count={data.themes.length} defaultOpen={false}>
+      <StudyBlock id="temaer" title={t('nav.themes')} count={data.themes.length} defaultOpen={false}>
         {data.themes.length > 0 && (
           <div class="st-chip-row">
             {data.themes.map((t) => (
@@ -1202,7 +1212,7 @@ function StudyPanel({
         </a>
       </StudyBlock>
 
-      <StudyBlock id="profetier" title="Profetier" count={data.chapterProphecies.length} defaultOpen={false}>
+      <StudyBlock id="profetier" title={t('nav.prophecies')} count={data.chapterProphecies.length} defaultOpen={false}>
         {data.chapterProphecies.length > 0 && (
           <ul class="st-prop-list">
             {data.chapterProphecies.slice(0, 6).map((p) => (
@@ -1220,7 +1230,7 @@ function StudyPanel({
         </a>
       </StudyBlock>
 
-      <StudyBlock id="historier" title="Bibelhistorier" count={data.stories.length} defaultOpen={false}>
+      <StudyBlock id="historier" title={t('nav.stories')} count={data.stories.length} defaultOpen={false}>
         {data.stories.length > 0 && (
           <ul class="st-prop-list">
             {data.stories.map((s) => (
@@ -1238,7 +1248,7 @@ function StudyPanel({
         </a>
       </StudyBlock>
 
-      <StudyBlock id="paralleller" title="Parallelle tekster" count={data.parallels.length} defaultOpen={false}>
+      <StudyBlock id="paralleller" title={t('rd.parallels')} count={data.parallels.length} defaultOpen={false}>
         {data.parallels.length > 0 && (
           <ul class="st-prop-list">
             {data.parallels.map((p) => {
@@ -1259,7 +1269,7 @@ function StudyPanel({
         </a>
       </StudyBlock>
 
-      <StudyBlock id="tall" title="Tall i Bibelen" count={data.numbers.length} defaultOpen={false}>
+      <StudyBlock id="tall" title={t('nav.numbers')} count={data.numbers.length} defaultOpen={false}>
         {data.numbers.length > 0 && (
           <div class="st-chip-row">
             {data.numbers.map((n) => (
@@ -1275,7 +1285,7 @@ function StudyPanel({
         </a>
       </StudyBlock>
 
-      <StudyBlock id="lesetekster" title="Lesetekster" count={data.readingTexts.length} defaultOpen={false}>
+      <StudyBlock id="lesetekster" title={t('nav.readingTexts')} count={data.readingTexts.length} defaultOpen={false}>
         {data.readingTexts.length > 0 && (
           <ul class="st-ms-list">
             {data.readingTexts.map((rt) => (
@@ -1293,7 +1303,7 @@ function StudyPanel({
         </a>
       </StudyBlock>
 
-      <StudyBlock id="manuskripter" title="Manuskripter" defaultOpen>
+      <StudyBlock id="manuskripter" title={t('nav.manuscripts')} defaultOpen>
         {/* Lokale manuskripter (localStorage) fylles inn av studium.js */}
         <ul class="st-ms-list" data-chapter-devotionals data-chapter-prefix={`${book.short_name.toLowerCase()}-${chapter}-`}></ul>
         <a href={`/manuskripter/ny?ref=${encodeURIComponent(newManuscriptRef)}`} class="st-new-ms-link">
@@ -1368,6 +1378,7 @@ function MobileToolbar({
   mapping,
   bible,
   secondary,
+  t,
 }: {
   book: BookInfo;
   bookSlug: string;
@@ -1376,6 +1387,7 @@ function MobileToolbar({
   mapping: string | undefined;
   bible: string;
   secondary: string | undefined;
+  t: Translator;
 }) {
   const maxChapter = book.chapters;
   const mappings = getAvailableMappings();
@@ -1396,10 +1408,10 @@ function MobileToolbar({
         <button type="button" class="mt-title" data-open-picker>
           {book.name_no} {chapter} <span class="mt-title-arrow" aria-hidden="true">▼</span>
         </button>
-        <button type="button" class="mt-sidebar" data-open-studium title="Studium og verktøy" aria-label="Åpne studium-panel">
+        <button type="button" class="mt-sidebar" data-open-studium title={t('rd.studyPanel')} aria-label={t('rd.openStudyPanel')}>
           ▥
         </button>
-        <button type="button" class="mt-tools" data-open-tools title="Hjelpemidler" aria-label="Åpne hjelpemidler">
+        <button type="button" class="mt-tools" data-open-tools title={t('rd.aids')} aria-label={t('rd.openAids')}>
           ⚙
         </button>
         <a
@@ -1417,7 +1429,7 @@ function MobileToolbar({
         <div class="mt-sheet mt-picker-sheet">
           <div class="mt-sheet-header">
             <h3 data-picker-book-name>{book.name_no}</h3>
-            <button type="button" class="mt-sheet-close" data-close-overlay aria-label="Lukk">
+            <button type="button" class="mt-sheet-close" data-close-overlay aria-label={t('common.close')}>
               ✕
             </button>
           </div>
@@ -1438,7 +1450,7 @@ function MobileToolbar({
             ))}
           </div>
           <div class="mt-book-picker">
-            <h4>Det gamle testamente</h4>
+            <h4>{t('st.ot')}</h4>
             <div class="mt-book-grid">
               {otBooks.map((b) => (
                 <button
@@ -1452,7 +1464,7 @@ function MobileToolbar({
                 </button>
               ))}
             </div>
-            <h4>Det nye testamente</h4>
+            <h4>{t('st.nt')}</h4>
             <div class="mt-book-grid">
               {ntBooks.map((b) => (
                 <button
@@ -1472,10 +1484,10 @@ function MobileToolbar({
 
       {/* Hjelpemidler — URL-styrte valg (bible/undertekst/nummerering) + skriftstørrelse */}
       <div class="mt-overlay" data-tools-overlay hidden>
-        <div class="mt-sheet mt-tools-sheet" role="region" aria-label="Hjelpemidler">
+        <div class="mt-sheet mt-tools-sheet" role="region" aria-label={t('rd.aids')}>
           <div class="mt-sheet-header">
-            <h3>Hjelpemidler</h3>
-            <button type="button" class="mt-sheet-close" data-close-overlay aria-label="Lukk">
+            <h3>{t('rd.aids')}</h3>
+            <button type="button" class="mt-sheet-close" data-close-overlay aria-label={t('common.close')}>
               ✕
             </button>
           </div>
@@ -1564,6 +1576,7 @@ function MobileToolbar({
 // ── Kapittelsiden ────────────────────────────────────────────────────
 
 r.get('/:book/:chapter', async (c) => {
+  const t = tFor(c);
   const bookSlug = c.req.param('book');
   const chapterStr = c.req.param('chapter');
 
@@ -1624,8 +1637,8 @@ r.get('/:book/:chapter', async (c) => {
       {raw(`<script>${bodyData}</script>`)}
       <div class="chapter-page" data-reading-root>
         <div class="chapter-layout" data-chapter-layout>
-          <aside class="chapter-toc" aria-label="Kapittelnavigasjon">
-            <ChapterToc book={book} bookSlug={canonicalSlug} chapter={chapter} query={query} />
+          <aside class="chapter-toc" aria-label={t('rd.chapterNavAria')}>
+            <ChapterToc t={t} book={book} bookSlug={canonicalSlug} chapter={chapter} query={query} />
           </aside>
 
           <article class="chapter-content">
@@ -1698,13 +1711,13 @@ r.get('/:book/:chapter', async (c) => {
               )}
             </div>
 
-            <ChapterInsights insight={data.insight} />
+            <ChapterInsights t={t} insight={data.insight} />
 
-            <ChapterParallels bookId={book.id} chapter={chapter} parallels={data.parallels} bible={bible} />
+            <ChapterParallels t={t} bookId={book.id} chapter={chapter} parallels={data.parallels} bible={bible} />
 
             <section class="verses" data-verses>
               {data.verses.map((v) => (
-                <VerseBlock data={v} bookId={book.id} secondary={secondary} />
+                <VerseBlock t={t} data={v} bookId={book.id} secondary={secondary} />
               ))}
             </section>
 
@@ -1753,7 +1766,7 @@ r.get('/:book/:chapter', async (c) => {
             </div>
             <div class="sidebar-content" data-sidebar-content>
               <section class="panel-section is-active" data-panel-section="1">
-                <StudyPanel data={data} book={book} chapter={chapter} />
+                <StudyPanel t={t} data={data} book={book} chapter={chapter} />
               </section>
               <section class="panel-section" data-panel-section="2" hidden>
                 <PanelTimeline events={data.timelineEvents} bookId={book.id} chapter={chapter} />
@@ -1780,7 +1793,7 @@ r.get('/:book/:chapter', async (c) => {
               <section class="panel-section" data-panel-section="4" hidden>
                 {data.insight ? (
                   <div class="insights-content">
-                    <InsightContent insight={data.insight} />
+                    <InsightContent t={t} insight={data.insight} />
                   </div>
                 ) : (
                   <p class="st-empty">Ingen kapittelinnsikt for dette kapittelet.</p>
@@ -1790,7 +1803,7 @@ r.get('/:book/:chapter', async (c) => {
           </aside>
         </div>
 
-        <MobileToolbar
+        <MobileToolbar t={t}
           book={book}
           bookSlug={canonicalSlug}
           chapter={chapter}
