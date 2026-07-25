@@ -1,66 +1,62 @@
 // Statiske sider: /om, /tilgjengelighet + 404-visningen (koblet i app.ts).
 // Portert 1:1 fra bibel/src/pages/AboutPage.tsx og AccessibilityPage.tsx.
+//
+// UI-rammen og den forklarende prosaen er oversatt (dictionaries.ts). Siterte
+// bibelvers i KVN-tabellen står uoversatt med vilje: det er innhold med sin
+// egen språkakse (lib/lang.ts), ikke grensesnitt. Utgavenavn (OSNB2, OSNN1,
+// Tanach, SBLGNT, KVN) er egennavn.
 
 import { Hono } from 'hono';
 import type { AppEnv } from '../../lib/session.ts';
 import { Layout } from '../../views/layout.tsx';
 import { Breadcrumbs } from '../../views/breadcrumbs.tsx';
-import { layoutProps, makeT, type Locale } from '../../lib/i18n.ts';
+import { layoutProps, makeT, tFor, type Locale } from '../../lib/i18n.ts';
 
 const r = new Hono<AppEnv>();
 
-r.get('/om', (c) =>
-  c.html(
-    <Layout {...layoutProps(c)} title="Om — FLOGVIT.bible" description="Om bibelprosjektet: åpen kildekode, bibeloversettelser, KVN-versnummerering og hjelpemidler." styles={['about.css']}>
+r.get('/om', (c) => {
+  const t = tFor(c);
+  return c.html(
+    <Layout {...layoutProps(c)} title={`${t('about.title')} — FLOGVIT.bible`} description={t('about.meta')} styles={['about.css']}>
       <div class="about-main">
         <div class="reading-container">
-          <Breadcrumbs items={[{ label: 'Hjem', href: '/' }, { label: 'Om' }]} />
+          <Breadcrumbs items={[{ label: t('common.home'), href: '/' }, { label: t('about.title') }]} />
 
-          <h1>Om denne siden</h1>
+          <h1>{t('about.h1')}</h1>
 
           <section class="about-section">
-            <h2>Prosjektet</h2>
-            <p>
-              Denne bibelsiden er en del av et åpent prosjekt for å gjøre Bibelen tilgjengelig med
-              gode studieverktøy. Både nettsiden og alle bibeldata er åpen kildekode og fritt
-              tilgjengelig.
-            </p>
+            <h2>{t('about.project')}</h2>
+            <p>{t('about.projectBody')}</p>
             <p>
               <a href="https://github.com/flogvit/bible.flogvit.com" target="_blank" rel="noopener noreferrer">
                 github.com/flogvit/bible.flogvit.com
               </a>{' '}
-              &ndash; kildekoden til denne nettsiden
+              &ndash; {t('about.repoSite')}
             </p>
             <p>
               <a href="https://github.com/flogvit/free-bible/" target="_blank" rel="noopener noreferrer">
                 github.com/flogvit/free-bible
               </a>{' '}
-              &ndash; bibeldata (tekst, grunntekst, referanser, m.m.)
+              &ndash; {t('about.repoData')}
             </p>
           </section>
 
           <section class="about-section">
-            <h2>Bibeloversettelser</h2>
+            <h2>{t('about.translations')}</h2>
 
-            <h3>Norsk tekst (OSNB2)</h3>
-            <p>Den norske teksten er en åpen oversettelse som er fritt tilgjengelig for alle å bruke.</p>
+            <h3>{t('about.osnb2')}</h3>
+            <p>{t('about.osnb2Body')}</p>
 
-            <h3>Hebraisk grunntekst (Tanach)</h3>
-            <p>
-              Den hebraiske teksten for Det gamle testamente er basert på den åpne Tanach-teksten
-              fra Tanach.us.
-            </p>
+            <h3>{t('about.tanach')}</h3>
+            <p>{t('about.tanachBody')}</p>
             <p>
               <a href="https://tanach.us" target="_blank" rel="noopener noreferrer">
                 Tanach.us
               </a>
             </p>
 
-            <h3>Gresk grunntekst (SBLGNT)</h3>
-            <p>
-              Den greske teksten for Det nye testamente er SBL Greek New Testament, utgitt av
-              Society of Biblical Literature og Logos Bible Software.
-            </p>
+            <h3>{t('about.sblgnt')}</h3>
+            <p>{t('about.sblgntBody')}</p>
             <p>
               <a href="https://sblgnt.com/" target="_blank" rel="noopener noreferrer">
                 sblgnt.com
@@ -68,208 +64,176 @@ r.get('/om', (c) =>
             </p>
             <p>
               <a href="https://github.com/morphgnt/sblgnt" target="_blank" rel="noopener noreferrer">
-                SBLGNT på GitHub
+                {t('about.sblgntGitHub')}
               </a>
             </p>
           </section>
 
           <section class="about-section">
-            <h2>Versnummerering (KVN)</h2>
-            <p>
-              Ulike bibeloversettelser nummererer vers forskjellig. Et vers som heter 1. Mosebok
-              31,55 i Bibelselskapets oversettelse (2024) heter 1. Mosebok 32,1 i vår grunntekst
-              (osnb2), fordi den hebraiske tradisjonen deler kapitlene annerledes enn den
-              europeiske.
-            </p>
-            <p>For eksempel i 1. Mosebok rundt kapittel 31&ndash;32:</p>
+            <h2>{t('about.kvn')}</h2>
+            <p>{t('about.kvnBody1')}</p>
+            <p>{t('about.kvnExample')}</p>
+            {/* Tekstkolonnen er sitert bibeltekst — egen språkakse, oversettes ikke her. */}
             <table class="about-verse-table">
               <thead>
                 <tr>
-                  <th>Bibelselskapets 2024</th>
-                  <th>osnb2 (hebraisk)</th>
-                  <th>Tekst</th>
+                  <th>{t('about.kvnColA')}</th>
+                  <th>{t('about.kvnColB')}</th>
+                  <th>{t('about.kvnColText')}</th>
                 </tr>
               </thead>
               <tbody>
                 <tr>
                   <td>1 Mos 31,55</td>
                   <td>1 Mos 32,1</td>
-                  <td>Tidlig neste morgen kysset Laban...</td>
+                  <td lang="nb">Tidlig neste morgen kysset Laban...</td>
                 </tr>
                 <tr>
                   <td>1 Mos 32,1</td>
                   <td>1 Mos 32,2</td>
-                  <td>Jakob fortsatte på sin vei...</td>
+                  <td lang="nb">Jakob fortsatte på sin vei...</td>
                 </tr>
                 <tr>
                   <td>1 Mos 32,2</td>
                   <td>1 Mos 32,3</td>
-                  <td>Da Jakob så dem, sa han...</td>
+                  <td lang="nb">Da Jakob så dem, sa han...</td>
                 </tr>
               </tbody>
             </table>
+            <p>{t('about.kvnBody2')}</p>
             <p>
-              Slike forskjeller finnes i over tusen vers, særlig i Salmene (der overskrifter noen
-              ganger telles som eget vers), og i flere kapitler i Mosebøkene, Joel og andre
-              profeter der kapittelgrensene er forskjøvet.
+              {t('about.kvnBody3a')} <strong>KVN</strong> {t('about.kvnBody3b')}
             </p>
             <p>
-              For å håndtere dette bruker vi <strong>KVN</strong> (Kanonisk Versnummer) &ndash; et
-              system som gir hvert vers i Bibelen et unikt nummer uavhengig av oversettelse. Når
-              du velger en versnummerering under &laquo;Innstillinger&raquo; eller i
-              hjelpemiddelpanelet, brukes KVN til å vise riktige versnummer for den valgte
-              tradisjonen, selv om den underliggende teksten er den samme.
-            </p>
-            <p>
-              KVN støtter i dag{' '}
+              {t('about.kvnSupports')}{' '}
               <a href="https://github.com/flogvit/free-bible/tree/main/kvn" target="_blank" rel="noopener noreferrer">
-                12 ulike nummereringssystemer
+                {t('about.kvnSystems')}
               </a>
-              , inkludert Bibelselskapets oversettelser (1930, 1978, 2011, 2024), Norsk Bibel
-              (1988, 1994), King James Version og flere.
+              {t('about.kvnIncluding')}
             </p>
           </section>
 
           <section class="about-section">
-            <h2>Hjelpemidler</h2>
-            <h3>Studieverktøy</h3>
+            <h2>{t('rd.aids')}</h2>
+            <h3>{t('about.studyTools')}</h3>
             <ul>
-              <li><strong>Grunntekst</strong> - Vis hebraisk/gresk originaltekst med ord-for-ord oversettelse</li>
-              <li><strong>Referanser</strong> - Kryssreferanser mellom bibelvers</li>
-              <li><strong>Boksammendrag</strong> - Oversikt over hver boks innhold</li>
-              <li><strong>Kapittelsammendrag</strong> - Kort beskrivelse av hvert kapittel</li>
-              <li><strong>Viktige ord</strong> - Nøkkelbegreper forklart</li>
-              <li><strong>Kjente vers</strong> - Utvalgte, kjente bibelvers</li>
-              <li><strong>Bibelhistorier</strong> - Bibelens fortellinger samlet og gjengitt</li>
-              <li><strong>Temaer</strong> - Tematiske oversikter med relevante bibelvers</li>
-              <li><strong>Profetier</strong> - Profetier og deres oppfyllelser</li>
-              <li><strong>Paralleller</strong> - Synoptiske paralleller mellom evangeliene</li>
-              <li><strong>Personer</strong> - Bibelske personer med referanser</li>
-              <li><strong>Tall</strong> - Tallenes betydning i Bibelen</li>
-              <li><strong>Dager</strong> - Helligdager og merkedager i kristen tradisjon</li>
-              <li><strong>Tidslinje</strong> - Bibelske hendelser i kronologisk rekkefølge</li>
+              <li><strong>{t('u.originalText')}</strong> - {t('about.tool.originalText')}</li>
+              <li><strong>{t('common.references')}</strong> - {t('about.tool.refs')}</li>
+              <li><strong>{t('about.lbl.bookSummary')}</strong> - {t('about.tool.bookSummary')}</li>
+              <li><strong>{t('about.lbl.chapterSummary')}</strong> - {t('about.tool.chapterSummary')}</li>
+              <li><strong>{t('rd.keyWords')}</strong> - {t('about.tool.keyWords')}</li>
+              <li><strong>{t('nav.knownVerses')}</strong> - {t('about.tool.knownVerses')}</li>
+              <li><strong>{t('nav.stories')}</strong> - {t('about.tool.stories')}</li>
+              <li><strong>{t('nav.themes')}</strong> - {t('about.tool.themes')}</li>
+              <li><strong>{t('nav.prophecies')}</strong> - {t('about.tool.prophecies')}</li>
+              <li><strong>{t('nav.parallels')}</strong> - {t('about.tool.parallels')}</li>
+              <li><strong>{t('nav.persons')}</strong> - {t('about.tool.persons')}</li>
+              <li><strong>{t('nav.numbers')}</strong> - {t('about.tool.numbers')}</li>
+              <li><strong>{t('nav.days')}</strong> - {t('about.tool.days')}</li>
+              <li><strong>{t('nav.timeline')}</strong> - {t('about.tool.timeline')}</li>
             </ul>
 
-            <h3>Personlige verktøy</h3>
+            <h3>{t('about.personalTools')}</h3>
             <p>
-              Husking — lagring av personlige data som favoritter, notater og egne oversettelser,
-              samt offline-nedlasting — er en del av{' '}
+              {t('about.rememberBody')}{' '}
               <a href="https://flogvit.com/plus/">FLOGVIT.plus</a>.
             </p>
             <ul>
-              <li><strong>Favoritter</strong> - Lagre dine favorittvers</li>
-              <li><strong>Emner</strong> - Tag vers med egne emner</li>
-              <li><strong>Notater</strong> - Skriv egne notater til vers</li>
-              <li><strong>Verslister</strong> - Samle bibelvers i navngitte lister for manuskripter og studier</li>
-              <li><strong>Leseplaner</strong> - Ulike planer for systematisk bibellesing</li>
-              <li><strong>Manuskripter</strong> - Skriv andakter, prekener og bibeltimer med versreferanser</li>
-              <li><strong>Oversettelser</strong> - Last opp og bruk egne bibeloversettelser</li>
-              <li><strong>Statistikk</strong> - Oversikt over lesing og bruk</li>
+              <li><strong>{t('nav.favorites')}</strong> - {t('about.pt.favorites')}</li>
+              <li><strong>{t('nav.topicsMine')}</strong> - {t('about.pt.topics')}</li>
+              <li><strong>{t('nav.notes')}</strong> - {t('about.pt.notes')}</li>
+              <li><strong>{t('nav.verseLists')}</strong> - {t('about.pt.verseLists')}</li>
+              <li><strong>{t('home.readingPlans')}</strong> - {t('about.pt.readingPlans')}</li>
+              <li><strong>{t('nav.manuscripts')}</strong> - {t('about.pt.manuscripts')}</li>
+              <li><strong>{t('nav.translations')}</strong> - {t('about.pt.translations')}</li>
+              <li><strong>{t('nav.statistics')}</strong> - {t('about.pt.statistics')}</li>
             </ul>
           </section>
 
           <section id="hjelp" class="about-section">
-            <h2>Hjelp og brukerveiledning</h2>
-            <p>Her er noen tips for å få mest mulig ut av siden:</p>
+            <h2>{t('about.help')}</h2>
+            <p>{t('about.helpIntro')}</p>
 
-            <h3>Navigasjon</h3>
+            <h3>{t('about.navigation')}</h3>
             <ul>
-              <li>Bruk <strong>søkefeltet</strong> øverst for å søke etter vers eller tekst</li>
-              <li>Skriv en referanse som <em>&quot;Joh 3:16&quot;</em> for å gå direkte til verset</li>
-              <li>Bruk <strong>piltastene</strong> (← →) for å bla mellom kapitler</li>
+              <li>{t('about.nav1')}</li>
+              <li>{t('about.nav2a')} <em>&quot;Joh 3:16&quot;</em> {t('about.nav2b')}</li>
+              <li>{t('about.nav3')}</li>
             </ul>
 
-            <h3>Tastaturhurtigtaster</h3>
-            <p>Trykk <kbd>?</kbd> på en hvilken som helst side for å se alle tilgjengelige hurtigtaster.</p>
+            <h3>{t('about.shortcuts')}</h3>
+            <p>{t('about.pressKey1')} <kbd>?</kbd> {t('about.pressKey2')}</p>
             <ul>
-              <li><kbd>/</kbd> eller <kbd>Ctrl</kbd>+<kbd>K</kbd> - Fokuser søkefeltet</li>
-              <li><kbd>R</kbd> - Lesemodus på/av</li>
-              <li><kbd>←</kbd> / <kbd>→</kbd> - Forrige/neste kapittel</li>
-              <li><kbd>1-9</kbd> - Hopp til vers 1-9</li>
-              <li><kbd>Alt</kbd>+<kbd>Shift</kbd>+bokstav - Hurtignavigasjon (H=Hjem, S=Søk, L=Leseplan, T=Tidslinje, P=Profetier, F=Favoritter, E=Emner, N=Notater, K=Kjente vers, O=Personer, V=Verslister, A=Paralleller, I=Statistikk, M=Manuskripter, C=Temaer, D=Dager, Y=Tall)</li>
+              <li><kbd>/</kbd> {t('common.or')} <kbd>Ctrl</kbd>+<kbd>K</kbd> - {t('about.sc.focusSearch')}</li>
+              <li><kbd>R</kbd> - {t('about.sc.readingMode')}</li>
+              <li><kbd>←</kbd> / <kbd>→</kbd> - {t('about.sc.prevNextChapter')}</li>
+              <li><kbd>1-9</kbd> - {t('about.sc.jumpVerse')}</li>
+              <li><kbd>Alt</kbd>+<kbd>Shift</kbd>+{t('about.sc.letter')} - {t('about.sc.quickNav')}</li>
             </ul>
 
-            <h3>Versinteraksjon</h3>
-            <p>Klikk på <strong>versnummeret</strong> for å åpne versdetaljer med følgende faner:</p>
+            <h3>{t('about.verseInteraction')}</h3>
+            <p>{t('about.verseClickBody')}</p>
             <ul>
-              <li><strong>Grunntekst</strong> - Hebraisk/gresk originaltekst (klikk på ord for oversettelse)</li>
-              <li><strong>Referanser</strong> - Kryssreferanser til andre bibelvers</li>
-              <li><strong>Profetier</strong> - Profetier knyttet til verset (hvis relevant)</li>
-              <li><strong>Emner</strong> - Tag verset med egne emner</li>
-              <li><strong>Notater</strong> - Skriv egne notater til verset</li>
-              <li><strong>Versjoner</strong> - Sammenlign med andre bibeloversettelser</li>
+              <li><strong>{t('u.originalText')}</strong> - {t('about.vi.originalText')}</li>
+              <li><strong>{t('common.references')}</strong> - {t('about.vi.refs')}</li>
+              <li><strong>{t('nav.prophecies')}</strong> - {t('about.vi.prophecies')}</li>
+              <li><strong>{t('nav.topicsMine')}</strong> - {t('about.vi.topics')}</li>
+              <li><strong>{t('nav.notes')}</strong> - {t('about.vi.notes')}</li>
+              <li><strong>{t('about.lbl.versions')}</strong> - {t('about.vi.versions')}</li>
             </ul>
 
-            <h3>Verslister</h3>
+            <h3>{t('nav.verseLists')}</h3>
             <p>
-              Under <a href="/lister">Verslister</a> kan du samle bibelvers i navngitte lister for
-              manuskripter, bibeltimer eller studier. Skriv inn referanser som &quot;Joh 3,16&quot;
-              eller &quot;Sal 23,1-6&quot; for å legge til vers. Du kan endre rekkefølge og kopiere
-              en lenke som viser alle versene.
+              {t('about.under')} <a href="/lister">{t('nav.verseLists')}</a> {t('about.verseListsBody')}
             </p>
 
-            <h3>Manuskripter</h3>
+            <h3>{t('nav.manuscripts')}</h3>
             <p>
-              Under <a href="/manuskripter">Manuskripter</a> kan du skrive andakter, prekener,
-              bibeltimer og andre tekster. Bruk <code>[ref:Joh 3,16]</code> for å sette inn
-              versreferanser. Sidepanelet gir deg tilgang til:
+              {t('about.under')} <a href="/manuskripter">{t('nav.manuscripts')}</a>{' '}
+              {t('about.manuscriptsBody1')} <code>[ref:Joh 3,16]</code> {t('about.manuscriptsBody2')}
             </p>
             <ul>
-              <li><strong>Bibel</strong> - Slå opp og sett inn vers direkte i teksten</li>
-              <li><strong>Manuskripter</strong> - Søk i andre manuskripter</li>
-              <li><strong>Kontekst</strong> - Automatisk sammendrag og historisk kontekst for refererte kapitler</li>
-              <li><strong>Tidslinje</strong> - Tidslinjehendelser knyttet til refererte kapitler</li>
+              <li><strong>{t('home.bible')}</strong> - {t('about.ms.bible')}</li>
+              <li><strong>{t('nav.manuscripts')}</strong> - {t('about.ms.manuscripts')}</li>
+              <li><strong>{t('about.lbl.context')}</strong> - {t('about.ms.context')}</li>
+              <li><strong>{t('nav.timeline')}</strong> - {t('about.ms.timeline')}</li>
             </ul>
 
-            <h3>Hjelpemidler-panelet</h3>
-            <p>
-              På mobil, trykk på tannhjulet (⚙) for å åpne hjelpemidler. På desktop vises disse i
-              et sidepanel.
-            </p>
+            <h3>{t('about.aidsPanel')}</h3>
+            <p>{t('about.aidsPanelBody')}</p>
           </section>
 
           <section id="offline" class="about-section">
-            <h2>Offline-tilgang</h2>
-            <p>
-              Denne siden fungerer også uten internett. Kapitler du har lest blir automatisk
-              lagret på enheten din, slik at du kan lese dem igjen selv om du er offline.
-            </p>
+            <h2>{t('about.offline')}</h2>
+            <p>{t('about.offlineBody')}</p>
 
-            <h3>Automatisk lagring</h3>
-            <p>
-              Når du leser et kapittel, lagres det automatisk i nettleserens cache. Neste gang du
-              besøker det samme kapittelet uten nett, vises den lagrede versjonen.
-            </p>
+            <h3>{t('about.autoSave')}</h3>
+            <p>{t('about.autoSaveBody')}</p>
 
-            <h3>Last ned hele Bibelen</h3>
+            <h3>{t('about.downloadAll')}</h3>
             <p>
-              Du kan også laste ned hele Bibelen på forhånd (en del av FLOGVIT.plus). Gå til{' '}
-              <a href="/offline">offline-siden</a> for å:
+              {t('about.downloadAllBody')} <a href="/offline">{t('about.offlinePage')}</a>{' '}
+              {t('about.downloadAllBody2')}
             </p>
             <ul>
-              <li>Laste ned OSNB2 (bokmål) og/eller OSNN1 (nynorsk) — grunnteksten (hebraisk/gresk med ord-for-ord), kryssreferanser og sammendrag følger med hvert kapittel</li>
-              <li>Laste ned tidslinje, profetier, personer og leseplaner for offline-bruk</li>
-              <li>Se hvilke kapitler som er lagret og hvor mye lagringsplass som brukes</li>
-              <li>Slette lagrede data</li>
+              <li>{t('about.dl1')}</li>
+              <li>{t('about.dl2')}</li>
+              <li>{t('about.dl3')}</li>
+              <li>{t('about.dl4')}</li>
             </ul>
 
-            <h3>Oppdateringer</h3>
-            <p>
-              Når selve appen oppdateres, får du et varsel med mulighet til å laste den nye
-              versjonen med en gang. Offline-siden viser hvilken innholdsversjon du har lastet
-              ned; kommer det nytt bibelinnhold, oppdaterer du ved å slette lagrede data og
-              laste ned på nytt.
-            </p>
+            <h3>{t('about.updates')}</h3>
+            <p>{t('about.updatesBody')}</p>
           </section>
 
           <section class="about-section">
-            <h2>Kontakt</h2>
+            <h2>{t('about.contact')}</h2>
             <p>FLOGVIT</p>
             <p>
-              E-post: <a href="mailto:support@flogvit.com">support@flogvit.com</a>
+              {t('about.email')} <a href="mailto:support@flogvit.com">support@flogvit.com</a>
             </p>
             <p>
-              Feil og forslag kan også meldes inn på GitHub:{' '}
+              {t('about.reportGitHub')}{' '}
               <a href="https://github.com/flogvit/free-bible/issues" target="_blank" rel="noopener noreferrer">
                 github.com/flogvit/free-bible/issues
               </a>
@@ -278,133 +242,122 @@ r.get('/om', (c) =>
         </div>
       </div>
     </Layout>,
-  ),
-);
+  );
+});
 
-r.get('/tilgjengelighet', (c) =>
-  c.html(
-    <Layout {...layoutProps(c)} title="Tilgjengelighet — FLOGVIT.bible" description="Tilgjengelighetserklæring for bibelsiden: WCAG 2.2 AA, tastaturnavigasjon, skjermleserstøtte." styles={['about.css']}>
+r.get('/tilgjengelighet', (c) => {
+  const t = tFor(c);
+  return c.html(
+    <Layout {...layoutProps(c)} title={`${t('foot.a11y')} — FLOGVIT.bible`} description={t('a11y.meta')} styles={['about.css']}>
       <div class="about-main">
         <div class="reading-container">
-          <Breadcrumbs items={[{ label: 'Hjem', href: '/' }, { label: 'Tilgjengelighet' }]} />
+          <Breadcrumbs items={[{ label: t('common.home'), href: '/' }, { label: t('foot.a11y') }]} />
 
-          <h1>Tilgjengelighetserklæring</h1>
+          <h1>{t('a11y.h1')}</h1>
 
           <section class="about-section">
-            <h2>Om tilgjengelighet på denne siden</h2>
-            <p>
-              bible.flogvit.com er utviklet for å være tilgjengelig for alle, uavhengig av
-              funksjonsevne. Siden er bygget med server-rendret HTML: alt innhold er lesbart
-              uten JavaScript, og navigasjon er vanlige sidelastinger.
-            </p>
+            <h2>{t('a11y.about')}</h2>
+            <p>{t('a11y.aboutBody')}</p>
           </section>
 
           <section class="about-section">
-            <h2>Status</h2>
+            <h2>{t('a11y.status')}</h2>
             <p>
-              <strong>Samsvarsstatus:</strong> Delvis i samsvar med WCAG 2.1 AA
+              <strong>{t('a11y.conformance')}</strong> {t('a11y.partial')}
             </p>
-            <p>
-              Sist testet juli 2026: automatisk testing med axe-core (WCAG 2.0/2.1 nivå A og AA)
-              på alle sidetyper ga ingen brudd, og en maskinell gjennomgang av over 250 sider
-              bekreftet struktur (overskrifter, landemerker, alt-tekster, lenker). Manuell
-              testing med skjermlesere gjenstår — derfor «delvis i samsvar».
-            </p>
+            <p>{t('a11y.tested')}</p>
           </section>
 
           <section class="about-section">
-            <h2>Kjente begrensninger</h2>
-            <p>Vi er klar over følgende områder som kan ha tilgjengelighetsproblemer:</p>
+            <h2>{t('a11y.limits')}</h2>
+            <p>{t('a11y.limitsIntro')}</p>
             <ul>
-              <li>Ikke alle funksjoner er testet med skjermlesere (VoiceOver/NVDA)</li>
-              <li>Fargekontrast i mørk modus er ikke revidert separat</li>
-              <li>Offline-funksjonalitet og opplasting av egne oversettelser er under utvikling</li>
+              <li>{t('a11y.lim1')}</li>
+              <li>{t('a11y.lim2')}</li>
+              <li>{t('a11y.lim3')}</li>
             </ul>
-            <p>Vi jobber aktivt med å teste og utbedre eventuelle problemer.</p>
+            <p>{t('a11y.limitsOutro')}</p>
           </section>
 
           <section class="about-section">
-            <h2>Hva gjør vi?</h2>
-            <h3>Struktur og semantikk</h3>
+            <h2>{t('a11y.whatWeDo')}</h2>
+            <h3>{t('a11y.structure')}</h3>
             <ul>
-              <li>Semantisk og strukturert HTML med korrekte landmark-regioner</li>
-              <li>Skip-link for å hoppe direkte til hovedinnhold</li>
-              <li>Korrekt overskriftshierarki (h1-h6)</li>
-              <li>Breadcrumbs på alle sider for orientering</li>
-              <li>Språkmerking på hebraisk og gresk tekst (lang-attributt)</li>
-              <li>Forkortelser forklart med abbr-tag</li>
-              <li>ARIA-labels på alle interaktive elementer</li>
-              <li>aria-live regioner for statusmeldinger</li>
+              <li>{t('a11y.s1')}</li>
+              <li>{t('a11y.s2')}</li>
+              <li>{t('a11y.s3')}</li>
+              <li>{t('a11y.s4')}</li>
+              <li>{t('a11y.s5')}</li>
+              <li>{t('a11y.s6')}</li>
+              <li>{t('a11y.s7')}</li>
+              <li>{t('a11y.s8')}</li>
             </ul>
 
-            <h3>Visuell tilgjengelighet</h3>
+            <h3>{t('a11y.visual')}</h3>
             <ul>
-              <li>Fargekontrast som oppfyller WCAG AA-krav (4.5:1)</li>
-              <li>Informasjon formidles aldri kun via farge (ikoner/symboler i tillegg)</li>
-              <li>Tydelig fokusindikator på alle klikkbare elementer</li>
-              <li>Tilpassbar tekststørrelse (liten/medium/stor)</li>
-              <li>Mørk modus for redusert lysbelastning</li>
-              <li>Støtte for høykontrastmodus (prefers-contrast)</li>
-              <li>Støtte for redusert bevegelse (prefers-reduced-motion)</li>
-              <li>Minimum klikkbar størrelse 24x24px (WCAG 2.5.8)</li>
+              <li>{t('a11y.v1')}</li>
+              <li>{t('a11y.v2')}</li>
+              <li>{t('a11y.v3')}</li>
+              <li>{t('a11y.v4')}</li>
+              <li>{t('a11y.v5')}</li>
+              <li>{t('a11y.v6')}</li>
+              <li>{t('a11y.v7')}</li>
+              <li>{t('a11y.v8')}</li>
             </ul>
 
-            <h3>Navigasjon</h3>
+            <h3>{t('about.navigation')}</h3>
             <ul>
-              <li>Konsistent plassering av navigasjon, header og footer</li>
-              <li>Flere måter å finne innhold (søk, meny, breadcrumbs, sitemap)</li>
-              <li>Beskrivende lenketekster og aria-labels</li>
-              <li>Ingen uventede kontekstendringer ved fokus eller input</li>
-              <li>Konsistent hjelp tilgjengelig via Footer (WCAG 3.2.6)</li>
+              <li>{t('a11y.n1')}</li>
+              <li>{t('a11y.n2')}</li>
+              <li>{t('a11y.n3')}</li>
+              <li>{t('a11y.n4')}</li>
+              <li>{t('a11y.n5')}</li>
             </ul>
 
-            <h3>Tastaturnavigasjon</h3>
+            <h3>{t('a11y.keyboard')}</h3>
             <ul>
-              <li>Alle funksjoner tilgjengelige via tastatur</li>
-              <li>Fokus skjules ikke bak sticky elementer (WCAG 2.4.11)</li>
-              <li>Logisk tab-rekkefølge</li>
-              <li>Ingen tastaturfeller</li>
+              <li>{t('a11y.k1')}</li>
+              <li>{t('a11y.k2')}</li>
+              <li>{t('a11y.k3')}</li>
+              <li>{t('a11y.k4')}</li>
             </ul>
 
-            <h3>Hurtigtaster</h3>
-            <p>Trykk <kbd>?</kbd> for å se alle tilgjengelige hurtigtaster.</p>
+            <h3>{t('about.shortcuts')}</h3>
+            <p>{t('about.pressKey1')} <kbd>?</kbd> {t('a11y.pressKey2')}</p>
             <ul>
-              <li><kbd>?</kbd> - Vis/skjul hurtigtasthjelp</li>
-              <li><kbd>/</kbd> eller <kbd>Ctrl</kbd>+<kbd>K</kbd> - Gå til søkefeltet</li>
-              <li><kbd>←</kbd> / <kbd>→</kbd> - Forrige/neste kapittel</li>
-              <li><kbd>1-9</kbd> - Hopp til vers 1-9</li>
-              <li><kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>H</kbd> - Gå til forsiden</li>
+              <li><kbd>?</kbd> - {t('a11y.scHelp')}</li>
+              <li><kbd>/</kbd> {t('common.or')} <kbd>Ctrl</kbd>+<kbd>K</kbd> - {t('a11y.scSearch')}</li>
+              <li><kbd>←</kbd> / <kbd>→</kbd> - {t('about.sc.prevNextChapter')}</li>
+              <li><kbd>1-9</kbd> - {t('about.sc.jumpVerse')}</li>
+              <li><kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>H</kbd> - {t('a11y.scHome')}</li>
             </ul>
 
-            <h3>Skjemaer og feilhåndtering</h3>
+            <h3>{t('a11y.forms')}</h3>
             <ul>
-              <li>Tydelige labels og instruksjoner på alle skjemafelt</li>
-              <li>Beskrivende feilmeldinger på norsk</li>
-              <li>Placeholder-tekster som veileder brukeren</li>
+              <li>{t('a11y.f1')}</li>
+              <li>{t('a11y.f2')}</li>
+              <li>{t('a11y.f3')}</li>
             </ul>
 
-            <h3>Testing og kvalitetssikring</h3>
+            <h3>{t('a11y.testing')}</h3>
             <ul>
-              <li>Automatisk tilgjengelighetstesting med axe-core (WCAG A/AA), sist juli 2026</li>
-              <li>Maskinell gjennomgang av alle sider: struktur, overskrifter, alt-tekster, lenker</li>
-              <li>Alt innhold fungerer uten JavaScript (server-rendret)</li>
+              <li>{t('a11y.t1')}</li>
+              <li>{t('a11y.t2')}</li>
+              <li>{t('a11y.t3')}</li>
             </ul>
           </section>
 
           <section class="about-section">
-            <h2>Tilbakemelding</h2>
+            <h2>{t('a11y.feedback')}</h2>
+            <p>{t('a11y.feedbackBody')}</p>
             <p>
-              Opplever du problemer med tilgjengeligheten på siden? Vi setter pris på
-              tilbakemeldinger slik at vi kan forbedre oss.
+              <strong>{t('about.contact')}:</strong>
             </p>
             <p>
-              <strong>Kontakt:</strong>
+              {t('about.email')} <a href="mailto:support@flogvit.com">support@flogvit.com</a>
             </p>
             <p>
-              E-post: <a href="mailto:support@flogvit.com">support@flogvit.com</a>
-            </p>
-            <p>
-              Du kan også melde inn problemer på GitHub:{' '}
+              {t('a11y.reportGitHub')}{' '}
               <a href="https://github.com/flogvit/free-bible/issues" target="_blank" rel="noopener noreferrer">
                 github.com/flogvit/free-bible/issues
               </a>
@@ -412,12 +365,8 @@ r.get('/tilgjengelighet', (c) =>
           </section>
 
           <section class="about-section">
-            <h2>Tilsynsmyndighet</h2>
-            <p>
-              Digitaliseringsdirektoratet (Digdir) er tilsynsmyndighet for universell utforming av
-              IKT i Norge. Hvis du mener at vi ikke har svart tilfredsstillende på din
-              henvendelse, kan du kontakte Digdir.
-            </p>
+            <h2>{t('a11y.authority')}</h2>
+            <p>{t('a11y.authorityBody')}</p>
             <p>
               <a href="https://uutilsynet.no/" target="_blank" rel="noopener noreferrer">
                 uutilsynet.no
@@ -427,38 +376,37 @@ r.get('/tilgjengelighet', (c) =>
 
           <section class="about-section">
             <p>
-              <em>Sist oppdatert: Januar 2026</em>
+              <em>{t('a11y.lastUpdated')}</em>
             </p>
           </section>
         </div>
       </div>
     </Layout>,
-  ),
-);
+  );
+});
 
 /** 404-siden — koblet via app.notFound i app.ts. */
 // Offline-fallback (#14): SW-en serverer denne siden for navigasjoner uten
 // nett. offline-reader.js rendrer nedlastede kapitler fra IndexedDB basert på
 // location.pathname (SW-en svarer med denne siden på original-URL-en).
-r.get('/offline-fallback', (c) =>
-  c.html(
-    <Layout {...layoutProps(c)} title="Offline — FLOGVIT.bible" description="Du er offline." styles={['offline.css']} scripts={['offline-reader.js']}>
+r.get('/offline-fallback', (c) => {
+  const t = tFor(c);
+  return c.html(
+    <Layout {...layoutProps(c)} title={`${t('foot.offline')} — FLOGVIT.bible`} description={t('off.youAreOffline')} styles={['offline.css']} scripts={['offline-reader.js']}>
       <div class="offline-reader-main">
         <div class="reading-container">
           <div data-offline-reader>
-            <h1>Du er offline</h1>
-            <p class="user-note">
-              Denne siden er ikke tilgjengelig uten nett. Nedlastede kapitler kan leses — laster…
-            </p>
+            <h1>{t('off.youAreOffline')}</h1>
+            <p class="user-note">{t('off.body')}</p>
             <noscript>
-              <p>Offline-lesing krever JavaScript.</p>
+              <p>{t('off.needsJs')}</p>
             </noscript>
           </div>
         </div>
       </div>
     </Layout>,
-  ),
-);
+  );
+});
 
 export function NotFoundPage({ locale, path }: { locale: Locale; path: string }) {
   const t = makeT(locale);
@@ -467,7 +415,7 @@ export function NotFoundPage({ locale, path }: { locale: Locale; path: string })
       <div class="reading-container" style="text-align: center; padding: 4rem 1rem;">
         <h1>404 – {t('error.notFound')}</h1>
         <p>{t('error.notFoundBody')}</p>
-        <a href="/">Gå til forsiden</a>
+        <a href="/">{t('error.goHome')}</a>
       </div>
     </Layout>
   );

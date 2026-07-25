@@ -526,7 +526,7 @@ r.get('/dager/:dayId', async (c) => {
           )}
           {secondary.length > 0 && (
             <section class="study-refs">
-              <h2>Andre tekster</h2>
+              <h2>{t('rd.parallels')}</h2>
               <div class="study-ref-cards">
                 {secondary.map((ref) => (
                   <a href={refUrl(ref)} class="study-ref-card">

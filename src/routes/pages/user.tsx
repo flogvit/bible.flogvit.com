@@ -340,7 +340,7 @@ r.get('/innstillinger', (c) => {
     <UserPage {...layoutProps(c)} title={t('chrome.settings')} crumb={t('chrome.settings')} heading={t('chrome.settings')} page="settings" intro="Lagres i nettleseren; innlogget synker de mot kontoen din.">
       <form data-settings-form class="settings-form">
         <fieldset class="settings-group">
-          <legend>Utseende</legend>
+          <legend>{t('settings.appearance')}</legend>
           {/* Global familie-pref (portal/PREFS.md). chrome.js speiler verdien
               og persisterer til cookie + konto — samme #fv-theme som før,
               flyttet hit fra FLOGVIT-menyen. */}
@@ -360,7 +360,7 @@ r.get('/innstillinger', (c) => {
           </label>
         </fieldset>
         <fieldset class="settings-group">
-          <legend>Konto og synkronisering</legend>
+          <legend>{t('u.accountSync')}</legend>
           {user ? (
             user.plus ? (
               <>
@@ -452,8 +452,8 @@ r.get('/innstillinger', (c) => {
             <span>{t('u.defaultView')}</span>
             <select data-setting="layoutMode" class="user-input">
               <option value="normal">{t('u.normal')}</option>
-              <option value="reading">Lesemodus</option>
-              <option value="panel">Panelmodus</option>
+              <option value="reading">{t('u.readingMode')}</option>
+              <option value="panel">{t('u.panelMode')}</option>
             </select>
           </label>
           {TOGGLES.map((t) => (
@@ -464,7 +464,7 @@ r.get('/innstillinger', (c) => {
           ))}
         </fieldset>
         <fieldset class="settings-group">
-          <legend>Søkeresultater</legend>
+          <legend>{t('u.searchResults')}</legend>
           <p class="user-note">Velg hvilke resultattyper som vises på søkesiden i tillegg til bibelteksten.</p>
           {SEARCH_TYPE_TOGGLES.map((t) => (
             <label class="settings-toggle">
@@ -474,7 +474,7 @@ r.get('/innstillinger', (c) => {
           ))}
         </fieldset>
         <fieldset class="settings-group">
-          <legend>Dine data</legend>
+          <legend>{t('u.yourData')}</legend>
           <div class="settings-data-buttons">
             <button type="button" class="user-btn" data-export-data>
               Eksporter alt (JSON)
@@ -510,12 +510,12 @@ r.get('/offline', (c) => {
       <section class="offline-section">
         <h2>Status</h2>
         <div data-offline-status class="offline-status">
-          <p>Sjekker lagringsstatus…</p>
+          <p>{t('u.checkingStorage')}</p>
         </div>
       </section>
 
       <section class="offline-section">
-        <h2>Last ned</h2>
+        <h2>{t('u.download')}</h2>
         <div class="offline-download" data-offline-download>
           <label class="settings-toggle">
             <input type="checkbox" data-dl-bible="osnb2" checked /> <span>OSNB2 (bokmål)</span>
@@ -524,7 +524,7 @@ r.get('/offline', (c) => {
             <input type="checkbox" data-dl-bible="osnn1" /> <span>OSNN1 (nynorsk)</span>
           </label>
           <div class="offline-actions">
-            <button type="button" class="user-btn" data-dl-start>Last ned for offline-bruk</button>
+            <button type="button" class="user-btn" data-dl-start>{t('u.downloadOffline')}</button>
             <button type="button" class="user-btn-ghost" data-dl-pause hidden>Pause</button>
           </div>
           <div class="offline-progress" data-dl-progress hidden>
@@ -540,16 +540,16 @@ r.get('/offline', (c) => {
       </section>
 
       <section class="offline-section">
-        <h2>Nedlastet innhold</h2>
+        <h2>{t('u.downloadedContent')}</h2>
         <div data-offline-content>
           <p class="user-note">{t('common.loading')}</p>
         </div>
         <div class="offline-actions">
-          <button type="button" class="user-btn-ghost" data-dl-clear>Slett nedlastet innhold</button>
+          <button type="button" class="user-btn-ghost" data-dl-clear>{t('u.deleteDownloaded')}</button>
         </div>
       </section>
       <noscript>
-        <p class="user-note">Offline-nedlasting krever JavaScript.</p>
+        <p class="user-note">{t('u.offlineNeedsJs')}</p>
       </noscript>
     </UserPage>,
   );
@@ -574,7 +574,7 @@ r.get('/oversettelser', async (c) => {
       scripts={['translations.js']}
     >
       <section class="trans-section">
-        <h2>Innebygde</h2>
+        <h2>{t('u.builtIn')}</h2>
         <ul class="trans-builtin">
           {editions.map((e) => (
             <li>
@@ -589,13 +589,13 @@ r.get('/oversettelser', async (c) => {
       </section>
 
       <section class="trans-section">
-        <h2>Dine oversettelser</h2>
+        <h2>{t('u.yourTranslations')}</h2>
         <div class="user-list" data-trans-list></div>
         <p class="user-empty" data-trans-empty hidden>Du har ikke lastet opp egne oversettelser ennå.</p>
       </section>
 
       <section class="trans-section" data-trans-upload>
-        <h2>Last opp ny</h2>
+        <h2>{t('u.uploadNew')}</h2>
         <p class="user-note">
           Last opp en tekstfil (eller lim inn) der hver linje er «Boknavn kapittel,vers tekst», f.eks.
           «1 Mos 1,1 I begynnelsen skapte Gud himmelen og jorden.» Ulike oversettelser kan ha
@@ -620,8 +620,8 @@ r.get('/oversettelser', async (c) => {
           </div>
           <textarea class="user-input trans-textarea" data-trans-text rows={6} placeholder="…eller lim inn teksten her"></textarea>
           <div class="offline-actions">
-            <button type="button" class="user-btn" data-trans-parse>Analyser tekst</button>
-            <button type="button" class="user-btn" data-trans-import hidden>Importer</button>
+            <button type="button" class="user-btn" data-trans-parse>{t('u.analyseText')}</button>
+            <button type="button" class="user-btn" data-trans-import hidden>{t('u.import')}</button>
           </div>
           <div data-trans-result hidden></div>
           <div class="offline-progress" data-trans-progress hidden>
@@ -630,7 +630,7 @@ r.get('/oversettelser', async (c) => {
         </div>
       </section>
       <noscript>
-        <p class="user-note">Opplasting av egne oversettelser krever JavaScript.</p>
+        <p class="user-note">{t('u.uploadNeedsJs')}</p>
       </noscript>
     </UserPage>,
   );

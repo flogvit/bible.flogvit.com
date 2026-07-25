@@ -1316,11 +1316,11 @@ function StudyPanel({
 
 // ── Panelfaner (høyre sidebar i panelmodus, kontrakt bibel:panel-tab) ─
 
-function PanelTimeline({ events, bookId, chapter }: { events: TimelineEvent[]; bookId: number; chapter: number }) {
+function PanelTimeline({ t, events, bookId, chapter }: { t: Translator; events: TimelineEvent[]; bookId: number; chapter: number }) {
   if (events.length === 0) {
     return (
       <div class="panel-timeline">
-        <p class="st-empty">Ingen hendelser i tidslinjen for dette kapitlet.</p>
+        <p class="st-empty">{t('rd.noTimelineEvents')}</p>
         <a href="/tidslinje" class="st-see-all">
           Se hele tidslinjen →
         </a>
@@ -1492,7 +1492,7 @@ function MobileToolbar({
             </button>
           </div>
           <div class="tools-section">
-            <span class="tools-section-title">Oversettelse</span>
+            <span class="tools-section-title">{t('rd.translation')}</span>
             <div class="tools-bibles">
               <a
                 href={`/${bookSlug}/${chapter}${buildQuery('osnb2', mapping, secondary)}`}
@@ -1509,7 +1509,7 @@ function MobileToolbar({
             </div>
           </div>
           <div class="tools-section">
-            <span class="tools-section-title">Undertekst</span>
+            <span class="tools-section-title">{t('rd.subtext')}</span>
             <select class="tools-select" data-secondary-select aria-label="Undertekst">
               <option value="" selected={!secondary}>
                 Ingen
@@ -1527,7 +1527,7 @@ function MobileToolbar({
           </div>
           {mappings.length > 0 && (
             <div class="tools-section">
-              <span class="tools-section-title">Versnummerering</span>
+              <span class="tools-section-title">{t('u.versification')}</span>
               <select class="tools-select" data-mapping-select aria-label="Versnummerering">
                 {mappings.map((m) => (
                   <option value={m.id} selected={(mapping || 'osnb2') === m.id}>
@@ -1538,7 +1538,7 @@ function MobileToolbar({
             </div>
           )}
           <div class="tools-section">
-            <span class="tools-section-title">Skriftstørrelse</span>
+            <span class="tools-section-title">{t('u.fontSize')}</span>
             <div class="tools-font-sizes">
               <button type="button" class="tools-font-button" data-font-size="small">
                 Liten
@@ -1562,7 +1562,7 @@ function MobileToolbar({
       {/* Studium-overlegg — studium.js flytter sidebar-innholdet hit */}
       <div class="studium-overlay" data-studium-overlay hidden>
         <div class="studium-overlay-header">
-          <div class="studium-overlay-title">Studium</div>
+          <div class="studium-overlay-title">{t('rd.study')}</div>
           <button type="button" class="mt-sheet-close" data-close-overlay aria-label="Lukk panel">
             ✕
           </button>
@@ -1658,11 +1658,11 @@ r.get('/:book/:chapter', async (c) => {
                   </button>
                   <button type="button" class="layout-mode-btn" data-mode="reading" aria-pressed="false" title="Lesemodus (R)">
                     <span aria-hidden="true">📖</span>
-                    <span class="sr-only">Lesemodus</span>
+                    <span class="sr-only">{t('u.readingMode')}</span>
                   </button>
                   <button type="button" class="layout-mode-btn" data-mode="panel" aria-pressed="false" title="Panelmodus (P)">
                     <span aria-hidden="true">▥</span>
-                    <span class="sr-only">Panelmodus</span>
+                    <span class="sr-only">{t('u.panelMode')}</span>
                   </button>
                 </span>
               </span>
@@ -1769,7 +1769,7 @@ r.get('/:book/:chapter', async (c) => {
                 <StudyPanel t={t} data={data} book={book} chapter={chapter} />
               </section>
               <section class="panel-section" data-panel-section="2" hidden>
-                <PanelTimeline events={data.timelineEvents} bookId={book.id} chapter={chapter} />
+                <PanelTimeline t={t} events={data.timelineEvents} bookId={book.id} chapter={chapter} />
               </section>
               <section class="panel-section" data-panel-section="3" hidden>
                 {data.parallels.length > 0 ? (
@@ -1787,7 +1787,7 @@ r.get('/:book/:chapter', async (c) => {
                     })}
                   </ul>
                 ) : (
-                  <p class="st-empty">Ingen paralleller for dette kapittelet.</p>
+                  <p class="st-empty">{t('rd.noParallels')}</p>
                 )}
               </section>
               <section class="panel-section" data-panel-section="4" hidden>
@@ -1796,7 +1796,7 @@ r.get('/:book/:chapter', async (c) => {
                     <InsightContent t={t} insight={data.insight} />
                   </div>
                 ) : (
-                  <p class="st-empty">Ingen kapittelinnsikt for dette kapittelet.</p>
+                  <p class="st-empty">{t('rd.noInsight')}</p>
                 )}
               </section>
             </div>
@@ -1844,6 +1844,7 @@ function parseRefs(refsParam: string | undefined): ParsedTextRef[] {
 }
 
 r.get('/tekst', async (c) => {
+  const t = tFor(c);
   const refsParam = c.req.query('refs');
   const bible = c.req.query('bible') || 'osnb2';
   const parsedRefs = parseRefs(refsParam);
@@ -1884,11 +1885,11 @@ r.get('/tekst', async (c) => {
         <div class="reading-container">
           <Breadcrumbs items={[{ label: 'Hjem', href: '/' }, { label: 'Bibelpassasjer' }]} />
 
-          <h1>Bibelpassasjer</h1>
+          <h1>{t('rd.passages')}</h1>
 
           {(!refsParam || parsedRefs.length === 0) && (
             <div class="text-empty">
-              <h2>Ingen passasjer valgt</h2>
+              <h2>{t('rd.noPassages')}</h2>
               <p>
                 Bruk URL-parametere for å vise bibelpassasjer.
                 <br />
@@ -1912,7 +1913,7 @@ r.get('/tekst', async (c) => {
           )}
 
           {refsParam && parsedRefs.length > 0 && grouped.length === 0 && (
-            <p class="text-error">Ingen gyldige referanser funnet</p>
+            <p class="text-error">{t('rd.noValidRefs')}</p>
           )}
 
           {grouped.length > 0 && (

@@ -899,7 +899,7 @@ r.get('/statistikk', async (c) => {
                     <th class="num">{t('st.chapters')}</th>
                     <th class="num">{t('st.verses')}</th>
                     <th class="num">Ord</th>
-                    <th class="num">Grunntekst</th>
+                    <th class="num">{t('u.originalText')}</th>
                   </tr>
                 </thead>
                 <tbody>
