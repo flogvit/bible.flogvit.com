@@ -18,7 +18,8 @@ describe('skjelett', () => {
     // Basespråket er engelsk (I18N.md §1), og L() treffer nettopp det.
     expect(html).toContain('<html lang="en"');
     expect(html).toContain('FLOGVIT');
-    expect(html).toContain('bibel');
+        // Wordmarket er «FLOGVIT.bible» — produktnavnet oversettes ikke.
+    expect(html).toContain('bible');
     expect(html).toContain('/styles.css');
   });
 

@@ -29,7 +29,7 @@ import {
 import { DEFAULT_CONTENT_LANGUAGE } from '../../lib/lang.ts';
 import { booksData, getBookInfoById, type BookInfo } from '../../lib/books-data.ts';
 import { toUrlSlug } from '../../lib/url-utils.ts';
-import { layoutProps } from '../../lib/i18n.ts';
+import { layoutProps, tFor, type Translator } from '../../lib/i18n.ts';
 
 const r = new Hono<AppEnv>();
 
@@ -75,33 +75,33 @@ async function loadDailyVerse(bible = 'osnb2'): Promise<DailyVerse | null> {
   };
 }
 
-const BOOK_GROUPS: { label: string; books: BookInfo[] }[] = [
-  { label: 'Det gamle testamente · Mosebøkene', books: booksData.filter((b) => b.id >= 1 && b.id <= 5) },
-  { label: 'Historiske bøker', books: booksData.filter((b) => b.id >= 6 && b.id <= 17) },
-  { label: 'Poetiske bøker', books: booksData.filter((b) => b.id >= 18 && b.id <= 22) },
-  { label: 'Profetene', books: booksData.filter((b) => b.id >= 23 && b.id <= 39) },
-  { label: 'Det nye testamente · Evangeliene & Apg', books: booksData.filter((b) => b.id >= 40 && b.id <= 44) },
-  { label: 'Paulus-brev', books: booksData.filter((b) => b.id >= 45 && b.id <= 57) },
-  { label: 'Øvrige brev & Åpenbaringen', books: booksData.filter((b) => b.id >= 58 && b.id <= 66) },
+const bookGroups = (t: Translator): { label: string; books: BookInfo[] }[] => [
+  { label: t('grp.pentateuch'), books: booksData.filter((b) => b.id >= 1 && b.id <= 5) },
+  { label: t('grp.historical'), books: booksData.filter((b) => b.id >= 6 && b.id <= 17) },
+  { label: t('grp.poetic'), books: booksData.filter((b) => b.id >= 18 && b.id <= 22) },
+  { label: t('grp.prophets'), books: booksData.filter((b) => b.id >= 23 && b.id <= 39) },
+  { label: t('grp.gospels'), books: booksData.filter((b) => b.id >= 40 && b.id <= 44) },
+  { label: t('grp.pauline'), books: booksData.filter((b) => b.id >= 45 && b.id <= 57) },
+  { label: t('grp.other'), books: booksData.filter((b) => b.id >= 58 && b.id <= 66) },
 ];
 
-const DISCOVER: { to: string; title: string; desc: string }[] = [
-  { to: '/tidslinje', title: 'Tidslinje', desc: 'Fra skapelsen til den tidlige kirken — se hvor i historien en tekst hører hjemme.' },
-  { to: '/personer', title: 'Personer', desc: 'Bibelske personer med biografier, slektskap og hvor de opptrer i teksten.' },
-  { to: '/profetier', title: 'Profetier', desc: 'GT-profetier og deres oppfyllelse i NT, med kontekst og kommentar.' },
-  { to: '/temaer', title: 'Temaer', desc: 'Følg motiver som nåde, lys, pakt eller ørken gjennom hele Bibelen.' },
-  { to: '/paralleller', title: 'Parallelle tekster', desc: 'Se evangeliene side om side, sammenlign oversettelser og grunntekst.' },
-  { to: '/manuskripter', title: 'Manuskripter', desc: 'Dine andakter, prekener og studienotater — koblet til vers.' },
-  { to: '/historier', title: 'Bibelhistorier', desc: 'Bibelens fortellinger samlet og søkbare med kategorier og beskrivelser.' },
-  { to: '/tall', title: 'Tall i Bibelen', desc: 'Tall og deres symbolikk gjennom hele Bibelen.' },
-  { to: '/lesetekster', title: 'Lesetekster', desc: 'Kirkeårets lesetekster for hver søndag og helligdag.' },
-  { to: '/kjente-vers', title: 'Kjente vers', desc: 'Populære vers å lære utenat og kjenne igjen.' },
-  { to: '/lister', title: 'Verslister', desc: 'Lag dine egne samlinger av vers — for andakt, prekenforberedelse, eller studium.' },
-  { to: '/favoritter', title: 'Favoritter', desc: 'Dine merkede vers og passasjer.' },
-  { to: '/emner', title: 'Emner', desc: 'Tag vers, notater og innhold med dine egne emner.' },
-  { to: '/notater', title: 'Notater', desc: 'Skriv refleksjoner og kommentarer på vers.' },
-  { to: '/statistikk', title: 'Statistikk', desc: 'Se hvor mye du har lest og fulgt leseplaner.' },
-  { to: '/oversettelser', title: 'Oversettelser', desc: 'Tilgjengelige bibeloversettelser og last ned for offline-bruk.' },
+const discover = (t: Translator): { to: string; title: string; desc: string }[] => [
+  { to: '/tidslinje', title: t('nav.timeline'), desc: t('disc.timeline') },
+  { to: '/personer', title: t('nav.persons'), desc: t('disc.persons') },
+  { to: '/profetier', title: t('nav.prophecies'), desc: t('disc.prophecies') },
+  { to: '/temaer', title: t('nav.themes'), desc: t('disc.themes') },
+  { to: '/paralleller', title: t('nav.parallels'), desc: t('disc.parallels') },
+  { to: '/manuskripter', title: t('nav.manuscripts'), desc: t('disc.manuscripts') },
+  { to: '/historier', title: t('nav.stories'), desc: t('disc.stories') },
+  { to: '/tall', title: t('nav.numbers'), desc: t('disc.numbers') },
+  { to: '/lesetekster', title: t('nav.readingTexts'), desc: t('disc.readingTexts') },
+  { to: '/kjente-vers', title: t('nav.knownVerses'), desc: t('disc.knownVerses') },
+  { to: '/lister', title: t('nav.verseLists'), desc: t('disc.verseLists') },
+  { to: '/favoritter', title: t('nav.favorites'), desc: t('disc.favorites') },
+  { to: '/emner', title: t('nav.topicsMine'), desc: t('disc.topics') },
+  { to: '/notater', title: t('nav.notes'), desc: t('disc.notes') },
+  { to: '/statistikk', title: t('nav.statistics'), desc: t('disc.statistics') },
+  { to: '/oversettelser', title: t('nav.translations'), desc: t('disc.translations') },
 ];
 
 const DAY_CATEGORY_LABELS: Record<string, string> = {
@@ -123,6 +123,7 @@ function dayRefUrl(ref: DayReference): string {
 }
 
 r.get('/', async (c) => {
+  const t = tFor(c);
   const verse = await loadDailyVerse();
   const todaysReading = await getTodaysReadingTexts();
   const todaysDays = await getTodaysDays();
@@ -140,21 +141,21 @@ r.get('/', async (c) => {
               leseposisjon finnes i localStorage. */}
           <div class="home-continue" id="home-continue" data-state="welcome">
             <div>
-              <div class="eyebrow">Velkommen</div>
-              <h1 class="home-continue-title">Bibelen</h1>
+              <div class="eyebrow">{t('home.welcome')}</div>
+              <h1 class="home-continue-title">{t('home.bible')}</h1>
               <div class="home-continue-sub">
-                Begynn et sted under, eller bruk ⌘K for å gå rett til et vers.
+                {t('home.startHint')}
               </div>
             </div>
             <div class="home-actions">
-              <a href="/1mos/1" class="home-btn home-btn-primary">Start med 1. Mosebok 1</a>
-              <a href="/joh/1" class="home-btn home-btn-ghost">Eller Johannes 1</a>
+              <a href="/1mos/1" class="home-btn home-btn-primary">{t('home.startGenesis')}</a>
+              <a href="/joh/1" class="home-btn home-btn-ghost">{t('home.orJohn')}</a>
             </div>
           </div>
 
           <div class="home-side">
             <div class="home-card home-vod" data-setting-show="showDailyVerse">
-              <h3>Dagens vers</h3>
+              <h3>{t('home.verseOfDay')}</h3>
               {verse ? (
                 <>
                   <p class="home-vod-text">«{verse.text}»</p>
@@ -166,19 +167,19 @@ r.get('/', async (c) => {
                   </div>
                 </>
               ) : (
-                <div class="home-vod-empty">Ingen vers for i dag</div>
+                <div class="home-vod-empty">{t('home.noVerseToday')}</div>
               )}
             </div>
 
             {/* Aktiv leseplan fylles av home.js fra localStorage. */}
             <div class="home-card home-plans" id="home-plans">
               <div class="home-plans-head">
-                <h3>Leseplaner</h3>
-                <span class="home-plans-count">Ingen aktiv</span>
+                <h3>{t('home.readingPlans')}</h3>
+                <span class="home-plans-count">{t('home.noneActive')}</span>
               </div>
               <div class="home-plans-empty">
-                <p>Du har ingen aktiv leseplan ennå.</p>
-                <a href="/leseplan" class="home-plans-btn">Velg leseplan</a>
+                <p>{t('home.noPlanYet')}</p>
+                <a href="/leseplan" class="home-plans-btn">{t('home.choosePlan')}</a>
               </div>
             </div>
           </div>
@@ -197,7 +198,7 @@ r.get('/', async (c) => {
                 <p class="home-todays-day-desc">{day.description}</p>
                 {(day.references ?? []).length > 0 && (
                   <div class="home-todays-day-refs">
-                    <span class="home-todays-day-reflabel">Dagens tekster:</span>
+                    <span class="home-todays-day-reflabel">{t('home.todaysTexts')}</span>
                     {(day.references ?? [])
                       .filter((ref) => ref.relevance === 'primary')
                       .map((ref) => (
@@ -233,9 +234,9 @@ r.get('/', async (c) => {
 
         <section class="home-books" aria-labelledby="books-heading">
           <div class="home-section-head">
-            <h2 id="books-heading">Bibelens bøker</h2>
+            <h2 id="books-heading">{t('home.booksOfBible')}</h2>
           </div>
-          {BOOK_GROUPS.map((group) => (
+          {bookGroups(t).map((group) => (
             <div class="home-book-group">
               <div class="home-book-group-label">{group.label}</div>
               <div class="home-book-grid">
@@ -252,11 +253,11 @@ r.get('/', async (c) => {
 
         <section class="home-discover" aria-labelledby="discover-heading">
           <div class="home-section-head">
-            <h2 id="discover-heading">Utforsk</h2>
-            <span class="home-section-sub">Studium på tvers av teksten</span>
+            <h2 id="discover-heading">{t('home.explore')}</h2>
+            <span class="home-section-sub">{t('home.exploreSub')}</span>
           </div>
           <div class="home-discover-grid">
-            {DISCOVER.map((item) => (
+            {discover(t).map((item) => (
               <a href={item.to} class="home-disc">
                 <h4>{item.title}</h4>
                 <p>{item.desc}</p>
@@ -384,6 +385,7 @@ async function loadExtraResults(query: string) {
 }
 
 r.get('/sok', async (c) => {
+  const t = tFor(c);
   const query = (c.req.query('q') || '').trim();
   const side = Math.max(1, parseInt(c.req.query('side') || '1', 10) || 1);
   const offset = (side - 1) * PAGE_SIZE;
@@ -403,7 +405,7 @@ r.get('/sok', async (c) => {
       <div class="search-main">
         <div class="reading-container">
           <Breadcrumbs items={[{ label: 'Hjem', href: '/' }, { label: 'Søk' }]} />
-          <h1>Søk i bibelteksten</h1>
+          <h1>{t('search.inBible')}</h1>
 
           <form class="search-form" action="/sok" method="get" role="search">
             <input
@@ -458,7 +460,7 @@ r.get('/sok', async (c) => {
               </div>
             </>
           )}
-          {query.length === 1 && <p class="search-count">Søket må være minst 2 tegn.</p>}
+          {query.length === 1 && <p class="search-count">{t('search.minChars')}</p>}
         </div>
       </div>
     </Layout>,
@@ -468,6 +470,7 @@ r.get('/sok', async (c) => {
 // ---------- /sok/original ----------
 
 r.get('/sok/original', async (c) => {
+  const t = tFor(c);
   const query = (c.req.query('q') || '').trim();
   const side = Math.max(1, parseInt(c.req.query('side') || '1', 10) || 1);
   const offset = (side - 1) * PAGE_SIZE;
@@ -489,7 +492,7 @@ r.get('/sok/original', async (c) => {
               { label: 'Originalspråk' },
             ]}
           />
-          <h1>Søk i originalspråk</h1>
+          <h1>{t('search.inOriginal')}</h1>
 
           <form class="search-form" action="/sok/original" method="get" role="search">
             <input
