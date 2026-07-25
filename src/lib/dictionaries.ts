@@ -98,6 +98,18 @@ const en = {
   "disc.notes": "Write reflections and comments on verses.",
   "disc.statistics": "See how much you have read and which plans you have followed.",
   "disc.translations": "Available Bible translations, and downloads for offline use.",
+  "persons.title": "Biblical figures",
+  "persons.meta": "Explore central figures in the Bible — their lives, roles, era and relevant verses.",
+  "persons.intro": "Explore central figures in the Bible. Click a person to read about their life, key events and relevant verses.",
+  "persons.searchPh": "Search for people…",
+  "persons.searchAria": "Search for biblical figures",
+  "persons.era": "Era:",
+  "persons.role": "Role:",
+  "persons.family": "Family",
+  "persons.keyEvents": "Key events",
+  "persons.related": "Related people",
+  "common.all": "All",
+  "common.home": "Home",
 };
 
 type Dict = Record<keyof typeof en, string>;
@@ -194,6 +206,18 @@ const nb: Dict = {
   "disc.notes": "Skriv refleksjoner og kommentarer på vers.",
   "disc.statistics": "Se hvor mye du har lest og fulgt leseplaner.",
   "disc.translations": "Tilgjengelige bibeloversettelser og last ned for offline-bruk.",
+  "persons.title": "Bibelske personer",
+  "persons.meta": "Utforsk sentrale skikkelser i Bibelen — deres liv, roller, epoke og relevante bibelvers.",
+  "persons.intro": "Utforsk sentrale skikkelser i Bibelen. Klikk på en person for å lese mer om deres liv, nøkkelhendelser og relevante bibelvers.",
+  "persons.searchPh": "Søk etter personer …",
+  "persons.searchAria": "Søk etter bibelske personer",
+  "persons.era": "Tidsepoke:",
+  "persons.role": "Rolle:",
+  "persons.family": "Familie",
+  "persons.keyEvents": "Nøkkelhendelser",
+  "persons.related": "Relaterte personer",
+  "common.all": "Alle",
+  "common.home": "Hjem",
 };
 
 const nn: Dict = {
@@ -288,6 +312,18 @@ const nn: Dict = {
   "disc.notes": "Skriv refleksjonar og kommentarar på vers.",
   "disc.statistics": "Sjå kor mykje du har lese og kva leseplanar du har følgt.",
   "disc.translations": "Tilgjengelege bibelomsetjingar og nedlasting for offline-bruk.",
+  "persons.title": "Bibelske personar",
+  "persons.meta": "Utforsk sentrale skikkelsar i Bibelen — livet deira, rollene, epoken og relevante bibelvers.",
+  "persons.intro": "Utforsk sentrale skikkelsar i Bibelen. Klikk på ein person for å lese meir om livet, nøkkelhendingar og relevante bibelvers.",
+  "persons.searchPh": "Søk etter personar …",
+  "persons.searchAria": "Søk etter bibelske personar",
+  "persons.era": "Tidsepoke:",
+  "persons.role": "Rolle:",
+  "persons.family": "Familie",
+  "persons.keyEvents": "Nøkkelhendingar",
+  "persons.related": "Relaterte personar",
+  "common.all": "Alle",
+  "common.home": "Heim",
 };
 
 const sv: Dict = {
@@ -382,6 +418,18 @@ const sv: Dict = {
   "disc.notes": "Skriv reflektioner och kommentarer på verser.",
   "disc.statistics": "Se hur mycket du har läst och vilka läsplaner du följt.",
   "disc.translations": "Tillgängliga bibelöversättningar och nedladdning för offline-bruk.",
+  "persons.title": "Bibliska personer",
+  "persons.meta": "Utforska centrala gestalter i Bibeln — deras liv, roller, epok och relevanta verser.",
+  "persons.intro": "Utforska centrala gestalter i Bibeln. Klicka på en person för att läsa om liv, nyckelhändelser och relevanta verser.",
+  "persons.searchPh": "Sök efter personer …",
+  "persons.searchAria": "Sök efter bibliska personer",
+  "persons.era": "Tidsepok:",
+  "persons.role": "Roll:",
+  "persons.family": "Familj",
+  "persons.keyEvents": "Nyckelhändelser",
+  "persons.related": "Relaterade personer",
+  "common.all": "Alla",
+  "common.home": "Hem",
 };
 
 const fr: Dict = {
@@ -476,6 +524,18 @@ const fr: Dict = {
   "disc.notes": "Rédigez réflexions et commentaires sur les versets.",
   "disc.statistics": "Voyez ce que vous avez lu et les plans suivis.",
   "disc.translations": "Traductions bibliques disponibles, et téléchargement hors ligne.",
+  "persons.title": "Personnages bibliques",
+  "persons.meta": "Explorez les figures centrales de la Bible : leur vie, leur rôle, leur époque et les versets clés.",
+  "persons.intro": "Explorez les figures centrales de la Bible. Cliquez sur un personnage pour lire sa vie, les événements clés et les versets liés.",
+  "persons.searchPh": "Rechercher des personnages…",
+  "persons.searchAria": "Rechercher des personnages bibliques",
+  "persons.era": "Époque :",
+  "persons.role": "Rôle :",
+  "persons.family": "Famille",
+  "persons.keyEvents": "Événements clés",
+  "persons.related": "Personnages liés",
+  "common.all": "Tous",
+  "common.home": "Accueil",
 };
 
 const es: Dict = {
@@ -570,6 +630,18 @@ const es: Dict = {
   "disc.notes": "Escribe reflexiones y comentarios sobre versículos.",
   "disc.statistics": "Ve cuánto has leído y qué planes has seguido.",
   "disc.translations": "Traducciones bíblicas disponibles y descarga para uso sin conexión.",
+  "persons.title": "Personajes bíblicos",
+  "persons.meta": "Explora las figuras centrales de la Biblia: su vida, papel, época y versículos relevantes.",
+  "persons.intro": "Explora las figuras centrales de la Biblia. Haz clic en una persona para leer su vida, hechos clave y versículos relacionados.",
+  "persons.searchPh": "Buscar personas…",
+  "persons.searchAria": "Buscar personajes bíblicos",
+  "persons.era": "Época:",
+  "persons.role": "Papel:",
+  "persons.family": "Familia",
+  "persons.keyEvents": "Hechos clave",
+  "persons.related": "Personas relacionadas",
+  "common.all": "Todos",
+  "common.home": "Inicio",
 };
 
 const fi: Dict = {
@@ -664,6 +736,18 @@ const fi: Dict = {
   "disc.notes": "Kirjoita pohdintoja ja kommentteja jakeisiin.",
   "disc.statistics": "Näe, kuinka paljon olet lukenut ja mitä suunnitelmia seurannut.",
   "disc.translations": "Saatavilla olevat raamatunkäännökset ja lataus offline-käyttöön.",
+  "persons.title": "Raamatun henkilöt",
+  "persons.meta": "Tutustu Raamatun keskeisiin hahmoihin: heidän elämäänsä, rooleihinsa, aikakauteensa ja jakeisiin.",
+  "persons.intro": "Tutustu Raamatun keskeisiin hahmoihin. Napsauta henkilöä lukeaksesi elämästä, avaintapahtumista ja jakeista.",
+  "persons.searchPh": "Hae henkilöitä…",
+  "persons.searchAria": "Hae Raamatun henkilöitä",
+  "persons.era": "Aikakausi:",
+  "persons.role": "Rooli:",
+  "persons.family": "Perhe",
+  "persons.keyEvents": "Avaintapahtumat",
+  "persons.related": "Liittyvät henkilöt",
+  "common.all": "Kaikki",
+  "common.home": "Etusivu",
 };
 
 const de: Dict = {
@@ -758,6 +842,18 @@ const de: Dict = {
   "disc.notes": "Schreibe Reflexionen und Kommentare zu Versen.",
   "disc.statistics": "Sieh, wie viel du gelesen und welche Pläne du verfolgt hast.",
   "disc.translations": "Verfügbare Bibelübersetzungen und Download für die Offline-Nutzung.",
+  "persons.title": "Biblische Personen",
+  "persons.meta": "Entdecke zentrale Gestalten der Bibel — ihr Leben, ihre Rollen, ihre Zeit und die passenden Verse.",
+  "persons.intro": "Entdecke zentrale Gestalten der Bibel. Klicke auf eine Person, um Leben, Schlüsselereignisse und Verse zu lesen.",
+  "persons.searchPh": "Nach Personen suchen…",
+  "persons.searchAria": "Nach biblischen Personen suchen",
+  "persons.era": "Zeitalter:",
+  "persons.role": "Rolle:",
+  "persons.family": "Familie",
+  "persons.keyEvents": "Schlüsselereignisse",
+  "persons.related": "Verwandte Personen",
+  "common.all": "Alle",
+  "common.home": "Start",
 };
 
 export const DICTIONARIES = { en, nb, nn, sv, fr, es, fi, de };

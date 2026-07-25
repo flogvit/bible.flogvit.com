@@ -19,12 +19,13 @@ import {
   getBookUrlSlug,
   type PersonData,
 } from '../../lib/bible.ts';
-import { layoutProps } from '../../lib/i18n.ts';
+import { layoutProps, tFor } from '../../lib/i18n.ts';
 
 const r = new Hono<AppEnv>();
 
 /** /personer — full liste SSR; filter/søk er en øy over data-attributtene. */
 r.get('/personer', async (c) => {
+  const t = tFor(c);
   const persons = await getAllPersonsData();
 
   const eras = [...new Set(persons.map((p) => p.era))].sort();
@@ -43,19 +44,18 @@ r.get('/personer', async (c) => {
 
   return c.html(
     <Layout {...layoutProps(c)}
-      title="Bibelske personer — FLOGVIT.bible"
-      description="Utforsk sentrale skikkelser i Bibelen — deres liv, roller, epoke og relevante bibelvers."
+      title={`${t('persons.title')} — FLOGVIT.bible`}
+      description={t('persons.meta')}
       styles={['persons.css']}
       scripts={['person-filter.js']}
     >
       <div class="persons-main">
         <div class="reading-container">
-          <Breadcrumbs items={[{ label: 'Hjem', href: '/' }, { label: 'Personer' }]} />
+          <Breadcrumbs items={[{ label: t('common.home'), href: '/' }, { label: t('persons.title') }]} />
 
-          <h1>Bibelske personer</h1>
+          <h1>{t('persons.title')}</h1>
           <p class="persons-intro">
-            Utforsk sentrale skikkelser i Bibelen. Klikk på en person for å lese mer om deres liv,
-            nøkkelhendelser og relevante bibelvers.
+            {t('persons.intro')}
           </p>
 
           <div class="persons-search-container">
@@ -63,18 +63,18 @@ r.get('/personer', async (c) => {
               type="text"
               class="persons-search-input"
               id="person-search"
-              placeholder="Søk etter personer..."
-              aria-label="Søk etter bibelske personer"
+              placeholder={t('persons.searchPh')}
+              aria-label={t('persons.searchAria')}
               autocomplete="off"
             />
           </div>
 
           <div class="persons-filter-section">
             <div class="persons-filter-group">
-              <span class="persons-filter-label">Tidsepoke:</span>
+              <span class="persons-filter-label">{t('persons.era')}</span>
               <div class="persons-filter-buttons" data-filter="era">
                 <button type="button" class="persons-filter-button active" data-value="">
-                  Alle
+                  {t('common.all')}
                 </button>
                 {eras.map((e) => (
                   <button type="button" class="persons-filter-button" data-value={e}>
@@ -84,10 +84,10 @@ r.get('/personer', async (c) => {
               </div>
             </div>
             <div class="persons-filter-group">
-              <span class="persons-filter-label">Rolle:</span>
+              <span class="persons-filter-label">{t('persons.role')}</span>
               <div class="persons-filter-buttons" data-filter="role">
                 <button type="button" class="persons-filter-button active" data-value="">
-                  Alle
+                  {t('common.all')}
                 </button>
                 {roles.map((role) => (
                   <button type="button" class="persons-filter-button" data-value={role}>
@@ -137,6 +137,7 @@ r.get('/personer', async (c) => {
 
 /** /personer/:personId — detalj. Familie/relaterte slås opp server-side. */
 r.get('/personer/:personId', async (c) => {
+  const t = tFor(c);
   const person = await getPersonData(c.req.param('personId'));
   if (!person) return c.notFound();
 
@@ -214,7 +215,7 @@ r.get('/personer/:personId', async (c) => {
 
           {familyMembers.length > 0 && (
             <section class="person-family-section">
-              <h2>Familie</h2>
+              <h2>{t('persons.family')}</h2>
               <div class="person-family-list">
                 {familyMembers.map((m) => (
                   <a href={`/personer/${m.id}`} class="person-family-member">
@@ -227,7 +228,7 @@ r.get('/personer/:personId', async (c) => {
           )}
 
           <section class="person-events-section">
-            <h2>Nøkkelhendelser</h2>
+            <h2>{t('persons.keyEvents')}</h2>
             <KeyEventList keyEvents={person.keyEvents} />
           </section>
 
@@ -251,7 +252,7 @@ r.get('/personer/:personId', async (c) => {
 
           {related.length > 0 && (
             <section class="person-related-section">
-              <h2>Relaterte personer</h2>
+              <h2>{t('persons.related')}</h2>
               <div class="person-related-list">
                 {related.map((rp) => (
                   <a href={`/personer/${rp.id}`} class="person-related-person">
