@@ -38,6 +38,9 @@ import verses from './routes/api/verses.ts';
 import version from './routes/api/version.ts';
 import wellknownVerses from './routes/api/wellknown-verses.ts';
 import word4word from './routes/api/word4word.ts';
+import { getCookie } from 'hono/cookie';
+import { LOCALES, href, layoutProps, negotiateLocale } from './lib/i18n.ts';
+import { seoRoutes } from './routes/seo.ts';
 
 export function createApp() {
   const app = new Hono<AppEnv>();
@@ -88,16 +91,52 @@ export function createApp() {
   app.route('/api/reading-texts', readingTexts);
   app.route('/api/sync', sync);
 
+  // Crawler-flater FØR serveStatic, ellers vinner den gamle statiske
+  // sitemap.xml med sine uprefiksede URL-er.
+  app.route('/', seoRoutes);
+
   // Statiske filer (styles.css, /js/*) — registrert etter /api/* så API vinner,
   // og faller gjennom til siderutene når ingen fil matcher.
   app.use('/*', serveStatic({ root: './public' }));
 
-  app.route('/', pages);
+  // Én montering per språk (I18N.md §2). Locale settes av monteringen, ikke av
+  // cookie: URL-en vinner, ellers ville en delt lenke vist mottakerens språk.
+  //
+  // MERK: dette er UI-locale. Innholdsspråket (deriverte tekster) utledes fra
+  // den via localeToContentLanguage() i lib/lang.ts, mens BIBELUTGAVEN
+  // (osnb2/osnn1/SBLGNT/Tanach) er et eget brukervalg som ikke røres her —
+  // norsk UI med gresk grunntekst er en gyldig kombinasjon.
+  for (const locale of LOCALES) {
+    const sub = new Hono<AppEnv>();
+    sub.use('*', async (c, next) => {
+      c.set('locale', locale);
+      await next();
+    });
+    sub.route('/', pages);
+    app.route(`/${locale}`, sub);
+  }
+
+  // Alt uprefikset forhandles: fv-prefs > Accept-Language > en. 302 fordi
+  // svaret avhenger av cookie og header, altså per bruker.
+  //
+  // Ligger språket ALLEREDE i stien, har vi bommet på en rute — da er 404 rett
+  // svar, ikke enda et prefiks (det ville gitt /en/x → /en/en/x i det uendelige).
+  app.all('*', (c) => {
+    const url = new URL(c.req.url);
+    const p = url.pathname;
+    if (p.startsWith('/api/') || p.includes('.')) return c.notFound();
+    if (new RegExp(`^/(${LOCALES.join('|')})(/|$)`).test(p)) {
+      const trimmed = p.replace(/\/+$/, '') || '/';
+      return trimmed !== p ? c.redirect(trimmed + url.search, 301) : c.notFound();
+    }
+    const locale = negotiateLocale(getCookie(c, 'fv-prefs'), c.req.header('accept-language'));
+    return c.redirect(href(locale, p) + url.search, 302);
+  });
 
   // 404: API-stier svarer JSON (som gamle Express-appen), sider får 404-siden.
   app.notFound((c) => {
     if (c.req.path.startsWith('/api/')) return c.json({ error: 'Not found' }, 404);
-    return c.html(NotFoundPage(), 404);
+    return c.html(NotFoundPage(layoutProps(c)), 404);
   });
 
   return app;

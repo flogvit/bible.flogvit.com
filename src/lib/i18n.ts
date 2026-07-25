@@ -106,3 +106,26 @@ export function makeT(locale: Locale): Translator {
 export function missingKeys(locale: Locale): string[] {
   return Object.keys(DICTIONARIES.en).filter((k) => !(DICTIONARIES[locale] as Record<string, string>)[k]);
 }
+
+/**
+ * Layout-props utledet fra requesten. Locale settes av språkmonteringen i
+ * app.ts (URL-en vinner, I18N.md §2), og `path` er stien uten prefiks — altså
+ * nøyaktig det hreflang-klyngen trenger.
+ *
+ * Finnes som helper fordi bibel har 31 Layout-kallsteder: å utlede det ett sted
+ * er både kortere og vanskeligere å glemme enn å sende to props hver gang.
+ */
+export function layoutProps(c: { get: (k: 'locale') => unknown; req: { path: string } }): {
+  locale: Locale;
+  path: string;
+} {
+  const raw = c.get('locale');
+  const locale = isLocale(raw as string) ? (raw as Locale) : DEFAULT_LOCALE;
+  return { locale, path: stripLocale(c.req.path) };
+}
+
+/** Oversetteren for gjeldende request. */
+export function tFor(c: { get: (k: 'locale') => unknown }): Translator {
+  const raw = c.get('locale');
+  return makeT(isLocale(raw as string) ? (raw as Locale) : DEFAULT_LOCALE);
+}

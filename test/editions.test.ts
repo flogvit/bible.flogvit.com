@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import { createApp } from '../src/app.ts';
 import { getBibleEditions } from '../src/lib/bible.ts';
+import { L } from './paths.ts';
 
 // Info-sider per oversettelse (/oversettelser/:id), bygget på bible_editions.
 //
@@ -15,7 +16,7 @@ const strip = (html: string) => html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' 
 
 describe('/oversettelser', () => {
   test('listen rendrer og lenker til info-side per utgave', async () => {
-    const res = await app.request('/oversettelser');
+    const res = await app.request(L('/oversettelser'));
     expect(res.status).toBe(200);
     const html = await res.text();
     for (const e of editions) {
@@ -26,7 +27,7 @@ describe('/oversettelser', () => {
 
 describe('/oversettelser/:id', () => {
   test('ukjent utgave gir 404', async () => {
-    const res = await app.request('/oversettelser/finnes-ikke');
+    const res = await app.request(L('/oversettelser/finnes-ikke'));
     expect(res.status).toBe(404);
   });
 
@@ -34,7 +35,7 @@ describe('/oversettelser/:id', () => {
   // oversettelse dekkes automatisk. Hopper pent over på en tom base.
   for (const edition of editions) {
     test(`${edition.id}: lisensseksjonen rendres alltid`, async () => {
-      const res = await app.request(`/oversettelser/${edition.id}`);
+      const res = await app.request(L(`/oversettelser/${edition.id}`));
       expect(res.status).toBe(200);
       const text = strip(await res.text());
 
@@ -49,7 +50,7 @@ describe('/oversettelser/:id', () => {
   const attributed = editions.find((e) => e.license_spdx?.startsWith('CC-BY'));
   if (attributed) {
     test(`${attributed.id}: krediteringskrav er uthevet, ikke bortgjemt`, async () => {
-      const res = await app.request(`/oversettelser/${attributed.id}`);
+      const res = await app.request(L(`/oversettelser/${attributed.id}`));
       const text = strip(await res.text());
       expect(text).toContain('krever kreditering');
       expect(text).toContain(attributed.license_spdx!);

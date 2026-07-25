@@ -28,6 +28,7 @@ import {
 } from '../../lib/bible.ts';
 import { getBookInfoById } from '../../lib/books-data.ts';
 import { toUrlSlug } from '../../lib/url-utils.ts';
+import { layoutProps } from '../../lib/i18n.ts';
 
 const r = new Hono<AppEnv>();
 
@@ -73,7 +74,7 @@ r.get('/temaer', async (c) => {
   });
 
   return c.html(
-    <Layout title="Tematiske bibelstudier — FLOGVIT.bible" description="Tematiske oversikter med relevante bibelvers." styles={['study.css']} scripts={['card-filter.js']}>
+    <Layout {...layoutProps(c)} title="Tematiske bibelstudier — FLOGVIT.bible" description="Tematiske oversikter med relevante bibelvers." styles={['study.css']} scripts={['card-filter.js']}>
       <div class="study-main">
         <div class="container">
           <Breadcrumbs items={[{ label: 'Hjem', href: '/' }, { label: 'Temaer' }]} />
@@ -111,7 +112,7 @@ r.get('/temaer/:tema', async (c) => {
   const title = json?.title || tema.charAt(0).toUpperCase() + tema.slice(1);
 
   return c.html(
-    <Layout title={`${title} — FLOGVIT.bible`} description={json?.introduction?.slice(0, 155) || `Tematisk bibelstudie: ${title}`} styles={['study.css']} scripts={['tagging.js']}>
+    <Layout {...layoutProps(c)} title={`${title} — FLOGVIT.bible`} description={json?.introduction?.slice(0, 155) || `Tematisk bibelstudie: ${title}`} styles={['study.css']} scripts={['tagging.js']}>
       <div class="study-main">
         <div class="reading-container">
           <Breadcrumbs items={[{ label: 'Hjem', href: '/' }, { label: 'Temaer', href: '/temaer' }, { label: title }]} />
@@ -175,7 +176,7 @@ r.get('/historier', async (c) => {
   const availableCategories = Object.entries(STORY_CATEGORIES).filter(([k]) => cats.has(k));
 
   return c.html(
-    <Layout title="Bibelhistorier — FLOGVIT.bible" description="Bibelens fortellinger samlet og gjengitt, kategorisert og søkbare." styles={['study.css']} scripts={['card-filter.js']}>
+    <Layout {...layoutProps(c)} title="Bibelhistorier — FLOGVIT.bible" description="Bibelens fortellinger samlet og gjengitt, kategorisert og søkbare." styles={['study.css']} scripts={['card-filter.js']}>
       <div class="study-main">
         <div class="container">
           <Breadcrumbs items={[{ label: 'Hjem', href: '/' }, { label: 'Bibelhistorier' }]} />
@@ -221,7 +222,7 @@ r.get('/historier/:slug', async (c) => {
   }
 
   return c.html(
-    <Layout title={`${data.title} — FLOGVIT.bible`} description={data.description?.slice(0, 155)} styles={['study.css']} scripts={['tagging.js']}>
+    <Layout {...layoutProps(c)} title={`${data.title} — FLOGVIT.bible`} description={data.description?.slice(0, 155)} styles={['study.css']} scripts={['tagging.js']}>
       <div class="study-main">
         <div class="reading-container">
           <Breadcrumbs items={[{ label: 'Hjem', href: '/' }, { label: 'Bibelhistorier', href: '/historier' }, { label: data.title }]} />
@@ -282,7 +283,7 @@ r.get('/tall', async (c) => {
   });
 
   return c.html(
-    <Layout title="Tall i Bibelen — FLOGVIT.bible" description="Tallenes betydning i Bibelen." styles={['study.css']} scripts={['card-filter.js']}>
+    <Layout {...layoutProps(c)} title="Tall i Bibelen — FLOGVIT.bible" description="Tallenes betydning i Bibelen." styles={['study.css']} scripts={['card-filter.js']}>
       <div class="study-main">
         <div class="container">
           <Breadcrumbs items={[{ label: 'Hjem', href: '/' }, { label: 'Tall' }]} />
@@ -330,7 +331,7 @@ r.get('/tall/:number', async (c) => {
   }
 
   return c.html(
-    <Layout title={`Tallet ${data.number}: ${data.meaning} — FLOGVIT.bible`} description={data.description.slice(0, 155)} styles={['study.css']} scripts={['tagging.js']}>
+    <Layout {...layoutProps(c)} title={`Tallet ${data.number}: ${data.meaning} — FLOGVIT.bible`} description={data.description.slice(0, 155)} styles={['study.css']} scripts={['tagging.js']}>
       <div class="study-main">
         <div class="reading-container">
           <Breadcrumbs items={[{ label: 'Hjem', href: '/' }, { label: 'Tall', href: '/tall' }, { label: `Tallet ${data.number}` }]} />
@@ -413,7 +414,7 @@ r.get('/dager', async (c) => {
     : [{ title: '', items: [...items].sort(byNextDate) }];
 
   return c.html(
-    <Layout title="Helligdager og merkedager — FLOGVIT.bible" description="Helligdager og merkedager i kristen tradisjon." styles={['study.css']} scripts={['card-filter.js']}>
+    <Layout {...layoutProps(c)} title="Helligdager og merkedager — FLOGVIT.bible" description="Helligdager og merkedager i kristen tradisjon." styles={['study.css']} scripts={['card-filter.js']}>
       <div class="study-main">
         <div class="container">
           <Breadcrumbs items={[{ label: 'Hjem', href: '/' }, { label: 'Dager' }]} />
@@ -477,7 +478,7 @@ r.get('/dager/:dayId', async (c) => {
   if (data.history) sections.push({ title: 'Historie', text: data.history });
 
   return c.html(
-    <Layout title={`${data.name} — FLOGVIT.bible`} description={data.description.slice(0, 155)} styles={['study.css']} scripts={['tagging.js']}>
+    <Layout {...layoutProps(c)} title={`${data.name} — FLOGVIT.bible`} description={data.description.slice(0, 155)} styles={['study.css']} scripts={['tagging.js']}>
       <div class="study-main">
         <div class="reading-container">
           <Breadcrumbs items={[{ label: 'Hjem', href: '/' }, { label: 'Dager', href: '/dager' }, { label: data.name }]} />

@@ -6,6 +6,7 @@
 // konto på localhost:3020. Alt er best-effort — feiler kallet, er man utlogget.
 
 import type { Context, Next } from 'hono';
+import type { Locale } from './i18n.ts';
 
 // Leses ved kall-tid så tester kan peke på en mock-server.
 function accountApiUrl(): string {
@@ -35,7 +36,9 @@ export interface SessionUser {
   csrf: string;
 }
 
-export type AppEnv = { Variables: { user: SessionUser | null } };
+// `locale` settes av språkmonteringen i app.ts (I18N.md §2) og leses av
+// layoutProps()/tFor() — UI-locale, ikke innholdsspråk eller bibelutgave.
+export type AppEnv = { Variables: { user: SessionUser | null; locale: Locale } };
 
 interface CentralSessionResponse {
   user?: {

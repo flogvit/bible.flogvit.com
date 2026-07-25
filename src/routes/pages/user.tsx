@@ -17,6 +17,7 @@ import { getSql } from '../../lib/db.ts';
 import { getUserItems, getUserSingleton } from '../../lib/user-data.ts';
 import { getBibleEditions } from '../../lib/bible.ts';
 import { getAvailableMappings } from '../../lib/verse-mapper.ts';
+import { layoutProps, type Locale } from '../../lib/i18n.ts';
 
 const r = new Hono<AppEnv>();
 
@@ -31,9 +32,11 @@ function UserPage(props: {
   wide?: boolean;
   styles?: string[];
   scripts?: string[];
+  locale: Locale;
+  path: string;
 }) {
   return (
-    <Layout
+    <Layout locale={props.locale} path={props.path}
       title={`${props.title} — FLOGVIT.bible`}
       description={props.intro || props.heading}
       styles={['user.css', ...(props.styles ?? [])]}
@@ -84,7 +87,7 @@ r.get('/favoritter', async (c) => {
     ).filter((x): x is NonNullable<typeof x> => x !== null);
   }
   return c.html(
-    <UserPage title="Favoritter" crumb="Favoritter" heading="Favorittvers" page="favorites" intro="Dine merkede vers. Husking er en del av FLOGVIT.plus.">
+    <UserPage {...layoutProps(c)} title="Favoritter" crumb="Favoritter" heading="Favorittvers" page="favorites" intro="Dine merkede vers. Husking er en del av FLOGVIT.plus.">
       <div class="user-list" data-list>
         {cards.map((card) => (
           <a class="user-card" href={card.href}>
@@ -111,7 +114,7 @@ r.get('/emner', async (c) => {
       (data.verseTopics ?? []).filter((vt) => vt.topicId === t.id).length,
   }));
   return c.html(
-    <UserPage title="Emner" crumb="Emner" heading="Emner" page="topics" intro="Egne emner du har tagget vers, personer og annet innhold med.">
+    <UserPage {...layoutProps(c)} title="Emner" crumb="Emner" heading="Emner" page="topics" intro="Egne emner du har tagget vers, personer og annet innhold med.">
       <div class="user-list" data-list>
         {topics.map((t) => (
           <div class="user-card">
@@ -132,7 +135,7 @@ r.get('/notater', async (c) => {
   const user = c.var.user;
   const notes = user?.plus ? (await getUserItems<NoteItem>(user.id, 'notes')).sort((a, b) => b.updatedAt - a.updatedAt) : [];
   return c.html(
-    <UserPage title="Notater" crumb="Notater" heading="Notater" page="notes" intro="Dine notater på vers.">
+    <UserPage {...layoutProps(c)} title="Notater" crumb="Notater" heading="Notater" page="notes" intro="Dine notater på vers.">
       <div class="user-list" data-list>
         {notes.map((n) => (
           <div class="user-card">
@@ -153,7 +156,7 @@ r.get('/lister', async (c) => {
   const user = c.var.user;
   const lists = user?.plus ? (await getUserItems<VerseListItem>(user.id, 'verseLists')).sort((a, b) => b.updatedAt - a.updatedAt) : [];
   return c.html(
-    <UserPage title="Verslister" crumb="Verslister" heading="Verslister" page="verselists" intro="Samle vers i navngitte lister for manuskripter, bibeltimer og studier.">
+    <UserPage {...layoutProps(c)} title="Verslister" crumb="Verslister" heading="Verslister" page="verselists" intro="Samle vers i navngitte lister for manuskripter, bibeltimer og studier.">
       <form class="user-create" data-create-list>
         <input type="text" name="name" placeholder="Navn på ny liste…" aria-label="Navn på liste" class="user-input" />
         <button type="submit" class="user-btn">Opprett liste</button>
@@ -180,7 +183,7 @@ r.get('/leseplan', async (c) => {
   const activePlan = user?.plus ? await getUserSingleton<string>(user.id, 'activePlan') : null;
 
   return c.html(
-    <Layout title="Leseplaner — FLOGVIT.bible" description="Ulike planer for systematisk bibellesing." styles={['user.css']} scripts={['user.js']}>
+    <Layout {...layoutProps(c)} title="Leseplaner — FLOGVIT.bible" description="Ulike planer for systematisk bibellesing." styles={['user.css']} scripts={['user.js']}>
       <div class="user-main">
         <div class="reading-container">
           <Breadcrumbs items={[{ label: 'Hjem', href: '/' }, { label: 'Leseplan' }]} />
@@ -222,7 +225,7 @@ r.get('/manuskripter', async (c) => {
   const user = c.var.user;
   const devs = user?.plus ? (await getUserItems<DevotionalItem>(user.id, 'devotionals')).sort((a, b) => b.updatedAt - a.updatedAt) : [];
   return c.html(
-    <UserPage title="Manuskripter" crumb="Manuskripter" heading="Manuskripter" page="devotionals" intro="Andakter, prekener og bibeltimer med versreferanser." wide>
+    <UserPage {...layoutProps(c)} title="Manuskripter" crumb="Manuskripter" heading="Manuskripter" page="devotionals" intro="Andakter, prekener og bibeltimer med versreferanser." wide>
       <div class="user-toolbar">
         <a href="/manuskripter/ny" class="user-btn">Skriv nytt manuskript</a>
       </div>
@@ -240,9 +243,9 @@ r.get('/manuskripter', async (c) => {
 });
 
 // Editor (ny + rediger) — CodeMirror erstattet av textarea + markdown-preview i user.js.
-function DevotionalEditor(props: { slug?: string }) {
+function DevotionalEditor(props: { slug?: string; locale: Locale; path: string }) {
   return (
-    <Layout title="Rediger manuskript — FLOGVIT.bible" description="Skriv andakt, preken eller bibeltime." styles={['user.css']} scripts={['user.js']}>
+    <Layout locale={props.locale} path={props.path} title="Rediger manuskript — FLOGVIT.bible" description="Skriv andakt, preken eller bibeltime." styles={['user.css']} scripts={['user.js']}>
       <div class="user-main">
         <div class="container">
           <Breadcrumbs items={[{ label: 'Hjem', href: '/' }, { label: 'Manuskripter', href: '/manuskripter' }, { label: props.slug ? 'Rediger' : 'Nytt' }]} />
@@ -269,11 +272,11 @@ function DevotionalEditor(props: { slug?: string }) {
     </Layout>
   );
 }
-r.get('/manuskripter/ny', (c) => c.html(<DevotionalEditor />));
-r.get('/manuskripter/:slug/rediger', (c) => c.html(<DevotionalEditor slug={c.req.param('slug')} />));
+r.get('/manuskripter/ny', (c) => c.html(<DevotionalEditor {...layoutProps(c)} />));
+r.get('/manuskripter/:slug/rediger', (c) => c.html(<DevotionalEditor {...layoutProps(c)} slug={c.req.param('slug')} />));
 r.get('/manuskripter/:slug', (c) =>
   c.html(
-    <Layout title="Manuskript — FLOGVIT.bible" description="Manuskript." styles={['user.css']} scripts={['user.js']}>
+    <Layout {...layoutProps(c)} title="Manuskript — FLOGVIT.bible" description="Manuskript." styles={['user.css']} scripts={['user.js']}>
       <div class="user-main">
         <div class="reading-container">
           <Breadcrumbs items={[{ label: 'Hjem', href: '/' }, { label: 'Manuskripter', href: '/manuskripter' }, { label: '…' }]} />
@@ -325,7 +328,7 @@ r.get('/innstillinger', (c) => {
   const user = c.var.user;
   const mappings = getAvailableMappings();
   return c.html(
-    <UserPage title="Innstillinger" crumb="Innstillinger" heading="Innstillinger" page="settings" intro="Lagres i nettleseren; innlogget synker de mot kontoen din.">
+    <UserPage {...layoutProps(c)} title="Innstillinger" crumb="Innstillinger" heading="Innstillinger" page="settings" intro="Lagres i nettleseren; innlogget synker de mot kontoen din.">
       <form data-settings-form class="settings-form">
         <fieldset class="settings-group">
           <legend>Utseende</legend>
@@ -485,7 +488,7 @@ r.get('/innstillinger', (c) => {
 // ---------- /offline ----------
 r.get('/offline', (c) =>
   c.html(
-    <UserPage
+    <UserPage {...layoutProps(c)}
       title="Offline"
       crumb="Offline"
       heading="Offline-tilgang"
@@ -550,7 +553,7 @@ r.get('/oversettelser', async (c) => {
   const editions = await getBibleEditions();
 
   return c.html(
-    <UserPage
+    <UserPage {...layoutProps(c)}
       title="Oversettelser"
       crumb="Oversettelser"
       heading="Oversettelser"

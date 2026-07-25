@@ -29,6 +29,7 @@ import {
 import { DEFAULT_CONTENT_LANGUAGE } from '../../lib/lang.ts';
 import { booksData, getBookInfoById, type BookInfo } from '../../lib/books-data.ts';
 import { toUrlSlug } from '../../lib/url-utils.ts';
+import { layoutProps } from '../../lib/i18n.ts';
 
 const r = new Hono<AppEnv>();
 
@@ -127,7 +128,7 @@ r.get('/', async (c) => {
   const todaysDays = await getTodaysDays();
 
   return c.html(
-    <Layout
+    <Layout {...layoutProps(c)}
       title="FLOGVIT.bible — Bibelen på nett"
       description="Les, studér og søk i Bibelen med grunntekst, kryssreferanser, tidslinje, temaer og personer."
       styles={['home.css']}
@@ -393,7 +394,7 @@ r.get('/sok', async (c) => {
   const extra = query.length >= 2 && side === 1 ? await loadExtraResults(query) : [];
 
   return c.html(
-    <Layout
+    <Layout {...layoutProps(c)}
       title={query ? `Søk: ${query} — FLOGVIT.bible` : 'Søk — FLOGVIT.bible'}
       description="Søk i bibelteksten."
       styles={['search.css']}
@@ -474,7 +475,7 @@ r.get('/sok/original', async (c) => {
   const res = query.length >= 1 ? await searchOriginalWord(query, PAGE_SIZE, offset) : null;
 
   return c.html(
-    <Layout
+    <Layout {...layoutProps(c)}
       title={query ? `Grunntekstsøk: ${query} — FLOGVIT.bible` : 'Søk i originalspråk — FLOGVIT.bible'}
       description="Søk i den hebraiske og greske grunnteksten."
       styles={['search.css']}

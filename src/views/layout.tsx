@@ -14,6 +14,24 @@ import type { Child } from 'hono/jsx';
 import { getContext } from 'hono/context-storage';
 import type { AppEnv } from '../lib/session.ts';
 import { ACCOUNT_URL } from '../lib/session.ts';
+import { DEFAULT_LOCALE, LOCALES, href, makeT, ogLocale, type Locale, type Translator } from '../lib/i18n.ts';
+
+const SITE = 'https://bible.flogvit.com';
+
+/**
+ * Full hreflang-klynge (I18N.md §3): de åtte URL-ene er samme side på ulike
+ * språk, ikke duplikater. x-default peker på basespråket.
+ */
+function HrefLang({ path }: { path: string }) {
+  return (
+    <>
+      {LOCALES.map((l) => (
+        <link rel="alternate" hreflang={l} href={SITE + href(l, path)} />
+      ))}
+      <link rel="alternate" hreflang="x-default" href={SITE + href(DEFAULT_LOCALE, path)} />
+    </>
+  );
+}
 
 const GOOGLE_FONTS =
   'https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;700;800&family=IBM+Plex+Mono:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&display=swap';
@@ -26,7 +44,6 @@ const PREFS_READ_SNIPPET = `<script>
     var m = document.cookie.match(/(?:^|;\\s*)fv-prefs=([^;]+)/);
     var p = m ? JSON.parse(decodeURIComponent(m[1])) : {};
     var d = document.documentElement;
-    if (p.lang) d.lang = p.lang;
     if (p.theme === 'light' || p.theme === 'dark') d.dataset.fvTheme = p.theme;
   } catch (e) {}
 </script>`;
@@ -43,11 +60,11 @@ const PRODUCTS: { prod: string; dot: string; href?: string; current?: boolean }[
   { prod: 'bible', dot: 'dotBibel', href: '/', current: true },
 ];
 
-function FlogvitMenu() {
+function FlogvitMenu({ t }: { t: Translator }) {
   return (
     <span class="wordmark">
       <details class="fvmenu">
-        <summary class="fvmenu-summary" aria-label="FLOGVIT — alle produkter">
+        <summary class="fvmenu-summary" aria-label={t('chrome.menuAria')}>
           FLOGVIT
           <svg class="fvmenu-caret" viewBox="0 0 8 6" width="8" height="6" aria-hidden="true">
             <path
@@ -60,7 +77,7 @@ function FlogvitMenu() {
             />
           </svg>
         </summary>
-        <nav class="fvmenu-panel" aria-label="FLOGVIT — alle produkter">
+        <nav class="fvmenu-panel" aria-label={t('chrome.menuAria')}>
           <a class="fvmenu-item" href="https://flogvit.com/">
             <span class="fvmenu-wm">
               <span class="fvmenu-b">FLOGVIT</span>
@@ -92,13 +109,13 @@ function FlogvitMenu() {
           {/* Uniform familie-oppføring (portal/STYLE.md): globale innstillinger
               — konto, språk — nås fra samme plass i alle produktene. */}
           <a class="fvmenu-item fvmenu-kontoitem" href="https://flogvit.com/konto/">
-            Konto og innstillinger
+            {t('chrome.accountItem')}
           </a>
         </nav>
         {/* Tema (og øvrige prefs) bor på innstillinger-siden — FLOGVIT-menyen
             er kun for produktbytte (portal/SETTINGS.md). */}
       </details>
-      <a class="fvmenu-product" href="/" aria-label="FLOGVIT.bible – til forsiden">
+      <a class="fvmenu-product" href="/" aria-label={t('chrome.homeAria')}>
         <span class="fvmenu-productDot">.</span>bible
       </a>
     </span>
@@ -106,38 +123,38 @@ function FlogvitMenu() {
 }
 
 // Navstrukturen fra redesignets Header.tsx — samme grupper, lenker og URL-er.
-const NAV_GROUPS: { label: string; links: { href: string; label: string }[] }[] = [
+const navGroups = (t: Translator): { label: string; links: { href: string; label: string }[] }[] => [
   {
-    label: 'Mitt',
+    label: t('nav.mine'),
     links: [
-      { href: '/favoritter', label: 'Favoritter' },
-      { href: '/emner', label: 'Emner' },
-      { href: '/notater', label: 'Notater' },
-      { href: '/lister', label: 'Verslister' },
-      { href: '/leseplan', label: 'Leseplan' },
-      { href: '/manuskripter', label: 'Manuskripter' },
+      { href: '/favoritter', label: t('nav.favorites') },
+      { href: '/emner', label: t('nav.topicsMine') },
+      { href: '/notater', label: t('nav.notes') },
+      { href: '/lister', label: t('nav.verseLists') },
+      { href: '/leseplan', label: t('nav.readingPlan') },
+      { href: '/manuskripter', label: t('nav.manuscripts') },
     ],
   },
   {
-    label: 'Studier',
+    label: t('nav.studies'),
     links: [
-      { href: '/kjente-vers', label: 'Kjente vers' },
-      { href: '/temaer', label: 'Temaer' },
-      { href: '/historier', label: 'Bibelhistorier' },
-      { href: '/profetier', label: 'Profetier' },
-      { href: '/paralleller', label: 'Paralleller' },
-      { href: '/personer', label: 'Personer' },
-      { href: '/tall', label: 'Tall' },
+      { href: '/kjente-vers', label: t('nav.knownVerses') },
+      { href: '/temaer', label: t('nav.themes') },
+      { href: '/historier', label: t('nav.stories') },
+      { href: '/profetier', label: t('nav.prophecies') },
+      { href: '/paralleller', label: t('nav.parallels') },
+      { href: '/personer', label: t('nav.persons') },
+      { href: '/tall', label: t('nav.numbers') },
     ],
   },
   {
-    label: 'Oversikt',
+    label: t('nav.overview'),
     links: [
-      { href: '/tidslinje', label: 'Tidslinje' },
-      { href: '/dager', label: 'Dager' },
-      { href: '/lesetekster', label: 'Lesetekster' },
-      { href: '/statistikk', label: 'Statistikk' },
-      { href: '/oversettelser', label: 'Oversettelser' },
+      { href: '/tidslinje', label: t('nav.timeline') },
+      { href: '/dager', label: t('nav.days') },
+      { href: '/lesetekster', label: t('nav.readingTexts') },
+      { href: '/statistikk', label: t('nav.statistics') },
+      { href: '/oversettelser', label: t('nav.translations') },
     ],
   },
 ];
@@ -146,7 +163,7 @@ const NAV_GROUPS: { label: string; links: { href: string; label: string }[] }[] 
 // inngang rett før tannhjulet. Bibel kjenner sesjonen server-side (fv-session
 // via konto), så innlogget tilstand rendres direkte — ingen «hidden-til-JS».
 // Utlogget: «Logg inn». Innlogget: visningsnavn/e-post (+ plus-merke).
-function AccountChip() {
+function AccountChip({ t }: { t: Translator }) {
   // Request-konteksten hentes fra AsyncLocalStorage (contextStorage-middleware
   // i app.ts), så vi slipper å tre user gjennom hvert Layout-kall.
   let user: AppEnv['Variables']['user'] = null;
@@ -157,8 +174,8 @@ function AccountChip() {
   }
   if (!user) {
     return (
-      <a class="account-chip" href={ACCOUNT_URL} aria-label="Logg inn">
-        Logg inn
+      <a class="account-chip" href={ACCOUNT_URL} aria-label={t('chrome.login')}>
+        {t('chrome.login')}
       </a>
     );
   }
@@ -176,16 +193,16 @@ function AccountChip() {
   );
 }
 
-function Header() {
+function Header({ t, u }: { t: Translator; u: (p: string) => string }) {
   return (
     <header class="site-header">
       <div class="site-header-inner">
-        <FlogvitMenu />
+        <FlogvitMenu t={t} />
 
         {/* Hurtigsøk — åpner CommandPalette (øy, ISSUES.md #11). Uten JS
             faller den tilbake til søkesiden. */}
         <form class="cmdk-form" action="/sok" method="get">
-          <button type="submit" class="cmdk-trigger" id="cmdk-trigger" aria-label="Åpne hurtigsøk">
+          <button type="submit" class="cmdk-trigger" id="cmdk-trigger" aria-label={t('chrome.quickSearch')}>
             <svg
               width="14"
               height="14"
@@ -198,15 +215,15 @@ function Header() {
               <circle cx="11" cy="11" r="7" />
               <path d="M21 21l-4.3-4.3" />
             </svg>
-            <span class="cmdk-label">Søk vers, person, tema…</span>
+            <span class="cmdk-label">{t('chrome.searchPlaceholder')}</span>
             <kbd class="cmdk-kbd" id="cmdk-kbd">
               Ctrl K
             </kbd>
           </button>
         </form>
 
-        <nav class="site-nav" aria-label="Hovednavigasjon">
-          {NAV_GROUPS.map((g) => (
+        <nav class="site-nav" aria-label={t('chrome.mainNavAria')}>
+          {navGroups(t).map((g) => (
             <details class="nav-dd">
               <summary class="nav-link nav-dd-trigger">
                 {g.label}
@@ -229,9 +246,9 @@ function Header() {
             header-ikon (2026-07-22). */}
 
         {/* Konto-chip: fast plass rett før tannhjulet (portal/SETTINGS.md). */}
-        <AccountChip />
+        <AccountChip t={t} />
 
-        <a href="/innstillinger" class="icon-btn" aria-label="Innstillinger" title="Innstillinger">
+        <a href="/innstillinger" class="icon-btn" aria-label={t('chrome.settings')} title={t('chrome.settings')}>
           <svg
             width="18"
             height="18"
@@ -248,11 +265,11 @@ function Header() {
 
         {/* Mobilmeny: <details> så den virker uten JS. */}
         <details class="mobile-menu">
-          <summary class="icon-btn mobile-menu-btn" aria-label="Meny">
+          <summary class="icon-btn mobile-menu-btn" aria-label={t('chrome.menu')}>
             <span class="hamburger" aria-hidden="true" />
           </summary>
-          <nav class="mobile-panel" aria-label="Hovednavigasjon">
-            {NAV_GROUPS.map((g) => (
+          <nav class="mobile-panel" aria-label={t('chrome.mainNavAria')}>
+            {navGroups(t).map((g) => (
               <div class="mobile-group">
                 <span class="mobile-group-title">{g.label}</span>
                 {g.links.map((l) => (
@@ -269,36 +286,36 @@ function Header() {
   );
 }
 
-function Footer() {
+function Footer({ t, u }: { t: Translator; u: (p: string) => string }) {
   return (
     <footer class="site-footer">
       <div class="site-footer-inner">
         {/* Produkt-tillegg (valgfritt) — over den faste raden (portal/FOOTER.md). */}
-        <nav class="site-footer-nav" aria-label="Bunnmeny">
-          <a href="/">Forside</a>
-          <a href="/om">Om siden</a>
-          <a href="/om#hjelp">Hjelp</a>
-          <a href="/innstillinger">Innstillinger</a>
-          <a href="https://flogvit.com/konto/">Konto</a>
-          <a href="/offline">Offline</a>
-          <a href="/tilgjengelighet">Tilgjengelighet</a>
+        <nav class="site-footer-nav" aria-label={t('chrome.footerNavAria')}>
+          <a href="/">{t('foot.home')}</a>
+          <a href="/om">{t('foot.about')}</a>
+          <a href="/om#hjelp">{t('foot.help')}</a>
+          <a href="/innstillinger">{t('chrome.settings')}</a>
+          <a href="https://flogvit.com/konto/">{t('foot.account')}</a>
+          <a href="/offline">{t('foot.offline')}</a>
+          <a href="/tilgjengelighet">{t('foot.a11y')}</a>
         </nav>
 
         {/* Fast legal-rad (portal/FOOTER.md): FLOGVIT.bible · Vilkår · Personvern ·
             Konto · © år. Ingen Refusjon — bibel tar ikke betaling. */}
         <div class="site-footer-legal">
           <span class="fv-wordmark">
-            <a class="fv-brand" href="https://flogvit.com" aria-label="FLOGVIT – alle produkter">
+            <a class="fv-brand" href="https://flogvit.com" aria-label={t('chrome.menuAria')}>
               FLOGVIT
             </a>
-            <a class="fv-product" href="/" aria-label="FLOGVIT.bible – til forsiden">
+            <a class="fv-product" href="/" aria-label={t('chrome.homeAria')}>
               <span class="fv-dot">.</span>bible
             </a>
           </span>
-          <nav class="site-footer-legalnav" aria-label="Juridisk">
-            <a href="https://flogvit.com/vilkar">Vilkår</a>
-            <a href="https://flogvit.com/personvern">Personvern</a>
-            <a href="https://flogvit.com/konto/">Konto</a>
+          <nav class="site-footer-legalnav" aria-label={t('chrome.legalAria')}>
+            <a href="https://flogvit.com/vilkar">{t('foot.terms')}</a>
+            <a href="https://flogvit.com/personvern">{t('foot.privacy')}</a>
+            <a href="https://flogvit.com/konto/">{t('foot.account')}</a>
           </nav>
           <p class="site-footer-note">© {new Date().getFullYear()} FLOGVIT</p>
         </div>
@@ -308,6 +325,10 @@ function Footer() {
 }
 
 export interface LayoutProps {
+  /** UI-locale — styrer prefiks, ordbok og <html lang>. IKKE innholdsspråk eller bibelutgave. */
+  locale: Locale;
+  /** Sti UTEN språkprefiks — grunnlaget for hreflang-klyngen. */
+  path: string;
   title: string;
   description?: string;
   children?: Child;
@@ -321,11 +342,13 @@ export interface LayoutProps {
 
 /** Fullt HTML-dokument med familie-chromen. */
 export function Layout(props: LayoutProps) {
-  const desc = props.description ?? 'Bibelen på nett — les, studér og søk i grunnteksten.';
+  const t = makeT(props.locale);
+  const u = (p: string) => href(props.locale, p);
+  const desc = props.description ?? t('chrome.searchPlaceholder');
   return (
     <>
       {raw('<!DOCTYPE html>')}
-      <html lang="nb">
+      <html lang={props.locale}>
         <head>
           <meta charset="utf-8" />
           <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -333,7 +356,9 @@ export function Layout(props: LayoutProps) {
           <title>{props.title}</title>
           <meta name="description" content={desc} />
           <meta name="author" content="FLOGVIT" />
-          {props.canonical && <link rel="canonical" href={props.canonical} />}
+          <meta property="og:locale" content={ogLocale(props.locale)} />
+          <link rel="canonical" href={props.canonical ?? SITE + href(props.locale, props.path)} />
+          <HrefLang path={props.path} />
           <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
           <link rel="manifest" href="/manifest.json" />
           <meta name="theme-color" content="#7a4a21" />
@@ -351,11 +376,11 @@ export function Layout(props: LayoutProps) {
           <a class="skip-link" href="#innhold">
             Hopp til innhold
           </a>
-          <Header />
+          <Header t={t} u={u} />
           <main id="innhold" class="site-main">
             {props.children}
           </main>
-          <Footer />
+          <Footer t={t} u={u} />
           <script type="module" src="/js/chrome.js" />
           <script type="module" src="/js/shortcuts.js" />
           <script type="module" src="/js/plus.js" />

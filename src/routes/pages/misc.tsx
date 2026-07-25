@@ -5,12 +5,13 @@ import { Hono } from 'hono';
 import type { AppEnv } from '../../lib/session.ts';
 import { Layout } from '../../views/layout.tsx';
 import { Breadcrumbs } from '../../views/breadcrumbs.tsx';
+import { layoutProps, makeT, type Locale } from '../../lib/i18n.ts';
 
 const r = new Hono<AppEnv>();
 
 r.get('/om', (c) =>
   c.html(
-    <Layout title="Om — FLOGVIT.bible" description="Om bibelprosjektet: åpen kildekode, bibeloversettelser, KVN-versnummerering og hjelpemidler." styles={['about.css']}>
+    <Layout {...layoutProps(c)} title="Om — FLOGVIT.bible" description="Om bibelprosjektet: åpen kildekode, bibeloversettelser, KVN-versnummerering og hjelpemidler." styles={['about.css']}>
       <div class="about-main">
         <div class="reading-container">
           <Breadcrumbs items={[{ label: 'Hjem', href: '/' }, { label: 'Om' }]} />
@@ -282,7 +283,7 @@ r.get('/om', (c) =>
 
 r.get('/tilgjengelighet', (c) =>
   c.html(
-    <Layout title="Tilgjengelighet — FLOGVIT.bible" description="Tilgjengelighetserklæring for bibelsiden: WCAG 2.2 AA, tastaturnavigasjon, skjermleserstøtte." styles={['about.css']}>
+    <Layout {...layoutProps(c)} title="Tilgjengelighet — FLOGVIT.bible" description="Tilgjengelighetserklæring for bibelsiden: WCAG 2.2 AA, tastaturnavigasjon, skjermleserstøtte." styles={['about.css']}>
       <div class="about-main">
         <div class="reading-container">
           <Breadcrumbs items={[{ label: 'Hjem', href: '/' }, { label: 'Tilgjengelighet' }]} />
@@ -441,7 +442,7 @@ r.get('/tilgjengelighet', (c) =>
 // location.pathname (SW-en svarer med denne siden på original-URL-en).
 r.get('/offline-fallback', (c) =>
   c.html(
-    <Layout title="Offline — FLOGVIT.bible" description="Du er offline." styles={['offline.css']} scripts={['offline-reader.js']}>
+    <Layout {...layoutProps(c)} title="Offline — FLOGVIT.bible" description="Du er offline." styles={['offline.css']} scripts={['offline-reader.js']}>
       <div class="offline-reader-main">
         <div class="reading-container">
           <div data-offline-reader>
@@ -459,12 +460,13 @@ r.get('/offline-fallback', (c) =>
   ),
 );
 
-export function NotFoundPage() {
+export function NotFoundPage({ locale, path }: { locale: Locale; path: string }) {
+  const t = makeT(locale);
   return (
-    <Layout title="Siden finnes ikke — FLOGVIT.bible">
+    <Layout locale={locale} path={path} title={`${t('error.notFound')} — FLOGVIT.bible`}>
       <div class="reading-container" style="text-align: center; padding: 4rem 1rem;">
-        <h1>404 - Siden finnes ikke</h1>
-        <p>Beklager, vi finner ikke siden du leter etter.</p>
+        <h1>404 – {t('error.notFound')}</h1>
+        <p>{t('error.notFoundBody')}</p>
         <a href="/">Gå til forsiden</a>
       </div>
     </Layout>

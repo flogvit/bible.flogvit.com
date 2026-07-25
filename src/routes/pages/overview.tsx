@@ -30,6 +30,7 @@ import {
 } from '../../lib/bible.ts';
 import { enrichWithVerseText, getReadingType } from '../../lib/reading-text-enrich.ts';
 import { toUrlSlug } from '../../lib/url-utils.ts';
+import { layoutProps } from '../../lib/i18n.ts';
 
 const r = new Hono<AppEnv>();
 
@@ -110,7 +111,7 @@ r.get('/oversettelser/:id', async (c) => {
   const attributionSources = sourceModules.filter((m) => known.has(m) && m !== edition.id);
 
   return c.html(
-    <Layout
+    <Layout {...layoutProps(c)}
       title={`${name} — Oversettelser — FLOGVIT.bible`}
       description={`Om ${name}${edition.abbreviation ? ` (${edition.abbreviation})` : ''}: tekstgrunnlag, oversettelsesmetode, dekning og lisens.`}
       styles={['overview.css']}
@@ -297,7 +298,7 @@ r.get('/kjente-vers', async (c) => {
   }
 
   return c.html(
-    <Layout
+    <Layout {...layoutProps(c)}
       title="Kjente bibelvers — FLOGVIT.bible"
       description="En samling kjente og ofte siterte bibelvers. Klikk på et vers for å lese det i kontekst."
       styles={['overview.css']}
@@ -358,7 +359,7 @@ r.get('/lesetekster', async (c) => {
   }
 
   return c.html(
-    <Layout
+    <Layout {...layoutProps(c)}
       title="Lesetekster — FLOGVIT.bible"
       description="Lesetekster fra Den norske kirkes tekstrekkesystem — GT, brev og evangelium for hver søndag og helligdag."
       styles={['overview.css']}
@@ -420,7 +421,7 @@ r.get('/lesetekster/:id', async (c) => {
   const enriched = await enrichWithVerseText(text, bible, mapping);
 
   return c.html(
-    <Layout
+    <Layout {...layoutProps(c)}
       title={`${text.name} — Lesetekster — FLOGVIT.bible`}
       description={`Lesetekster for ${text.name}: GT, brev og evangelium.`}
       styles={['overview.css']}
@@ -508,7 +509,7 @@ r.get('/profetier', async (c) => {
   const catName = new Map(categories.map((cat) => [cat.id, cat.name]));
 
   return c.html(
-    <Layout
+    <Layout {...layoutProps(c)}
       title="Profetier og oppfyllelser — FLOGVIT.bible"
       description="Profetier i Det gamle testamente og hvordan de ble oppfylt i Det nye testamente."
       styles={['overview.css', 'persons.css']}
@@ -625,7 +626,7 @@ r.get('/paralleller', async (c) => {
     );
 
   return c.html(
-    <Layout
+    <Layout {...layoutProps(c)}
       title="Parallelle evangelietekster — FLOGVIT.bible"
       description="Sammenlign parallelle tekster fra de fire evangeliene side ved side."
       styles={['overview.css', 'persons.css']}
@@ -722,7 +723,7 @@ r.get('/tidslinje', async (c) => {
   }
 
   return c.html(
-    <Layout
+    <Layout {...layoutProps(c)}
       title="Bibelens tidslinje — FLOGVIT.bible"
       description="En kronologisk oversikt over de viktigste hendelsene i Bibelen og verdenshistorien."
       styles={['overview.css']}
@@ -841,7 +842,7 @@ r.get('/statistikk', async (c) => {
   }
 
   return c.html(
-    <Layout
+    <Layout {...layoutProps(c)}
       title="Bibelstatistikk — FLOGVIT.bible"
       description="Oversikt over bøker, kapitler, vers og ord i Bibelen, samt de hyppigste ordene."
       styles={['overview.css']}

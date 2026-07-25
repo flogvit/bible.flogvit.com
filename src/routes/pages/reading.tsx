@@ -62,6 +62,7 @@ import type {
   VerseRef,
 } from '../../lib/bible.ts';
 import { mapChapter, resolveMappingId, getAvailableMappings } from '../../lib/verse-mapper.ts';
+import { layoutProps } from '../../lib/i18n.ts';
 
 const r = new Hono<AppEnv>();
 
@@ -1613,7 +1614,7 @@ r.get('/:book/:chapter', async (c) => {
   }${userSecondary ? `d.userSecondary=${JSON.stringify(userSecondary)};` : ''}})(document.body.dataset);`;
 
   return c.html(
-    <Layout
+    <Layout {...layoutProps(c)}
       title={title}
       description={description}
       canonical={`${SITE}/${canonicalSlug}/${chapter}`}
@@ -1859,7 +1860,7 @@ r.get('/tekst', async (c) => {
   }
 
   return c.html(
-    <Layout
+    <Layout {...layoutProps(c)}
       title="Bibelpassasjer — FLOGVIT.bible"
       description="Vis utvalgte bibelpassasjer samlet på én side."
       canonical={`${SITE}/tekst`}
