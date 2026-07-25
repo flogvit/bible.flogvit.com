@@ -28,7 +28,7 @@ import {
 } from '../../lib/bible.ts';
 import { getBookInfoById } from '../../lib/books-data.ts';
 import { toUrlSlug } from '../../lib/url-utils.ts';
-import { layoutProps } from '../../lib/i18n.ts';
+import { layoutProps, tFor } from '../../lib/i18n.ts';
 
 const r = new Hono<AppEnv>();
 
@@ -50,6 +50,7 @@ const DAY_CATEGORIES: Record<string, string> = {
 // ---------- /temaer ----------
 
 r.get('/temaer', async (c) => {
+  const t = tFor(c);
   const themes = await getAllThemes();
   const items = themes.map((t) => {
     try {
@@ -74,13 +75,13 @@ r.get('/temaer', async (c) => {
   });
 
   return c.html(
-    <Layout {...layoutProps(c)} title="Tematiske bibelstudier — FLOGVIT.bible" description="Tematiske oversikter med relevante bibelvers." styles={['study.css']} scripts={['card-filter.js']}>
+    <Layout {...layoutProps(c)} title={`${t('themes.title')} — FLOGVIT.bible`} description={t('themes.meta')} styles={['study.css']} scripts={['card-filter.js']}>
       <div class="study-main">
         <div class="container">
           <Breadcrumbs items={[{ label: 'Hjem', href: '/' }, { label: 'Temaer' }]} />
-          <h1>Tematiske bibelstudier</h1>
+          <h1>{t('themes.title')}</h1>
           <div class="study-search-container">
-            <input type="text" class="study-search-input" data-card-search placeholder="Søk etter tema..." aria-label="Søk etter tema" autocomplete="off" />
+            <input type="text" class="study-search-input" data-card-search placeholder={t('themes.searchPh')} aria-label="Søk etter tema" autocomplete="off" />
           </div>
           <div class="study-grid" data-card-list>
             {items.map((t) => (
@@ -90,7 +91,7 @@ r.get('/temaer', async (c) => {
               </a>
             ))}
           </div>
-          <p class="study-empty" data-card-empty hidden>Ingen temaer matcher søket.</p>
+          <p class="study-empty" data-card-empty hidden>{t('themes.noMatch')}</p>
         </div>
       </div>
     </Layout>,
@@ -98,6 +99,7 @@ r.get('/temaer', async (c) => {
 });
 
 r.get('/temaer/:tema', async (c) => {
+  const t = tFor(c);
   const tema = c.req.param('tema');
   const theme = await getThemeByName(tema);
   if (!theme) return c.notFound();
@@ -171,21 +173,22 @@ r.get('/temaer/:tema', async (c) => {
 // ---------- /historier ----------
 
 r.get('/historier', async (c) => {
+  const t = tFor(c);
   const stories = await getAllStories();
   const cats = new Set(stories.map((s) => s.category));
   const availableCategories = Object.entries(STORY_CATEGORIES).filter(([k]) => cats.has(k));
 
   return c.html(
-    <Layout {...layoutProps(c)} title="Bibelhistorier — FLOGVIT.bible" description="Bibelens fortellinger samlet og gjengitt, kategorisert og søkbare." styles={['study.css']} scripts={['card-filter.js']}>
+    <Layout {...layoutProps(c)} title={`${t('stories.title')} — FLOGVIT.bible`} description={t('stories.meta')} styles={['study.css']} scripts={['card-filter.js']}>
       <div class="study-main">
         <div class="container">
           <Breadcrumbs items={[{ label: 'Hjem', href: '/' }, { label: 'Bibelhistorier' }]} />
-          <h1>Bibelhistorier</h1>
+          <h1>{t('stories.title')}</h1>
           <div class="study-search-container">
-            <input type="text" class="study-search-input" data-card-search placeholder="Søk etter historie..." aria-label="Søk etter historie" autocomplete="off" />
+            <input type="text" class="study-search-input" data-card-search placeholder={t('stories.searchPh')} aria-label="Søk etter historie" autocomplete="off" />
           </div>
           <div class="study-filter-buttons" data-card-catfilter>
-            <button type="button" class="persons-filter-button active" data-value="">Alle</button>
+            <button type="button" class="persons-filter-button active" data-value="">{t('common.all')}</button>
             {availableCategories.map(([key, label]) => (
               <button type="button" class="persons-filter-button" data-value={key}>{label}</button>
             ))}
@@ -204,7 +207,7 @@ r.get('/historier', async (c) => {
               </a>
             ))}
           </div>
-          <p class="study-empty" data-card-empty hidden>Ingen historier matcher søket.</p>
+          <p class="study-empty" data-card-empty hidden>{t('stories.noMatch')}</p>
         </div>
       </div>
     </Layout>,
@@ -212,6 +215,7 @@ r.get('/historier', async (c) => {
 });
 
 r.get('/historier/:slug', async (c) => {
+  const t = tFor(c);
   const story = await getStoryBySlug(c.req.param('slug'));
   if (!story) return c.notFound();
   let data: StoryData;
@@ -272,6 +276,7 @@ r.get('/historier/:slug', async (c) => {
 // ---------- /tall ----------
 
 r.get('/tall', async (c) => {
+  const t = tFor(c);
   const numbers = await getAllNumberSymbolism();
   const items = numbers.map((n) => {
     try {
@@ -283,13 +288,13 @@ r.get('/tall', async (c) => {
   });
 
   return c.html(
-    <Layout {...layoutProps(c)} title="Tall i Bibelen — FLOGVIT.bible" description="Tallenes betydning i Bibelen." styles={['study.css']} scripts={['card-filter.js']}>
+    <Layout {...layoutProps(c)} title={`${t('nav.numbers')} — FLOGVIT.bible`} description={t('numbers.meta')} styles={['study.css']} scripts={['card-filter.js']}>
       <div class="study-main">
         <div class="container">
           <Breadcrumbs items={[{ label: 'Hjem', href: '/' }, { label: 'Tall' }]} />
-          <h1>Tallenes betydning</h1>
+          <h1>{t('numbers.title')}</h1>
           <div class="study-search-container">
-            <input type="text" class="study-search-input" data-card-search placeholder="Søk etter tall eller betydning..." aria-label="Søk" autocomplete="off" />
+            <input type="text" class="study-search-input" data-card-search placeholder={t('numbers.searchPh')} aria-label="Søk" autocomplete="off" />
           </div>
           <div class="study-grid study-grid-numbers" data-card-list>
             {items.map((n) => (
@@ -299,7 +304,7 @@ r.get('/tall', async (c) => {
               </a>
             ))}
           </div>
-          <p class="study-empty" data-card-empty hidden>Ingen tall matcher søket.</p>
+          <p class="study-empty" data-card-empty hidden>{t('numbers.noMatch')}</p>
         </div>
       </div>
     </Layout>,
@@ -307,6 +312,7 @@ r.get('/tall', async (c) => {
 });
 
 r.get('/tall/:number', async (c) => {
+  const t = tFor(c);
   const num = parseInt(c.req.param('number'), 10);
   if (isNaN(num)) return c.notFound();
   const row = await getNumberSymbolismByNumber(num);
@@ -379,6 +385,7 @@ function formatDayDate(iso: string): string {
 }
 
 r.get('/dager', async (c) => {
+  const t = tFor(c);
   const thematic = c.req.query('visning') === 'tematisk';
   const days = await getAllDays();
   const items = days.map((d) => {
@@ -414,17 +421,17 @@ r.get('/dager', async (c) => {
     : [{ title: '', items: [...items].sort(byNextDate) }];
 
   return c.html(
-    <Layout {...layoutProps(c)} title="Helligdager og merkedager — FLOGVIT.bible" description="Helligdager og merkedager i kristen tradisjon." styles={['study.css']} scripts={['card-filter.js']}>
+    <Layout {...layoutProps(c)} title={`${t('days.title')} — FLOGVIT.bible`} description={t('days.meta')} styles={['study.css']} scripts={['card-filter.js']}>
       <div class="study-main">
         <div class="container">
           <Breadcrumbs items={[{ label: 'Hjem', href: '/' }, { label: 'Dager' }]} />
-          <h1>Helligdager og merkedager</h1>
+          <h1>{t('days.title')}</h1>
           <nav class="study-view-tabs" aria-label="Visning">
-            <a href="/dager" class={`study-view-tab ${thematic ? '' : 'is-active'}`} aria-current={thematic ? undefined : 'true'}>Kronologisk</a>
-            <a href="/dager?visning=tematisk" class={`study-view-tab ${thematic ? 'is-active' : ''}`} aria-current={thematic ? 'true' : undefined}>Tematisk</a>
+            <a href="/dager" class={`study-view-tab ${thematic ? '' : 'is-active'}`} aria-current={thematic ? undefined : 'true'}>{t('days.chronological')}</a>
+            <a href="/dager?visning=tematisk" class={`study-view-tab ${thematic ? 'is-active' : ''}`} aria-current={thematic ? 'true' : undefined}>{t('days.thematic')}</a>
           </nav>
           <div class="study-search-container">
-            <input type="text" class="study-search-input" data-card-search placeholder="Søk etter dag..." aria-label="Søk" autocomplete="off" />
+            <input type="text" class="study-search-input" data-card-search placeholder={t('days.searchPh')} aria-label="Søk" autocomplete="off" />
           </div>
           <div data-card-list>
             {groups.map((g) => (
@@ -438,7 +445,7 @@ r.get('/dager', async (c) => {
               </section>
             ))}
           </div>
-          <p class="study-empty" data-card-empty hidden>Ingen dager matcher søket.</p>
+          <p class="study-empty" data-card-empty hidden>{t('days.noMatch')}</p>
         </div>
       </div>
     </Layout>,
@@ -446,6 +453,7 @@ r.get('/dager', async (c) => {
 });
 
 r.get('/dager/:dayId', async (c) => {
+  const t = tFor(c);
   const row = await getDayById(c.req.param('dayId'));
   if (!row) return c.notFound();
   let data: DayData;
@@ -505,7 +513,7 @@ r.get('/dager/:dayId', async (c) => {
           ))}
           {primary.length > 0 && (
             <section class="study-refs">
-              <h2>Hovedtekster</h2>
+              <h2>{t('days.mainTexts')}</h2>
               <div class="study-ref-cards">
                 {primary.map((ref) => (
                   <a href={refUrl(ref)} class="study-ref-card">
