@@ -26,6 +26,7 @@ import {
   searchDays,
   type DayReference,
 } from '../../lib/bible.ts';
+import { DEFAULT_CONTENT_LANGUAGE } from '../../lib/lang.ts';
 import { booksData, getBookInfoById, type BookInfo } from '../../lib/books-data.ts';
 import { toUrlSlug } from '../../lib/url-utils.ts';
 
@@ -48,7 +49,7 @@ async function loadDailyVerse(bible = 'osnb2'): Promise<DailyVerse | null> {
   const date = new Date().toISOString().slice(0, 10);
   const [dv] = (await sql`
     SELECT book_id, chapter, verse_start, verse_end, note
-    FROM daily_verses WHERE date = ${date}
+    FROM daily_verses WHERE date = ${date} AND language = ${DEFAULT_CONTENT_LANGUAGE}
   `) as { book_id: number; chapter: number; verse_start: number; verse_end: number; note: string | null }[];
   if (!dv) return null;
   const [book] = (await sql`

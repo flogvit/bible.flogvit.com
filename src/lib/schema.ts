@@ -17,10 +17,27 @@
 // - `key` i db_meta er reservert ord i MySQL — alle spørringer må backtick-e den.
 // - user_id i sync-/brukertabellene er konto-bruker-id (INT, egen database —
 //   ingen FK mulig). Bibels egen users-tabell finnes ikke lenger (konto-auth).
+//
+// SPRÅKDIMENSJON (se lang.ts): alt derivert innhold er språk-scopet med en
+// `language`-kolonne som er DEL AV unik-nøkkelen, slik at flere språk kan ligge
+// side om side uten å overskrive hverandre. Tre unntak, med vilje:
+// - `books`, `verse_mappings`: har egne språkkolonner/-akser (name/name_no,
+//   book_names per oversettelse).
+// - `verses`, `word4word`: scopet av `bible` (oversettelses-id), som allerede
+//   koder språk (osnb2, osnn1, tanach-nb, …).
+// - Barnetabeller med SURROGAT-forelder (`reading_text_refs`): språket følger av
+//   forelderraden. Barn med NATURLIG forelder-nøkkel (timeline_references,
+//   prophecy_fulfillments, gospel_parallel_passages) har egen kolonne, fordi
+//   selve forelder-id-en nå bare er unik sammen med språket.
 
 import type { SQL } from 'bun';
+import { DEFAULT_CONTENT_LANGUAGE } from './lang.ts';
 
 const CS = 'CHARACTER SET utf8mb4 COLLATE utf8mb4_danish_ci';
+
+/** Språkkolonnen på innholdstabellene. Default = gulvet, så gamle rader og
+ *  språknøytralt innhold beholder sin verdi uten migrering av data. */
+const LANG = `language VARCHAR(10) NOT NULL DEFAULT '${DEFAULT_CONTENT_LANGUAGE}'`;
 
 const TABLES: string[] = [
   // --- bibelinnhold (derivert, regenereres av import-pipelinen) ---
@@ -77,13 +94,17 @@ const TABLES: string[] = [
   ) ENGINE=InnoDB ${CS}`,
 
   `CREATE TABLE IF NOT EXISTS book_summaries (
-    book_id INT PRIMARY KEY,
-    summary MEDIUMTEXT NOT NULL
+    book_id INT NOT NULL,
+    summary MEDIUMTEXT NOT NULL,
+    ${LANG},
+    PRIMARY KEY (book_id, language)
   ) ENGINE=InnoDB ${CS}`,
 
   `CREATE TABLE IF NOT EXISTS book_context (
-    book_id INT PRIMARY KEY,
-    context MEDIUMTEXT NOT NULL
+    book_id INT NOT NULL,
+    context MEDIUMTEXT NOT NULL,
+    ${LANG},
+    PRIMARY KEY (book_id, language)
   ) ENGINE=InnoDB ${CS}`,
 
   `CREATE TABLE IF NOT EXISTS chapter_summaries (
@@ -91,7 +112,8 @@ const TABLES: string[] = [
     book_id INT NOT NULL,
     chapter INT NOT NULL,
     summary MEDIUMTEXT NOT NULL,
-    UNIQUE KEY uq_chapter_summaries (book_id, chapter)
+    ${LANG},
+    UNIQUE KEY uq_chapter_summaries (book_id, chapter, language)
   ) ENGINE=InnoDB ${CS}`,
 
   `CREATE TABLE IF NOT EXISTS chapter_context (
@@ -99,7 +121,8 @@ const TABLES: string[] = [
     book_id INT NOT NULL,
     chapter INT NOT NULL,
     context MEDIUMTEXT NOT NULL,
-    UNIQUE KEY uq_chapter_context (book_id, chapter)
+    ${LANG},
+    UNIQUE KEY uq_chapter_context (book_id, chapter, language)
   ) ENGINE=InnoDB ${CS}`,
 
   `CREATE TABLE IF NOT EXISTS important_words (
@@ -108,7 +131,8 @@ const TABLES: string[] = [
     chapter INT NOT NULL,
     word VARCHAR(255) NOT NULL,
     explanation TEXT NOT NULL,
-    INDEX idx_important_words_chapter (book_id, chapter)
+    ${LANG},
+    INDEX idx_important_words_chapter (book_id, chapter, language)
   ) ENGINE=InnoDB ${CS}`,
 
   `CREATE TABLE IF NOT EXISTS important_verses (
@@ -117,7 +141,8 @@ const TABLES: string[] = [
     chapter INT NOT NULL,
     verse INT NOT NULL,
     text TEXT,
-    UNIQUE KEY uq_important_verses (book_id, chapter, verse)
+    ${LANG},
+    UNIQUE KEY uq_important_verses (book_id, chapter, verse, language)
   ) ENGINE=InnoDB ${CS}`,
 
   `CREATE TABLE IF NOT EXISTS verse_prayers (
@@ -126,7 +151,8 @@ const TABLES: string[] = [
     chapter INT NOT NULL,
     verse INT NOT NULL,
     prayer MEDIUMTEXT NOT NULL,
-    UNIQUE KEY uq_verse_prayers (book_id, chapter, verse)
+    ${LANG},
+    UNIQUE KEY uq_verse_prayers (book_id, chapter, verse, language)
   ) ENGINE=InnoDB ${CS}`,
 
   `CREATE TABLE IF NOT EXISTS verse_sermons (
@@ -135,13 +161,16 @@ const TABLES: string[] = [
     chapter INT NOT NULL,
     verse INT NOT NULL,
     sermon MEDIUMTEXT NOT NULL,
-    UNIQUE KEY uq_verse_sermons (book_id, chapter, verse)
+    ${LANG},
+    UNIQUE KEY uq_verse_sermons (book_id, chapter, verse, language)
   ) ENGINE=InnoDB ${CS}`,
 
   `CREATE TABLE IF NOT EXISTS themes (
     id INT AUTO_INCREMENT PRIMARY KEY,
-    name VARCHAR(255) NOT NULL UNIQUE,
-    content MEDIUMTEXT NOT NULL
+    name VARCHAR(255) NOT NULL,
+    content MEDIUMTEXT NOT NULL,
+    ${LANG},
+    UNIQUE KEY uq_themes (name, language)
   ) ENGINE=InnoDB ${CS}`,
 
   `CREATE TABLE IF NOT EXISTS timeline_periods (
@@ -151,13 +180,14 @@ const TABLES: string[] = [
     color VARCHAR(20),
     description TEXT,
     sort_order INT,
-    PRIMARY KEY (id, timeline_type)
+    ${LANG},
+    PRIMARY KEY (id, timeline_type, language)
   ) ENGINE=InnoDB ${CS}`,
 
   `CREATE TABLE IF NOT EXISTS timeline_events (
     seq INT NOT NULL AUTO_INCREMENT,
     UNIQUE KEY uq_timeline_events_seq (seq),
-    id VARCHAR(100) PRIMARY KEY,
+    id VARCHAR(100) NOT NULL,
     title VARCHAR(500) NOT NULL,
     description TEXT,
     year INT,
@@ -169,10 +199,12 @@ const TABLES: string[] = [
     region VARCHAR(100),
     book_id INT,
     section_id VARCHAR(100),
-    INDEX idx_timeline_events_period (period_id),
+    ${LANG},
+    PRIMARY KEY (id, language),
+    INDEX idx_timeline_events_period (period_id, language),
     INDEX idx_timeline_events_sort (sort_order),
-    INDEX idx_timeline_events_type (timeline_type),
-    INDEX idx_timeline_events_book (book_id)
+    INDEX idx_timeline_events_type (timeline_type, language),
+    INDEX idx_timeline_events_book (book_id, language)
   ) ENGINE=InnoDB ${CS}`,
 
   `CREATE TABLE IF NOT EXISTS timeline_references (
@@ -182,7 +214,8 @@ const TABLES: string[] = [
     chapter INT NOT NULL,
     verse_start INT NOT NULL,
     verse_end INT NOT NULL,
-    INDEX idx_timeline_references_event (event_id)
+    ${LANG},
+    INDEX idx_timeline_references_event (event_id, language)
   ) ENGINE=InnoDB ${CS}`,
 
   `CREATE TABLE IF NOT EXISTS timeline_book_sections (
@@ -195,22 +228,25 @@ const TABLES: string[] = [
     chapter_end INT NOT NULL,
     description TEXT,
     sort_order INT,
-    PRIMARY KEY (id, book_id),
-    INDEX idx_timeline_book_sections_book (book_id)
+    ${LANG},
+    PRIMARY KEY (id, book_id, language),
+    INDEX idx_timeline_book_sections_book (book_id, language)
   ) ENGINE=InnoDB ${CS}`,
 
   `CREATE TABLE IF NOT EXISTS prophecy_categories (
     seq INT NOT NULL AUTO_INCREMENT,
     UNIQUE KEY uq_prophecy_categories_seq (seq),
-    id VARCHAR(100) PRIMARY KEY,
+    id VARCHAR(100) NOT NULL,
     name VARCHAR(255) NOT NULL,
-    description TEXT
+    description TEXT,
+    ${LANG},
+    PRIMARY KEY (id, language)
   ) ENGINE=InnoDB ${CS}`,
 
   `CREATE TABLE IF NOT EXISTS prophecies (
     seq INT NOT NULL AUTO_INCREMENT,
     UNIQUE KEY uq_prophecies_seq (seq),
-    id VARCHAR(100) PRIMARY KEY,
+    id VARCHAR(100) NOT NULL,
     category_id VARCHAR(100) NOT NULL,
     title VARCHAR(500) NOT NULL,
     explanation TEXT,
@@ -218,7 +254,9 @@ const TABLES: string[] = [
     prophecy_chapter INT NOT NULL,
     prophecy_verse_start INT NOT NULL,
     prophecy_verse_end INT NOT NULL,
-    INDEX idx_prophecies_category (category_id)
+    ${LANG},
+    PRIMARY KEY (id, language),
+    INDEX idx_prophecies_category (category_id, language)
   ) ENGINE=InnoDB ${CS}`,
 
   `CREATE TABLE IF NOT EXISTS prophecy_fulfillments (
@@ -228,14 +266,17 @@ const TABLES: string[] = [
     chapter INT NOT NULL,
     verse_start INT NOT NULL,
     verse_end INT NOT NULL,
-    INDEX idx_prophecy_fulfillments_prophecy (prophecy_id),
-    INDEX idx_prophecy_fulfillments_book (book_id, chapter)
+    ${LANG},
+    INDEX idx_prophecy_fulfillments_prophecy (prophecy_id, language),
+    INDEX idx_prophecy_fulfillments_book (book_id, chapter, language)
   ) ENGINE=InnoDB ${CS}`,
 
   `CREATE TABLE IF NOT EXISTS persons (
     id INT AUTO_INCREMENT PRIMARY KEY,
-    name VARCHAR(255) NOT NULL UNIQUE,
-    content MEDIUMTEXT NOT NULL
+    name VARCHAR(255) NOT NULL,
+    content MEDIUMTEXT NOT NULL,
+    ${LANG},
+    UNIQUE KEY uq_persons (name, language)
   ) ENGINE=InnoDB ${CS}`,
 
   `CREATE TABLE IF NOT EXISTS chapter_insights (
@@ -244,30 +285,35 @@ const TABLES: string[] = [
     chapter INT NOT NULL,
     type VARCHAR(50) NOT NULL,
     content MEDIUMTEXT NOT NULL,
-    UNIQUE KEY uq_chapter_insights (book_id, chapter),
-    INDEX idx_chapter_insights_book (book_id, chapter)
+    ${LANG},
+    UNIQUE KEY uq_chapter_insights (book_id, chapter, language),
+    INDEX idx_chapter_insights_book (book_id, chapter, language)
   ) ENGINE=InnoDB ${CS}`,
 
   `CREATE TABLE IF NOT EXISTS daily_verses (
     id INT AUTO_INCREMENT PRIMARY KEY,
-    date VARCHAR(10) NOT NULL UNIQUE,
+    date VARCHAR(10) NOT NULL,
     book_id INT NOT NULL,
     chapter INT NOT NULL,
     verse_start INT NOT NULL,
     verse_end INT NOT NULL,
     note TEXT,
-    INDEX idx_daily_verses_date (date)
+    ${LANG},
+    UNIQUE KEY uq_daily_verses (date, language),
+    INDEX idx_daily_verses_date (date, language)
   ) ENGINE=InnoDB ${CS}`,
 
   `CREATE TABLE IF NOT EXISTS reading_plans (
     seq INT NOT NULL AUTO_INCREMENT,
     UNIQUE KEY uq_reading_plans_seq (seq),
-    id VARCHAR(100) PRIMARY KEY,
+    id VARCHAR(100) NOT NULL,
     name VARCHAR(255) NOT NULL,
     description TEXT,
     category VARCHAR(100),
     days INT NOT NULL,
-    content MEDIUMTEXT NOT NULL
+    content MEDIUMTEXT NOT NULL,
+    ${LANG},
+    PRIMARY KEY (id, language)
   ) ENGINE=InnoDB ${CS}`,
 
   `CREATE TABLE IF NOT EXISTS db_meta (
@@ -276,19 +322,23 @@ const TABLES: string[] = [
   ) ENGINE=InnoDB ${CS}`,
 
   `CREATE TABLE IF NOT EXISTS gospel_parallel_sections (
-    id VARCHAR(100) PRIMARY KEY,
+    id VARCHAR(100) NOT NULL,
     name VARCHAR(255) NOT NULL,
     description TEXT,
-    sort_order INT NOT NULL
+    sort_order INT NOT NULL,
+    ${LANG},
+    PRIMARY KEY (id, language)
   ) ENGINE=InnoDB ${CS}`,
 
   `CREATE TABLE IF NOT EXISTS gospel_parallels (
-    id VARCHAR(100) PRIMARY KEY,
+    id VARCHAR(100) NOT NULL,
     section_id VARCHAR(100) NOT NULL,
     title VARCHAR(500) NOT NULL,
     notes TEXT,
     sort_order INT NOT NULL,
-    INDEX idx_gospel_parallels_section (section_id)
+    ${LANG},
+    PRIMARY KEY (id, language),
+    INDEX idx_gospel_parallels_section (section_id, language)
   ) ENGINE=InnoDB ${CS}`,
 
   `CREATE TABLE IF NOT EXISTS gospel_parallel_passages (
@@ -300,7 +350,44 @@ const TABLES: string[] = [
     verse_start INT NOT NULL,
     verse_end INT NOT NULL,
     reference VARCHAR(100) NOT NULL,
-    INDEX idx_gospel_parallel_passages_parallel (parallel_id)
+    ${LANG},
+    INDEX idx_gospel_parallel_passages_parallel (parallel_id, language)
+  ) ENGINE=InnoDB ${CS}`,
+
+  // Metadata om selve OVERSETTELSEN (free-bible: bibles_raw/<modul>/meta.json +
+  // license.json). `id` er modul-id-en, altså samme verdi som `verses.bible` —
+  // raden finnes bare for oversettelser vi faktisk importerer tekst for.
+  //
+  // Ingen language-kolonne: dette er metadata OM et språk, ikke innhold PÅ et
+  // språk (navnet ligger som name.native + name.en i meta-JSON-en).
+  //
+  // Kolonnene som er trukket ut er de vi lister/sorterer/filtrerer på; resten av
+  // feltene leses fra JSON-blobbene på detaljsiden. Samme mønster som
+  // themes/persons/stories (utdrag + full `content`), fordi meta.json har svært
+  // varierende felter: bare module/name/language/coverage/features/provenance
+  // finnes i alle 82, mens f.eks. year/translators/publisher/place er valgfrie.
+  `CREATE TABLE IF NOT EXISTS bible_editions (
+    id VARCHAR(50) PRIMARY KEY,
+    name_native VARCHAR(255) NOT NULL,
+    name_en VARCHAR(255),
+    abbreviation VARCHAR(50),
+    lang_iso639_1 VARCHAR(10),
+    lang_iso639_3 VARCHAR(10),
+    script VARCHAR(20),
+    direction VARCHAR(3) NOT NULL DEFAULT 'ltr',
+    philosophy VARCHAR(50),
+    tradition VARCHAR(50),
+    body VARCHAR(255),
+    year_published INT,
+    testament VARCHAR(10),
+    books INT,
+    chapters INT,
+    verses INT,
+    license_name VARCHAR(255),
+    license_spdx VARCHAR(100),
+    meta MEDIUMTEXT NOT NULL,
+    license MEDIUMTEXT,
+    INDEX idx_bible_editions_lang (lang_iso639_1)
   ) ENGINE=InnoDB ${CS}`,
 
   `CREATE TABLE IF NOT EXISTS verse_mappings (
@@ -313,15 +400,19 @@ const TABLES: string[] = [
   ) ENGINE=InnoDB ${CS}`,
 
   `CREATE TABLE IF NOT EXISTS days (
-    id VARCHAR(100) PRIMARY KEY,
+    id VARCHAR(100) NOT NULL,
     name VARCHAR(255) NOT NULL,
-    content MEDIUMTEXT NOT NULL
+    content MEDIUMTEXT NOT NULL,
+    ${LANG},
+    PRIMARY KEY (id, language)
   ) ENGINE=InnoDB ${CS}`,
 
   `CREATE TABLE IF NOT EXISTS number_symbolism (
     id INT AUTO_INCREMENT PRIMARY KEY,
-    number INT NOT NULL UNIQUE,
-    content MEDIUMTEXT NOT NULL
+    number INT NOT NULL,
+    content MEDIUMTEXT NOT NULL,
+    ${LANG},
+    UNIQUE KEY uq_number_symbolism (number, language)
   ) ENGINE=InnoDB ${CS}`,
 
   `CREATE TABLE IF NOT EXISTS reading_texts (
@@ -329,7 +420,8 @@ const TABLES: string[] = [
     date VARCHAR(10) NOT NULL,
     name VARCHAR(255) NOT NULL,
     series VARCHAR(255),
-    INDEX idx_reading_texts_date (date)
+    ${LANG},
+    INDEX idx_reading_texts_date (date, language)
   ) ENGINE=InnoDB ${CS}`,
 
   `CREATE TABLE IF NOT EXISTS reading_text_refs (
@@ -353,22 +445,29 @@ const TABLES: string[] = [
 
   `CREATE TABLE IF NOT EXISTS stories (
     id INT AUTO_INCREMENT PRIMARY KEY,
-    slug VARCHAR(255) NOT NULL UNIQUE,
+    slug VARCHAR(255) NOT NULL,
     title VARCHAR(500) NOT NULL,
     keywords TEXT NOT NULL,
     description TEXT,
     category VARCHAR(100) NOT NULL,
     content MEDIUMTEXT NOT NULL,
-    INDEX idx_stories_category (category)
+    ${LANG},
+    UNIQUE KEY uq_stories (slug, language),
+    INDEX idx_stories_category (category, language)
   ) ENGINE=InnoDB ${CS}`,
 
+  // language her er SCOPET til hash-oppføringen, ikke nødvendigvis innholdets
+  // språk: språknøytrale typer (kapitler, word4word, vers-mappinger) føres på
+  // gulvet, slik at eksisterende rader beholder nøkkelen sin og ikke utløser en
+  // full reimport når kolonnen kommer til.
   `CREATE TABLE IF NOT EXISTS content_hashes (
     id INT AUTO_INCREMENT PRIMARY KEY,
     content_type VARCHAR(50) NOT NULL,
     content_key VARCHAR(255) NOT NULL,
     content_hash VARCHAR(64) NOT NULL,
     updated_at VARCHAR(30) NOT NULL,
-    UNIQUE KEY uq_content_hashes (content_type, content_key),
+    ${LANG},
+    UNIQUE KEY uq_content_hashes (content_type, content_key, language),
     INDEX idx_content_hashes_type (content_type),
     INDEX idx_content_hashes_updated (updated_at)
   ) ENGINE=InnoDB ${CS}`,
@@ -413,11 +512,180 @@ const TABLES: string[] = [
   ) ENGINE=InnoDB ${CS}`,
 ];
 
-/** Oppretter alle tabeller (idempotent). */
+// --- Migreringer ---------------------------------------------------------
+//
+// `CREATE TABLE IF NOT EXISTS` treffer bare NYE databaser; en tabell som
+// allerede finnes blir stående som den var. Skjemaendringer må derfor uttrykkes
+// som eksplisitte, idempotente steg her — de kjøres av `ensureSchema` etter
+// CREATE-ene og er no-ops når skjemaet allerede stemmer (altså på nye baser).
+//
+// Alle språk-scopede tabeller er små (titusener av rader på det meste), så
+// ALTER-ene er raske. `verses`/`word4word` — de store — røres ikke.
+
+/** Tabellene som fikk språkdimensjonen, med nøklene den må inn i. */
+const LANGUAGE_MIGRATIONS: {
+  table: string;
+  /** Unik-nøkler/PK som må inneholde language for at språk skal kunne sameksistere. */
+  keys: { name: string; columns: string[]; kind: 'primary' | 'unique' | 'index' }[];
+  /** Indekser fra inline `UNIQUE` (MySQL navngir dem etter kolonnen) som skal bort. */
+  dropLegacy?: string[];
+}[] = [
+  { table: 'book_summaries', keys: [{ name: 'PRIMARY', columns: ['book_id', 'language'], kind: 'primary' }] },
+  { table: 'book_context', keys: [{ name: 'PRIMARY', columns: ['book_id', 'language'], kind: 'primary' }] },
+  { table: 'chapter_summaries', keys: [{ name: 'uq_chapter_summaries', columns: ['book_id', 'chapter', 'language'], kind: 'unique' }] },
+  { table: 'chapter_context', keys: [{ name: 'uq_chapter_context', columns: ['book_id', 'chapter', 'language'], kind: 'unique' }] },
+  { table: 'important_words', keys: [{ name: 'idx_important_words_chapter', columns: ['book_id', 'chapter', 'language'], kind: 'index' }] },
+  { table: 'important_verses', keys: [{ name: 'uq_important_verses', columns: ['book_id', 'chapter', 'verse', 'language'], kind: 'unique' }] },
+  { table: 'verse_prayers', keys: [{ name: 'uq_verse_prayers', columns: ['book_id', 'chapter', 'verse', 'language'], kind: 'unique' }] },
+  { table: 'verse_sermons', keys: [{ name: 'uq_verse_sermons', columns: ['book_id', 'chapter', 'verse', 'language'], kind: 'unique' }] },
+  { table: 'themes', keys: [{ name: 'uq_themes', columns: ['name', 'language'], kind: 'unique' }], dropLegacy: ['name'] },
+  { table: 'timeline_periods', keys: [{ name: 'PRIMARY', columns: ['id', 'timeline_type', 'language'], kind: 'primary' }] },
+  {
+    table: 'timeline_events',
+    keys: [
+      { name: 'PRIMARY', columns: ['id', 'language'], kind: 'primary' },
+      { name: 'idx_timeline_events_period', columns: ['period_id', 'language'], kind: 'index' },
+      { name: 'idx_timeline_events_type', columns: ['timeline_type', 'language'], kind: 'index' },
+      { name: 'idx_timeline_events_book', columns: ['book_id', 'language'], kind: 'index' },
+    ],
+  },
+  { table: 'timeline_references', keys: [{ name: 'idx_timeline_references_event', columns: ['event_id', 'language'], kind: 'index' }] },
+  {
+    table: 'timeline_book_sections',
+    keys: [
+      { name: 'PRIMARY', columns: ['id', 'book_id', 'language'], kind: 'primary' },
+      { name: 'idx_timeline_book_sections_book', columns: ['book_id', 'language'], kind: 'index' },
+    ],
+  },
+  { table: 'prophecy_categories', keys: [{ name: 'PRIMARY', columns: ['id', 'language'], kind: 'primary' }] },
+  {
+    table: 'prophecies',
+    keys: [
+      { name: 'PRIMARY', columns: ['id', 'language'], kind: 'primary' },
+      { name: 'idx_prophecies_category', columns: ['category_id', 'language'], kind: 'index' },
+    ],
+  },
+  {
+    table: 'prophecy_fulfillments',
+    keys: [
+      { name: 'idx_prophecy_fulfillments_prophecy', columns: ['prophecy_id', 'language'], kind: 'index' },
+      { name: 'idx_prophecy_fulfillments_book', columns: ['book_id', 'chapter', 'language'], kind: 'index' },
+    ],
+  },
+  { table: 'persons', keys: [{ name: 'uq_persons', columns: ['name', 'language'], kind: 'unique' }], dropLegacy: ['name'] },
+  {
+    table: 'chapter_insights',
+    keys: [
+      { name: 'uq_chapter_insights', columns: ['book_id', 'chapter', 'language'], kind: 'unique' },
+      { name: 'idx_chapter_insights_book', columns: ['book_id', 'chapter', 'language'], kind: 'index' },
+    ],
+  },
+  {
+    table: 'daily_verses',
+    keys: [
+      { name: 'uq_daily_verses', columns: ['date', 'language'], kind: 'unique' },
+      { name: 'idx_daily_verses_date', columns: ['date', 'language'], kind: 'index' },
+    ],
+    dropLegacy: ['date'],
+  },
+  { table: 'reading_plans', keys: [{ name: 'PRIMARY', columns: ['id', 'language'], kind: 'primary' }] },
+  { table: 'gospel_parallel_sections', keys: [{ name: 'PRIMARY', columns: ['id', 'language'], kind: 'primary' }] },
+  {
+    table: 'gospel_parallels',
+    keys: [
+      { name: 'PRIMARY', columns: ['id', 'language'], kind: 'primary' },
+      { name: 'idx_gospel_parallels_section', columns: ['section_id', 'language'], kind: 'index' },
+    ],
+  },
+  { table: 'gospel_parallel_passages', keys: [{ name: 'idx_gospel_parallel_passages_parallel', columns: ['parallel_id', 'language'], kind: 'index' }] },
+  { table: 'days', keys: [{ name: 'PRIMARY', columns: ['id', 'language'], kind: 'primary' }] },
+  { table: 'number_symbolism', keys: [{ name: 'uq_number_symbolism', columns: ['number', 'language'], kind: 'unique' }], dropLegacy: ['number'] },
+  { table: 'reading_texts', keys: [{ name: 'idx_reading_texts_date', columns: ['date', 'language'], kind: 'index' }] },
+  {
+    table: 'stories',
+    keys: [
+      { name: 'uq_stories', columns: ['slug', 'language'], kind: 'unique' },
+      { name: 'idx_stories_category', columns: ['category', 'language'], kind: 'index' },
+    ],
+    dropLegacy: ['slug'],
+  },
+  { table: 'content_hashes', keys: [{ name: 'uq_content_hashes', columns: ['content_type', 'content_key', 'language'], kind: 'unique' }] },
+];
+
+async function tableExists(sql: SQL, table: string): Promise<boolean> {
+  const rows = (await sql`
+    SELECT 1 AS n FROM information_schema.tables
+    WHERE table_schema = DATABASE() AND table_name = ${table}
+  `) as { n: number }[];
+  return rows.length > 0;
+}
+
+async function columnExists(sql: SQL, table: string, column: string): Promise<boolean> {
+  const rows = (await sql`
+    SELECT 1 AS n FROM information_schema.columns
+    WHERE table_schema = DATABASE() AND table_name = ${table} AND column_name = ${column}
+  `) as { n: number }[];
+  return rows.length > 0;
+}
+
+/** Kolonnene i en indeks, i nøkkelrekkefølge. Tom liste = indeksen finnes ikke. */
+async function indexColumns(sql: SQL, table: string, index: string): Promise<string[]> {
+  // Alias eksplisitt: information_schema svarer med VERSALE kolonnenavn.
+  const rows = (await sql`
+    SELECT column_name AS col FROM information_schema.statistics
+    WHERE table_schema = DATABASE() AND table_name = ${table} AND index_name = ${index}
+    ORDER BY seq_in_index
+  `) as { col: string }[];
+  return rows.map((r) => r.col.toLowerCase());
+}
+
+/** Kjører alle skjemaendringer som CREATE-ene ikke kan uttrykke. Idempotent. */
+async function runMigrations(sql: SQL): Promise<void> {
+  for (const { table, keys, dropLegacy } of LANGUAGE_MIGRATIONS) {
+    if (!(await tableExists(sql, table))) continue;
+
+    if (!(await columnExists(sql, table, 'language'))) {
+      await sql.unsafe(`ALTER TABLE ${table} ADD COLUMN ${LANG}`).simple();
+    }
+
+    // Gamle inline-UNIQUE-indekser (navngitt etter kolonnen) må vike for den
+    // navngitte, språk-scopede nøkkelen — ellers står den gamle igjen og
+    // håndhever unikhet PÅ TVERS av språk.
+    for (const legacy of dropLegacy ?? []) {
+      const cols = await indexColumns(sql, table, legacy);
+      if (cols.length > 0 && !cols.includes('language')) {
+        await sql.unsafe(`ALTER TABLE ${table} DROP INDEX \`${legacy}\``).simple();
+      }
+    }
+
+    for (const key of keys) {
+      const current = await indexColumns(sql, table, key.name);
+      const wanted = key.columns.map((c) => c.toLowerCase());
+      if (current.length === wanted.length && current.every((c, i) => c === wanted[i])) continue;
+
+      const cols = key.columns.map((c) => `\`${c}\``).join(', ');
+      const parts: string[] = [];
+      if (current.length > 0) {
+        parts.push(key.kind === 'primary' ? 'DROP PRIMARY KEY' : `DROP INDEX \`${key.name}\``);
+      }
+      parts.push(
+        key.kind === 'primary'
+          ? `ADD PRIMARY KEY (${cols})`
+          : key.kind === 'unique'
+            ? `ADD UNIQUE KEY \`${key.name}\` (${cols})`
+            : `ADD INDEX \`${key.name}\` (${cols})`,
+      );
+      await sql.unsafe(`ALTER TABLE ${table} ${parts.join(', ')}`).simple();
+    }
+  }
+}
+
+/** Oppretter alle tabeller og kjører migreringene (idempotent). */
 export async function ensureSchema(sql: SQL): Promise<void> {
   for (const stmt of TABLES) {
     await sql.unsafe(stmt).simple();
   }
+  await runMigrations(sql);
 }
 
 export const TABLE_COUNT = TABLES.length;

@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import type { Context } from 'hono';
 import { getSql } from '../../lib/db.ts';
+import { DEFAULT_CONTENT_LANGUAGE } from '../../lib/lang.ts';
 import { NO_CACHE } from './util.ts';
 
 const r = new Hono();
@@ -20,7 +21,7 @@ async function dailyVerseResponse(c: Context, date: string): Promise<Response> {
 
   const [dailyVerse] = (await sql`
     SELECT date, book_id, chapter, verse_start, verse_end, note
-    FROM daily_verses WHERE date = ${date}
+    FROM daily_verses WHERE date = ${date} AND language = ${DEFAULT_CONTENT_LANGUAGE}
   `) as DailyVerseRow[];
   if (!dailyVerse) return c.json({ error: 'No verse for this date' }, 404);
 

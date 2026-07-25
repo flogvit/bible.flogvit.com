@@ -49,6 +49,39 @@ innholdstabeller røres — aldri brukertabeller. Ta gjerne `mysqldump --skip-lo
 av tabellene fra prod først (prod-brukeren mangler `RELOAD`, så `--single-transaction`
 feiler der).
 
+## Språkdimensjon (innhold)
+
+Alt derivert innhold ligger i basen med en **`language`-kolonne som er del av
+unik-nøkkelen**, så flere språk kan ligge side om side. Kontrakten bor i
+`src/lib/lang.ts`; les den før du rører språk.
+
+- **Kilde på disk:** `free-bible/generate/<type>/<språk>/`. Importøren *oppdager*
+  språk ved å lese katalogene (`contentLanguages()`), så **et nytt språk krever
+  ingen kodeendring** — bare en ny katalog. free-bibles `translate.mjs` skriver
+  nøyaktig denne strukturen (kildespråk `nb` → `<språk>`).
+- **To akser, ikke bland dem:** UI-locale (URL-prefiks, der norsk er `no`, se
+  `portal/I18N.md`) vs innholdsspråk (`nb`/`nn`/`en`, katalognavn og kolonneverdi).
+  Bruk `localeToContentLanguage()` i overgangen.
+- **Fallback:** `contentLanguageChain()` — forespurt → engelsk → norsk, men
+  `nn`→`nb` (nabospråk før engelsk) og `nb` er terminalt. `bible.ts` sin
+  `inLanguage()` kjører spørringen per ledd og tar første som gir treff, altså
+  fallback per SPØRRING (mangler et innholdsslag språket helt, får leseren hele
+  settet på fallback-språket framfor en tom side).
+- **Enhver spørring mot en språk-scopet tabell MÅ filtrere på språk.** Uten
+  filter plukker den en tilfeldig rad blant språkene. Getterne i `bible.ts` tar
+  `lang` med gulvet som default, så kallere som ikke bryr seg er uendret.
+- **Unntak (med vilje):** `books`/`verse_mappings` har egne språkakser;
+  `verses`/`word4word` er scopet av `bible` (oversettelses-id, som koder språk);
+  `reading_text_refs` arver språk fra forelderraden (surrogat-nøkkel).
+- **`content_hashes`** har også `language`, med `nb` som default. Derfor beholder
+  eksisterende rader nøkkelen sin, og språknøytralt innhold (kapitler, word4word)
+  føres på gulvet — en ny språkkolonne utløser altså ingen full reimport.
+- **Migrering:** `ensureSchema()` kjører `runMigrations()` etter CREATE-ene, som
+  legger til kolonnen og bytter nøklene idempotent. `CREATE TABLE IF NOT EXISTS`
+  treffer bare nye baser, så skjemaendringer på eksisterende tabeller MÅ uttrykkes
+  der. Kjør `bun scripts/init-db.ts` (eller `deploy-bibel-data.sh`) for å løfte en
+  base.
+
 ### KILDE: pass på riktig free-bible
 Import leser `$FREE_BIBLE_DIR` (default: `flogvit.com/free-bible`, som er en **symlink**
 → det ekte `../free-bible`-repoet). Historisk felle: `flogvit.com/free-bible` var en
