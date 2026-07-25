@@ -3,6 +3,9 @@ import { createApp } from '../src/app.ts';
 import { getBibleEditions } from '../src/lib/bible.ts';
 import { L } from './paths.ts';
 
+// L() kjører på basespråket (engelsk), så overskriftene her er de engelske —
+// ikke fordi seksjonen har byttet språk, men fordi testen ber om /en.
+
 // Info-sider per oversettelse (/oversettelser/:id), bygget på bible_editions.
 //
 // Den viktigste testen her er lisens-invarianten: seksjonen «Lisens og
@@ -39,7 +42,7 @@ describe('/oversettelser/:id', () => {
       expect(res.status).toBe(200);
       const text = strip(await res.text());
 
-      expect(text).toContain('Lisens og kreditering');
+      expect(text).toContain('Licence and attribution');
       // Enten står vilkårene der, eller det står eksplisitt at de mangler —
       // taushet er ikke et lovlig utfall.
       const stated = edition.license_name !== null;

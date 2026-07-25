@@ -30,7 +30,7 @@ import {
 } from '../../lib/bible.ts';
 import { enrichWithVerseText, getReadingType } from '../../lib/reading-text-enrich.ts';
 import { toUrlSlug } from '../../lib/url-utils.ts';
-import { layoutProps } from '../../lib/i18n.ts';
+import { layoutProps, tFor } from '../../lib/i18n.ts';
 
 const r = new Hono<AppEnv>();
 
@@ -91,6 +91,7 @@ function EditionRow({ term, children }: { term: string; children?: unknown }) {
 }
 
 r.get('/oversettelser/:id', async (c) => {
+  const t = tFor(c);
   const edition = await getBibleEditionById(c.req.param('id'));
   if (!edition) return c.notFound();
 
@@ -134,7 +135,7 @@ r.get('/oversettelser/:id', async (c) => {
           </header>
 
           <section class="overview-section">
-            <h2>Om utgaven</h2>
+            <h2>{t('ed.about')}</h2>
             <dl class="edition-facts">
               {edition.abbreviation ? <EditionRow term="Forkortelse">{edition.abbreviation}</EditionRow> : null}
               <EditionRow term="Språk">
@@ -176,7 +177,7 @@ r.get('/oversettelser/:id', async (c) => {
 
           {edition.books ? (
             <section class="overview-section">
-              <h2>Dekning</h2>
+              <h2>{t('ed.coverage')}</h2>
               <dl class="edition-facts">
                 <EditionRow term="Omfang">{label(TESTAMENT_LABELS, edition.testament)}</EditionRow>
                 <EditionRow term="Bøker">{edition.books}</EditionRow>
@@ -192,7 +193,7 @@ r.get('/oversettelser/:id', async (c) => {
 
           {meta.legacy?.length ? (
             <section class="overview-section">
-              <h2>Særpreg</h2>
+              <h2>{t('ed.character')}</h2>
               <ul class="edition-notes">
                 {meta.legacy.map((l) => <li>{l.text}</li>)}
               </ul>
@@ -202,7 +203,7 @@ r.get('/oversettelser/:id', async (c) => {
           {/* Lisensseksjonen rendres ALLTID. En utelatt seksjon leses som «ingen
               begrensninger», og det er nettopp den feilen vi ikke skal gjøre. */}
           <section class="overview-section">
-            <h2>Lisens og kreditering</h2>
+            <h2>{t('ed.license')}</h2>
             {license ? (
               <>
                 <dl class="edition-facts">
@@ -251,7 +252,7 @@ r.get('/oversettelser/:id', async (c) => {
 
           {meta.provenance ? (
             <section class="overview-section">
-              <h2>Kilder for opplysningene</h2>
+              <h2>{t('ed.sources')}</h2>
               <p class="overview-intro">
                 Feltene over er {meta.provenance.method === 'manual' ? 'manuelt kontrollert' : 'maskinelt hentet'}
                 {meta.provenance.generated ? `, sist oppdatert ${meta.provenance.generated}` : ''}.
@@ -279,6 +280,7 @@ r.get('/oversettelser/:id', async (c) => {
 // ---------- /kjente-vers ----------
 
 r.get('/kjente-vers', async (c) => {
+  const t = tFor(c);
   const verses = await getAllWellKnownVerses();
   const ot = verses.filter((v) => v.book_id <= 39);
   const nt = verses.filter((v) => v.book_id >= 40);
@@ -299,15 +301,15 @@ r.get('/kjente-vers', async (c) => {
 
   return c.html(
     <Layout {...layoutProps(c)}
-      title="Kjente bibelvers — FLOGVIT.bible"
-      description="En samling kjente og ofte siterte bibelvers. Klikk på et vers for å lese det i kontekst."
+      title={`${t('kv.title')} — FLOGVIT.bible`}
+      description={t('kv.meta')}
       styles={['overview.css']}
     >
       <div class="overview-main">
         <div class="container">
           <Breadcrumbs items={[{ label: 'Hjem', href: '/' }, { label: 'Kjente vers' }]} />
           <header>
-            <h1>Kjente bibelvers</h1>
+            <h1>{t('kv.title')}</h1>
             <p class="overview-intro">
               En samling av kjente og ofte siterte bibelvers. Klikk på et vers for å lese det i
               kontekst.
@@ -346,6 +348,7 @@ function formatDate(date: string): string {
 }
 
 r.get('/lesetekster', async (c) => {
+  const t = tFor(c);
   const texts = await getAllReadingTexts();
   // Kronologisk fremover (som gamle appens standardvisning): dato ≥ i dag.
   const today = new Date().toISOString().slice(0, 10);
@@ -360,21 +363,21 @@ r.get('/lesetekster', async (c) => {
 
   return c.html(
     <Layout {...layoutProps(c)}
-      title="Lesetekster — FLOGVIT.bible"
+      title={`${t('nav.readingTexts')} — FLOGVIT.bible`}
       description="Lesetekster fra Den norske kirkes tekstrekkesystem — GT, brev og evangelium for hver søndag og helligdag."
       styles={['overview.css']}
     >
       <div class="overview-main">
         <div class="reading-container">
           <Breadcrumbs items={[{ label: 'Hjem', href: '/' }, { label: 'Lesetekster' }]} />
-          <h1>Lesetekster</h1>
+          <h1>{t('nav.readingTexts')}</h1>
           <p class="overview-intro">
             Lesetekster fra Den norske kirkes tekstrekkesystem. Hver søndag og helligdag har tre
             lesetekster fra Det gamle testamente, brevlitteraturen og evangeliene.
           </p>
 
           {upcoming.length === 0 ? (
-            <p>Ingen kommende lesetekster funnet.</p>
+            <p>{t('rt.noUpcoming')}</p>
           ) : (
             [...groups.entries()].map(([key, group]) => (
               <section class="overview-section">
@@ -410,6 +413,7 @@ function formatFullDate(date: string): string {
 }
 
 r.get('/lesetekster/:id', async (c) => {
+  const t = tFor(c);
   const id = parseInt(c.req.param('id'), 10);
   if (isNaN(id)) return c.notFound();
   const text = await getReadingTextById(id);
@@ -504,21 +508,22 @@ r.get('/lesetekster/:id', async (c) => {
 // ---------- /profetier ----------
 
 r.get('/profetier', async (c) => {
+  const t = tFor(c);
   const categories = await getProphecyCategories();
   const prophecies = await getProphecies();
   const catName = new Map(categories.map((cat) => [cat.id, cat.name]));
 
   return c.html(
     <Layout {...layoutProps(c)}
-      title="Profetier og oppfyllelser — FLOGVIT.bible"
-      description="Profetier i Det gamle testamente og hvordan de ble oppfylt i Det nye testamente."
+      title={`${t('pr.title')} — FLOGVIT.bible`}
+      description={t('pr.meta')}
       styles={['overview.css', 'persons.css']}
       scripts={['card-filter.js', 'tagging.js']}
     >
       <div class="overview-main">
         <div class="reading-container">
           <Breadcrumbs items={[{ label: 'Hjem', href: '/' }, { label: 'Profetier' }]} />
-          <h1>Profetier og oppfyllelser</h1>
+          <h1>{t('pr.title')}</h1>
           <p class="overview-intro">
             En oversikt over profetier i Det gamle testamente og hvordan de ble oppfylt i Det nye
             testamente. Klikk på en profeti for å se forklaringen og bibelversene.
@@ -545,7 +550,7 @@ r.get('/profetier', async (c) => {
                 <div class="prophecy-body">
                   <div class="prophecy-refs">
                     <span class="prophecy-ref">
-                      <span class="prophecy-ref-label">Profeti:</span>{' '}
+                      <span class="prophecy-ref-label">{t('pr.prophecy')}</span>{' '}
                       <a href={prophecyRefUrl(p.prophecy)}>{p.prophecy.reference}</a>
                     </span>
                     <span class="prophecy-arrow" aria-hidden="true">→</span>
@@ -573,7 +578,7 @@ r.get('/profetier', async (c) => {
                   </div>
 
                   <details class="prophecy-verses">
-                    <summary>Vis bibelvers</summary>
+                    <summary>{t('pr.showVerses')}</summary>
                     <div class="prophecy-verse-section">
                       <h4>Profetien ({p.prophecy.reference})</h4>
                       <VerseRefList refs={[toVerseRef(p.prophecy)]} />
@@ -605,6 +610,7 @@ const GOSPEL_NAMES: Record<string, string> = {
 const GOSPEL_ORDER = ['matthew', 'mark', 'luke', 'john'];
 
 r.get('/paralleller', async (c) => {
+  const t = tFor(c);
   const sections = await getGospelParallelSections();
   const parallels = await getGospelParallels();
   const sectionName = new Map(sections.map((s) => [s.id, s.name]));
@@ -627,15 +633,15 @@ r.get('/paralleller', async (c) => {
 
   return c.html(
     <Layout {...layoutProps(c)}
-      title="Parallelle evangelietekster — FLOGVIT.bible"
-      description="Sammenlign parallelle tekster fra de fire evangeliene side ved side."
+      title={`${t('pa.title')} — FLOGVIT.bible`}
+      description={t('pa.meta')}
       styles={['overview.css', 'persons.css']}
       scripts={['card-filter.js']}
     >
       <div class="overview-main">
         <div class="container">
           <Breadcrumbs items={[{ label: 'Hjem', href: '/' }, { label: 'Paralleller' }]} />
-          <h1>Parallelle evangelietekster</h1>
+          <h1>{t('pa.title')}</h1>
           <p class="overview-intro">
             Sammenlign parallelle tekster fra de fire evangeliene. Mange av Jesu ord og gjerninger
             er gjengitt i flere evangelier, ofte med små forskjeller i ordlyd og vinkling. Klikk på
@@ -711,6 +717,7 @@ r.get('/paralleller', async (c) => {
 // dette innholdet er fullt lesbart og SEO-vennlig uten JS.
 
 r.get('/tidslinje', async (c) => {
+  const t = tFor(c);
   const data = await getMultiTimeline();
   // Gruppér bibelhendelsene under periodene (rekkefølge fra periods-lista).
   const byPeriod = new Map<string, typeof data.bible.events>();
@@ -724,15 +731,15 @@ r.get('/tidslinje', async (c) => {
 
   return c.html(
     <Layout {...layoutProps(c)}
-      title="Bibelens tidslinje — FLOGVIT.bible"
-      description="En kronologisk oversikt over de viktigste hendelsene i Bibelen og verdenshistorien."
+      title={`${t('tl.title')} — FLOGVIT.bible`}
+      description={t('tl.meta')}
       styles={['overview.css']}
       scripts={['timeline-filter.js']}
     >
       <div class="overview-main">
         <div class="reading-container">
           <Breadcrumbs items={[{ label: 'Hjem', href: '/' }, { label: 'Tidslinje' }]} />
-          <h1>Bibelens tidslinje</h1>
+          <h1>{t('tl.title')}</h1>
           <p class="overview-intro">
             En kronologisk oversikt over de viktigste hendelsene i Bibelen og verdenshistorien, fra
             skapelsen til den tidlige kirkens tid.
@@ -740,7 +747,7 @@ r.get('/tidslinje', async (c) => {
 
           {/* Periodefilter (GitHub #6) — uten JS vises alle periodene. */}
           <div class="timeline-filter" data-timeline-filter hidden>
-            <button type="button" class="timeline-filter-btn is-active" data-value="">Alle perioder</button>
+            <button type="button" class="timeline-filter-btn is-active" data-value="">{t('tl.allPeriods')}</button>
             {data.bible.periods
               .filter((p) => (byPeriod.get(p.id) || []).length > 0)
               .map((p) => (
@@ -785,7 +792,7 @@ r.get('/tidslinje', async (c) => {
           })}
           {orphans.length > 0 && (
             <section class="timeline-period">
-              <h2 class="timeline-period-name">Øvrige hendelser</h2>
+              <h2 class="timeline-period-name">{t('tl.otherEvents')}</h2>
               <ol class="timeline-events">
                 {orphans.map((e) => (
                   <li class="timeline-event">
@@ -813,6 +820,7 @@ function nf(n: number): string {
 }
 
 r.get('/statistikk', async (c) => {
+  const t = tFor(c);
   const bible = c.req.query('bible') || 'osnb2';
   const stats = await getBibleStatistics(bible);
   const topWords = await getTopWords(bible, 100, false);
@@ -843,18 +851,18 @@ r.get('/statistikk', async (c) => {
 
   return c.html(
     <Layout {...layoutProps(c)}
-      title="Bibelstatistikk — FLOGVIT.bible"
-      description="Oversikt over bøker, kapitler, vers og ord i Bibelen, samt de hyppigste ordene."
+      title={`${t('st.title')} — FLOGVIT.bible`}
+      description={t('st.meta')}
       styles={['overview.css']}
       scripts={['statistics.js']}
     >
       <div class="overview-main">
         <div class="container">
           <Breadcrumbs items={[{ label: 'Hjem', href: '/' }, { label: 'Statistikk' }]} />
-          <h1>Bibelstatistikk</h1>
+          <h1>{t('st.title')}</h1>
 
           <section class="overview-section">
-            <h2>Oversikt</h2>
+            <h2>{t('st.overview')}</h2>
             <div class="stat-grid">
               {statCard(stats.totalBooks, 'Bøker')}
               {statCard(stats.totalChapters, 'Kapitler')}
@@ -864,17 +872,17 @@ r.get('/statistikk', async (c) => {
             {ot.length > 0 && nt.length > 0 && (
               <div class="stat-comparison">
                 <div class="stat-comparison-card">
-                  <h3>Det gamle testamente</h3>
-                  <div class="stat-comparison-row"><span>Bøker</span><span>{nf(stats.otBooks)}</span></div>
-                  <div class="stat-comparison-row"><span>Kapitler</span><span>{nf(stats.otChapters)}</span></div>
-                  <div class="stat-comparison-row"><span>Vers</span><span>{nf(stats.otVerses)}</span></div>
+                  <h3>{t('st.ot')}</h3>
+                  <div class="stat-comparison-row"><span>{t('st.books')}</span><span>{nf(stats.otBooks)}</span></div>
+                  <div class="stat-comparison-row"><span>{t('st.chapters')}</span><span>{nf(stats.otChapters)}</span></div>
+                  <div class="stat-comparison-row"><span>{t('st.verses')}</span><span>{nf(stats.otVerses)}</span></div>
                   <div class="stat-comparison-row"><span>Ord</span><span>{nf(stats.otWords)}</span></div>
                 </div>
                 <div class="stat-comparison-card">
-                  <h3>Det nye testamente</h3>
-                  <div class="stat-comparison-row"><span>Bøker</span><span>{nf(stats.ntBooks)}</span></div>
-                  <div class="stat-comparison-row"><span>Kapitler</span><span>{nf(stats.ntChapters)}</span></div>
-                  <div class="stat-comparison-row"><span>Vers</span><span>{nf(stats.ntVerses)}</span></div>
+                  <h3>{t('st.nt')}</h3>
+                  <div class="stat-comparison-row"><span>{t('st.books')}</span><span>{nf(stats.ntBooks)}</span></div>
+                  <div class="stat-comparison-row"><span>{t('st.chapters')}</span><span>{nf(stats.ntChapters)}</span></div>
+                  <div class="stat-comparison-row"><span>{t('st.verses')}</span><span>{nf(stats.ntVerses)}</span></div>
                   <div class="stat-comparison-row"><span>Ord</span><span>{nf(stats.ntWords)}</span></div>
                 </div>
               </div>
@@ -882,14 +890,14 @@ r.get('/statistikk', async (c) => {
           </section>
 
           <section class="overview-section">
-            <h2>Bøker</h2>
+            <h2>{t('st.books')}</h2>
             <div class="stat-table-wrap">
               <table class="stat-table">
                 <thead>
                   <tr>
                     <th>Bok</th>
-                    <th class="num">Kapitler</th>
-                    <th class="num">Vers</th>
+                    <th class="num">{t('st.chapters')}</th>
+                    <th class="num">{t('st.verses')}</th>
                     <th class="num">Ord</th>
                     <th class="num">Grunntekst</th>
                   </tr>
@@ -903,7 +911,7 @@ r.get('/statistikk', async (c) => {
           </section>
 
           <section class="overview-section">
-            <h2>Hyppigste ord</h2>
+            <h2>{t('st.frequentWords')}</h2>
             <div class="stat-word-tabs" role="group" aria-label="Ordkilde">
               <button type="button" class="stat-word-tab active" data-wordtab="translation" aria-pressed="true">
                 Oversettelse
