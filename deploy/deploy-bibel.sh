@@ -41,7 +41,7 @@ fi
 # Denne linja laa igjen fra byggemodellen vi gikk bort fra, og ville gjenskapt
 # /srv/flogvit.com/bibel-hono/ ved neste deploy.
 echo "==> Sender server-konfig"
-rsync -az --inplace --no-owner --no-group --chmod=F644,D755 "$ROOT/server/Caddyfile" "$ROOT/server/compose.yml" $VM:$SRV/server/
+rsync -az --inplace --no-owner --no-group "$ROOT/server/Caddyfile" "$ROOT/server/compose.yml" $VM:$SRV/server/
 
 echo "==> Bygger og pusher"
 # Bygg og push imaget, men IKKE start tjenesten foer skjemaet er migrert.
@@ -49,7 +49,7 @@ echo "==> Bygger og pusher"
 # imaget, saa skjemaet loftes av samme kode som skal ta over.
 build_and_push bibel-hono "$ROOT/bibel"
 preflight "$VM"
-rsync -az --inplace --no-owner --no-group --chmod=F644,D755 "$ROOT/server/compose.yml" "$VM:$SRV/server/"
+rsync -az --inplace --no-owner --no-group "$ROOT/server/compose.yml" "$VM:$SRV/server/"
 
 # MIGRER SKJEMAET FOER RESTART.
 #
