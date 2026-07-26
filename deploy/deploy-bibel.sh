@@ -43,7 +43,36 @@ rsync -az --delete --exclude node_modules --exclude .git --exclude .env --exclud
 rsync -az --inplace "$ROOT/server/Caddyfile" "$ROOT/server/compose.yml" $VM:$SRV/server/
 
 echo "==> Bygger og starter"
-ship bibel-hono "$ROOT/bibel"
+# Bygg og send imaget, men IKKE start tjenesten foer skjemaet er migrert.
+build_image bibel-hono "$ROOT/bibel"
+preflight "$VM"
+docker save flogvit/bibel-hono:latest | gzip -1 | ssh "$VM" 'gunzip | docker load'
+rsync -az --inplace "$ROOT/server/compose.yml" "$VM:$SRV/server/"
+
+# MIGRER SKJEMAET FOER RESTART.
+#
+# Appen kjoerer IKKE ensureSchema() ved oppstart — bare scripts/init-db.ts gjoer
+# det (bibel/CLAUDE.md «Migrering»). En ren kode-deploy kan derfor aldri lofte
+# skjemaet, og kode som forventer en ny kolonne tar ned siden.
+#
+# Det skjedde 2026-07-26: `language`-kolonnen manglet i ALLE 30+ prod-tabellene,
+# bible.flogvit.com svarte 500 «Unknown column 'language' in 'where clause'», og
+# maatte rulles tilbake. Dokumentasjonen sa dette; den ble ikke lest. Derfor
+# staar det som et STEG her, ikke som en merknad.
+#
+# init-db.ts er idempotent: CREATE IF NOT EXISTS + runMigrations().
+echo "==> Migrerer skjemaet fra det NYE imaget (idempotent)"
+ssh "$VM" "docker run --rm --network server_default --env-file $SRV/server/bibel.env \
+  flogvit/bibel-hono:latest bun scripts/init-db.ts"
+
+echo "==> Starter bibel-hono"
+ssh "$VM" "cd $SRV/server && docker compose up -d bibel-hono"
+
+# Bekreft at containeren faktisk byttet image — `compose up` sier «Running» ogsaa
+# naar den ikke gjorde noe.
+running=$(ssh "$VM" "docker inspect -f '{{.Config.Image}}' \$(docker compose -f $SRV/server/compose.yml ps -q bibel-hono)")
+[ "$running" = "flogvit/bibel-hono:latest" ] || { echo "FEIL: kjoerer paa '$running'" >&2; exit 1; }
+echo "    bekreftet: bibel-hono kjoerer paa flogvit/bibel-hono:latest"
 ssh $VM "cd $SRV/server && docker compose exec caddy caddy reload --config /etc/caddy/Caddyfile"
 
 echo "==> Sjekk"
