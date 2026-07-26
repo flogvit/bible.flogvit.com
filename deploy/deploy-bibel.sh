@@ -17,6 +17,9 @@ SRC="$(cd "$(dirname "$0")/.." && pwd)"
 ROOT="$(cd "$SRC/.." && pwd)"
 [ -d "$ROOT/free-bible" ] || ROOT="/Users/vhanssen/WebstormProjects/flogvit/flogvit.com"
 VM=flogvit-vm
+
+# Bygger LOKALT og sender ferdig image — VM-en bygger aldri (server/lib-ship.sh).
+source "$ROOT/server/lib-ship.sh"
 SRV=/srv/flogvit.com
 
 echo "==> Stager kvn-pakken fra free-bible"
@@ -40,7 +43,8 @@ rsync -az --delete --exclude node_modules --exclude .git --exclude .env --exclud
 rsync -az --inplace "$ROOT/server/Caddyfile" "$ROOT/server/compose.yml" $VM:$SRV/server/
 
 echo "==> Bygger og starter"
-ssh $VM "cd $SRV/server && docker compose up -d --build bibel-hono && docker compose exec caddy caddy reload --config /etc/caddy/Caddyfile"
+ship bibel-hono "$ROOT/bibel"
+ssh $VM "cd $SRV/server && docker compose exec caddy caddy reload --config /etc/caddy/Caddyfile"
 
 echo "==> Sjekk"
 ssh $VM "docker compose -f $SRV/server/compose.yml exec caddy wget -qO- --timeout=10 http://bibel-hono:8080/api/health" && echo " …OK"
