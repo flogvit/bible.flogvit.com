@@ -5,7 +5,7 @@
 //   1. UI-locale        — denne fila. URL-prefikset `/<lang>/`, chrome, knapper.
 //   2. Innholdsspråk    — lib/lang.ts. Hvilket språk de deriverte tekstene
 //                         (sammendrag, kontekst, temaer) er generert på.
-//   3. Bibelutgave      — osnb2, osnn1, SBLGNT, Tanach. Et EGET, eksplisitt
+//   3. Bibelutgave      — osnb, osnn, SBLGNT, Tanach. Et EGET, eksplisitt
 //                         brukervalg som IKKE skal rives med av språkvalget:
 //                         norsk UI + gresk grunntekst er en bevisst, gyldig
 //                         kombinasjon.

@@ -101,9 +101,9 @@ if (rootPage) {
         changed = true;
       }
     };
-    applyParam('bible', s.bible, 'osnb2');
+    applyParam('bible', s.bible, 'osnb');
     applyParam('secondary', s.secondaryBible, '');
-    applyParam('mapping', s.verseMapping, 'osnb2');
+    applyParam('mapping', s.verseMapping, 'osnb');
     if (changed) location.replace(url.pathname + url.search + url.hash);
   }
 

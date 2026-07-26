@@ -1,6 +1,6 @@
 // Berikelse av lesetekster med verstekster — delt av API-ruten
 // (routes/api/reading-texts.ts) og lesetekst-detaljsiden (routes/pages/
-// overview.tsx). Håndterer KVN-mapping (osmain → osnb2 for tekst, osmain →
+// overview.tsx). Håndterer KVN-mapping (osmain → osnb for tekst, osmain →
 // visningsmapping for nummer) og del-slicing (a/b/c).
 
 import { getVerse, type ReadingTextWithSlots, type VerseRange } from './bible.ts';
@@ -41,8 +41,8 @@ async function rangeToVerses(
   const out: EnrichedVerse[] = [];
   const end = range.verse_end ?? range.verse_start;
   for (let v = range.verse_start; v <= end; v++) {
-    const osnb2 = osmainTo(range.book_id, range.chapter, v, 'osnb2');
-    const verse = await getVerse(range.book_id, osnb2.chapter, osnb2.verse, bible);
+    const osnb = osmainTo(range.book_id, range.chapter, v, 'osnb');
+    const verse = await getVerse(range.book_id, osnb.chapter, osnb.verse, bible);
     if (!verse) continue;
 
     let verseText = verse.text;
@@ -72,7 +72,7 @@ export async function enrichWithVerseText(
   mapping: string,
 ): Promise<ReadingTextWithSlots & { verses: Record<string, EnrichedVerse[]> }> {
   const verses: Record<string, EnrichedVerse[]> = {};
-  const resolvedMapping = resolveMappingId(mapping) || 'osnb2';
+  const resolvedMapping = resolveMappingId(mapping) || 'osnb';
 
   for (const slot of text.slots) {
     for (const option of slot.options) {

@@ -1,5 +1,5 @@
 import { Hono } from 'hono';
-import { getAllReadingTexts, getReadingTextById, getTodaysReadingTexts } from '../../lib/bible.ts';
+import { getAllReadingTexts, getReadingTextById, getTodaysReadingTexts, normalizeBibleId } from '../../lib/bible.ts';
 import { enrichWithVerseText } from '../../lib/reading-text-enrich.ts';
 import { NO_CACHE } from './util.ts';
 
@@ -29,8 +29,8 @@ r.get('/today', async (c) => {
 /** GET /api/reading-texts/:id — full lesetekst med verstekster. */
 r.get('/:id', async (c) => {
   const id = parseInt(c.req.param('id'), 10);
-  const bible = c.req.query('bible') || 'osnb2';
-  const mapping = c.req.query('mapping') || 'osnb2';
+  const bible = normalizeBibleId(c.req.query('bible')) || 'osnb';
+  const mapping = normalizeBibleId(c.req.query('mapping')) || 'osnb';
   if (isNaN(id)) return c.json({ error: 'Invalid ID' }, 400);
 
   try {

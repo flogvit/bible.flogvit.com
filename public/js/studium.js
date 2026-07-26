@@ -252,7 +252,7 @@ if (toolbar) {
     const s = read(KEYS.settings, {});
     s.verseMapping = e.target.value;
     write(KEYS.settings, s);
-    navigateWithParam('mapping', e.target.value === 'osnb2' ? '' : e.target.value);
+    navigateWithParam('mapping', e.target.value === 'osnb' ? '' : e.target.value);
   });
 
   // Skriftstørrelse: lagres i settings og brukes av reading.js.

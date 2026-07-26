@@ -57,7 +57,7 @@ function VerseGroup({ data }: { data: VerseWithOriginal }) {
 }
 
 /** Async: henter og rendrer en liste versreferanser som vers-grupper. */
-export async function VerseRefList({ refs, bible = 'osnb2' }: { refs: VerseRef[]; bible?: string }) {
+export async function VerseRefList({ refs, bible = 'osnb' }: { refs: VerseRef[]; bible?: string }) {
   const verses = await getVersesWithOriginal(refs, bible);
   return (
     <>
@@ -74,7 +74,7 @@ export async function VerseRefList({ refs, bible = 'osnb2' }: { refs: VerseRef[]
  * fordelte dem tilbake per hendelse; server-side henter vi per hendelse
  * (samme resultat, uten fordelingsheuristikken).
  */
-export async function KeyEventList({ keyEvents, bible = 'osnb2' }: { keyEvents: PersonKeyEvent[]; bible?: string }) {
+export async function KeyEventList({ keyEvents, bible = 'osnb' }: { keyEvents: PersonKeyEvent[]; bible?: string }) {
   const events = await Promise.all(
     keyEvents.map(async (event) => ({
       event,

@@ -279,6 +279,33 @@ function rebuildFromServer(serverChanges, pushedChanges) {
   document.dispatchEvent(new CustomEvent('bibel:sync-rebuilt'));
 }
 
+// ── Omdøpte bibel-ID-er (2026-07-26) ───────────────────────────────
+// free-bible omdøpte osnb2→osnb og osnn1→osnn. Serveren migrerer sin kopi
+// (schema.ts), men den lokale cachen leses av lesesidene FØR første sync
+// svarer — uten dette ville første sidelast bedt om en bibel som ikke finnes.
+// Kjøres rått (writeRaw) fordi verdien ikke er en brukerendring som skal pushes.
+const LEGACY_BIBLE_IDS = { osnb2: 'osnb', osnn1: 'osnn' };
+(function migrateLegacyBibleIds() {
+  const settings = read('bible-settings', null);
+  if (!settings) return;
+  let changed = false;
+  for (const key of ['bible', 'secondaryBible', 'verseMapping']) {
+    const next = LEGACY_BIBLE_IDS[settings[key]];
+    if (next) {
+      settings[key] = next;
+      changed = true;
+    }
+  }
+  if (Array.isArray(settings.hiddenBibles)) {
+    const mapped = settings.hiddenBibles.map((id) => LEGACY_BIBLE_IDS[id] || id);
+    if (mapped.some((id, i) => id !== settings.hiddenBibles[i])) {
+      settings.hiddenBibles = mapped;
+      changed = true;
+    }
+  }
+  if (changed) writeRaw('bible-settings', settings);
+})();
+
 // Ved last: full server-først-sync (push utboks + les alt). Ved skjuling:
 // flush utboksen. Når nettet kommer tilbake: flush med en gang.
 setTimeout(() => syncNow(true), 300);

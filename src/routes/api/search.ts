@@ -21,6 +21,7 @@ import {
   getReadingTextsByChapter,
   getGospelParallelsForChapter,
   getImportantWords,
+  normalizeBibleId,
 } from '../../lib/bible.ts';
 import { NO_CACHE } from './util.ts';
 
@@ -31,7 +32,7 @@ r.get('/', async (c) => {
   const query = c.req.query('q') || '';
   const limit = parseInt(c.req.query('limit') || '50', 10);
   const offset = parseInt(c.req.query('offset') || '0', 10);
-  const bible = c.req.query('bible') || 'osnb2';
+  const bible = normalizeBibleId(c.req.query('bible')) || 'osnb';
 
   if (query.length < 2) {
     return c.json({ results: [], total: 0, hasMore: false, message: 'Søket må være minst 2 tegn' });

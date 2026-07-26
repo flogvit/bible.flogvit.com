@@ -251,8 +251,8 @@ if (root) {
       if (box) {
         box.textContent = '';
         const versions = [
-          { value: 'osnb2', label: 'OSNB2 (bokmål)' },
-          { value: 'osnn1', label: 'OSNN1 (nynorsk)' },
+          { value: 'osnb', label: 'OSNB (bokmål)' },
+          { value: 'osnn', label: 'OSNN (nynorsk)' },
           ...userBibles.map((b) => ({ value: b.id, label: b.name })),
         ];
         const hidden = new Set((read(KEYS.settings, {}).hiddenBibles || []));
@@ -262,7 +262,7 @@ if (root) {
           const input = el('input');
           input.type = 'checkbox';
           input.checked = !hidden.has(v.value);
-          const active = (read(KEYS.settings, {}).bible || 'osnb2') === v.value;
+          const active = (read(KEYS.settings, {}).bible || 'osnb') === v.value;
           if (active) {
             input.checked = true;
             input.disabled = true;

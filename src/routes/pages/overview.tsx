@@ -27,6 +27,7 @@ import {
   getTopWords,
   type ProphecyReference,
   type VerseRef,
+  normalizeBibleId,
 } from '../../lib/bible.ts';
 import { enrichWithVerseText, getReadingType } from '../../lib/reading-text-enrich.ts';
 import { toUrlSlug } from '../../lib/url-utils.ts';
@@ -419,9 +420,9 @@ r.get('/lesetekster/:id', async (c) => {
   const text = await getReadingTextById(id);
   if (!text) return c.notFound();
 
-  // Prefs (bibel/mapping) er klient-side i dag; osnb2 er standard server-side.
-  const bible = c.req.query('bible') || 'osnb2';
-  const mapping = c.req.query('mapping') || 'osnb2';
+  // Prefs (bibel/mapping) er klient-side i dag; osnb er standard server-side.
+  const bible = normalizeBibleId(c.req.query('bible')) || 'osnb';
+  const mapping = normalizeBibleId(c.req.query('mapping')) || 'osnb';
   const enriched = await enrichWithVerseText(text, bible, mapping);
 
   return c.html(
@@ -821,7 +822,7 @@ function nf(n: number): string {
 
 r.get('/statistikk', async (c) => {
   const t = tFor(c);
-  const bible = c.req.query('bible') || 'osnb2';
+  const bible = normalizeBibleId(c.req.query('bible')) || 'osnb';
   const stats = await getBibleStatistics(bible);
   const topWords = await getTopWords(bible, 100, false);
   const ot = stats.books.filter((b) => b.testament === 'OT');

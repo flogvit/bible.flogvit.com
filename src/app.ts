@@ -104,7 +104,7 @@ export function createApp() {
   //
   // MERK: dette er UI-locale. Innholdsspråket (deriverte tekster) utledes fra
   // den via localeToContentLanguage() i lib/lang.ts, mens BIBELUTGAVEN
-  // (osnb2/osnn1/SBLGNT/Tanach) er et eget brukervalg som ikke røres her —
+  // (osnb/osnn/SBLGNT/Tanach) er et eget brukervalg som ikke røres her —
   // norsk UI med gresk grunntekst er en gyldig kombinasjon.
   for (const locale of LOCALES) {
     const sub = new Hono<AppEnv>();

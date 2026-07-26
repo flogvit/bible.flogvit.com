@@ -44,9 +44,9 @@ async function resolvePath() {
 async function renderChapter(book, chapter, books) {
   const settings = readSettings();
   const params = new URLSearchParams(location.search);
-  const bible = params.get('bible') || settings.bible || 'osnb2';
+  const bible = params.get('bible') || settings.bible || 'osnb';
   let stored = await getChapter(book.id, chapter, bible);
-  if (!stored && bible !== 'osnb2') stored = await getChapter(book.id, chapter, 'osnb2');
+  if (!stored && bible !== 'osnb') stored = await getChapter(book.id, chapter, 'osnb');
   root.textContent = '';
 
   const crumbs = el('p', 'offline-crumbs');

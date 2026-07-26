@@ -1,5 +1,5 @@
 // Egne oversettelser på lesesiden (#14): når ?bible=user:<id> rendrer serveren
-// osnb2 som grunnlag (studieverktøyene hører til osnb2, som i gamle appen) og
+// osnb som grunnlag (studieverktøyene hører til osnb, som i gamle appen) og
 // denne øya bytter ut versteksten fra IndexedDB. ?secondary=user:<id> legges
 // inn som undertekst-linje per vers. Øya utvider også bibelvelgeren med egne
 // bibler og respekterer settings.hiddenBibles.
@@ -34,7 +34,7 @@ async function applyUserPrimary(userBibleId, bibles) {
   const note = document.createElement('p');
   note.className = 'user-bible-note';
   if (!stored) {
-    note.textContent = `«${name}» har ikke dette kapittelet — viser OSNB2.`;
+    note.textContent = `«${name}» har ikke dette kapittelet — viser OSNB.`;
     rail?.after(note);
     return;
   }
@@ -46,12 +46,12 @@ async function applyUserPrimary(userBibleId, bibles) {
     const text = byVerse.get(n);
     if (text !== undefined) {
       plain.textContent = text;
-      verseEl.querySelector('.footnotes')?.remove(); // fotnotene hører til osnb2-teksten
+      verseEl.querySelector('.footnotes')?.remove(); // fotnotene hører til osnb-teksten
     } else {
       verseEl.classList.add('user-bible-missing');
     }
   });
-  note.textContent = `Viser «${name}» (egen oversettelse). Studieverktøyene følger OSNB2.`;
+  note.textContent = `Viser «${name}» (egen oversettelse). Studieverktøyene følger OSNB.`;
   rail?.after(note);
 }
 
@@ -82,8 +82,8 @@ function extendSwitcher(bibles, userBibleId) {
   if (box) {
     box.querySelectorAll('.tools-bible-button').forEach((btn) => {
       const href = btn.getAttribute('href') || '';
-      const value = /bible=osnn1/.test(href) ? 'osnn1' : 'osnb2';
-      // SSR markerer osnb2 aktiv når en egen bibel vises — flytt markeringen.
+      const value = /bible=osnn/.test(href) ? 'osnn' : 'osnb';
+      // SSR markerer osnb aktiv når en egen bibel vises — flytt markeringen.
       if (userBibleId) btn.classList.remove('is-active');
       const active = !userBibleId && btn.classList.contains('is-active');
       if (hidden.includes(value) && !active) btn.hidden = true;

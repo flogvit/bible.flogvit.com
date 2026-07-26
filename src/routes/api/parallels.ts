@@ -5,6 +5,7 @@ import {
   getGospelParallelSections,
   getGospelParallelsForChapter,
   getVerses,
+  normalizeBibleId,
 } from '../../lib/bible.ts';
 import { NO_CACHE } from './util.ts';
 
@@ -53,7 +54,8 @@ r.get('/:id', async (c) => {
 /** POST /api/parallels/:id/verses — versene for en parallell. Body: { bible? } */
 r.post('/:id/verses', async (c) => {
   const body = await c.req.json().catch(() => null);
-  const { bible = 'osnb2' } = (body ?? {}) as { bible?: string };
+  const { bible: rawBible = 'osnb' } = (body ?? {}) as { bible?: string };
+  const bible = normalizeBibleId(rawBible);
 
   try {
     const parallel = await getGospelParallelById(c.req.param('id'));

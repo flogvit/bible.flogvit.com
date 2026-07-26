@@ -24,7 +24,7 @@
 // - `books`, `verse_mappings`: har egne språkkolonner/-akser (name/name_no,
 //   book_names per oversettelse).
 // - `verses`, `word4word`: scopet av `bible` (oversettelses-id), som allerede
-//   koder språk (osnb2, osnn1, tanach-nb, …).
+//   koder språk (osnb, osnn, tanach-nb, …).
 // - Barnetabeller med SURROGAT-forelder (`reading_text_refs`): språket følger av
 //   forelderraden. Barn med NATURLIG forelder-nøkkel (timeline_references,
 //   prophecy_fulfillments, gospel_parallel_passages) har egen kolonne, fordi
@@ -56,7 +56,7 @@ const TABLES: string[] = [
     chapter INT NOT NULL,
     verse INT NOT NULL,
     text TEXT NOT NULL,
-    bible VARCHAR(20) NOT NULL DEFAULT 'osnb2',
+    bible VARCHAR(20) NOT NULL DEFAULT 'osnb',
     versions MEDIUMTEXT,
     footnotes MEDIUMTEXT,
     UNIQUE KEY uq_verses (book_id, chapter, verse, bible),
@@ -74,7 +74,7 @@ const TABLES: string[] = [
     original TEXT,
     pronunciation TEXT,
     explanation TEXT,
-    bible VARCHAR(20) NOT NULL DEFAULT 'osnb2',
+    bible VARCHAR(20) NOT NULL DEFAULT 'osnb',
     UNIQUE KEY uq_word4word (book_id, chapter, verse, word_index, bible),
     INDEX idx_word4word_verse (book_id, chapter, verse, bible)
   ) ENGINE=InnoDB ${CS}`,
@@ -612,6 +612,88 @@ const LANGUAGE_MIGRATIONS: {
   { table: 'content_hashes', keys: [{ name: 'uq_content_hashes', columns: ['content_type', 'content_key', 'language'], kind: 'unique' }] },
 ];
 
+// --- Omdøpte bibel-ID-er (2026-07-26) ------------------------------------
+//
+// free-bible omdøpte `osnb2`→`osnb` og `osnn1`→`osnn`. Innholdstabellene hadde
+// rettet seg selv ved neste FULLE import, men `content_hashes` gjør importen
+// inkrementell (nøkkelen inneholder bibel-ID-en), og `user_bibles` importeres
+// aldri på nytt — den er brukerdata. En halvmigrert base gir tom bibeltekst,
+// så verdiene renames her, idempotent.
+//
+// Brukerens INNSTILLINGER må med i samme runde: sync er server-først, så en
+// upåvirket serverrad ville skrevet `osnb2` tilbake til klienten ved neste
+// sidelast uansett hva klienten gjorde lokalt (`public/js/sync.js` migrerer den
+// lokale cachen tilsvarende, for lesingene som skjer før første sync svarer).
+// I tillegg tåler serveren de gamle ID-ene fra gamle lenker og eldre klienter
+// via `normalizeBibleId` i bible.ts.
+const BIBLE_ID_RENAMES: [from: string, to: string][] = [
+  ['osnb2', 'osnb'],
+  ['osnn1', 'osnn'],
+];
+
+/** Kolonner der ID-en er HELE verdien. */
+const BIBLE_ID_COLUMNS: [table: string, column: string][] = [
+  ['verses', 'bible'],
+  ['word4word', 'bible'],
+  ['bible_editions', 'id'],
+  ['verse_mappings', 'id'],
+  ['user_bibles', 'mapping_id'],
+];
+
+/** Kolonner der ID-en er PREFIKS i en sammensatt nøkkel (`osnb2-1-1`). */
+const BIBLE_ID_PREFIX_COLUMNS: [table: string, column: string][] = [
+  ['content_hashes', 'content_key'],
+];
+
+/** Skalarfelt i den synkede `settings`-blobben som holder en bibel-/mapping-ID. */
+const SETTINGS_BIBLE_KEYS = ['bible', 'secondaryBible', 'verseMapping'] as const;
+
+/**
+ * Renamer gamle bibel-ID-er. `UPDATE IGNORE` + påfølgende `DELETE`: står den nye
+ * raden der allerede (basen er delvis reimportert med nye ID-er), er den
+ * autoritativ og den gamle skal bort — ellers ville unik-nøkkelen stoppet hele
+ * migreringen.
+ */
+async function renameBibleIds(sql: SQL): Promise<void> {
+  for (const [from, to] of BIBLE_ID_RENAMES) {
+    for (const [table, column] of BIBLE_ID_COLUMNS) {
+      if (!(await tableExists(sql, table))) continue;
+      await sql.unsafe(`UPDATE IGNORE \`${table}\` SET \`${column}\` = ? WHERE \`${column}\` = ?`, [to, from]);
+      await sql.unsafe(`DELETE FROM \`${table}\` WHERE \`${column}\` = ?`, [from]);
+    }
+
+    for (const [table, column] of BIBLE_ID_PREFIX_COLUMNS) {
+      if (!(await tableExists(sql, table))) continue;
+      await sql.unsafe(
+        `UPDATE IGNORE \`${table}\` SET \`${column}\` = CONCAT(?, SUBSTRING(\`${column}\`, ?))
+         WHERE \`${column}\` LIKE ?`,
+        [to, from.length + 1, `${from}%`],
+      );
+      await sql.unsafe(`DELETE FROM \`${table}\` WHERE \`${column}\` LIKE ?`, [`${from}%`]);
+    }
+
+    if (await tableExists(sql, 'sync_items')) {
+      for (const key of SETTINGS_BIBLE_KEYS) {
+        await sql.unsafe(
+          `UPDATE sync_items SET data = JSON_SET(data, '$.${key}', ?)
+           WHERE data_type = 'settings' AND JSON_UNQUOTE(JSON_EXTRACT(data, '$.${key}')) = ?`,
+          [to, from],
+        );
+      }
+      // `hiddenBibles` er en array — JSON_SEARCH gir stien til elementet
+      // (`$.hiddenBibles[2]`), som JSON_SET så kan bytte ut. Hver ID kan bare
+      // forekomme én gang, så «one» er nok.
+      await sql.unsafe(
+        `UPDATE sync_items
+         SET data = JSON_SET(data, JSON_UNQUOTE(JSON_SEARCH(data, 'one', ?, NULL, '$.hiddenBibles')), ?)
+         WHERE data_type = 'settings'
+           AND JSON_SEARCH(data, 'one', ?, NULL, '$.hiddenBibles') IS NOT NULL`,
+        [from, to, from],
+      );
+    }
+  }
+}
+
 async function tableExists(sql: SQL, table: string): Promise<boolean> {
   const rows = (await sql`
     SELECT 1 AS n FROM information_schema.tables
@@ -678,6 +760,8 @@ async function runMigrations(sql: SQL): Promise<void> {
       await sql.unsafe(`ALTER TABLE ${table} ${parts.join(', ')}`).simple();
     }
   }
+
+  await renameBibleIds(sql);
 }
 
 /** Oppretter alle tabeller og kjører migreringene (idempotent). */

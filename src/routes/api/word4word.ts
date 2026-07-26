@@ -1,12 +1,12 @@
 import { Hono } from 'hono';
-import { getOriginalWord4Word, getWord4Word } from '../../lib/bible.ts';
+import { getOriginalWord4Word, getWord4Word, normalizeBibleId } from '../../lib/bible.ts';
 import { intParam } from './util.ts';
 
 const r = new Hono();
 
 // Bibel-kode → språkkode.
 function getBibleLanguage(bible: string): string {
-  if (bible.includes('nn') || bible === 'osnn1') return 'nn';
+  if (bible.includes('nn') || bible === 'osnn') return 'nn';
   return 'nb';
 }
 
@@ -15,7 +15,7 @@ r.get('/', async (c) => {
   const bookId = intParam(c, 'bookId');
   const chapter = intParam(c, 'chapter');
   const verse = intParam(c, 'verse');
-  const bible = c.req.query('bible') || 'osnb2';
+  const bible = normalizeBibleId(c.req.query('bible')) || 'osnb';
   const langParam = c.req.query('lang');
 
   if (isNaN(bookId) || isNaN(chapter) || isNaN(verse)) {

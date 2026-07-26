@@ -39,8 +39,8 @@ function fmtBytes(n) {
 async function renderStatus() {
   const [total, nb, nn, downloadedAt, syncVersion] = await Promise.all([
     countChapters(),
-    countChapters('osnb2'),
-    countChapters('osnn1'),
+    countChapters('osnb'),
+    countChapters('osnn'),
     getMeta('downloadedAt'),
     getMeta('syncVersion'),
   ]);
@@ -52,7 +52,7 @@ async function renderStatus() {
   };
   statusBox.textContent = '';
   const list = el('ul', 'offline-status-list');
-  list.append(el('li', '', `Nedlastede kapitler: ${total} (OSNB2: ${nb}, OSNN1: ${nn})`));
+  list.append(el('li', '', `Nedlastede kapitler: ${total} (OSNB: ${nb}, OSNN: ${nn})`));
   const supportText = Object.entries(support)
     .map(([name, ok]) => `${name} ${ok ? '✓' : '—'}`)
     .join(' · ');

@@ -50,6 +50,7 @@ import {
   getGospelParallelsForChapter,
   getVersesWithOriginal,
   formatReference,
+  normalizeBibleId,
 } from '../../lib/bible.ts';
 import type {
   Verse,
@@ -73,8 +74,8 @@ const SITE = 'https://bible.flogvit.com';
 /** Bevar bible/mapping/secondary i lenker (som gamle bibleQuery, utvidet). */
 function buildQuery(bible: string, mapping: string | undefined, secondary: string | undefined): string {
   const params = new URLSearchParams();
-  if (bible && bible !== 'osnb2') params.set('bible', bible);
-  if (mapping && mapping !== 'osnb2') params.set('mapping', mapping);
+  if (bible && bible !== 'osnb') params.set('bible', bible);
+  if (mapping && mapping !== 'osnb') params.set('mapping', mapping);
   if (secondary) params.set('secondary', secondary);
   const s = params.toString();
   return s ? `?${s}` : '';
@@ -83,8 +84,8 @@ function buildQuery(bible: string, mapping: string | undefined, secondary: strin
 /** Kort etikett over undertekst-stripen (som undertekstShortLabel). */
 function undertekstShortLabel(id: string | undefined): string {
   if (!id) return '';
-  if (id === 'osnb2') return 'nb';
-  if (id === 'osnn1') return 'nn';
+  if (id === 'osnb') return 'nb';
+  if (id === 'osnn') return 'nn';
   if (id === '1930') return '1930';
   if (id === 'dnb2024') return '2024';
   return id;
@@ -117,8 +118,8 @@ const TOC_CATEGORIES: { label: string; range: [number, number] }[] = [
 
 interface DisplayVerse {
   verse: Verse; // verse.chapter/verse.verse er visningsnummerering
-  osnb2Chapter: number;
-  osnb2Verse: number;
+  osnbChapter: number;
+  osnbVerse: number;
   originalText: string | null;
   secondaryText: string | null;
   word4word: Word4Word[];
@@ -157,26 +158,26 @@ async function loadChapterData(
   mapping: string | null,
   secondary: string | undefined,
 ): Promise<ChapterData | null> {
-  const lang = bible === 'osnn1' ? 'nn' : 'nb';
+  const lang = bible === 'osnn' ? 'nn' : 'nb';
 
   // Vers (med ev. KVN-mapping) — samme oppsett som /api/chapter.
-  let base: { verse: Verse; osnb2Chapter: number; osnb2Verse: number }[];
-  if (mapping && mapping !== 'osnb2') {
+  let base: { verse: Verse; osnbChapter: number; osnbVerse: number }[];
+  if (mapping && mapping !== 'osnb') {
     const mapped = await mapChapter(bookId, chapter, mapping, bible);
     if (mapped.length === 0) return null;
     base = mapped.map((m) => ({
       verse: { ...m.verse, chapter: m.displayChapter, verse: m.displayVerse },
-      osnb2Chapter: m.osnb2Chapter,
-      osnb2Verse: m.osnb2Verse,
+      osnbChapter: m.osnbChapter,
+      osnbVerse: m.osnbVerse,
     }));
   } else {
     const versesRaw = await getVerses(bookId, chapter, bible);
     if (versesRaw.length === 0) return null;
-    base = versesRaw.map((v) => ({ verse: v, osnb2Chapter: v.chapter, osnb2Verse: v.verse }));
+    base = versesRaw.map((v) => ({ verse: v, osnbChapter: v.chapter, osnbVerse: v.verse }));
   }
 
-  // Kapittelmetadata bruker osnb2-kapittelet (primærinnholdet).
-  const primaryChapter = base[0]?.osnb2Chapter ?? chapter;
+  // Kapittelmetadata bruker osnb-kapittelet (primærinnholdet).
+  const primaryChapter = base[0]?.osnbChapter ?? chapter;
 
   const [bookSummary, summary, context, insight, importantWords, timelineEvents, chapterProphecies] =
     await Promise.all([
@@ -216,20 +217,20 @@ async function loadChapterData(
   const verses: DisplayVerse[] = [];
   for (const b of base) {
     const [orig, sec, w4w, refs] = await Promise.all([
-      getOriginalVerse(bookId, b.osnb2Chapter, b.osnb2Verse),
-      wantSecondary ? getVerse(bookId, b.osnb2Chapter, b.osnb2Verse, secondary) : Promise.resolve(undefined),
-      getOriginalWord4Word(bookId, b.osnb2Chapter, b.osnb2Verse, lang),
-      getReferences(bookId, b.osnb2Chapter, b.osnb2Verse, lang),
+      getOriginalVerse(bookId, b.osnbChapter, b.osnbVerse),
+      wantSecondary ? getVerse(bookId, b.osnbChapter, b.osnbVerse, secondary) : Promise.resolve(undefined),
+      getOriginalWord4Word(bookId, b.osnbChapter, b.osnbVerse, lang),
+      getReferences(bookId, b.osnbChapter, b.osnbVerse, lang),
     ]);
     verses.push({
       verse: b.verse,
-      osnb2Chapter: b.osnb2Chapter,
-      osnb2Verse: b.osnb2Verse,
+      osnbChapter: b.osnbChapter,
+      osnbVerse: b.osnbVerse,
       originalText: orig?.text ?? null,
       secondaryText: sec?.text ?? null,
       word4word: w4w,
       references: refs,
-      prophecies: chapterProphecies.filter((p) => versesInProphecy(p, bookId, b.osnb2Chapter, b.osnb2Verse)),
+      prophecies: chapterProphecies.filter((p) => versesInProphecy(p, bookId, b.osnbChapter, b.osnbVerse)),
     });
   }
 
@@ -1495,16 +1496,16 @@ function MobileToolbar({
             <span class="tools-section-title">{t('rd.translation')}</span>
             <div class="tools-bibles">
               <a
-                href={`/${bookSlug}/${chapter}${buildQuery('osnb2', mapping, secondary)}`}
-                class={`tools-bible-button ${bible === 'osnb2' ? 'is-active' : ''}`}
+                href={`/${bookSlug}/${chapter}${buildQuery('osnb', mapping, secondary)}`}
+                class={`tools-bible-button ${bible === 'osnb' ? 'is-active' : ''}`}
               >
-                OSNB2 (bokmål)
+                OSNB (bokmål)
               </a>
               <a
-                href={`/${bookSlug}/${chapter}${buildQuery('osnn1', mapping, secondary)}`}
-                class={`tools-bible-button ${bible === 'osnn1' ? 'is-active' : ''}`}
+                href={`/${bookSlug}/${chapter}${buildQuery('osnn', mapping, secondary)}`}
+                class={`tools-bible-button ${bible === 'osnn' ? 'is-active' : ''}`}
               >
-                OSNN1 (nynorsk)
+                OSNN (nynorsk)
               </a>
             </div>
           </div>
@@ -1517,11 +1518,11 @@ function MobileToolbar({
               <option value="original" selected={secondary === 'original'}>
                 Grunntekst
               </option>
-              <option value="osnb2" selected={secondary === 'osnb2'}>
-                OSNB2 (bokmål)
+              <option value="osnb" selected={secondary === 'osnb'}>
+                OSNB (bokmål)
               </option>
-              <option value="osnn1" selected={secondary === 'osnn1'}>
-                OSNN1 (nynorsk)
+              <option value="osnn" selected={secondary === 'osnn'}>
+                OSNN (nynorsk)
               </option>
             </select>
           </div>
@@ -1530,7 +1531,7 @@ function MobileToolbar({
               <span class="tools-section-title">{t('u.versification')}</span>
               <select class="tools-select" data-mapping-select aria-label="Versnummerering">
                 {mappings.map((m) => (
-                  <option value={m.id} selected={(mapping || 'osnb2') === m.id}>
+                  <option value={m.id} selected={(mapping || 'osnb') === m.id}>
                     {m.displayName}
                   </option>
                 ))}
@@ -1589,13 +1590,13 @@ r.get('/:book/:chapter', async (c) => {
   if (chapter > book.chapters) return c.notFound();
 
   // Egne opplastede bibler ('user:<uuid>') bor i IndexedDB på klienten: SSR
-  // rendrer osnb2 som grunnlag (studieverktøyene hentes derfra uansett, som i
+  // rendrer osnb som grunnlag (studieverktøyene hentes derfra uansett, som i
   // gamle appen), og reading.js bytter ut versteksten fra IndexedDB (#14).
-  const requestedBible = c.req.query('bible') || 'osnb2';
+  const requestedBible = normalizeBibleId(c.req.query('bible')) || 'osnb';
   const userBible = requestedBible.startsWith('user:') ? requestedBible : undefined;
-  const bible = userBible ? 'osnb2' : requestedBible;
-  const mappingParam = c.req.query('mapping');
-  const mapping = (mappingParam && mappingParam !== 'osnb2' ? resolveMappingId(mappingParam) : null) ?? null;
+  const bible = userBible ? 'osnb' : requestedBible;
+  const mappingParam = normalizeBibleId(c.req.query('mapping'));
+  const mapping = (mappingParam && mappingParam !== 'osnb' ? resolveMappingId(mappingParam) : null) ?? null;
   const requestedSecondary = c.req.query('secondary') || undefined;
   const userSecondary = requestedSecondary?.startsWith('user:') ? requestedSecondary : undefined;
   const secondary = userSecondary ? undefined : requestedSecondary;
@@ -1617,7 +1618,7 @@ r.get('/:book/:chapter', async (c) => {
 
   const undertekstOn = !!secondary && secondary !== 'original';
   const grunntekstOn = secondary === 'original';
-  const otherNorwegian = bible === 'osnn1' ? 'osnb2' : 'osnn1';
+  const otherNorwegian = bible === 'osnn' ? 'osnb' : 'osnn';
 
   // Kontrakten mot shortcuts.js: data-attributter på <body>.
   const bodyData = `(function(d){d.bookSlug=${JSON.stringify(canonicalSlug)};d.chapter='${chapter}';d.maxChapter='${maxChapter}';${
@@ -1846,7 +1847,7 @@ function parseRefs(refsParam: string | undefined): ParsedTextRef[] {
 r.get('/tekst', async (c) => {
   const t = tFor(c);
   const refsParam = c.req.query('refs');
-  const bible = c.req.query('bible') || 'osnb2';
+  const bible = normalizeBibleId(c.req.query('bible')) || 'osnb';
   const parsedRefs = parseRefs(refsParam);
 
   // Slug → VerseRef via bok-metadata (alias-støtte som ellers).

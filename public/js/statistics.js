@@ -5,7 +5,7 @@
 const tabs = document.querySelectorAll('.stat-word-tab');
 const listEl = document.getElementById('stat-words');
 if (tabs.length && listEl) {
-  const bible = listEl.dataset.bible || 'osnb2';
+  const bible = listEl.dataset.bible || 'osnb';
   // Behold SSR-oversettelseslista så vi slipper å hente den på nytt.
   const cache = { translation: listEl.innerHTML };
 

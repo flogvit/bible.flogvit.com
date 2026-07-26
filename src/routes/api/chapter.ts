@@ -10,6 +10,7 @@ import {
   getChapterInsight,
   getOriginalWord4Word,
   getReferences,
+  normalizeBibleId,
 } from '../../lib/bible.ts';
 import { mapChapter, resolveMappingId } from '../../lib/verse-mapper.ts';
 import { NO_CACHE } from './util.ts';
@@ -18,13 +19,13 @@ const r = new Hono();
 
 /**
  * GET /api/chapter?book=&chapter=&bible=&mapping=&secondary=
- * Med `mapping` remappes versnummereringen fra osnb2 til målsystemet (KVN).
+ * Med `mapping` remappes versnummereringen fra osnb til målsystemet (KVN).
  */
 r.get('/', async (c) => {
   const bookIdStr = c.req.query('book');
   const chapterStr = c.req.query('chapter');
-  const bible = c.req.query('bible') || 'osnb2';
-  const mapping = c.req.query('mapping');
+  const bible = normalizeBibleId(c.req.query('bible')) || 'osnb';
+  const mapping = normalizeBibleId(c.req.query('mapping'));
 
   if (!bookIdStr || !chapterStr) {
     return c.json({ error: 'Missing required parameters: book and chapter' }, 400);
@@ -43,7 +44,7 @@ r.get('/', async (c) => {
 
   try {
     // KVN-kryssmapping når mapping er oppgitt.
-    if (mapping && mapping !== 'osnb2') {
+    if (mapping && mapping !== 'osnb') {
       const resolvedMapping = resolveMappingId(mapping);
       if (!resolvedMapping) {
         return c.json({ error: `Unknown mapping: ${mapping}` }, 400);
@@ -51,32 +52,32 @@ r.get('/', async (c) => {
       const mapped = await mapChapter(bookId, chapter, resolvedMapping, bible);
       if (mapped.length === 0) return c.json({ error: 'Chapter not found' }, 404);
 
-      // Vers med visningsnummerering; osnb2-koordinatene bevares.
+      // Vers med visningsnummerering; osnb-koordinatene bevares.
       const verses = mapped.map((m) => ({
         ...m.verse,
         chapter: m.displayChapter,
         verse: m.displayVerse,
-        osnb2Chapter: m.osnb2Chapter,
-        osnb2Verse: m.osnb2Verse,
+        osnbChapter: m.osnbChapter,
+        osnbVerse: m.osnbVerse,
         partial: m.partial,
       }));
 
       const originalVerses: { verse: number; text: string }[] = [];
       for (const m of mapped) {
-        const orig = await getOriginalVerse(bookId, m.osnb2Chapter, m.osnb2Verse);
+        const orig = await getOriginalVerse(bookId, m.osnbChapter, m.osnbVerse);
         if (orig) originalVerses.push({ verse: m.displayVerse, text: orig.text });
       }
 
-      const lang = bible === 'osnn1' ? 'nn' : 'nb';
+      const lang = bible === 'osnn' ? 'nn' : 'nb';
       const word4word: Record<number, unknown[]> = {};
       for (const m of mapped) {
-        const w4w = await getOriginalWord4Word(bookId, m.osnb2Chapter, m.osnb2Verse, lang);
+        const w4w = await getOriginalWord4Word(bookId, m.osnbChapter, m.osnbVerse, lang);
         if (w4w.length > 0) word4word[m.displayVerse] = w4w;
       }
 
       const references: Record<number, unknown[]> = {};
       for (const m of mapped) {
-        const refs = await getReferences(bookId, m.osnb2Chapter, m.osnb2Verse, lang);
+        const refs = await getReferences(bookId, m.osnbChapter, m.osnbVerse, lang);
         if (refs.length > 0) references[m.displayVerse] = refs;
       }
 
@@ -85,14 +86,14 @@ r.get('/', async (c) => {
       if (secondary && secondary !== 'original' && secondary !== bible) {
         const secVerses: { verse: number; text: string }[] = [];
         for (const m of mapped) {
-          const sv = await getVerse(bookId, m.osnb2Chapter, m.osnb2Verse, secondary);
+          const sv = await getVerse(bookId, m.osnbChapter, m.osnbVerse, secondary);
           if (sv) secVerses.push({ verse: m.displayVerse, text: sv.text });
         }
         if (secVerses.length > 0) secondaryVerses = secVerses;
       }
 
-      // Kapittelmetadata bruker osnb2-kapittelet (primærinnholdet).
-      const primaryChapter = mapped[0]?.osnb2Chapter ?? chapter;
+      // Kapittelmetadata bruker osnb-kapittelet (primærinnholdet).
+      const primaryChapter = mapped[0]?.osnbChapter ?? chapter;
       const bookSummary = chapter === 1 ? await getBookSummary(bookId) : null;
       const summary = await getChapterSummary(bookId, primaryChapter);
       const context = await getChapterContext(bookId, primaryChapter);
@@ -120,7 +121,7 @@ r.get('/', async (c) => {
       );
     }
 
-    // Standardsti: ingen mapping, direkte osnb2-nummerering.
+    // Standardsti: ingen mapping, direkte osnb-nummerering.
     const verses = await getVerses(bookId, chapter, bible);
     if (verses.length === 0) return c.json({ error: 'Chapter not found' }, 404);
 
@@ -136,7 +137,7 @@ r.get('/', async (c) => {
       }
     }
 
-    const lang = bible === 'osnn1' ? 'nn' : 'nb';
+    const lang = bible === 'osnn' ? 'nn' : 'nb';
     const word4word: Record<number, unknown[]> = {};
     for (const verse of verses) {
       const w4w = await getOriginalWord4Word(bookId, chapter, verse.verse, lang);

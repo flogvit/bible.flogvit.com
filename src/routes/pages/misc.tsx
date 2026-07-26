@@ -3,7 +3,7 @@
 //
 // UI-rammen og den forklarende prosaen er oversatt (dictionaries.ts). Siterte
 // bibelvers i KVN-tabellen står uoversatt med vilje: det er innhold med sin
-// egen språkakse (lib/lang.ts), ikke grensesnitt. Utgavenavn (OSNB2, OSNN1,
+// egen språkakse (lib/lang.ts), ikke grensesnitt. Utgavenavn (OSNB, OSNN,
 // Tanach, SBLGNT, KVN) er egennavn.
 
 import { Hono } from 'hono';
@@ -44,8 +44,8 @@ r.get('/om', (c) => {
           <section class="about-section">
             <h2>{t('about.translations')}</h2>
 
-            <h3>{t('about.osnb2')}</h3>
-            <p>{t('about.osnb2Body')}</p>
+            <h3>{t('about.osnb')}</h3>
+            <p>{t('about.osnbBody')}</p>
 
             <h3>{t('about.tanach')}</h3>
             <p>{t('about.tanachBody')}</p>

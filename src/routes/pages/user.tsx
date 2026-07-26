@@ -75,7 +75,7 @@ r.get('/favoritter', async (c) => {
               SELECT v.text, b.name_no, b.short_name FROM verses v
               JOIN books b ON v.book_id = b.id
               WHERE v.book_id = ${f.bookId} AND v.chapter = ${f.chapter}
-                AND v.verse = ${f.verse} AND v.bible = 'osnb2'
+                AND v.verse = ${f.verse} AND v.bible = 'osnb'
             `) as { text: string; name_no: string; short_name: string }[];
             if (!v) return null;
             return {
@@ -408,8 +408,8 @@ r.get('/innstillinger', (c) => {
           <label class="settings-row">
             <span>{t('u.bibleEdition')}</span>
             <select data-setting="bible" class="user-input">
-              <option value="osnb2">OSNB2 (bokmål)</option>
-              <option value="osnn1">OSNN1 (nynorsk)</option>
+              <option value="osnb">OSNB (bokmål)</option>
+              <option value="osnn">OSNN (nynorsk)</option>
             </select>
           </label>
           <label class="settings-row">
@@ -417,8 +417,8 @@ r.get('/innstillinger', (c) => {
             <select data-setting="secondaryBible" class="user-input">
               <option value="">{t('common.none')}</option>
               <option value="original">{t('u.originalText')}</option>
-              <option value="osnb2">OSNB2 (bokmål)</option>
-              <option value="osnn1">OSNN1 (nynorsk)</option>
+              <option value="osnb">OSNB (bokmål)</option>
+              <option value="osnn">OSNN (nynorsk)</option>
             </select>
           </label>
           {mappings.length > 0 && (
@@ -518,10 +518,10 @@ r.get('/offline', (c) => {
         <h2>{t('u.download')}</h2>
         <div class="offline-download" data-offline-download>
           <label class="settings-toggle">
-            <input type="checkbox" data-dl-bible="osnb2" checked /> <span>OSNB2 (bokmål)</span>
+            <input type="checkbox" data-dl-bible="osnb" checked /> <span>OSNB (bokmål)</span>
           </label>
           <label class="settings-toggle">
-            <input type="checkbox" data-dl-bible="osnn1" /> <span>OSNN1 (nynorsk)</span>
+            <input type="checkbox" data-dl-bible="osnn" /> <span>OSNN (nynorsk)</span>
           </label>
           <div class="offline-actions">
             <button type="button" class="user-btn" data-dl-start>{t('u.downloadOffline')}</button>

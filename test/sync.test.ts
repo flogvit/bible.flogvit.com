@@ -172,13 +172,13 @@ describe('sync-API', () => {
       headers: AUTH,
       body: JSON.stringify({
         bibles: [
-          { id: 'ub-test-1', name: 'Testbibel', mappingId: 'osnb2', uploadedAt: 1000 },
+          { id: 'ub-test-1', name: 'Testbibel', mappingId: 'osnb', uploadedAt: 1000 },
         ],
       }),
     });
     expect(up.status).toBe(200);
     const upBody = (await up.json()) as { bibles: { id: string; mappingId: string }[] };
-    expect(upBody.bibles[0]!.mappingId).toBe('osnb2');
+    expect(upBody.bibles[0]!.mappingId).toBe('osnb');
 
     const chUp = await app.request('/api/sync/user-bible-chapters/ub-test-1', {
       method: 'POST',

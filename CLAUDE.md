@@ -82,6 +82,24 @@ unik-nøkkelen**, så flere språk kan ligge side om side. Kontrakten bor i
   der. Kjør `bun scripts/init-db.ts` (eller `deploy-bibel-data.sh`) for å løfte en
   base.
 
+### Bibel-ID-er: `osnb`/`osnn` (omdøpt fra `osnb2`/`osnn1` 2026-07-26)
+
+free-bible omdøpte de to norske grunntekstene. ID-en er ikke bare en streng i
+koden — den ligger i `verses.bible`, `word4word.bible`, `bible_editions.id`,
+`verse_mappings.id`, `user_bibles.mapping_id`, som prefiks i
+`content_hashes.content_key` (`osnb-1-1`), og i brukerens synkede innstillinger.
+
+- **Basen migreres** av `renameBibleIds()` i `schema.ts` (idempotent, kjøres av
+  `ensureSchema`). `UPDATE IGNORE` + `DELETE`: finnes målraden alt, er den nye
+  autoritativ.
+- **De gamle ID-ene lever videre utenfor basen** — i bokmerker, delte lenker og
+  eldre klienters localStorage. Alt som kommer utenfra går derfor gjennom
+  `normalizeBibleId()` (`bible.ts`); `public/js/sync.js` migrerer den lokale
+  cachen tilsvarende. **Ikke fjern aliasene** uten å vite at ingen lenker igjen.
+- **Rekkefølge ved utrulling:** kode FØR data. `deploy-bibel.sh` migrerer
+  skjemaet og renamer verdiene før restart; kjører du `deploy-bibel-data.sh`
+  først, får prod nye ID-er mens gammel kode spør etter de gamle → blank side.
+
 ### KILDE: pass på riktig free-bible
 Import leser `$FREE_BIBLE_DIR` (default: `flogvit.com/free-bible`, som er en **symlink**
 → det ekte `../free-bible`-repoet). Historisk felle: `flogvit.com/free-bible` var en

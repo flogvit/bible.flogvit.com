@@ -14,7 +14,7 @@ for (const book of books) {
   for (let ch = 1; ch <= book.chapters; ch++) {
     const [row] = (await sql`
       SELECT MAX(verse) AS count FROM verses
-      WHERE book_id = ${book.id} AND chapter = ${ch} AND bible = 'osnb2'
+      WHERE book_id = ${book.id} AND chapter = ${ch} AND bible = 'osnb'
     `) as { count: number | null }[];
     counts.push(row?.count ?? 0);
   }

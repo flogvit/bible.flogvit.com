@@ -28,7 +28,7 @@ r.post('/', async (c) => {
             FROM verses v
             JOIN books b ON v.book_id = b.id
             WHERE v.book_id = ${fav.bookId} AND v.chapter = ${fav.chapter}
-              AND v.verse = ${fav.verse} AND v.bible = 'osnb2'
+              AND v.verse = ${fav.verse} AND v.bible = 'osnb'
           `) as { text: string; book_name: string; book_short_name: string }[];
           if (!verse) return null;
           return {

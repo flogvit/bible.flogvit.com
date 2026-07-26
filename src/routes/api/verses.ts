@@ -1,14 +1,14 @@
 import { Hono } from 'hono';
-import { getVersesWithOriginal, type VerseRef } from '../../lib/bible.ts';
+import { getVersesWithOriginal, normalizeBibleId, type VerseRef } from '../../lib/bible.ts';
 import { parseStandardRef, refSegmentsToVerseRefs } from '../../lib/standard-ref-parser.ts';
 import { NO_CACHE } from './util.ts';
 
 const r = new Hono();
 
-/** GET /api/verses?ref=Joh+3,16-19&bible=osnb2 — norsk standardreferanse → vers. */
+/** GET /api/verses?ref=Joh+3,16-19&bible=osnb — norsk standardreferanse → vers. */
 r.get('/', async (c) => {
   const ref = c.req.query('ref');
-  const bible = c.req.query('bible') || 'osnb2';
+  const bible = normalizeBibleId(c.req.query('bible')) || 'osnb';
 
   if (!ref) return c.json({ error: 'Missing ref parameter' }, 400);
 
@@ -28,7 +28,8 @@ r.get('/', async (c) => {
 /** POST /api/verses — body: { refs: VerseRef[], bible? } */
 r.post('/', async (c) => {
   const body = await c.req.json().catch(() => null);
-  const { refs, bible = 'osnb2' } = (body ?? {}) as { refs?: VerseRef[]; bible?: string };
+  const { refs, bible: rawBible = 'osnb' } = (body ?? {}) as { refs?: VerseRef[]; bible?: string };
+  const bible = normalizeBibleId(rawBible);
 
   if (!refs || !Array.isArray(refs)) return c.json({ error: 'Missing refs array' }, 400);
 

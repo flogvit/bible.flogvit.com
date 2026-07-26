@@ -144,7 +144,22 @@ interface VerseRow {
   footnotes: string | null;
 }
 
-export async function getVerses(bookId: number, chapter: number, bible = 'osnb2'): Promise<Verse[]> {
+// --- Gamle bibel-/mapping-ID-er ------------------------------------------
+//
+// `osnb2`/`osnn1` ble omdøpt til `osnb`/`osnn` i free-bible (2026-07-26). Basen
+// migreres (se schema.ts), men de gamle ID-ene lever videre UTENFOR basen: i
+// lagrede innstillinger (localStorage + synkede `settings`), i bokmerker og i
+// delte lenker med `?bible=`/`?mapping=`. Derfor normaliseres alt som kommer
+// utenfra — ellers får leseren tom tekst for en ID som ikke finnes lenger.
+const LEGACY_BIBLE_IDS: Record<string, string> = { osnb2: 'osnb', osnn1: 'osnn' };
+
+export function normalizeBibleId(id: string): string;
+export function normalizeBibleId(id: string | undefined): string | undefined;
+export function normalizeBibleId(id?: string): string | undefined {
+  return id === undefined ? undefined : (LEGACY_BIBLE_IDS[id] ?? id);
+}
+
+export async function getVerses(bookId: number, chapter: number, bible = 'osnb'): Promise<Verse[]> {
   const sql = getSql();
   const rows = await sql`
     SELECT * FROM verses WHERE book_id = ${bookId} AND chapter = ${chapter} AND bible = ${bible} ORDER BY verse
@@ -184,7 +199,7 @@ export interface VerseWithOriginal {
   bookShortName: string;
 }
 
-export async function getVerse(bookId: number, chapter: number, verseNum: number, bible = 'osnb2'): Promise<Verse | undefined> {
+export async function getVerse(bookId: number, chapter: number, verseNum: number, bible = 'osnb'): Promise<Verse | undefined> {
   const sql = getSql();
   const [row] = await sql`
     SELECT * FROM verses WHERE book_id = ${bookId} AND chapter = ${chapter} AND verse = ${verseNum} AND bible = ${bible}
@@ -208,7 +223,7 @@ export async function getOriginalVerse(bookId: number, chapter: number, verseNum
   return row;
 }
 
-export async function getVersesWithOriginal(refs: VerseRef[], bible = 'osnb2'): Promise<VerseWithOriginal[]> {
+export async function getVersesWithOriginal(refs: VerseRef[], bible = 'osnb'): Promise<VerseWithOriginal[]> {
   const results: VerseWithOriginal[] = [];
 
   for (const ref of refs) {
@@ -235,7 +250,7 @@ export async function getVersesWithOriginal(refs: VerseRef[], bible = 'osnb2'): 
   return results;
 }
 
-export async function getWord4Word(bookId: number, chapter: number, verse: number, bible = 'osnb2'): Promise<Word4Word[]> {
+export async function getWord4Word(bookId: number, chapter: number, verse: number, bible = 'osnb'): Promise<Word4Word[]> {
   const sql = getSql();
   return await sql`
     SELECT word_index, word, original, pronunciation, explanation FROM word4word
@@ -391,7 +406,7 @@ export async function getAllWellKnownVerses(lang = DEFAULT_CONTENT_LANGUAGE): Pr
       v.text as verse_text
     FROM important_verses iv
     JOIN books b ON iv.book_id = b.id
-    JOIN verses v ON iv.book_id = v.book_id AND iv.chapter = v.chapter AND iv.verse = v.verse AND v.bible = 'osnb2'
+    JOIN verses v ON iv.book_id = v.book_id AND iv.chapter = v.chapter AND iv.verse = v.verse AND v.bible = 'osnb'
     WHERE iv.language = ${language}
     ORDER BY iv.book_id, iv.chapter, iv.verse
   ` as Promise<WellKnownVerse[]>);
@@ -626,7 +641,7 @@ export interface SearchResponse {
   hasMore: boolean;
 }
 
-export async function searchVerses(query: string, limit = 50, offset = 0, bible = 'osnb2'): Promise<SearchResponse> {
+export async function searchVerses(query: string, limit = 50, offset = 0, bible = 'osnb'): Promise<SearchResponse> {
   if (!query || query.length < 2) return { results: [], total: 0, hasMore: false };
 
   const sql = getSql();
@@ -653,7 +668,7 @@ export async function searchVerses(query: string, limit = 50, offset = 0, bible 
   return { results, total, hasMore: offset + results.length < total };
 }
 
-export async function getVerseCount(bookId: number, chapter: number, bible = 'osnb2'): Promise<number> {
+export async function getVerseCount(bookId: number, chapter: number, bible = 'osnb'): Promise<number> {
   const sql = getSql();
   const [result] = await sql`
     SELECT MAX(verse) as count FROM verses WHERE book_id = ${bookId} AND chapter = ${chapter} AND bible = ${bible}
@@ -775,7 +790,7 @@ export async function searchOriginalWord(word: string, limit = 50, offset = 0): 
       v_orig.text as original_text
     FROM word4word w
     JOIN books b ON w.book_id = b.id
-    JOIN verses v_no ON w.book_id = v_no.book_id AND w.chapter = v_no.chapter AND w.verse = v_no.verse AND v_no.bible = 'osnb2'
+    JOIN verses v_no ON w.book_id = v_no.book_id AND w.chapter = v_no.chapter AND w.verse = v_no.verse AND v_no.bible = 'osnb'
     JOIN verses v_orig ON w.book_id = v_orig.book_id AND w.chapter = v_orig.chapter AND w.verse = v_orig.verse AND v_orig.bible = ?
     WHERE w.word IN (${placeholders}) AND w.bible = ?
     ORDER BY w.book_id, w.chapter, w.verse
@@ -788,7 +803,7 @@ export async function searchOriginalWord(word: string, limit = 50, offset = 0): 
     // Get Norwegian word4word entries for this verse
     const norwegianEntries = await sql`
       SELECT DISTINCT word, original FROM word4word
-      WHERE book_id = ${r.book_id} AND chapter = ${r.chapter} AND verse = ${r.verse} AND bible = 'osnb2' AND original IS NOT NULL
+      WHERE book_id = ${r.book_id} AND chapter = ${r.chapter} AND verse = ${r.verse} AND bible = 'osnb' AND original IS NOT NULL
     ` as { word: string; original: string }[];
 
     // Get original language word4word entries for this verse
@@ -2021,7 +2036,7 @@ function countWords(text: string): number {
   return text.split(/\s+/).filter(w => w.length > 0).length;
 }
 
-export async function getBookStatistics(bookId: number, bible = 'osnb2'): Promise<BookStatistics | null> {
+export async function getBookStatistics(bookId: number, bible = 'osnb'): Promise<BookStatistics | null> {
   const sql = getSql();
   const book = getBookById(bookId);
   if (!book) return null;
@@ -2063,7 +2078,7 @@ export async function getBookStatistics(bookId: number, bible = 'osnb2'): Promis
   };
 }
 
-export async function getBibleStatistics(bible = 'osnb2'): Promise<BibleStatistics> {
+export async function getBibleStatistics(bible = 'osnb'): Promise<BibleStatistics> {
   const books = getAllBooks();
 
   let totalChapters = 0;
@@ -2121,7 +2136,7 @@ export async function getBibleStatistics(bible = 'osnb2'): Promise<BibleStatisti
   };
 }
 
-export async function getTopWords(bible = 'osnb2', limit = 100, includeStopWords = false): Promise<WordFrequency[]> {
+export async function getTopWords(bible = 'osnb', limit = 100, includeStopWords = false): Promise<WordFrequency[]> {
   const sql = getSql();
 
   // Get all text from verses

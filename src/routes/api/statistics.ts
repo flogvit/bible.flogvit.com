@@ -1,5 +1,5 @@
 import { Hono } from 'hono';
-import { getBibleStatistics, getTopOriginalWords, getTopWords } from '../../lib/bible.ts';
+import { getBibleStatistics, getTopOriginalWords, getTopWords, normalizeBibleId } from '../../lib/bible.ts';
 import { NO_CACHE } from './util.ts';
 
 const r = new Hono();
@@ -7,7 +7,7 @@ const r = new Hono();
 /** GET /api/statistics — overordnet bibelstatistikk. */
 r.get('/', async (c) => {
   try {
-    const bible = c.req.query('bible') || 'osnb2';
+    const bible = normalizeBibleId(c.req.query('bible')) || 'osnb';
     return c.json(await getBibleStatistics(bible), 200, NO_CACHE);
   } catch (error) {
     console.error('Error fetching statistics:', error);
@@ -20,7 +20,7 @@ r.get('/top-words', async (c) => {
   try {
     const limit = Math.min(parseInt(c.req.query('limit') ?? '', 10) || 100, 500);
     const includeStopWords = c.req.query('all') === 'true';
-    const bible = c.req.query('bible') || 'osnb2';
+    const bible = normalizeBibleId(c.req.query('bible')) || 'osnb';
     const words = await getTopWords(bible, limit, includeStopWords);
     return c.json({ words }, 200, NO_CACHE);
   } catch (error) {

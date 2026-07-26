@@ -76,7 +76,7 @@ const isFullImport = args.includes('--full');
  * Listen styrer også metadata-importen (`bible_editions`), så en ny oversettelse
  * her drar meta.json/license.json og info-siden med seg automatisk.
  */
-const BIBLES = ['osnb2', 'osnn1', 'sblgnt', 'tanach'];
+const BIBLES = ['osnb', 'osnn', 'sblgnt', 'tanach'];
 
 // Statistics tracking
 interface ImportStats {
@@ -448,7 +448,7 @@ for (const bible of BIBLES) {
   }
 
   // license.json finnes bare for moduler der lisensen er kartlagt eksternt —
-  // egne tekster (osnb2/osnn1) og grunntekstene har den ikke.
+  // egne tekster (osnb/osnn) og grunntekstene har den ikke.
   const licensePath = path.join(GENERATE_PATH, 'bibles_raw', bible, 'license.json');
   const metaContent = fs.readFileSync(metaPath, 'utf-8');
   const licenseContent = fs.existsSync(licensePath) ? fs.readFileSync(licensePath, 'utf-8') : null;
@@ -1939,7 +1939,7 @@ if (fs.existsSync(leseteksterPath)) {
             console.warn(`  Ukjent bok: ${parsed.book} i ${refMarkup}`);
             return 0;
           }
-          const mappingId = parsed.system ? (resolveMappingId(parsed.system) || parsed.system) : 'osnb2';
+          const mappingId = parsed.system ? (resolveMappingId(parsed.system) || parsed.system) : 'osnb';
           const ranges = parseVerseRanges(parsed.verseSpec);
 
           let inserted = 0;

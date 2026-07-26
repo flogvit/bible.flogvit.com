@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import type { Context } from 'hono';
 import { getSql } from '../../lib/db.ts';
+import { normalizeBibleId } from '../../lib/bible.ts';
 import { DEFAULT_CONTENT_LANGUAGE } from '../../lib/lang.ts';
 import { NO_CACHE } from './util.ts';
 
@@ -16,7 +17,7 @@ interface DailyVerseRow {
 }
 
 async function dailyVerseResponse(c: Context, date: string): Promise<Response> {
-  const bible = c.req.query('bible') || 'osnb2';
+  const bible = normalizeBibleId(c.req.query('bible')) || 'osnb';
   const sql = getSql();
 
   const [dailyVerse] = (await sql`
