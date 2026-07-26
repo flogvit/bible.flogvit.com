@@ -11,11 +11,21 @@ const username = process.env.DB_USER || 'root';
 const password = process.env.DB_PASSWORD || '';
 
 // Første tilkobling uten database — den finnes kanskje ikke ennå.
-const admin = new SQL({ adapter: 'mysql', hostname: host, port, username, password });
-await admin
-  .unsafe(`CREATE DATABASE IF NOT EXISTS ${DB_NAME} CHARACTER SET utf8mb4 COLLATE utf8mb4_danish_ci`)
-  .simple();
-await admin.end();
+//
+// I PROD finnes basen allerede, og appbrukeren har med vilje ikke rett til å
+// opprette databaser (GRANT er scopet til bibel-basen). Da feiler dette steget
+// med 1044 «Access denied … to database 'mysql'» — og det er riktig oppsett,
+// ikke en feil. Vi lar det gå videre: hvis basen mangler OG vi ikke kan lage
+// den, feiler neste tilkobling uansett, med en tydeligere melding.
+try {
+  const admin = new SQL({ adapter: 'mysql', hostname: host, port, username, password });
+  await admin
+    .unsafe(`CREATE DATABASE IF NOT EXISTS ${DB_NAME} CHARACTER SET utf8mb4 COLLATE utf8mb4_danish_ci`)
+    .simple();
+  await admin.end();
+} catch (err) {
+  console.log(`  (hopper over CREATE DATABASE: ${(err as Error).message})`);
+}
 
 const sql = new SQL({ adapter: 'mysql', hostname: host, port, username, password, database: DB_NAME });
 await ensureSchema(sql);

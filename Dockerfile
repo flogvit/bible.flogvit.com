@@ -11,6 +11,11 @@ RUN bun install --frozen-lockfile --production || bun install --production
 # å transpilere .tsx-viewene; uten den faller Bun til react/jsx-runtime og krasjer.
 COPY tsconfig.json ./
 COPY src ./src
+# scripts/ maa vaere med: deployen kjoerer `bun scripts/init-db.ts` FRA imaget
+# for aa lofte prod-skjemaet foer tjenesten starter. Appen kjoerer ikke
+# ensureSchema() selv, saa uten dette kan en kode-deploy aldri migrere — og
+# kode som forventer en ny kolonne tar ned siden (skjedde 2026-07-26).
+COPY scripts ./scripts
 COPY public ./public
 ENV NODE_ENV=production
 ENV PORT=8080
