@@ -37,10 +37,11 @@ else
   echo "==> Hopper over sitemap-generering (ingen .env) — bruker committet sitemap.xml"
 fi
 
-echo "==> Rsyncer bibel-hono og server-konfig"
-rsync -az --delete --exclude node_modules --exclude .git --exclude .env --exclude data --exclude dist \
-  "$SRC/" $VM:$SRV/bibel-hono/
-rsync -az --inplace "$ROOT/server/Caddyfile" "$ROOT/server/compose.yml" $VM:$SRV/server/
+# Kildekoden sendes IKKE opp — imaget bygges her og hentes fra registryet.
+# Denne linja laa igjen fra byggemodellen vi gikk bort fra, og ville gjenskapt
+# /srv/flogvit.com/bibel-hono/ ved neste deploy.
+echo "==> Sender server-konfig"
+rsync -az --inplace --no-owner --no-group --chmod=F644,D755 "$ROOT/server/Caddyfile" "$ROOT/server/compose.yml" $VM:$SRV/server/
 
 echo "==> Bygger og pusher"
 # Bygg og push imaget, men IKKE start tjenesten foer skjemaet er migrert.
@@ -48,7 +49,7 @@ echo "==> Bygger og pusher"
 # imaget, saa skjemaet loftes av samme kode som skal ta over.
 build_and_push bibel-hono "$ROOT/bibel"
 preflight "$VM"
-rsync -az --inplace "$ROOT/server/compose.yml" "$VM:$SRV/server/"
+rsync -az --inplace --no-owner --no-group --chmod=F644,D755 "$ROOT/server/compose.yml" "$VM:$SRV/server/"
 
 # MIGRER SKJEMAET FOER RESTART.
 #
