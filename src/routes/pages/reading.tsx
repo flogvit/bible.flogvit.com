@@ -63,6 +63,7 @@ import type {
   VerseRef,
 } from '../../lib/bible.ts';
 import { mapChapter, resolveMappingId, getAvailableMappings } from '../../lib/verse-mapper.ts';
+import { getWorksForChapter, workHref, encodeKvn, type WorkRef } from '../../lib/works.ts';
 import { layoutProps, tFor, type Translator } from '../../lib/i18n.ts';
 
 const r = new Hono<AppEnv>();
@@ -125,6 +126,7 @@ interface DisplayVerse {
   word4word: Word4Word[];
   references: Reference[];
   prophecies: Prophecy[];
+  works: WorkRef[];
 }
 
 interface ChapterData {
@@ -142,6 +144,7 @@ interface ChapterData {
   readingTexts: { id: number; name: string; date: string }[];
   parallels: GospelParallel[];
   chapterProphecies: Prophecy[];
+  chapterWorks: WorkRef[];
 }
 
 function versesInProphecy(p: Prophecy, bookId: number, chapter: number, verse: number): boolean {
@@ -191,14 +194,21 @@ async function loadChapterData(
     ]);
 
   // Studium-ressurser (samme kall som /api/search/chapter-resources).
-  const [personsRaw, themesRaw, storiesRaw, numbersRaw, readingTextsRaw, parallels] = await Promise.all([
+  const [personsRaw, themesRaw, storiesRaw, numbersRaw, readingTextsRaw, parallels, allWorks] = await Promise.all([
     getPersonsByChapter(bookId, primaryChapter),
     getThemesByChapter(bookId, primaryChapter),
     getStoriesByChapter(bookId, primaryChapter),
     getNumberSymbolismByChapter(bookId, primaryChapter),
     getReadingTextsByChapter(bookId, primaryChapter),
     getGospelParallelsForChapter(bookId, primaryChapter),
+    getWorksForChapter(bookId, primaryChapter),
   ]);
+  // Presise treff (vers/passasje) legges paa hvert vers; kapittel-/bok-nivaa
+  // samles i studium-blokka saa de ikke drukner de presise paa hvert vers.
+  const preciseWorks = allWorks.filter((w) => w.level === 'verse' || w.level === 'passage');
+  const chapterWorks = allWorks
+    .filter((w) => w.level === 'chapter' || w.level === 'book')
+    .filter((w, i, arr) => arr.findIndex((o) => o.work_id === w.work_id) === i);
 
   const persons = personsRaw.map((p) => ({
     id: p.id,
@@ -231,11 +241,16 @@ async function loadChapterData(
       word4word: w4w,
       references: refs,
       prophecies: chapterProphecies.filter((p) => versesInProphecy(p, bookId, b.osnbChapter, b.osnbVerse)),
+      works: preciseWorks.filter((w) => {
+        const k = encodeKvn(bookId, b.osnbChapter, b.osnbVerse);
+        return w.kvn_from <= k + 15 && w.kvn_to >= k;
+      }),
     });
   }
 
   return {
     verses,
+    chapterWorks,
     bookSummary,
     summary,
     context,
@@ -753,6 +768,27 @@ function VerseStrip({
   return null;
 }
 
+const WORK_KIND_ORDER: Record<string, number> = { cites: 0, discusses: 1, covers_passage: 2 };
+
+function WorkItem({ work, t }: { work: WorkRef; t: Translator }) {
+  const target = workHref(work);
+  const label = work.title || work.doi || work.isbn13 || work.work_id;
+  const meta = [work.authors, work.year, work.container].filter(Boolean).join(' · ');
+  return (
+    <div class="vd-work">
+      {target ? (
+        <a href={target} rel="noopener" target="_blank" class="vd-work-title">{label}</a>
+      ) : (
+        <span class="vd-work-title">{label}</span>
+      )}
+      {meta && <span class="vd-work-meta">{meta}</span>}
+      {work.where_page && (
+        <span class="vd-work-meta">{t('contrib.worksPage')} {work.where_page}</span>
+      )}
+    </div>
+  );
+}
+
 function VerseDetailPanel({
   data,
   bookId,
@@ -788,6 +824,11 @@ function VerseDetailPanel({
         <button type="button" class="vd-tab" data-vd-tab="references">
           Referanser {data.references.length > 0 && `(${data.references.length})`}
         </button>
+        {data.works.length > 0 && (
+          <button type="button" class="vd-tab" data-vd-tab="works">
+            {t('contrib.worksTab')} ({data.works.length})
+          </button>
+        )}
         {data.prophecies.length > 0 && (
           <button type="button" class="vd-tab" data-vd-tab="prophecies">
             Profetier ({data.prophecies.length})
@@ -889,6 +930,20 @@ function VerseDetailPanel({
             </a>
           </div>
         </div>
+
+        {/* Litteratur — verk fra contrib-pipelinen som treffer dette verset presist */}
+        {data.works.length > 0 && (
+          <div class="vd-pane" data-vd-pane="works" hidden>
+            <div class="vd-works">
+              {data.works
+                .slice()
+                .sort((a, b) => (WORK_KIND_ORDER[a.ref_kind] ?? 3) - (WORK_KIND_ORDER[b.ref_kind] ?? 3))
+                .map((work) => (
+                  <WorkItem work={work} t={t} />
+                ))}
+            </div>
+          </div>
+        )}
 
         {/* Profetier */}
         {data.prophecies.length > 0 && (
@@ -1306,6 +1361,21 @@ function StudyPanel({
           Alle lesetekster →
         </a>
       </StudyBlock>
+
+      {data.chapterWorks.length > 0 && (
+        <StudyBlock id="litteratur" title={t('contrib.worksChapter')} count={data.chapterWorks.length} defaultOpen={false}>
+          <div class="vd-works">
+            {data.chapterWorks.map((work) => (
+              <div class="vd-work-row">
+                <WorkItem work={work} t={t} />
+                <span class="vd-work-level">
+                  {work.level === 'book' ? t('contrib.worksBook') : t('contrib.worksChapterLevel')}
+                </span>
+              </div>
+            ))}
+          </div>
+        </StudyBlock>
+      )}
 
       <StudyBlock id="manuskripter" title={t('nav.manuscripts')} defaultOpen>
         {/* Lokale manuskripter (localStorage) fylles inn av studium.js */}

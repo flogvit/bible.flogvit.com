@@ -1520,3 +1520,38 @@ a.ins-hero-name:hover {
   margin: 0 0 16px;
 }
 .user-bible-missing [data-verse-plain] { opacity: 0.55; }
+
+/* Litteratur (verk fra contrib-pipelinen) — verspanel-tab og studium-blokk */
+.vd-work {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  padding: 0.35rem 0;
+}
+
+.vd-work + .vd-work,
+.vd-work-row + .vd-work-row {
+  border-top: 1px solid var(--border, #e3ded4);
+}
+
+.vd-work-title {
+  font-weight: 600;
+}
+
+.vd-work-meta {
+  font-size: 0.85rem;
+  color: var(--text-muted, #6b6355);
+}
+
+.vd-work-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.vd-work-level {
+  font-size: 0.8rem;
+  color: var(--text-muted, #6b6355);
+  white-space: nowrap;
+}
