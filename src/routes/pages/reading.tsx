@@ -884,6 +884,9 @@ function VerseDetailPanel({
             ) : (
               <p class="text-muted">{t('rd.noRefs')}</p>
             )}
+            <a href={`/bidra?vers=${verseRef}`} class="write-devotional-link">
+              {t('contrib.suggestWork')}
+            </a>
           </div>
         </div>
 
@@ -1710,6 +1713,9 @@ r.get('/:book/:chapter', async (c) => {
                   </a>
                 )
               )}
+              <a href={`/bidra?kap=${canonicalSlug}-${chapter}`} class="rail-chip">
+                {t('contrib.title')}
+              </a>
             </div>
 
             <ChapterInsights t={t} insight={data.insight} />
