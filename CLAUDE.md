@@ -107,6 +107,26 @@ egen, stale klon — standard-importen leste da feil data og rapporterte «0 end
 Symlinken fikser dette; `deploy-bibel-data.sh` setter i tillegg `FREE_BIBLE_DIR`
 eksplisitt til den resolverte stien.
 
+## Contrib (bruker-innsendte artikler/bøker)
+
+Brukere melder inn verk med versreferanser på `/bidra` (krever konto, IKKE
+plus); innsendinger lagres i **brukertabellen** `contrib_submissions` og
+reviewes via free-bibles filbaserte skript. Full runbook:
+`../free-bible/contrib/README.md` (pull → check → review → export → apply →
+import). Nøkkelregler:
+
+- **KVN-regelen:** bidragsyter oppgir kun `raw` + `context_translation`;
+  kvnFrom/kvnTo (bit-shift-`encode()`, Esra 3:1 = 15740944 — ALDRI
+  `ukvnEncode`) fylles av free-bibles pipeline/reviewer.
+- Transport mot DB-en er `scripts/contrib-pull.ts`/`contrib-apply.ts` over
+  de token-gatede endepunktene `/api/contrib/pending|apply` —
+  `CONTRIB_TOKEN` må ligge i `bibel.env` (prod) / `.env` (dev). Uten env
+  finnes ikke endepunktene.
+- Godkjente bidrag blir `free-bible/generate/verse_works/<workId>.json`,
+  importeres til innholdstabellene `works`/`work_verse_refs`, og vises som
+  «Litteratur» i versdetaljen (presise treff) og studium-blokka
+  (kapittel-/bok-nivå).
+
 ## Regler
 - Minimal deps: innebygd/web-standard fremfor npm-pakker. Aldri React/Express/ORM-er.
 - Bibeldata er derivert og regenererbar — aldri inn i Docker-imaget; import kjøres separat mot DB-en.
