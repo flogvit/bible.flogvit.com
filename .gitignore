@@ -4,6 +4,7 @@ kvn-package/
 .DS_Store
 tmp/
 *.tsbuildinfo
+docs/superpowers/
 .idea/
 
 # Gammel apps artefakter (fryst på bibel-no; skal ikke inn på main)
