@@ -26,6 +26,7 @@ import persons from './routes/api/persons.ts';
 import prophecies from './routes/api/prophecies.ts';
 import readingPlans from './routes/api/reading-plans.ts';
 import readingTexts from './routes/api/reading-texts.ts';
+import contrib from './routes/api/contrib.ts';
 import reference from './routes/api/reference.ts';
 import references from './routes/api/references.ts';
 import search from './routes/api/search.ts';
@@ -89,6 +90,7 @@ export function createApp() {
   app.route('/api/number-symbolism', numberSymbolism);
   app.route('/api/days', days);
   app.route('/api/reading-texts', readingTexts);
+  app.route('/api/contrib', contrib);
   app.route('/api/sync', sync);
 
   // Crawler-flater FØR serveStatic, ellers vinner den gamle statiske
