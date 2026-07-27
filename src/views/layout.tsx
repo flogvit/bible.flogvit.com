@@ -133,6 +133,7 @@ const navGroups = (t: Translator): { label: string; links: { href: string; label
       { href: '/lister', label: t('nav.verseLists') },
       { href: '/leseplan', label: t('nav.readingPlan') },
       { href: '/manuskripter', label: t('nav.manuscripts') },
+      { href: '/mine-bidrag', label: t('contrib.mine') },
     ],
   },
   {

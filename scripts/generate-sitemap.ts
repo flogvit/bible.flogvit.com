@@ -23,6 +23,7 @@ const staticUrls: [path: string, changefreq: string, priority: string][] = [
   ['/temaer', 'monthly', '0.7'],
   ['/leseplan', 'monthly', '0.7'],
   ['/kjente-vers', 'monthly', '0.6'],
+  ['/bidra', 'monthly', '0.4'],
   ['/tilgjengelighet', 'monthly', '0.3'],
 ];
 

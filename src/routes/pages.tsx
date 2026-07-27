@@ -11,6 +11,7 @@ import persons from './pages/persons.tsx';
 import themes from './pages/themes.tsx';
 import overview from './pages/overview.tsx';
 import user from './pages/user.tsx';
+import contrib from './pages/contrib.tsx';
 import misc from './pages/misc.tsx';
 import reading from './pages/reading.tsx';
 
@@ -21,6 +22,7 @@ pages.route('/', persons);
 pages.route('/', themes);
 pages.route('/', overview);
 pages.route('/', user);
+pages.route('/', contrib);
 pages.route('/', misc);
 pages.route('/', reading);
 
