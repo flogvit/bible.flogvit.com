@@ -472,6 +472,40 @@ const TABLES: string[] = [
     INDEX idx_content_hashes_updated (updated_at)
   ) ENGINE=InnoDB ${CS}`,
 
+  // --- verk (artikler/bøker) fra free-bible/generate/verse_works/ ---
+  // KVN-kolonnene er bit-shift-kodingen fra kvn/src/types.ts:
+  // (book<<20)|(chapter<<12)|(verse<<4)|part — monoton i (bok,kapittel,vers),
+  // så range-oppslag «hvilke verk dekker dette verset» er én BETWEEN-spørring.
+  `CREATE TABLE IF NOT EXISTS works (
+    id VARCHAR(120) PRIMARY KEY,
+    kind VARCHAR(20) NOT NULL,
+    title VARCHAR(500) NULL,
+    authors VARCHAR(500) NULL,
+    year INT NULL,
+    container VARCHAR(300) NULL,
+    doi VARCHAR(200) NULL,
+    isbn13 VARCHAR(13) NULL,
+    openlibrary_id VARCHAR(30) NULL,
+    url VARCHAR(500) NULL,
+    contributors VARCHAR(500) NULL,
+    updated VARCHAR(40) NULL
+  ) ENGINE=InnoDB ${CS}`,
+
+  `CREATE TABLE IF NOT EXISTS work_verse_refs (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    work_id VARCHAR(120) NOT NULL,
+    kvn_from BIGINT NOT NULL,
+    kvn_to BIGINT NOT NULL,
+    kvn_ref VARCHAR(150) NULL,
+    book_id INT NOT NULL,
+    level VARCHAR(10) NOT NULL,
+    ref_kind VARCHAR(20) NOT NULL,
+    where_page INT NULL,
+    where_section VARCHAR(200) NULL,
+    INDEX idx_wvr_book (book_id, kvn_from),
+    INDEX idx_wvr_work (work_id)
+  ) ENGINE=InnoDB ${CS}`,
+
   // --- brukerdata (sync; user_id = konto-bruker-id) ---
   `CREATE TABLE IF NOT EXISTS sync_items (
     user_id INT NOT NULL,
@@ -509,6 +543,24 @@ const TABLES: string[] = [
     data JSON NOT NULL,
     PRIMARY KEY (bible_id, book_id, chapter),
     FOREIGN KEY (bible_id) REFERENCES user_bibles(id) ON DELETE CASCADE
+  ) ENGINE=InnoDB ${CS}`,
+
+  // Bruker-innsendte artikler/bøker (free-bible-contrib/1). BRUKERTABELL —
+  // aldri inn i import/deploy-data-listene. `status` speiler
+  // payload.review.status (kolonne for indeksering; payloaden er kontrakten
+  // som pull-skriptet eksporterer til free-bible/contrib/queue/).
+  `CREATE TABLE IF NOT EXISTS contrib_submissions (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    kind VARCHAR(30) NOT NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'pending',
+    payload JSON NOT NULL,
+    review_note TEXT NULL,
+    created_at BIGINT NOT NULL,
+    updated_at BIGINT NOT NULL,
+    reviewed_at BIGINT NULL,
+    INDEX idx_contrib_user (user_id, updated_at),
+    INDEX idx_contrib_status (status, updated_at)
   ) ENGINE=InnoDB ${CS}`,
 ];
 
