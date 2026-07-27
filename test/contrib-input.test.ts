@@ -121,3 +121,18 @@ describe('buildSubmissionPayload', () => {
     expect(p.submitted.by).toEqual({ user_id: '990001', credit: true });
   });
 });
+
+describe('sang-kind', () => {
+  test('sang med tittel+artist godtas; song_id valideres', () => {
+    const song = {
+      kind: 'song_verse_refs',
+      target: { freetext: { title: 'Deg være ære', authors: ['E. Budry'] } },
+      context_translation: 'osnb',
+      refs: [{ raw: 'Matt 28,6', kind: 'cites' }],
+    };
+    expect(validateContribInput(song).ok).toBe(true);
+    const withId = validateContribInput({ ...song, target: { song_id: 'song-0042' } });
+    expect(withId.ok && withId.input.target.song_id === 'song-0042').toBe(true);
+    expect(validateContribInput({ ...song, target: { song_id: 'sang-42' } }).ok).toBe(false);
+  });
+});

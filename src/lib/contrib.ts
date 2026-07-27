@@ -10,12 +10,12 @@
 import { getSql } from './db.ts';
 import type { SessionUser } from './session.ts';
 
-export type ContribKind = 'article_verse_refs' | 'book_verse_refs';
+export type ContribKind = 'article_verse_refs' | 'book_verse_refs' | 'song_verse_refs';
 export type ContribStatus = 'pending' | 'needs_info' | 'approved' | 'rejected';
 
 export const CONTRIB_STATUSES = ['pending', 'needs_info', 'approved', 'rejected'] as const;
 const REF_KINDS = ['cites', 'discusses', 'covers_passage'] as const;
-const KINDS: ContribKind[] = ['article_verse_refs', 'book_verse_refs'];
+const KINDS: ContribKind[] = ['article_verse_refs', 'book_verse_refs', 'song_verse_refs'];
 
 export interface ContribRefInput {
   raw: string;
@@ -30,6 +30,7 @@ export interface ContribTargetInput {
   isbn13?: string;
   isbn10?: string;
   openlibrary_id?: string;
+  song_id?: string;
   url?: string;
   freetext?: { title: string; authors?: string[]; year?: number; publisher_or_journal?: string };
 }
@@ -44,7 +45,7 @@ export interface ContribInput {
   credit_name?: string;
 }
 
-const TARGET_KEYS = ['catalog_id', 'doi', 'isbn13', 'isbn10', 'openlibrary_id', 'url', 'freetext'] as const;
+const TARGET_KEYS = ['catalog_id', 'doi', 'isbn13', 'isbn10', 'openlibrary_id', 'song_id', 'url', 'freetext'] as const;
 
 function isRecord(v: unknown): v is Record<string, unknown> {
   return typeof v === 'object' && v !== null && !Array.isArray(v);
@@ -119,6 +120,14 @@ export function validateContribInput(
     const r = optStr(rawTarget.openlibrary_id, 30, 'target.openlibrary_id');
     if (!r.ok) return r;
     if (r.value) target.openlibrary_id = r.value.trim();
+  }
+  {
+    const r = optStr(rawTarget.song_id, 30, 'target.song_id');
+    if (!r.ok) return r;
+    if (r.value) {
+      if (!/^song-\d+$/.test(r.value.trim())) return { ok: false, error: 'Invalid song_id' };
+      target.song_id = r.value.trim();
+    }
   }
   if (rawTarget.freetext !== undefined) {
     if (!isRecord(rawTarget.freetext)) return { ok: false, error: 'Invalid target.freetext' };

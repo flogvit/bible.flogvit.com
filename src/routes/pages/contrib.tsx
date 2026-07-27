@@ -157,6 +157,9 @@ r.get('/bidra', (c) => {
           <label>
             <input type="radio" name="kind" value="book_verse_refs" /> {t('contrib.kindBook')}
           </label>
+          <label>
+            <input type="radio" name="kind" value="song_verse_refs" /> {t('contrib.kindSong')}
+          </label>
         </fieldset>
 
         <h2>{t('contrib.targetHeading')}</h2>
