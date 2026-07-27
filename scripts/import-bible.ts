@@ -21,6 +21,8 @@ import {
   getSyncVersion,
 } from './import-utils.ts';
 import { DEFAULT_CONTENT_LANGUAGE, isLanguageCode } from '../src/lib/lang.ts';
+import { booksData } from '../src/lib/books-data.ts';
+import { getChapterVerseCount } from '../src/lib/verse-counts.ts';
 import { parseRefMarkup } from '@free-bible/kvn/ref';
 import { BOOK_IDS } from '@free-bible/kvn/types';
 import { UkvnMapper, loadUkvnMapping, ukvnEncode, ukvnDecode, resolveMappingId } from '@free-bible/kvn';
@@ -104,9 +106,11 @@ interface ImportStats {
   numberSymbolism: { updated: number; unchanged: number };
   days: { updated: number; unchanged: number };
   readingTexts: { updated: number; unchanged: number };
+  verseWorks: { updated: number; unchanged: number };
 }
 
 const stats: ImportStats = {
+  verseWorks: { updated: 0, unchanged: 0 },
   chapters: { updated: 0, unchanged: 0 },
   bibleEditions: { updated: 0, unchanged: 0 },
   word4word: { updated: 0, unchanged: 0 },
@@ -238,6 +242,8 @@ const CONTENT_TABLES = [
   'gospel_parallels',
   'gospel_parallel_passages',
   'verse_mappings',
+  'works',
+  'work_verse_refs',
   'days',
   'number_symbolism',
   'reading_texts',
@@ -1644,6 +1650,113 @@ if (fs.existsSync(mappingsPath)) {
   console.log('  Ingen mappinger-mappe funnet');
 }
 
+
+// Importer verk (artikler/bøker fra contrib-pipelinen) — språknøytral flat
+// katalog som mappings. KVN-kolonnene er bit-shift-kodingen fra
+// kvn/src/types.ts; level avledes av spennet for visningsgruppering.
+console.log('Importerer verk (verse_works)...');
+
+function decodeWorkKvn(kvn: number): { book: number; chapter: number; verse: number } {
+  return { book: (kvn >> 20) & 0x7f, chapter: (kvn >> 12) & 0xff, verse: (kvn >> 4) & 0xff };
+}
+
+function workRefLevel(kvnFrom: number, kvnTo: number): string {
+  const a = decodeWorkKvn(kvnFrom);
+  const b = decodeWorkKvn(kvnTo);
+  if (a.book !== b.book) return 'passage';
+  if (a.chapter === b.chapter && a.verse === b.verse) return 'verse';
+  const chapters = booksData.find((bk) => bk.id === a.book)?.chapters ?? 0;
+  const wholeFromStart = a.chapter === 1 && a.verse === 1;
+  const wholeToEnd = b.chapter === chapters && b.verse >= getChapterVerseCount(b.book, b.chapter);
+  if (wholeFromStart && wholeToEnd) return 'book';
+  if (a.verse === 1 && b.verse >= getChapterVerseCount(b.book, b.chapter)) return 'chapter';
+  return 'passage';
+}
+
+const verseWorksPath = path.join(GENERATE_PATH, 'verse_works');
+if (fs.existsSync(verseWorksPath)) {
+  const workKeysOnDisk = new Set<string>();
+  await sql.begin(async (tx) => {
+    const files = fs.readdirSync(verseWorksPath).filter((f) => f.endsWith('.json'));
+
+    for (const file of files) {
+      const filePath = path.join(verseWorksPath, file);
+      const content = fs.readFileSync(filePath, 'utf-8');
+      const contentHash = computeHash(content);
+      const fileId = file.replace('.json', '');
+      workKeysOnDisk.add(fileId);
+
+      if (!isFullImport && !hasContentChangedCached('verse_work', fileId, contentHash)) {
+        stats.verseWorks.unchanged++;
+        continue;
+      }
+
+      try {
+        const data = JSON.parse(content) as {
+          id?: string;
+          kind?: string;
+          target?: Record<string, string>;
+          title?: string;
+          authors?: string[];
+          year?: number;
+          container?: string;
+          contributors?: string[];
+          updated?: string;
+          refs?: { kvnFrom: number; kvnTo: number; kvnRef?: string; kind?: string;
+            where?: { page?: number; chapter_or_section?: string } }[];
+        };
+        const workId = data.id || fileId;
+        await tx`
+          REPLACE INTO works (id, kind, title, authors, year, container, doi, isbn13,
+                              openlibrary_id, url, contributors, updated)
+          VALUES (${workId}, ${data.kind || 'article'}, ${data.title || null},
+                  ${data.authors?.length ? data.authors.join(', ') : null}, ${data.year || null},
+                  ${data.container || null}, ${data.target?.doi || null},
+                  ${data.target?.isbn13 || null}, ${data.target?.openlibrary_id || null},
+                  ${data.target?.url || null},
+                  ${data.contributors?.length ? data.contributors.join(', ') : null},
+                  ${data.updated || null})
+        `;
+        await tx`DELETE FROM work_verse_refs WHERE work_id = ${workId}`;
+        for (const ref of data.refs ?? []) {
+          if (!Number.isInteger(ref.kvnFrom) || !Number.isInteger(ref.kvnTo)) continue;
+          await tx`
+            INSERT INTO work_verse_refs (work_id, kvn_from, kvn_to, kvn_ref, book_id, level,
+                                         ref_kind, where_page, where_section)
+            VALUES (${workId}, ${ref.kvnFrom}, ${ref.kvnTo}, ${ref.kvnRef || null},
+                    ${decodeWorkKvn(ref.kvnFrom).book}, ${workRefLevel(ref.kvnFrom, ref.kvnTo)},
+                    ${ref.kind || 'discusses'}, ${ref.where?.page || null},
+                    ${ref.where?.chapter_or_section || null})
+          `;
+        }
+        await setContentHash(tx, 'verse_work', fileId, contentHash);
+        stats.verseWorks.updated++;
+      } catch (e) {
+        console.error(`Ugyldig JSON i ${file}:`, e);
+      }
+    }
+
+    // Slett verk som er borte fra disk (works har ingen språkkolonne, så
+    // cleanupRemovedEntries kan ikke brukes).
+    const dbWorks = (await tx`SELECT id FROM works`) as { id: string }[];
+    let removed = 0;
+    for (const row of dbWorks) {
+      if (workKeysOnDisk.has(row.id)) continue;
+      await tx`DELETE FROM work_verse_refs WHERE work_id = ${row.id}`;
+      await tx`DELETE FROM works WHERE id = ${row.id}`;
+      await tx`DELETE FROM content_hashes WHERE content_type = 'verse_work' AND content_key = ${row.id}`;
+      removed++;
+    }
+    if (removed > 0) {
+      deleted['verk'] = (deleted['verk'] ?? 0) + removed;
+      console.log(`  Slettet ${removed} verk som er fjernet fra disk`);
+    }
+    console.log(`  Importerte ${stats.verseWorks.updated} verk`);
+  });
+} else {
+  console.log('  Ingen verse_works-mappe funnet');
+}
+
 // Importer bibelhistorier (per-fil, lik persons-mønsteret)
 console.log('Importerer bibelhistorier...');
 
@@ -2095,6 +2208,7 @@ console.log(`Vers-mappinger        ${String(stats.verseMappings.updated).padStar
 console.log(`Bibelhistorier        ${String(stats.stories.updated).padStart(9)}  ${String(stats.stories.unchanged).padStart(7)}  ${d('historier')}`);
 console.log(`Tallsymbolikk         ${String(stats.numberSymbolism.updated).padStart(9)}  ${String(stats.numberSymbolism.unchanged).padStart(7)}  ${d('tall')}`);
 console.log(`Dager                 ${String(stats.days.updated).padStart(9)}  ${String(stats.days.unchanged).padStart(7)}  ${d('dager')}`);
+console.log(`Verk                  ${String(stats.verseWorks.updated).padStart(9)}  ${String(stats.verseWorks.unchanged).padStart(7)}  ${d('verk')}`);
 console.log('--------------------------------------------------');
 console.log(`Totalt                ${String(totalUpdated).padStart(9)}  ${String(totalUnchanged).padStart(7)}  ${totalDeleted > 0 ? String(totalDeleted).padStart(7) : '      -'}`);
 console.log('\nFerdig!');

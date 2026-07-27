@@ -38,12 +38,12 @@ LDB_USER="${DB_USER:-root}"
 LDB_NAME="${DB_NAME:-flogvit_bibel}"
 
 # Innholdstabellene import-pipelinen eier (speiler CONTENT_TABLES i import-bible.ts).
-DEFAULT_TABLES="books verses word4word references_ book_summaries book_context \
+DEFAULT_TABLES="books verses bible_editions word4word references_ book_summaries book_context \
 chapter_summaries chapter_context important_words important_verses verse_prayers \
 verse_sermons themes timeline_periods timeline_events timeline_references \
 timeline_book_sections prophecy_categories prophecies prophecy_fulfillments persons \
 chapter_insights daily_verses reading_plans gospel_parallel_sections gospel_parallels \
-gospel_parallel_passages verse_mappings days number_symbolism reading_texts \
+gospel_parallel_passages verse_mappings works work_verse_refs days number_symbolism reading_texts \
 reading_text_refs stories content_hashes db_meta"
 TABLES="${*:-$DEFAULT_TABLES}"
 
