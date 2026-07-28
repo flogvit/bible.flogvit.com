@@ -1767,7 +1767,7 @@ r.get('/:book/:chapter', async (c) => {
     <Layout {...layoutProps(c)}
       title={title}
       description={description}
-      canonical={`${SITE}/${canonicalSlug}/${chapter}`}
+      canonical={SITE + lhref(`/${canonicalSlug}/${chapter}`)}
       styles={['reading.css', 'studium.css']}
       scripts={['reading.js', 'studium.js', 'ref-preview.js', 'tagging.js', 'user-bibles.js']}
     >
@@ -2053,7 +2053,7 @@ r.get('/tekst', async (c) => {
     <Layout {...layoutProps(c)}
       title="Bibelpassasjer — FLOGVIT.bible"
       description="Vis utvalgte bibelpassasjer samlet på én side."
-      canonical={`${SITE}/tekst`}
+      canonical={SITE + lhref('/tekst')}
       styles={['reading.css']}
       scripts={['ref-preview.js']}
     >

@@ -22,6 +22,25 @@ VM=flogvit-vm
 source "$ROOT/server/lib-ship.sh"
 SRV=/srv/flogvit.com
 
+# ── PORT: tester og typecheck FØR noe bygges eller sendes ────────────
+#
+# Det finnes ingen CI i flogvit — deploy-skriptet er eneste realistiske sted
+# å håndheve at suiten er grønn. Kjøres først, så en rød test koster sekunder
+# framfor en rullet-ut regresjon. `SKIP_TESTS=1` finnes for nødfikser der
+# testene er nede av andre grunner; bruk den bevisst.
+if [ "${SKIP_TESTS:-0}" = "1" ]; then
+  echo "==> ⚠ HOPPER OVER tester og typecheck (SKIP_TESTS=1)"
+else
+  echo "==> Typecheck"
+  (cd "$SRC" && bun run typecheck) || { echo "AVBRYTER: typecheck feilet."; exit 1; }
+  echo "==> Tester"
+  # Testene trenger lokal MySQL (DBngin :3312) for integrasjonsdelen.
+  (cd "$SRC" && bun test) || {
+    echo "AVBRYTER: tester feilet. Kjør 'bun test' og fiks, eller SKIP_TESTS=1 for nødfiks."
+    exit 1
+  }
+fi
+
 echo "==> Stager kvn-pakken fra free-bible"
 rm -rf "$SRC/kvn-package"
 mkdir -p "$SRC/kvn-package"

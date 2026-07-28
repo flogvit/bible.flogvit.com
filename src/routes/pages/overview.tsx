@@ -117,7 +117,7 @@ r.get('/oversettelser/:id', async (c) => {
       title={`${name} — Oversettelser — FLOGVIT.bible`}
       description={`Om ${name}${edition.abbreviation ? ` (${edition.abbreviation})` : ''}: tekstgrunnlag, oversettelsesmetode, dekning og lisens.`}
       styles={['overview.css']}
-      canonical={`https://bible.flogvit.com/oversettelser/${edition.id}`}
+      canonical={`https://bible.flogvit.com${lhref(`/oversettelser/${edition.id}`)}`}
     >
       <div class="overview-main">
         <div class="container">
