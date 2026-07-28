@@ -16,4 +16,9 @@ console.log(`bibel-web listening on :${port}`);
 export default {
   port,
   fetch: app.fetch,
+  // MAA ligge over DB_RETRY_BUDGET_MS i lib/db.ts. Bun sin standard er 10 s:
+  // en forespoersel som venter lenger faar forbindelsen lukket, Caddy ser
+  // «EOF» og svarer 502 — uansett hva Caddy selv er satt til. Det var dette
+  // som gjorde at retryen paa 25 s ikke hjalp under DB-restarten 2026-07-28.
+  idleTimeout: Number(process.env.SERVE_IDLE_TIMEOUT || 35),
 };
