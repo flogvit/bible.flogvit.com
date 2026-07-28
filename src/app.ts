@@ -114,6 +114,11 @@ export function createApp() {
       c.set('locale', locale);
       await next();
     });
+    // Samme snarveier som uprefikset (se over): /<lang>/logg-inn og
+    // /<lang>/konto skal ikke 404 naar de uprefiksede virker. De redirecter
+    // til sentral konto uansett spraak, saa locale spiller ingen rolle her.
+    sub.get('/logg-inn', (c) => c.redirect(ACCOUNT_URL, 302));
+    sub.get('/konto', (c) => c.redirect(ACCOUNT_URL, 302));
     sub.route('/', pages);
     app.route(`/${locale}`, sub);
   }
