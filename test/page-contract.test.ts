@@ -36,6 +36,11 @@ beforeAll(async () => {
 const PAGES: { path: string; name: string }[] = [
   { path: '/', name: 'forsiden' },
   { path: '/1mos/1', name: 'kapittelsiden (TOC, skinne, versdetaljer, referanser)' },
+  // 1 Mos 1 har INGEN personer, så studieblokka for personer rendres ikke der.
+  // Mutasjonstesting avslørte det: en uprefikset lenke i den blokka slapp
+  // gjennom kontrakten. Disse to drar inn de betingede blokkene.
+  { path: '/1mos/12', name: 'kapittel med personer og profetier' },
+  { path: '/matt/1', name: 'kapittel med evangelieparalleller' },
   { path: '/profetier', name: 'profetier' },
   { path: '/paralleller', name: 'evangelieparalleller' },
   { path: '/statistikk', name: 'statistikk' },

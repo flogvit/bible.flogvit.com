@@ -165,6 +165,33 @@ historikk) og holdes utenfor tidslinje/ferskhet framfor å gjettes inn.
   ingen påminnelser. Gamification (streaks/merker/nivåer) er et bevisst
   NON-GOAL — vil man presses, velger man en leseplan.
 
+## Testene — tre nivåer og hva hvert av dem faktisk fanger
+
+`bun test` kjøres AUTOMATISK av `deploy/deploy-bibel.sh` sammen med typecheck, og
+deployen avbrytes hvis noe er rødt (`SKIP_TESTS=1` finnes for nødfikser — bruk den
+bevisst). Det finnes ingen CI, så deploy-skriptet er eneste reelle port.
+
+1. **Ren logikk** — `reading-progress.test.ts`, `lang.test.ts` osv. Rask, ingen DB.
+2. **Sidekontrakt** — `page-contract.test.ts`. En SVEIP: hver invariant sjekkes mot
+   ALLE sidene i `PAGES`. Dekker prefiksede lenker, `<html lang>`, hreflang-klynge,
+   canonical, ordboks-fullstendighet og sitemap. **Ny side ⇒ legg den i `PAGES`; ny
+   invariant ⇒ den gjelder umiddelbart for alle sidene.**
+3. **Klient-øyene** — `islands.test.ts` (happy-dom). Dekker DOM-wiringen i
+   `public/js/` som ellers bare kjører i nettleser. IntersectionObserver og plus-porten
+   stubbes/lastes eksplisitt, så målingen kan drives deterministisk.
+
+**Velg sider etter KOMPONENT, ikke etter URL.** 1 Mos 1 har ingen personer, så
+studieblokka for personer rendres ikke der — en uprefikset lenke i den blokka slapp
+gjennom kontrakten helt til mutasjonstesting avslørte det. Derfor ligger `/1mos/12`
+(personer + profetier) og `/matt/1` (evangelieparalleller) også i matrisen.
+
+**Verifiser nye vakter ved å gjeninnføre feilen de skal fange.** En test som ikke blir
+rød av mutasjonen er verdiløs. Alle fire vaktene her er sjekket slik.
+
+**Grense:** happy-dom lar seg ikke patche der `plus.js` overstyrer
+`localStorage.setItem`, så den stille skrivesperren for gratisbrukere må verifiseres i
+en ekte nettleser. Den brukersynlige porten (klikk registrerer ingenting) er dekket.
+
 ## Lenker og lokale vakter
 
 **Alle interne lenker skal bruke `lhref(path)`** (`lib/i18n.ts`), aldri `href="/…"` rått.
