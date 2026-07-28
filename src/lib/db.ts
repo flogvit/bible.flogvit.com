@@ -18,6 +18,16 @@ export function getSql(): SQL {
       password: process.env.DB_PASSWORD || '',
       database: DB_NAME,
       max: Number(process.env.DB_POOL_MAX || 5),
+      // Feil RASKT naar basen er borte. Bun sin standard er 30 s, altsaa
+      // lenger enn Caddys 10 s proxy-timeout: forespoerselen hang til Caddy
+      // kuttet og ga 502, i stedet for at vi rakk aa svare selv. Scaleway-basen
+      // ligger paa «Cost Optimized» (delte ressurser, EKSPLISITT unntatt SLA)
+      // og faar ordnede SIGTERM-er; selve avbruddet er kort (maalt 28 s og 12 s
+      // 2026-07-28), men uten dette ble et kvarters utfall av det.
+      connectionTimeout: Number(process.env.DB_CONNECT_TIMEOUT || 2),
+      // Resirkuler tilkoblinger, saa poolen ikke blir staaende med forbindelser
+      // til en server som forsvant.
+      maxLifetime: Number(process.env.DB_MAX_LIFETIME || 900),
     });
   }
   return pool;
