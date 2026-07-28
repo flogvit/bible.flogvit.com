@@ -51,8 +51,10 @@ import {
   getVersesWithOriginal,
   formatReference,
   normalizeBibleId,
+  readableBibleCandidates,
 } from '../../lib/bible.ts';
 import type {
+  BibleCandidate,
   Verse,
   Word4Word,
   Reference,
@@ -65,6 +67,7 @@ import type {
 import { mapChapter, resolveMappingId, getAvailableMappings } from '../../lib/verse-mapper.ts';
 import { getWorksForChapter, workHref, encodeKvn, type WorkRef } from '../../lib/works.ts';
 import { layoutProps, tFor, type Translator } from '../../lib/i18n.ts';
+import { localeToContentLanguage } from '../../lib/lang.ts';
 
 const r = new Hono<AppEnv>();
 
@@ -73,9 +76,14 @@ const SITE = 'https://bible.flogvit.com';
 // ── Hjelpere ──────────────────────────────────────────────────────────
 
 /** Bevar bible/mapping/secondary i lenker (som gamle bibleQuery, utvidet). */
-function buildQuery(bible: string, mapping: string | undefined, secondary: string | undefined): string {
+function buildQuery(
+  bible: string,
+  mapping: string | undefined,
+  secondary: string | undefined,
+  defaultBible = 'osnb',
+): string {
   const params = new URLSearchParams();
-  if (bible && bible !== 'osnb') params.set('bible', bible);
+  if (bible && bible !== defaultBible) params.set('bible', bible);
   if (mapping && mapping !== 'osnb') params.set('mapping', mapping);
   if (secondary) params.set('secondary', secondary);
   const s = params.toString();
@@ -160,8 +168,12 @@ async function loadChapterData(
   bible: string,
   mapping: string | null,
   secondary: string | undefined,
+  contentLang = 'nb',
 ): Promise<ChapterData | null> {
-  const lang = bible === 'osnn' ? 'nn' : 'nb';
+  // Derivert innhold (sammendrag, referanser, ord-for-ord …) følger UI-ets
+  // innholdsspråk, ikke bibelutgaven — getterne faller selv tilbake via
+  // contentLanguageChain når språket mangler.
+  const lang = contentLang;
 
   // Vers (med ev. KVN-mapping) — samme oppsett som /api/chapter.
   let base: { verse: Verse; osnbChapter: number; osnbVerse: number }[];
@@ -184,23 +196,23 @@ async function loadChapterData(
 
   const [bookSummary, summary, context, insight, importantWords, timelineEvents, chapterProphecies] =
     await Promise.all([
-      chapter === 1 ? getBookSummary(bookId) : Promise.resolve(null),
-      getChapterSummary(bookId, primaryChapter),
-      getChapterContext(bookId, primaryChapter),
-      getChapterInsight(bookId, primaryChapter),
-      getImportantWords(bookId, primaryChapter),
-      getTimelineEventsForChapter(bookId, primaryChapter),
-      getPropheciesForChapter(bookId, primaryChapter),
+      chapter === 1 ? getBookSummary(bookId, lang) : Promise.resolve(null),
+      getChapterSummary(bookId, primaryChapter, lang),
+      getChapterContext(bookId, primaryChapter, lang),
+      getChapterInsight(bookId, primaryChapter, lang),
+      getImportantWords(bookId, primaryChapter, lang),
+      getTimelineEventsForChapter(bookId, primaryChapter, lang),
+      getPropheciesForChapter(bookId, primaryChapter, lang),
     ]);
 
   // Studium-ressurser (samme kall som /api/search/chapter-resources).
   const [personsRaw, themesRaw, storiesRaw, numbersRaw, readingTextsRaw, parallels, allWorks] = await Promise.all([
-    getPersonsByChapter(bookId, primaryChapter),
-    getThemesByChapter(bookId, primaryChapter),
-    getStoriesByChapter(bookId, primaryChapter),
-    getNumberSymbolismByChapter(bookId, primaryChapter),
-    getReadingTextsByChapter(bookId, primaryChapter),
-    getGospelParallelsForChapter(bookId, primaryChapter),
+    getPersonsByChapter(bookId, primaryChapter, lang),
+    getThemesByChapter(bookId, primaryChapter, lang),
+    getStoriesByChapter(bookId, primaryChapter, lang),
+    getNumberSymbolismByChapter(bookId, primaryChapter, lang),
+    getReadingTextsByChapter(bookId, primaryChapter, lang),
+    getGospelParallelsForChapter(bookId, primaryChapter, lang),
     getWorksForChapter(bookId, primaryChapter),
   ]);
   // Presise treff (vers/passasje) legges paa hvert vers; kapittel-/bok-nivaa
@@ -265,6 +277,27 @@ async function loadChapterData(
     parallels,
     chapterProphecies,
   };
+}
+
+/**
+ * Prøver kandidat-utgavene i rekkefølge og serverer den første som har
+ * kapittelet (GitHub #13). Gyldige bok/kapittel-referanser skal aldri 404-e
+ * fordi språkets utgave (eller ett av kapitlene dens) mangler — de faller til
+ * neste utgave i kjeden. Eksportert for test.
+ */
+export async function loadChapterWithFallback(
+  bookId: number,
+  chapter: number,
+  candidates: BibleCandidate[],
+  mapping: string | null,
+  secondary: string | undefined,
+  contentLang: string,
+): Promise<{ data: ChapterData | null; bible: BibleCandidate }> {
+  for (const candidate of candidates) {
+    const data = await loadChapterData(bookId, chapter, candidate.id, mapping, secondary, contentLang);
+    if (data) return { data, bible: candidate };
+  }
+  return { data: null, bible: candidates[0] ?? { id: 'osnb', lang: 'nb' } };
 }
 
 // ── Tekst med {{ref}}-maler (port av VerseTemplateText, server-side) ─
@@ -1452,6 +1485,7 @@ function MobileToolbar({
   mapping,
   bible,
   secondary,
+  defaultBible,
   t,
 }: {
   book: BookInfo;
@@ -1461,6 +1495,7 @@ function MobileToolbar({
   mapping: string | undefined;
   bible: string;
   secondary: string | undefined;
+  defaultBible: string;
   t: Translator;
 }) {
   const maxChapter = book.chapters;
@@ -1569,13 +1604,13 @@ function MobileToolbar({
             <span class="tools-section-title">{t('rd.translation')}</span>
             <div class="tools-bibles">
               <a
-                href={`/${bookSlug}/${chapter}${buildQuery('osnb', mapping, secondary)}`}
+                href={`/${bookSlug}/${chapter}${buildQuery('osnb', mapping, secondary, defaultBible)}`}
                 class={`tools-bible-button ${bible === 'osnb' ? 'is-active' : ''}`}
               >
                 OSNB (bokmål)
               </a>
               <a
-                href={`/${bookSlug}/${chapter}${buildQuery('osnn', mapping, secondary)}`}
+                href={`/${bookSlug}/${chapter}${buildQuery('osnn', mapping, secondary, defaultBible)}`}
                 class={`tools-bible-button ${bible === 'osnn' ? 'is-active' : ''}`}
               >
                 OSNN (nynorsk)
@@ -1662,12 +1697,20 @@ r.get('/:book/:chapter', async (c) => {
   if (isNaN(chapter) || chapter < 1 || !/^\d+$/.test(chapterStr)) return c.notFound();
   if (chapter > book.chapters) return c.notFound();
 
+  // Utgavevalget følger locale (GitHub #13): kandidatene kommer fra
+  // contentLanguageChain over importerte utgaver, så /en/ serverer osen den
+  // dagen den finnes og faller til osnb (med hint) til da — per kapittel.
+  // Et eksplisitt ?bible=-valg overstyrer og fallbacker ikke.
+  const contentLang = localeToContentLanguage(c.get('locale'));
+  const candidates = await readableBibleCandidates(contentLang);
+  const localeDefault = candidates[0] ?? { id: 'osnb', lang: 'nb' };
+
   // Egne opplastede bibler ('user:<uuid>') bor i IndexedDB på klienten: SSR
   // rendrer osnb som grunnlag (studieverktøyene hentes derfra uansett, som i
   // gamle appen), og reading.js bytter ut versteksten fra IndexedDB (#14).
-  const requestedBible = normalizeBibleId(c.req.query('bible')) || 'osnb';
+  const explicitBible = normalizeBibleId(c.req.query('bible')) || undefined;
+  const requestedBible = explicitBible || localeDefault.id;
   const userBible = requestedBible.startsWith('user:') ? requestedBible : undefined;
-  const bible = userBible ? 'osnb' : requestedBible;
   const mappingParam = normalizeBibleId(c.req.query('mapping'));
   const mapping = (mappingParam && mappingParam !== 'osnb' ? resolveMappingId(mappingParam) : null) ?? null;
   const requestedSecondary = c.req.query('secondary') || undefined;
@@ -1675,14 +1718,25 @@ r.get('/:book/:chapter', async (c) => {
   const secondary = userSecondary ? undefined : requestedSecondary;
 
   const canonicalSlug = toUrlSlug(book.short_name);
-  const data = await loadChapterData(book.id, chapter, bible, mapping, secondary);
+  const ssrCandidates: BibleCandidate[] =
+    userBible ? [{ id: 'osnb', lang: 'nb' }]
+    : explicitBible ? [{ id: explicitBible, lang: contentLang }]
+    : candidates;
+  const { data, bible: served } = await loadChapterWithFallback(
+    book.id, chapter, ssrCandidates, mapping, secondary, contentLang,
+  );
   if (!data) return c.notFound();
+  const bible = served.id;
+  // Hint når leseren ba om ett språk og fikk et annet (utgaven/kapittelet
+  // er ikke oversatt ennå). Aldri ved eksplisitt valg.
+  const untranslated = !explicitBible && !userBible && served.lang !== contentLang;
 
   const maxChapter = book.chapters;
   const nextBook = getBookInfoById(book.id + 1);
   const nextBookSlug = nextBook ? toUrlSlug(nextBook.short_name) : undefined;
-  // Lenker bevarer det FORESPURTE valget (inkl. user:-bibler).
-  const query = buildQuery(requestedBible, mapping ?? undefined, requestedSecondary);
+  // Lenker bevarer det FORESPURTE valget (inkl. user:-bibler); locale-
+  // defaulten holdes ute av URL-ene så fallbacken virker per kapittel.
+  const query = buildQuery(requestedBible, mapping ?? undefined, requestedSecondary, localeDefault.id);
 
   const title = `${book.name_no} ${chapter} — FLOGVIT.bible`;
   const description = data.summary
@@ -1750,9 +1804,15 @@ r.get('/:book/:chapter', async (c) => {
               </h1>
             </header>
 
+            {untranslated && (
+              <p class="chapter-untranslated" data-untranslated>
+                {t('rd.untranslated')}
+              </p>
+            )}
+
             <div class="chapter-rail">
               <a
-                href={`/${canonicalSlug}/${chapter}${buildQuery(bible, mapping ?? undefined, undertekstOn ? undefined : otherNorwegian)}`}
+                href={`/${canonicalSlug}/${chapter}${buildQuery(requestedBible, mapping ?? undefined, undertekstOn ? undefined : otherNorwegian, localeDefault.id)}`}
                 class={`rail-chip ${undertekstOn ? 'is-on' : ''}`}
                 aria-current={undertekstOn ? 'true' : undefined}
                 title="Undertekst under hvert vers"
@@ -1760,7 +1820,7 @@ r.get('/:book/:chapter', async (c) => {
                 + Undertekst
               </a>
               <a
-                href={`/${canonicalSlug}/${chapter}${buildQuery(bible, mapping ?? undefined, grunntekstOn ? undefined : 'original')}`}
+                href={`/${canonicalSlug}/${chapter}${buildQuery(requestedBible, mapping ?? undefined, grunntekstOn ? undefined : 'original', localeDefault.id)}`}
                 class={`rail-chip ${grunntekstOn ? 'is-on' : ''}`}
                 aria-current={grunntekstOn ? 'true' : undefined}
               >
@@ -1888,6 +1948,7 @@ r.get('/:book/:chapter', async (c) => {
           mapping={mapping ?? undefined}
           bible={bible}
           secondary={secondary}
+          defaultBible={localeDefault.id}
         />
       </div>
     </Layout>,

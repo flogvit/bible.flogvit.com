@@ -2309,6 +2309,34 @@ export async function getBibleEditions(): Promise<BibleEdition[]> {
   `) as BibleEdition[];
 }
 
+export interface BibleCandidate {
+  id: string;
+  lang: string;
+}
+
+/**
+ * Lesbare utgaver (ikke grunntekster) for et innholdsspråk, i fallback-
+ * rekkefølge (GitHub #13): contentLanguageChain avgjør språkrekkefølgen, og
+ * utgavene oppdages fra bible_editions — et nytt språk trenger altså bare en
+ * importert utgave, ingen kodeendring. osnb er alltid siste utvei.
+ */
+export async function readableBibleCandidates(requested: string): Promise<BibleCandidate[]> {
+  const sql = getSql();
+  const rows = await sql`
+    SELECT id, lang_iso639_1 AS lang FROM bible_editions
+    WHERE philosophy IS NULL OR philosophy != 'source_text'
+    ORDER BY id
+  ` as { id: string; lang: string | null }[];
+  const result: BibleCandidate[] = [];
+  for (const language of contentLanguageChain(requested)) {
+    for (const row of rows) {
+      if (row.lang === language) result.push({ id: row.id, lang: language });
+    }
+  }
+  if (!result.some((r) => r.id === 'osnb')) result.push({ id: 'osnb', lang: DEFAULT_CONTENT_LANGUAGE });
+  return result;
+}
+
 export async function getBibleEditionById(id: string): Promise<
   (BibleEdition & { meta: BibleEditionMeta; license: BibleEditionLicense | null }) | undefined
 > {
