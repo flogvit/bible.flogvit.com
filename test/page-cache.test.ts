@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
 import { Hono } from 'hono';
-import { clearPageCache, withPageCache } from '../src/lib/page-cache.ts';
+import { clearPageCache, configurePageCache, withPageCache } from '../src/lib/page-cache.ts';
 
 // Mikrocachen (GitHub #4): anonyme GET-HTML-sider caches og får Cache-Control;
 // innloggede forespørsler og /api/* går alltid gjennom.
@@ -64,5 +64,97 @@ describe('withPageCache', () => {
     expect(getRenders()).toBe(2);
     const hit = await app.request('/side?a=1');
     expect(hit.headers.get('x-cache')).toBe('hit');
+  });
+});
+
+// Lastavvisning (GitHub #14): anonyme render over taket får 503 + Retry-After
+// i stedet for å stå i kø til Caddy kutter med 502. Utløpt cache-innhold
+// serveres ved overlast (stale-while-shedding). Innloggede berøres aldri.
+
+/** App der hver render venter på en port vi åpner fra testen. */
+function buildGatedApp() {
+  let renders = 0;
+  const gates: Array<() => void> = [];
+  const app = new Hono();
+  app.use('*', withPageCache);
+  app.get('/side', async (c) => {
+    renders++;
+    await new Promise<void>((resolve) => gates.push(resolve));
+    return c.html(`<html><body>render ${renders}</body></html>`);
+  });
+  return { app, gates, getRenders: () => renders };
+}
+
+describe('lastavvisning', () => {
+  beforeEach(() => {
+    clearPageCache();
+    configurePageCache({ maxConcurrentRenders: 1, queueWaitMs: 30, ttlMs: 5 * 60 * 1000 });
+  });
+
+  test('over taket uten stale: 503 med Retry-After', async () => {
+    const { app, gates } = buildGatedApp();
+    const first = app.request('/side?a=1');
+    while (gates.length === 0) await Bun.sleep(1);
+
+    const shed = await app.request('/side?a=2');
+    expect(shed.status).toBe(503);
+    expect(shed.headers.get('retry-after')).toBe('30');
+
+    gates.shift()!();
+    expect((await first).status).toBe(200);
+  });
+
+  test('kø: venter på ledig plass og rendrer når den frigjøres', async () => {
+    configurePageCache({ maxConcurrentRenders: 1, queueWaitMs: 2000, ttlMs: 5 * 60 * 1000 });
+    const { app, gates, getRenders } = buildGatedApp();
+    const first = app.request('/side?a=1');
+    while (gates.length === 0) await Bun.sleep(1);
+
+    const queued = app.request('/side?a=2');
+    await Bun.sleep(5);
+    expect(getRenders()).toBe(1); // står i kø, har ikke fått slippe til
+
+    gates.shift()!();
+    await first;
+    while (gates.length === 0) await Bun.sleep(1);
+    gates.shift()!();
+    expect((await queued).status).toBe(200);
+    expect(getRenders()).toBe(2);
+  });
+
+  test('utløpt cache serveres ved overlast (stale-while-shedding)', async () => {
+    configurePageCache({ maxConcurrentRenders: 1, queueWaitMs: 30, ttlMs: 1 });
+    const { app, gates } = buildGatedApp();
+    const prime = app.request('/side?a=1');
+    while (gates.length === 0) await Bun.sleep(1);
+    gates.shift()!();
+    expect((await prime).status).toBe(200);
+    await Bun.sleep(5); // entry utløpt
+
+    const blocker = app.request('/side?a=2');
+    while (gates.length === 0) await Bun.sleep(1);
+
+    const stale = await app.request('/side?a=1');
+    expect(stale.status).toBe(200);
+    expect(stale.headers.get('x-cache')).toBe('stale');
+    expect(await stale.text()).toContain('render 1');
+
+    gates.shift()!();
+    await blocker;
+  });
+
+  test('innloggede går utenom semaforen', async () => {
+    const { app, gates, getRenders } = buildGatedApp();
+    const first = app.request('/side?a=1');
+    while (gates.length === 0) await Bun.sleep(1);
+
+    const loggedIn = app.request('/side?a=2', { headers: { cookie: 'fv-session=abc' } });
+    while (gates.length < 2) await Bun.sleep(1);
+    expect(getRenders()).toBe(2);
+
+    gates.shift()!();
+    gates.shift()!();
+    expect((await loggedIn).status).toBe(200);
+    await first;
   });
 });
