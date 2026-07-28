@@ -9,6 +9,8 @@ import type { SQL } from 'bun';
 import { getSql } from '../lib/db.ts';
 import type { AppEnv } from '../lib/session.ts';
 import { requirePlus } from '../lib/session.ts';
+// @ts-expect-error — delt klient-modul uten typer (samme kjernelogikk som reading.js)
+import { mergeProgress } from '../../public/js/reading-progress.js';
 
 // Enkel rate-limit per bruker i minnet (som originalen).
 const rateLimitMap = new Map<number, { count: number; resetAt: number }>();
@@ -62,6 +64,19 @@ function mergeReadingPlanProgress(clientData: unknown, serverData: unknown): Pla
   return { ...server, ...client, completedDays: merged };
 }
 
+/**
+ * Datatyper som må FLETTES framfor å overskrives, uansett hvem som er nyest.
+ *
+ * Standardregelen (nyeste updatedAt vinner) er feil for framdrift: leser du på
+ * mobilen mens nettbrettet ligger offline med eldre data, skal ingen av
+ * lesingene forsvinne når nettbrettet synker. Fletterne er kommutative, så det
+ * spiller ingen rolle hvilken vei sammenligningen faller ut.
+ */
+const MERGERS: Record<string, (client: unknown, server: unknown) => unknown> = {
+  planProgress: mergeReadingPlanProgress,
+  readingProgress: (client, server) => mergeProgress(client, server),
+};
+
 const sync = new Hono<AppEnv>();
 
 // Husking (skylagring/sync) er en del av FLOGVIT.plus (2026-07-22).
@@ -100,10 +115,8 @@ sync.post('/', async (c) => {
           `;
         } else if (updatedAt > Number(existing.updated_at)) {
           // Klienten er nyest — oppdater serveren.
-          const payload =
-            dataType === 'planProgress'
-              ? mergeReadingPlanProgress(data, parseData(existing.data))
-              : data;
+          const merger = MERGERS[dataType];
+          const payload = merger ? merger(data, parseData(existing.data)) : data;
           await tx`
             UPDATE sync_items
             SET data = ${JSON.stringify(payload)}, updated_at = ${updatedAt}, deleted = ${deleted ? 1 : 0}
@@ -112,8 +125,9 @@ sync.post('/', async (c) => {
         } else if (Number(existing.updated_at) > updatedAt) {
           // Serveren er nyest — send serverversjonen tilbake.
           const serverData = parseData(existing.data);
-          if (dataType === 'planProgress') {
-            const merged = mergeReadingPlanProgress(data, serverData);
+          const merger = MERGERS[dataType];
+          if (merger) {
+            const merged = merger(data, serverData);
             serverChanges.push({
               dataType,
               itemId,

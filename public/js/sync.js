@@ -12,6 +12,10 @@ const LAST_SYNC_KEY = 'bible-last-sync';
 const PENDING_KEY = 'bible-sync-pending';
 const SHADOW_KEY = 'bible-sync-shadow';
 
+import { mergeProgress } from './reading-progress.js';
+
+// `merge` settes på typer der nyeste-vinner er feil: framdrift skal aldri
+// kunne slettes av en enhet som lå bakpå. Serveren bruker samme funksjon.
 const MAP = {
   'bible-settings': { type: 'settings', kind: 'singleton' },
   'bible-topics': { type: 'topics', kind: 'singleton' },
@@ -19,6 +23,7 @@ const MAP = {
   'bible-reading-position': { type: 'readingPosition', kind: 'singleton' },
   'bible-verse-versions': { type: 'verseVersions', kind: 'singleton' },
   'readingPlanProgress': { type: 'planProgress', kind: 'record' },
+  'bible-reading-progress': { type: 'readingProgress', kind: 'record', merge: mergeProgress },
   'bible-favorites': { type: 'favorites', kind: 'items', id: (f) => `${f.bookId}-${f.chapter}-${f.verse}`, at: (f) => f.addedAt },
   'bible-notes': { type: 'notes', kind: 'items', id: (n) => n.id, at: (n) => n.updatedAt },
   'bible-verse-lists': { type: 'verseLists', kind: 'items', id: (l) => l.id, at: (l) => l.updatedAt },
@@ -123,7 +128,9 @@ function applyServerChanges(changes) {
         const cur = read(key, {}) || {};
         for (const ch of list) {
           if (ch.deleted) delete cur[ch.itemId];
-          else cur[ch.itemId] = ch.data;
+          // Framdrift flettes også lokalt: uten dette ville serversvaret
+          // overskrive en lesing som skjedde mens kallet var underveis.
+          else cur[ch.itemId] = spec.merge ? spec.merge(cur[ch.itemId], ch.data) : ch.data;
         }
         writeRaw(key, cur);
       } else {
@@ -257,7 +264,7 @@ function rebuildFromServer(serverChanges, pushedChanges) {
         }
         for (const [id, ch] of serverItems) {
           if (ch.deleted) delete next[id];
-          else next[id] = ch.data;
+          else next[id] = spec.merge ? spec.merge(next[id], ch.data) : ch.data;
         }
         if (Object.keys(next).length > 0) writeRaw(key, next);
         else localStorage.removeItem(key);

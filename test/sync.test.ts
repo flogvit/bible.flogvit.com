@@ -166,6 +166,85 @@ describe('sync-API', () => {
     expect(body.changes[0]!.data.completedDays).toEqual([1, 2, 3]);
   });
 
+  test('readingProgress flettes union-vis — en enhet kan ikke slette en annens lesing', async () => {
+    await app.request('/api/sync', {
+      method: 'POST',
+      headers: AUTH,
+      body: JSON.stringify({
+        deviceId: 'enhet-a',
+        lastSyncAt: 0,
+        changes: [
+          {
+            dataType: 'readingProgress',
+            itemId: '40-5',
+            data: { firstAt: 100, lastAt: 100, count: 1, opens: 2, verses: '1-3' },
+            updatedAt: 1000,
+          },
+        ],
+      }),
+    });
+    // Enhet B er UTDATERT (updatedAt lavere), men har lest kapittelet en gang til.
+    const res = await app.request('/api/sync', {
+      method: 'POST',
+      headers: AUTH,
+      body: JSON.stringify({
+        deviceId: 'enhet-b',
+        lastSyncAt: 5000,
+        changes: [
+          {
+            dataType: 'readingProgress',
+            itemId: '40-5',
+            data: { firstAt: 50, lastAt: 900, count: 2, opens: 1, verses: '7' },
+            updatedAt: 500,
+          },
+        ],
+      }),
+    });
+    const body = (await res.json()) as {
+      changes: { data: { firstAt: number; lastAt: number; count: number; opens: number; verses: string } }[];
+    };
+    const merged = body.changes[0]!.data;
+    expect(merged.firstAt).toBe(50);
+    expect(merged.lastAt).toBe(900);
+    expect(merged.count).toBe(2);
+    expect(merged.opens).toBe(2);
+    expect(merged.verses).toBe('1-3,7');
+  });
+
+  test('readingProgress: nyere klient flettes også, ikke bare overskriver', async () => {
+    await app.request('/api/sync', {
+      method: 'POST',
+      headers: AUTH,
+      body: JSON.stringify({
+        deviceId: 'enhet-a',
+        lastSyncAt: 0,
+        changes: [
+          { dataType: 'readingProgress', itemId: '41-2', data: { firstAt: 100, lastAt: 100, count: 3, opens: 5 }, updatedAt: 1000 },
+        ],
+      }),
+    });
+    await app.request('/api/sync', {
+      method: 'POST',
+      headers: AUTH,
+      body: JSON.stringify({
+        deviceId: 'enhet-b',
+        lastSyncAt: 0,
+        changes: [
+          { dataType: 'readingProgress', itemId: '41-2', data: { firstAt: 200, lastAt: 200, count: 1, opens: 1 }, updatedAt: 9000 },
+        ],
+      }),
+    });
+    const res = await app.request('/api/sync', {
+      method: 'POST',
+      headers: AUTH,
+      body: JSON.stringify({ deviceId: 'enhet-c', lastSyncAt: 0, changes: [] }),
+    });
+    const body = (await res.json()) as { changes: { itemId: string; data: { count: number; firstAt: number } }[] };
+    const entry = body.changes.find((ch) => ch.itemId === '41-2')!;
+    expect(entry.data.count).toBe(3);
+    expect(entry.data.firstAt).toBe(100);
+  });
+
   test('user-bibles + kapittel-opplasting og -nedlasting', async () => {
     const up = await app.request('/api/sync/user-bibles', {
       method: 'POST',
