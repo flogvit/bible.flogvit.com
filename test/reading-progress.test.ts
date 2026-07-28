@@ -4,7 +4,7 @@
 
 import { describe, expect, test } from 'bun:test';
 // @ts-expect-error — delt klient-modul uten typer
-import { dwellFloorMs, dwellCapMs, chapterComplete, versesToRanges, rangesToVerses, mergeProgress, recordRead, recordOpen, emptyProgress } from '../public/js/reading-progress.js';
+import { dwellFloorMs, dwellCapMs, chapterComplete, versesToRanges, rangesToVerses, mergeProgress, recordRead, recordOpen, emptyProgress, heatLevel, HEAT_LEVELS } from '../public/js/reading-progress.js';
 
 describe('dwell-terskler', () => {
   test('lengre vers krever lengre synlig tid', () => {
@@ -113,6 +113,32 @@ describe('mergeProgress', () => {
   test('merge er idempotent', () => {
     const a = { firstAt: 100, lastAt: 500, count: 2, opens: 3, verses: '1-3' };
     expect(mergeProgress(a, a)).toEqual(mergeProgress(a, mergeProgress(a, a)));
+  });
+});
+
+describe('heatLevel', () => {
+  test('ulest er 0', () => {
+    expect(heatLevel({ count: 0, opens: 3 })).toBe(0);
+  });
+
+  test('delvis lest ligger mellom ulest og lest', () => {
+    const level = heatLevel({ count: 0, verses: '1-4' });
+    expect(level).toBeGreaterThan(0);
+    expect(level).toBeLessThan(1);
+  });
+
+  test('én lesing er nivå 1, gjenlesing gir høyere', () => {
+    expect(heatLevel({ count: 1 })).toBe(1);
+    expect(heatLevel({ count: 5 })).toBeGreaterThan(1);
+  });
+
+  test('nivået har et tak', () => {
+    expect(heatLevel({ count: 100000 })).toBe(HEAT_LEVELS);
+  });
+
+  test('tom eller manglende oppføring er 0', () => {
+    expect(heatLevel(null)).toBe(0);
+    expect(heatLevel(undefined)).toBe(0);
   });
 });
 

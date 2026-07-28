@@ -383,7 +383,10 @@ if (rootPage) {
       label.textContent = btn.dataset.labelMark || 'Marker som lest';
       return;
     }
-    const when = entry.lastAt ? new Date(entry.lastAt).toLocaleDateString() : null;
+    // Sidens språk, ikke nettleserens: en norsk side skal ikke vise 7/28/2026.
+    const when = entry.lastAt
+      ? new Date(entry.lastAt).toLocaleDateString(document.documentElement.lang || undefined)
+      : null;
     const times = (entry.count ?? 0) > 1 ? ` · ${entry.count} ${btn.dataset.labelTimes || ''}`.trimEnd() : '';
     label.textContent = when
       ? `${btn.dataset.labelLastRead || 'Sist lest'} ${when}${times}`

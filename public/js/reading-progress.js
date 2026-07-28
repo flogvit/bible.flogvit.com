@@ -136,6 +136,21 @@ export function recordRead(entry, at) {
   };
 }
 
+/** Antall intensitetsnivåer i varmekartet (1 = lest én gang, HEAT_LEVELS = ofte). */
+export const HEAT_LEVELS = 4;
+
+/**
+ * Intensitet for én kapittelcelle: 0 ulest, 0.5 delvis lest, 1..HEAT_LEVELS
+ * etter antall lesinger. Delt av SSR-en (reading-map.ts) og klient-hydreringen
+ * (user.js), så en nymarkert celle får nøyaktig samme farge som en synket.
+ */
+export function heatLevel(entry) {
+  if (!entry) return 0;
+  const count = entry.count ?? 0;
+  if (count > 0) return Math.min(HEAT_LEVELS, 1 + Math.floor(Math.log2(count)));
+  return rangesToVerses(entry.verses).length > 0 ? 0.5 : 0;
+}
+
 /** Registrer at kapittelet ble åpnet. Teller ikke som lest, og setter ingen lesetid. */
 export function recordOpen(entry) {
   const cur = entry ?? emptyProgress();

@@ -10,10 +10,10 @@
 import { booksData, getBookInfoById } from './books-data.ts';
 import type { ChapterProgress } from './user-data.ts';
 // @ts-expect-error — delt klient-modul uten typer
-import { rangesToVerses } from '../../public/js/reading-progress.js';
+import { heatLevel, HEAT_LEVELS as SHARED_HEAT_LEVELS } from '../../public/js/reading-progress.js';
 
 /** Antall intensitetsnivåer i varmekartet (1 = lest én gang, HEAT_LEVELS = ofte). */
-export const HEAT_LEVELS = 4;
+export const HEAT_LEVELS: number = SHARED_HEAT_LEVELS;
 
 export const TOTAL_CHAPTERS = booksData.reduce((sum, b) => sum + b.chapters, 0);
 
@@ -89,13 +89,7 @@ export function bookHeat(progress: ChapterProgress[], bookId: number): BookHeat 
     const idx = p.chapter - 1;
     if (idx < 0 || idx >= chapters.length) continue;
 
-    if (isRead(p)) {
-      // 1 lesing → 1, deretter gradvis opp mot taket.
-      const level = Math.min(HEAT_LEVELS, 1 + Math.floor(Math.log2(p.count ?? 1)));
-      chapters[idx] = Math.max(chapters[idx]!, level);
-    } else if (p.verses && rangesToVerses(p.verses).length > 0) {
-      chapters[idx] = Math.max(chapters[idx]!, 0.5);
-    }
+    chapters[idx] = Math.max(chapters[idx]!, heatLevel(p) as number);
   }
   return { bookId, name: book.name_no, testament: book.testament, chapters };
 }

@@ -4,7 +4,7 @@
 // TODO(#12): synk mot /api/sync (push ved endring, pull ved last).
 // TODO(#14): offline-nedlasting + service worker.
 
-import { recordRead, mergeProgress } from './reading-progress.js';
+import { recordRead, mergeProgress, heatLevel } from './reading-progress.js';
 
 const KEYS = {
   favorites: 'bible-favorites',
@@ -520,6 +520,23 @@ if (mapRoot) {
     }
   }
 
+  /**
+   * Male cellene fra lokal framdrift. SSR-en rendrer fra SERVEREN, så et
+   * kapittel du nettopp markerte ville vært usynlig her til neste sidelast
+   * etter at sync har gått. Hydreringen fjerner det etterslepet.
+   */
+  function hydrate() {
+    const all = read(KEYS.progress, {}) || {};
+    for (const [key, entry] of Object.entries(all)) {
+      const [bookId, chapter] = key.split('-');
+      const cell = mapRoot.querySelector(`[data-map-book="${bookId}"] .map-cell[data-chapter="${chapter}"]`);
+      if (!cell) continue;
+      const level = heatLevel(entry);
+      if (level > (parseFloat(cell.dataset.level) || 0)) cell.dataset.level = String(level);
+    }
+  }
+  hydrate();
+
   function applyBook(bookId, at) {
     if (!window.fvPlus?.gate('Lesekart')) return;
     const section = mapRoot.querySelector(`[data-map-book="${bookId}"]`);
@@ -531,10 +548,7 @@ if (mapRoot) {
       all[key] = mergeProgress(all[key], recordRead(all[key], at));
     }
     write(KEYS.progress, all);
-    section.querySelectorAll('.map-cell').forEach((cell) => {
-      const cur = parseFloat(cell.dataset.level) || 0;
-      cell.dataset.level = String(Math.max(cur < 1 ? 1 : cur, 1));
-    });
+    hydrate();
   }
 
   mapRoot.querySelectorAll('[data-mark-book]').forEach((btn) => {
