@@ -36,11 +36,16 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
  * så i prod), mens meldingsteksten varierer — derfor sjekkes begge, og
  * skilletegnet er `[ _]` siden koden bruker understrek der teksten bruker
  * mellomrom.
+ *
+ * «max lifetime» er VÅR EGEN maxLifetime som slår til: Bun kaster da en feil
+ * til kalleren i stedet for å resirkulere stille. Den ER en forbindelsesfeil
+ * og skal gjentas — uten dette ga resirkuleringen hver 15. minutt en 500 til
+ * en tilfeldig bruker (sett i prod 2026-07-28 kveld, /en/2kong/18).
  */
 export function isConnectionError(err: unknown): boolean {
   const e = err as { message?: unknown; code?: unknown } | null;
   const text = `${typeof e?.code === 'string' ? e.code : ''} ${typeof e?.message === 'string' ? e.message : String(err ?? '')}`;
-  return /connection[ _]closed|connection[ _]timeout|shutdown[ _]in[ _]progress|server[ _]has[ _]gone[ _]away|lost[ _]connection|not[ _]connected|ECONNREFUSED|ECONNRESET|EPIPE|too[ _]many[ _]connections/i.test(text);
+  return /connection[ _]closed|connection[ _]timeout|shutdown[ _]in[ _]progress|server[ _]has[ _]gone[ _]away|lost[ _]connection|not[ _]connected|ECONNREFUSED|ECONNRESET|EPIPE|too[ _]many[ _]connections|max[ _]lifetime/i.test(text);
 }
 
 /**

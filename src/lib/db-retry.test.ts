@@ -14,6 +14,8 @@ describe('isConnectionError', () => {
       'Connection closed',
       'Too many connections',
       'connect ECONNREFUSED 172.16.16.2:3306',
+      // Vår EGEN maxLifetime — Bun kaster den til kalleren (prod, /en/2kong/18).
+      'Max lifetime timeout reached after 15m',
     ]) expect(isConnectionError(new Error(m))).toBe(true);
   });
 
