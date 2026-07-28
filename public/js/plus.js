@@ -14,6 +14,7 @@ const GATED_KEYS = [
   'bible-devotionals',
   'bible-verse-versions',
   'bible-reading-position',
+  'bible-reading-progress',
   'activeReadingPlan',
   'readingPlanProgress',
 ];

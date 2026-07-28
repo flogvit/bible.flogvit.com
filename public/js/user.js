@@ -289,6 +289,7 @@ if (root) {
       'bible-favorites', 'bible-notes', 'bible-topics', 'bible-settings',
       'bible-verse-lists', 'bible-devotionals', 'bible-verse-versions',
       'bible-reading-position', 'activeReadingPlan', 'readingPlanProgress',
+      'bible-reading-progress',
     ];
     const status = root.querySelector('[data-data-status]');
     root.querySelector('[data-export-data]')?.addEventListener('click', () => {

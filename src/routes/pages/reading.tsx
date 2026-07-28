@@ -848,6 +848,15 @@ function VerseDetailPanel({
         <button type="button" class="favorite-toggle" data-fav-toggle>
           ☆ Legg til favoritt
         </button>
+        <button
+          type="button"
+          class="verse-read-toggle"
+          data-verse-read-toggle
+          data-verse-num={n}
+          data-label-read={t('rd.read')}
+        >
+          ○ {t('rd.read')}
+        </button>
       </div>
 
       <div class="vd-tabs" role="tablist" aria-label={`Detaljer for vers ${n}`}>
@@ -1750,7 +1759,7 @@ r.get('/:book/:chapter', async (c) => {
   // Kontrakten mot shortcuts.js: data-attributter på <body>.
   const bodyData = `(function(d){d.bookSlug=${JSON.stringify(canonicalSlug)};d.chapter='${chapter}';d.maxChapter='${maxChapter}';${
     nextBookSlug ? `d.nextBookSlug=${JSON.stringify(nextBookSlug)};` : ''
-  }d.bibleQuery=${JSON.stringify(query)};d.bookId='${book.id}';d.bookName=${JSON.stringify(book.name_no)};${
+  }d.bibleQuery=${JSON.stringify(query)};d.bookId='${book.id}';d.bookName=${JSON.stringify(book.name_no)};d.totalVerses='${data.verses.length}';${
     userBible ? `d.userBible=${JSON.stringify(userBible)};` : ''
   }${userSecondary ? `d.userSecondary=${JSON.stringify(userSecondary)};` : ''}})(document.body.dataset);`;
 
@@ -1802,7 +1811,31 @@ r.get('/:book/:chapter', async (c) => {
                 <span class="chapter-book">{book.name_no}</span>
                 <span class="chapter-number">Kapittel {chapter}</span>
               </h1>
+              {/* Progresjonsringen ER knappen (#16): den fyller seg selv i
+                  auto/foreslå-modus, og klikkes i manuell. Skjult til
+                  reading.js har bekreftet plus — ingen død knapp for gratis. */}
+              <button
+                type="button"
+                class="chapter-read-ring"
+                data-chapter-read
+                hidden
+                aria-pressed="false"
+                data-label-mark={t('rd.markRead')}
+                data-label-read={t('rd.read')}
+                data-label-last-read={t('rd.lastRead')}
+                data-label-times={t('rd.times')}
+              >
+                <span class="crr-dial" data-crr-dial aria-hidden="true"></span>
+                <span class="crr-label" data-crr-label>{t('rd.markRead')}</span>
+              </button>
             </header>
+
+            {/* Foreslå-modus: heuristikken spør i stedet for å markere selv. */}
+            <div class="read-suggestion" data-read-suggestion hidden>
+              <span>{t('rd.markReadPrompt').replace('%s', `${book.name_no} ${chapter}`)}</span>
+              <button type="button" class="rs-yes" data-suggestion-yes>{t('rd.yes')}</button>
+              <button type="button" class="rs-no" data-suggestion-no>{t('common.close')}</button>
+            </div>
 
             {untranslated && (
               <p class="chapter-untranslated" data-untranslated>
@@ -1851,6 +1884,11 @@ r.get('/:book/:chapter', async (c) => {
             <ChapterInsights t={t} insight={data.insight} />
 
             <ChapterParallels t={t} bookId={book.id} chapter={chapter} parallels={data.parallels} bible={bible} />
+
+            {/* Vises kun mens et utvalg står inne i versene (reading.js). */}
+            <button type="button" class="mark-selection-read" data-mark-selection-read hidden>
+              {t('rd.markSelectionRead')}
+            </button>
 
             <section class="verses" data-verses>
               {data.verses.map((v) => (

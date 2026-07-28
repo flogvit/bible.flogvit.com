@@ -4,6 +4,17 @@
 // og kopiering med referanse. Samme localStorage-nøkler/JSON-former som gamle
 // appen (datakompatibelt). Sidebar/panelfaner/mobil bor i studium.js.
 
+import {
+  dwellFloorMs,
+  dwellCapMs,
+  chapterComplete,
+  versesToRanges,
+  rangesToVerses,
+  recordRead,
+  recordOpen,
+  emptyProgress,
+} from './reading-progress.js';
+
 const KEYS = {
   favorites: 'bible-favorites',
   notes: 'bible-notes',
@@ -11,6 +22,7 @@ const KEYS = {
   devotionals: 'bible-devotionals',
   verseVersions: 'bible-verse-versions',
   position: 'bible-reading-position',
+  progress: 'bible-reading-progress',
 };
 
 function read(key, fallback) {
@@ -335,6 +347,216 @@ if (rootPage) {
       { rootMargin: '0px 0px -60% 0px' },
     );
     verseEls.forEach((v) => observer.observe(v));
+  }
+
+  // ── Lesesporing (#16) ────────────────────────────────────────────
+  //
+  // Tid måles PER VERS, ikke per side: måler man total tid og total dekning
+  // hver for seg, kan begge oppfylles uten at noe er lest (parker fanen, scroll
+  // så til bunns). Tid mens fanen er skjult teller ikke, og hvert vers har et
+  // tak, så en side som blir stående åpen ikke bygger opp kreditt.
+  //
+  // `manual` skriver ingenting automatisk — verken lesing eller åpning. Det er
+  // en personvern-innstilling, ikke bare en preferanse.
+  const progressKeyOf = () => `${bookId}-${chapter}`;
+  const readProgressAll = () => read(KEYS.progress, {}) || {};
+  const progressEntry = () => readProgressAll()[progressKeyOf()] || emptyProgress();
+
+  function saveProgress(entry) {
+    const all = readProgressAll();
+    all[progressKeyOf()] = entry;
+    write(KEYS.progress, all);
+    paintChapterRead(entry);
+  }
+
+  const trackingMode = () => settings().readTracking || 'suggest';
+
+  function paintChapterRead(entry) {
+    const btn = document.querySelector('[data-chapter-read]');
+    if (!btn) return;
+    const done = (entry.count ?? 0) > 0;
+    btn.setAttribute('aria-pressed', done ? 'true' : 'false');
+    btn.classList.toggle('is-read', done);
+    const label = btn.querySelector('[data-crr-label]');
+    if (!label) return;
+    if (!done) {
+      label.textContent = btn.dataset.labelMark || 'Marker som lest';
+      return;
+    }
+    const when = entry.lastAt ? new Date(entry.lastAt).toLocaleDateString() : null;
+    const times = (entry.count ?? 0) > 1 ? ` · ${entry.count} ${btn.dataset.labelTimes || ''}`.trimEnd() : '';
+    label.textContent = when
+      ? `${btn.dataset.labelLastRead || 'Sist lest'} ${when}${times}`
+      : `${btn.dataset.labelRead || 'Lest'}${times}`;
+  }
+
+  function markChapterRead(at) {
+    if (!window.fvPlus?.gate('Lesesporing')) return;
+    saveProgress(recordRead(progressEntry(), at === undefined ? Date.now() : at));
+  }
+
+  function unmarkChapter() {
+    const all = readProgressAll();
+    delete all[progressKeyOf()];
+    write(KEYS.progress, all);
+    paintChapterRead(emptyProgress());
+  }
+
+  const chapterBtn = document.querySelector('[data-chapter-read]');
+  if (chapterBtn && bookId && chapter) {
+    chapterBtn.hidden = false;
+    paintChapterRead(progressEntry());
+    chapterBtn.addEventListener('click', () => {
+      if ((progressEntry().count ?? 0) > 0) unmarkChapter();
+      else markChapterRead();
+    });
+  }
+
+  // Vers-markering: samme mønster som favoritt-knappen i versdetaljene.
+  function paintVerseRead(btn, on) {
+    btn.textContent = on ? `● ${btn.dataset.labelRead || 'Lest'}` : `○ ${btn.dataset.labelRead || 'Lest'}`;
+    btn.classList.toggle('is-active', on);
+  }
+
+  function markVersesRead(nums) {
+    if (!nums.length) return;
+    if (!window.fvPlus?.gate('Lesesporing')) return;
+    const entry = progressEntry();
+    const merged = versesToRanges([...rangesToVerses(entry.verses), ...nums]);
+    const total = parseInt(document.body.dataset.totalVerses || '0', 10);
+    if (chapterComplete(rangesToVerses(merged).length, total)) {
+      saveProgress(recordRead(entry, Date.now()));
+    } else {
+      saveProgress({ ...entry, verses: merged });
+    }
+  }
+
+  document.querySelectorAll('[data-verse-read-toggle]').forEach((btn) => {
+    const n = parseInt(btn.dataset.verseNum, 10);
+    paintVerseRead(btn, rangesToVerses(progressEntry().verses).includes(n) || (progressEntry().count ?? 0) > 0);
+    btn.addEventListener('click', () => {
+      markVersesRead([n]);
+      paintVerseRead(btn, true);
+    });
+  });
+
+  // Marker et tekstUTVALG som lest — «jeg leste Matt 5:1-20 i dag».
+  const selectionBtn = document.querySelector('[data-mark-selection-read]');
+  if (selectionBtn) {
+    const versesRoot = document.querySelector('[data-verses]');
+    document.addEventListener('selectionchange', () => {
+      const sel = window.getSelection();
+      const inside =
+        sel && !sel.isCollapsed && versesRoot && versesRoot.contains(sel.anchorNode) && versesRoot.contains(sel.focusNode);
+      selectionBtn.hidden = !inside;
+    });
+    selectionBtn.addEventListener('click', () => {
+      const sel = window.getSelection();
+      if (!sel || sel.isCollapsed) return;
+      const range = sel.getRangeAt(0);
+      const nums = [];
+      document.querySelectorAll('.verse[data-verse-num]').forEach((v) => {
+        if (range.intersectsNode(v)) nums.push(parseInt(v.dataset.verseNum, 10));
+      });
+      markVersesRead(nums.filter(Number.isFinite));
+      sel.removeAllRanges();
+      selectionBtn.hidden = true;
+    });
+  }
+
+  if (verseEls.length > 0 && 'IntersectionObserver' in window && trackingMode() !== 'manual') {
+    // Åpning telles én gang per sidelast — ikke lesing, bare «her var jeg».
+    saveProgress(recordOpen(progressEntry()));
+
+    const dwell = new Map(); // versnummer → akkumulerte ms
+    const since = new Map(); // versnummer → tidspunkt det ble synlig
+    const wordCount = new Map();
+    const readVerses = new Set();
+    const totalVerses = parseInt(document.body.dataset.totalVerses || '0', 10) || verseEls.length;
+
+    verseEls.forEach((v) => {
+      const n = parseInt(v.dataset.verseNum, 10);
+      const text = v.querySelector('[data-verse-text]')?.textContent || v.textContent || '';
+      wordCount.set(n, text.trim().split(/\s+/).filter(Boolean).length);
+    });
+
+    function settle(n, now) {
+      const start = since.get(n);
+      if (start == null) return;
+      since.delete(n);
+      const words = wordCount.get(n) ?? 0;
+      const added = Math.min(now - start, dwellCapMs(words));
+      const total = (dwell.get(n) ?? 0) + added;
+      dwell.set(n, total);
+      if (total >= dwellFloorMs(words)) readVerses.add(n);
+    }
+
+    function settleAll() {
+      const now = Date.now();
+      for (const n of [...since.keys()]) settle(n, now);
+    }
+
+    let completed = false;
+    function checkComplete() {
+      if (completed || !chapterComplete(readVerses.size, totalVerses)) return;
+      completed = true;
+      if (trackingMode() === 'auto') markChapterRead();
+      else showSuggestion();
+    }
+
+    function showSuggestion() {
+      const bar = document.querySelector('[data-read-suggestion]');
+      if (!bar || (progressEntry().count ?? 0) > 0) return;
+      bar.hidden = false;
+      bar.querySelector('[data-suggestion-yes]')?.addEventListener(
+        'click',
+        () => {
+          markChapterRead();
+          bar.hidden = true;
+        },
+        { once: true },
+      );
+      bar.querySelector('[data-suggestion-no]')?.addEventListener('click', () => { bar.hidden = true; }, { once: true });
+    }
+
+    const dwellObserver = new IntersectionObserver(
+      (entries) => {
+        const now = Date.now();
+        for (const entry of entries) {
+          const n = parseInt(entry.target.dataset.verseNum, 10);
+          if (entry.isIntersecting) {
+            if (!document.hidden) since.set(n, now);
+          } else {
+            settle(n, now);
+          }
+        }
+        checkComplete();
+      },
+      { threshold: 0.6 },
+    );
+    verseEls.forEach((v) => dwellObserver.observe(v));
+
+    // Bakgrunnstid teller ikke: fryser ved skjult fane, starter på nytt etterpå.
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) {
+        settleAll();
+        checkComplete();
+      } else {
+        const now = Date.now();
+        document.querySelectorAll('.verse[data-verse-num]').forEach((v) => {
+          const rect = v.getBoundingClientRect();
+          if (rect.top < window.innerHeight && rect.bottom > 0) since.set(parseInt(v.dataset.verseNum, 10), now);
+        });
+      }
+    });
+    window.addEventListener('pagehide', () => {
+      settleAll();
+      const partial = versesToRanges([...readVerses]);
+      const entry = progressEntry();
+      if (partial && (entry.count ?? 0) === 0 && partial !== entry.verses) {
+        saveProgress({ ...entry, verses: versesToRanges([...rangesToVerses(entry.verses), ...readVerses]) });
+      }
+    });
   }
 
   // ── Kopiering med referanse (settings.copyVerseNumbers) ──────────

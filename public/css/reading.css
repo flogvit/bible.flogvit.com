@@ -214,6 +214,76 @@
   display: block;
 }
 
+/* Lesesporing (#16) — ringen er både framdriftsvisning og knapp. */
+.chapter-read-ring {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  padding: 6px 12px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+.chapter-read-ring:hover { border-color: var(--accent, currentColor); color: var(--ink); }
+.chapter-read-ring.is-read { color: var(--ink); border-color: currentColor; }
+.crr-dial {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid currentColor;
+}
+.chapter-read-ring.is-read .crr-dial { background: currentColor; }
+
+.read-suggestion {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin: 12px 0 0;
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius, 8px);
+  font-size: 0.9rem;
+}
+.read-suggestion button {
+  padding: 4px 12px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+.read-suggestion .rs-yes { border-color: currentColor; font-weight: 600; }
+
+.mark-selection-read {
+  position: sticky;
+  top: 12px;
+  z-index: 5;
+  align-self: flex-start;
+  padding: 6px 14px;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  background: var(--bg, #fff);
+  color: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.verse-read-toggle {
+  padding: 4px 10px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+.verse-read-toggle.is-active { color: var(--ink); border-color: currentColor; }
+
 .chapter-untranslated {
   margin: 12px 0 0;
   font-size: 0.85rem;
