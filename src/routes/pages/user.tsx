@@ -14,7 +14,8 @@ import { Layout } from '../../views/layout.tsx';
 import { Breadcrumbs } from '../../views/breadcrumbs.tsx';
 import type { Child } from 'hono/jsx';
 import { getSql } from '../../lib/db.ts';
-import { getUserItems, getUserSingleton } from '../../lib/user-data.ts';
+import { getUserItems, getUserSingleton, getReadingProgress } from '../../lib/user-data.ts';
+import { summarizeProgress, fullHeat, stalestBooks } from '../../lib/reading-map.ts';
 import { getBibleEditions } from '../../lib/bible.ts';
 import { getAvailableMappings } from '../../lib/verse-mapper.ts';
 import { layoutProps, makeT, tFor, type Locale } from '../../lib/i18n.ts';
@@ -174,6 +175,97 @@ r.get('/lister', async (c) => {
         ))}
       </div>
       <p class="user-empty" data-empty hidden={lists.length > 0}>{t('u.noLists')}</p>
+    </UserPage>,
+  );
+});
+
+// ---------- /lesekart ----------
+//
+// Kartet forteller hvor i Bibelen brukeren faktisk oppholder seg: varmere celle
+// = flere gjenlesinger. Det er PULL — siden oppsøkes, den oppsøker ikke noen.
+r.get('/lesekart', async (c) => {
+  const t = tFor(c);
+  const user = c.var.user;
+  const progress = user?.plus ? await getReadingProgress(user.id) : [];
+  const summary = summarizeProgress(progress);
+  const heat = fullHeat(progress);
+  const stale = stalestBooks(progress);
+  const fmt = (ms: number) => new Date(ms).toLocaleDateString(c.get('locale'));
+
+  return c.html(
+    <UserPage {...layoutProps(c)}
+      title={t('nav.readingMap')}
+      crumb={t('nav.readingMap')}
+      heading={t('map.heading')}
+      page="readingmap"
+      wide
+      styles={['reading-map.css']}
+    >
+      <div class="map-stats" data-map-stats>
+        <div class="map-stat">
+          <strong data-stat-chapters>{summary.chaptersRead}</strong>
+          <span>{t('map.chaptersRead')}</span>
+        </div>
+        <div class="map-stat">
+          <strong data-stat-percent>{summary.percent.toFixed(1)} %</strong>
+          <span>{t('map.ofBible')}</span>
+        </div>
+        <div class="map-stat">
+          <strong>{summary.otRead}</strong>
+          <span>GT</span>
+        </div>
+        <div class="map-stat">
+          <strong>{summary.ntRead}</strong>
+          <span>NT</span>
+        </div>
+        {summary.lastReadAt != null && (
+          <div class="map-stat">
+            <strong>{fmt(summary.lastReadAt)}</strong>
+            <span>{t('rd.lastRead')}</span>
+          </div>
+        )}
+        {summary.undatedChapters > 0 && (
+          <div class="map-stat is-muted">
+            <strong>{summary.undatedChapters}</strong>
+            <span>{t('map.undated')}</span>
+          </div>
+        )}
+      </div>
+
+      {stale.length > 0 && (
+        <ul class="map-stale">
+          {stale.map((s) => (
+            <li>
+              {s.name} — {fmt(s.lastAt)}
+            </li>
+          ))}
+        </ul>
+      )}
+
+      <div class="map-grid" data-reading-map>
+        {heat.map((b) => (
+          <section class="map-book" data-map-book={b.bookId} data-book-chapters={b.chapters.length}>
+            <h2 class="map-book-name">{b.name}</h2>
+            <div class="map-cells">
+              {b.chapters.map((level, i) => (
+                <span class="map-cell" data-level={level} data-chapter={i + 1} title={`${b.name} ${i + 1}`} />
+              ))}
+            </div>
+            <button type="button" class="map-book-mark" data-mark-book={b.bookId} title={t('map.markBook')}>
+              ✓
+            </button>
+          </section>
+        ))}
+      </div>
+
+      {/* Bulk-markering: historikk fra før appen fantes. Tidspunkt er valgfritt —
+          «vet ikke» er et gyldig svar og holdes utenfor tidslinjen. */}
+      <div class="map-when" data-map-when hidden>
+        <span data-map-when-label>{t('map.whenRead')}</span>
+        <select data-map-when-year class="user-input" />
+        <button type="button" class="user-btn" data-map-when-ok>OK</button>
+        <button type="button" class="user-btn" data-map-when-unknown>{t('map.unknownWhen')}</button>
+      </div>
     </UserPage>,
   );
 });

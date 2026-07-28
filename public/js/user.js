@@ -4,6 +4,8 @@
 // TODO(#12): synk mot /api/sync (push ved endring, pull ved last).
 // TODO(#14): offline-nedlasting + service worker.
 
+import { recordRead, mergeProgress } from './reading-progress.js';
+
 const KEYS = {
   favorites: 'bible-favorites',
   notes: 'bible-notes',
@@ -13,6 +15,7 @@ const KEYS = {
   devotionals: 'bible-devotionals',
   activePlan: 'activeReadingPlan',
   planProgress: 'readingPlanProgress',
+  progress: 'bible-reading-progress',
 };
 
 function read(key, fallback) {
@@ -495,4 +498,66 @@ function inlineInto(node, text) {
   }
   if (last < text.length) node.appendChild(document.createTextNode(text.slice(last)));
   return node;
+}
+
+// ── Lesekart: bulk-markering av hele bøker (#16) ────────────────────
+//
+// Nye .plus-brukere kommer med en leshistorikk fra før appen fantes. Uten
+// bulk starter alle på null, og kartet føles feil fra dag én. Tidspunkt er
+// VALGFRITT: «vet ikke» lagres som null og holdes utenfor tidslinjen.
+const mapRoot = document.querySelector('[data-reading-map]');
+if (mapRoot) {
+  const whenBar = document.querySelector('[data-map-when]');
+  const yearSelect = document.querySelector('[data-map-when-year]');
+  let pendingBookId = null;
+
+  if (yearSelect) {
+    const thisYear = new Date().getFullYear();
+    for (let y = thisYear; y >= thisYear - 40; y--) {
+      const opt = el('option', null, String(y));
+      opt.value = String(y);
+      yearSelect.appendChild(opt);
+    }
+  }
+
+  function applyBook(bookId, at) {
+    if (!window.fvPlus?.gate('Lesekart')) return;
+    const section = mapRoot.querySelector(`[data-map-book="${bookId}"]`);
+    if (!section) return;
+    const chapters = parseInt(section.dataset.bookChapters, 10) || 0;
+    const all = read(KEYS.progress, {}) || {};
+    for (let ch = 1; ch <= chapters; ch++) {
+      const key = `${bookId}-${ch}`;
+      all[key] = mergeProgress(all[key], recordRead(all[key], at));
+    }
+    write(KEYS.progress, all);
+    section.querySelectorAll('.map-cell').forEach((cell) => {
+      const cur = parseFloat(cell.dataset.level) || 0;
+      cell.dataset.level = String(Math.max(cur < 1 ? 1 : cur, 1));
+    });
+  }
+
+  mapRoot.querySelectorAll('[data-mark-book]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      pendingBookId = btn.dataset.markBook;
+      if (whenBar) whenBar.hidden = false;
+      else applyBook(pendingBookId, Date.now());
+    });
+  });
+
+  document.querySelector('[data-map-when-ok]')?.addEventListener('click', () => {
+    if (pendingBookId == null) return;
+    const year = parseInt(yearSelect?.value, 10);
+    // Midt i året: vi vet bare årstallet, og skal ikke late som vi vet dagen.
+    applyBook(pendingBookId, Number.isFinite(year) ? Date.UTC(year, 6, 1) : Date.now());
+    pendingBookId = null;
+    if (whenBar) whenBar.hidden = true;
+  });
+
+  document.querySelector('[data-map-when-unknown]')?.addEventListener('click', () => {
+    if (pendingBookId == null) return;
+    applyBook(pendingBookId, null);
+    pendingBookId = null;
+    if (whenBar) whenBar.hidden = true;
+  });
 }
