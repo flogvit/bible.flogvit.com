@@ -28,7 +28,7 @@ import {
 } from '../../lib/bible.ts';
 import { getBookInfoById } from '../../lib/books-data.ts';
 import { toUrlSlug } from '../../lib/url-utils.ts';
-import { layoutProps, tFor } from '../../lib/i18n.ts';
+import { layoutProps, tFor, lhref } from '../../lib/i18n.ts';
 
 const r = new Hono<AppEnv>();
 
@@ -85,7 +85,7 @@ r.get('/temaer', async (c) => {
           </div>
           <div class="study-grid" data-card-list>
             {items.map((t) => (
-              <a href={`/temaer/${t.id}`} class="study-card" data-search={t.search}>
+              <a href={lhref(`/temaer/${t.id}`)} class="study-card" data-search={t.search}>
                 <h2 class="study-card-title">{t.title}</h2>
                 <p class="study-card-desc">{t.introduction}</p>
               </a>
@@ -196,7 +196,7 @@ r.get('/historier', async (c) => {
           <div class="study-grid" data-card-list>
             {stories.map((s) => (
               <a
-                href={`/historier/${s.slug}`}
+                href={lhref(`/historier/${s.slug}`)}
                 class="study-card"
                 data-cat={s.category}
                 data-search={`${s.title} ${s.keywords} ${s.description ?? ''}`.toLowerCase()}
@@ -298,7 +298,7 @@ r.get('/tall', async (c) => {
           </div>
           <div class="study-grid study-grid-numbers" data-card-list>
             {items.map((n) => (
-              <a href={`/tall/${n.number}`} class="study-number-card" data-search={n.search}>
+              <a href={lhref(`/tall/${n.number}`)} class="study-number-card" data-search={n.search}>
                 <span class="study-big-number">{n.number}</span>
                 <span class="study-number-meaning">{n.meaning}</span>
               </a>
@@ -357,7 +357,7 @@ r.get('/tall/:number', async (c) => {
               <h2>Bibelreferanser ({data.references.length})</h2>
               <div class="study-ref-list">
                 {data.references.map((ref) => (
-                  <a href={refUrl(ref)} class="person-ref-chip">{refLabel(ref)}</a>
+                  <a href={lhref(refUrl(ref))} class="person-ref-chip">{refLabel(ref)}</a>
                 ))}
               </div>
             </div>
@@ -405,7 +405,7 @@ r.get('/dager', async (c) => {
   };
 
   const DayCard = ({ d }: { d: (typeof items)[number] }) => (
-    <a href={`/dager/${d.id}`} class="study-card" data-search={d.search}>
+    <a href={lhref(`/dager/${d.id}`)} class="study-card" data-search={d.search}>
       {d.category && <span class="study-card-cat">{DAY_CATEGORIES[d.category] || d.category}</span>}
       <h2 class="study-card-title">{d.name}</h2>
       {d.description && <p class="study-card-desc">{d.description}</p>}
@@ -427,8 +427,8 @@ r.get('/dager', async (c) => {
           <Breadcrumbs items={[{ label: 'Hjem', href: '/' }, { label: 'Dager' }]} />
           <h1>{t('days.title')}</h1>
           <nav class="study-view-tabs" aria-label="Visning">
-            <a href="/dager" class={`study-view-tab ${thematic ? '' : 'is-active'}`} aria-current={thematic ? undefined : 'true'}>{t('days.chronological')}</a>
-            <a href="/dager?visning=tematisk" class={`study-view-tab ${thematic ? 'is-active' : ''}`} aria-current={thematic ? 'true' : undefined}>{t('days.thematic')}</a>
+            <a href={lhref('/dager')} class={`study-view-tab ${thematic ? '' : 'is-active'}`} aria-current={thematic ? undefined : 'true'}>{t('days.chronological')}</a>
+            <a href={lhref('/dager?visning=tematisk')} class={`study-view-tab ${thematic ? 'is-active' : ''}`} aria-current={thematic ? 'true' : undefined}>{t('days.thematic')}</a>
           </nav>
           <div class="study-search-container">
             <input type="text" class="study-search-input" data-card-search placeholder={t('days.searchPh')} aria-label="Søk" autocomplete="off" />
@@ -516,7 +516,7 @@ r.get('/dager/:dayId', async (c) => {
               <h2>{t('days.mainTexts')}</h2>
               <div class="study-ref-cards">
                 {primary.map((ref) => (
-                  <a href={refUrl(ref)} class="study-ref-card">
+                  <a href={lhref(refUrl(ref))} class="study-ref-card">
                     <span class="study-ref-name">{refLabel(ref)}</span>
                     {ref.reason && <span class="study-ref-reason">{ref.reason}</span>}
                   </a>
@@ -529,7 +529,7 @@ r.get('/dager/:dayId', async (c) => {
               <h2>{t('rd.parallels')}</h2>
               <div class="study-ref-cards">
                 {secondary.map((ref) => (
-                  <a href={refUrl(ref)} class="study-ref-card">
+                  <a href={lhref(refUrl(ref))} class="study-ref-card">
                     <span class="study-ref-name">{refLabel(ref)}</span>
                     {ref.reason && <span class="study-ref-reason">{ref.reason}</span>}
                   </a>

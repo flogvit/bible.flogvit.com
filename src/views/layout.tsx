@@ -14,7 +14,7 @@ import type { Child } from 'hono/jsx';
 import { getContext } from 'hono/context-storage';
 import type { AppEnv } from '../lib/session.ts';
 import { ACCOUNT_URL } from '../lib/session.ts';
-import { DEFAULT_LOCALE, LOCALES, href, makeT, ogLocale, type Locale, type Translator } from '../lib/i18n.ts';
+import { DEFAULT_LOCALE, LOCALES, href, makeT, ogLocale, type Locale, type Translator, lhref } from '../lib/i18n.ts';
 
 const SITE = 'https://bible.flogvit.com';
 
@@ -101,7 +101,7 @@ function FlogvitMenu({ t }: { t: Translator }) {
               );
             }
             return (
-              <a class="fvmenu-item" href={p.href} aria-current={p.current ? 'true' : undefined}>
+              <a class="fvmenu-item" href={p.href.startsWith('/') ? lhref(p.href) : p.href} aria-current={p.current ? 'true' : undefined}>
                 {wm}
               </a>
             );
@@ -115,7 +115,7 @@ function FlogvitMenu({ t }: { t: Translator }) {
         {/* Tema (og øvrige prefs) bor på innstillinger-siden — FLOGVIT-menyen
             er kun for produktbytte (portal/SETTINGS.md). */}
       </details>
-      <a class="fvmenu-product" href="/" aria-label={t('chrome.homeAria')}>
+      <a class="fvmenu-product" href={lhref('/')} aria-label={t('chrome.homeAria')}>
         <span class="fvmenu-productDot">.</span>bible
       </a>
     </span>
@@ -235,7 +235,7 @@ function Header({ t, u }: { t: Translator; u: (p: string) => string }) {
               </summary>
               <div class="nav-dd-menu">
                 {g.links.map((l) => (
-                  <a href={l.href} class="nav-dd-link">
+                  <a href={lhref(l.href)} class="nav-dd-link">
                     {l.label}
                   </a>
                 ))}
@@ -250,7 +250,7 @@ function Header({ t, u }: { t: Translator; u: (p: string) => string }) {
         {/* Konto-chip: fast plass rett før tannhjulet (portal/SETTINGS.md). */}
         <AccountChip t={t} />
 
-        <a href="/innstillinger" class="icon-btn" aria-label={t('chrome.settings')} title={t('chrome.settings')}>
+        <a href={lhref('/innstillinger')} class="icon-btn" aria-label={t('chrome.settings')} title={t('chrome.settings')}>
           <svg
             width="18"
             height="18"
@@ -275,7 +275,7 @@ function Header({ t, u }: { t: Translator; u: (p: string) => string }) {
               <div class="mobile-group">
                 <span class="mobile-group-title">{g.label}</span>
                 {g.links.map((l) => (
-                  <a href={l.href} class="mobile-link">
+                  <a href={lhref(l.href)} class="mobile-link">
                     {l.label}
                   </a>
                 ))}
@@ -294,13 +294,13 @@ function Footer({ t, u }: { t: Translator; u: (p: string) => string }) {
       <div class="site-footer-inner">
         {/* Produkt-tillegg (valgfritt) — over den faste raden (portal/FOOTER.md). */}
         <nav class="site-footer-nav" aria-label={t('chrome.footerNavAria')}>
-          <a href="/">{t('foot.home')}</a>
-          <a href="/om">{t('foot.about')}</a>
-          <a href="/om#hjelp">{t('foot.help')}</a>
-          <a href="/innstillinger">{t('chrome.settings')}</a>
+          <a href={lhref('/')}>{t('foot.home')}</a>
+          <a href={lhref('/om')}>{t('foot.about')}</a>
+          <a href={lhref('/om#hjelp')}>{t('foot.help')}</a>
+          <a href={lhref('/innstillinger')}>{t('chrome.settings')}</a>
           <a href="https://flogvit.com/konto/">{t('foot.account')}</a>
-          <a href="/offline">{t('foot.offline')}</a>
-          <a href="/tilgjengelighet">{t('foot.a11y')}</a>
+          <a href={lhref('/offline')}>{t('foot.offline')}</a>
+          <a href={lhref('/tilgjengelighet')}>{t('foot.a11y')}</a>
         </nav>
 
         {/* Fast legal-rad (portal/FOOTER.md): FLOGVIT.bible · Vilkår · Personvern ·
@@ -310,7 +310,7 @@ function Footer({ t, u }: { t: Translator; u: (p: string) => string }) {
             <a class="fv-brand" href="https://flogvit.com" aria-label={t('chrome.menuAria')}>
               FLOGVIT
             </a>
-            <a class="fv-product" href="/" aria-label={t('chrome.homeAria')}>
+            <a class="fv-product" href={lhref('/')} aria-label={t('chrome.homeAria')}>
               <span class="fv-dot">.</span>bible
             </a>
           </span>

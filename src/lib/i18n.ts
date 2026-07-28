@@ -13,6 +13,9 @@
 // Akse 1 og 2 møtes i `localeToContentLanguage()` (lib/lang.ts). Akse 3 røres
 // ikke herfra.
 
+import { getContext } from 'hono/context-storage';
+
+
 export const LOCALES = ['en', 'nb', 'nn', 'sv', 'fr', 'es', 'fi', 'de'] as const;
 export type Locale = (typeof LOCALES)[number];
 export const DEFAULT_LOCALE: Locale = LOCALES[0];
@@ -77,6 +80,31 @@ export function negotiateLocale(cookie: string | undefined | null, accept: strin
 export function href(locale: Locale, path: string): string {
   const rest = path === '/' ? '' : path.startsWith('/') ? path : `/${path}`;
   return `/${locale}${rest}`;
+}
+
+
+/**
+ * Som `href()`, men henter locale fra request-konteksten (GitHub #18).
+ *
+ * Uprefiksede lenker 302-redirecter til den FORHANDLEDE locale-en, ikke den
+ * leseren er på — en norsk nettleser som leser den engelske utgaven ble kastet
+ * til /nb/ ved første klikk, og hvert klikk kostet en ekstra rundtur.
+ *
+ * Locale hentes fra AsyncLocalStorage (contextStorage-middleware i app.ts, samme
+ * mekanisme som konto-chipen i layout) framfor å tres gjennom hvert
+ * komponentkall: lenkene ligger dypt nede i komponenter som ikke har noen annen
+ * grunn til å kjenne språket.
+ *
+ * Utenfor request-kontekst (tester, statisk generering) faller den til
+ * basespråket framfor å kaste.
+ */
+export function lhref(path: string): string {
+  try {
+    const locale = getContext<{ Variables: { locale?: Locale } }>().var.locale;
+    return href(locale ?? DEFAULT_LOCALE, path);
+  } catch {
+    return href(DEFAULT_LOCALE, path);
+  }
 }
 
 /** Stien uten språkprefiks — grunnlaget for hreflang og språkbytte. */

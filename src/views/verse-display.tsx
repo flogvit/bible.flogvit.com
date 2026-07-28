@@ -9,6 +9,7 @@ import type { PersonKeyEvent, VerseRef, VerseWithOriginal } from '../lib/bible.t
 import { toUrlSlug } from '../lib/url-utils.ts';
 import { InlineRefs } from './inline-refs.tsx';
 import { Footnotes } from './footnotes.tsx';
+import { lhref } from '../lib/i18n.ts';
 
 /** Statisk enkeltvers: nummer + tekst (+ fotnoter og grunntekst). */
 export function VerseView({ data }: { data: VerseWithOriginal }) {
@@ -44,10 +45,10 @@ function VerseGroup({ data }: { data: VerseWithOriginal }) {
   return (
     <div class="verse-group">
       <div class="verse-header">
-        <a href={url} class="verse-ref-link">
+        <a href={lhref(url)} class="verse-ref-link">
           {data.bookShortName} {data.verse.chapter}:{data.verse.verse}
         </a>
-        <a href={url} class="open-context">
+        <a href={lhref(url)} class="open-context">
           Vis i kontekst →
         </a>
       </div>

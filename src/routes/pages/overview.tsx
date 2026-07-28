@@ -31,7 +31,7 @@ import {
 } from '../../lib/bible.ts';
 import { enrichWithVerseText, getReadingType } from '../../lib/reading-text-enrich.ts';
 import { toUrlSlug } from '../../lib/url-utils.ts';
-import { layoutProps, tFor } from '../../lib/i18n.ts';
+import { layoutProps, tFor, lhref } from '../../lib/i18n.ts';
 
 const r = new Hono<AppEnv>();
 
@@ -165,7 +165,7 @@ r.get('/oversettelser/:id', async (c) => {
               {meta.derived_from?.module
                 ? <EditionRow term="Bygger på">
                     {known.has(meta.derived_from.module)
-                      ? <a href={`/oversettelser/${meta.derived_from.module}`}>{meta.derived_from.module}</a>
+                      ? <a href={lhref(`/oversettelser/${meta.derived_from.module}`)}>{meta.derived_from.module}</a>
                       : meta.derived_from.module}
                     {meta.derived_from.relation === 'revision_of' ? ' (revisjon)' : ''}
                   </EditionRow> : null}
@@ -242,7 +242,7 @@ r.get('/oversettelser/:id', async (c) => {
                 {attributionSources.map((m, i) => (
                   <>
                     {i > 0 ? ', ' : ''}
-                    <a href={`/oversettelser/${m}`}>{m}</a>
+                    <a href={lhref(`/oversettelser/${m}`)}>{m}</a>
                   </>
                 ))}
                 . Lisensvilkårene der — inkludert eventuelle krediteringskrav — gjelder også for
@@ -289,7 +289,7 @@ r.get('/kjente-vers', async (c) => {
   function card(v: (typeof verses)[number]) {
     return (
       <a
-        href={`/${toUrlSlug(v.book_short_name)}/${v.chapter}#v${v.verse}`}
+        href={lhref(`/${toUrlSlug(v.book_short_name)}/${v.chapter}#v${v.verse}`)}
         class="famous-verse-card"
       >
         <span class="famous-verse-ref">
@@ -387,7 +387,7 @@ r.get('/lesetekster', async (c) => {
                 </h2>
                 <div class="reading-text-list">
                   {group.map((t) => (
-                    <a href={`/lesetekster/${t.id}`} class="reading-text-card">
+                    <a href={lhref(`/lesetekster/${t.id}`)} class="reading-text-card">
                       <span class="reading-text-name">
                         {t.name}
                         {t.series && <span class="reading-text-series">{t.series}</span>}
@@ -497,7 +497,7 @@ r.get('/lesetekster/:id', async (c) => {
             );
           })}
 
-          <a href="/lesetekster" class="reading-text-back">
+          <a href={lhref('/lesetekster')} class="reading-text-back">
             ← Alle lesetekster
           </a>
         </div>
@@ -552,7 +552,7 @@ r.get('/profetier', async (c) => {
                   <div class="prophecy-refs">
                     <span class="prophecy-ref">
                       <span class="prophecy-ref-label">{t('pr.prophecy')}</span>{' '}
-                      <a href={prophecyRefUrl(p.prophecy)}>{p.prophecy.reference}</a>
+                      <a href={lhref(prophecyRefUrl(p.prophecy))}>{p.prophecy.reference}</a>
                     </span>
                     <span class="prophecy-arrow" aria-hidden="true">→</span>
                     <span class="prophecy-ref">
@@ -562,7 +562,7 @@ r.get('/profetier', async (c) => {
                       {p.fulfillments.map((f, i) => (
                         <>
                           {i > 0 && ', '}
-                          <a href={prophecyRefUrl(f)}>{f.reference}</a>
+                          <a href={lhref(prophecyRefUrl(f))}>{f.reference}</a>
                         </>
                       ))}
                     </span>
@@ -682,7 +682,7 @@ r.get('/paralleller', async (c) => {
                           {passage ? (
                             <>
                               <a
-                                href={`/${toUrlSlug(passage.book_short_name || '')}/${passage.chapter}#v${passage.verse_start}`}
+                                href={lhref(`/${toUrlSlug(passage.book_short_name || '')}/${passage.chapter}#v${passage.verse_start}`)}
                                 class="parallel-passage-ref"
                               >
                                 {passage.reference}
@@ -777,7 +777,7 @@ r.get('/tidslinje', async (c) => {
                         <div class="timeline-event-refs">
                           {e.references.map((ref) => (
                             <a
-                              href={`/${toUrlSlug(ref.book_short_name || '')}/${ref.chapter}#v${ref.verse_start}`}
+                              href={lhref(`/${toUrlSlug(ref.book_short_name || '')}/${ref.chapter}#v${ref.verse_start}`)}
                               class="person-ref-chip"
                             >
                               {ref.book_short_name} {ref.chapter}:{ref.verse_start}
@@ -840,7 +840,7 @@ r.get('/statistikk', async (c) => {
     return books.map((b) => (
       <tr>
         <td>
-          <a href={`/${toUrlSlug(b.shortName)}/1`}>{b.bookName}</a>
+          <a href={lhref(`/${toUrlSlug(b.shortName)}/1`)}>{b.bookName}</a>
         </td>
         <td class="num">{nf(b.chapters)}</td>
         <td class="num">{nf(b.verses)}</td>

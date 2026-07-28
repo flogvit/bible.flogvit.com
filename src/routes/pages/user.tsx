@@ -18,7 +18,7 @@ import { getUserItems, getUserSingleton, getReadingProgress } from '../../lib/us
 import { summarizeProgress, fullHeat, stalestBooks } from '../../lib/reading-map.ts';
 import { getBibleEditions } from '../../lib/bible.ts';
 import { getAvailableMappings } from '../../lib/verse-mapper.ts';
-import { layoutProps, makeT, tFor, type Locale } from '../../lib/i18n.ts';
+import { layoutProps, makeT, tFor, type Locale, lhref } from '../../lib/i18n.ts';
 
 const r = new Hono<AppEnv>();
 
@@ -92,7 +92,7 @@ r.get('/favoritter', async (c) => {
     <UserPage {...layoutProps(c)} title={t('nav.favorites')} crumb={t('nav.favorites')} heading={t('u.favVerses')} page="favorites" intro="Dine merkede vers. Husking er en del av FLOGVIT.plus.">
       <div class="user-list" data-list>
         {cards.map((card) => (
-          <a class="user-card" href={card.href}>
+          <a class="user-card" href={lhref(card.href)}>
             <span class="user-card-ref">{card.ref}</span>
             <p class="user-card-text">{card.text}</p>
           </a>
@@ -325,11 +325,11 @@ r.get('/manuskripter', async (c) => {
   return c.html(
     <UserPage {...layoutProps(c)} title={t('nav.manuscripts')} crumb={t('nav.manuscripts')} heading={t('nav.manuscripts')} page="devotionals" intro="Andakter, prekener og bibeltimer med versreferanser." wide>
       <div class="user-toolbar">
-        <a href="/manuskripter/ny" class="user-btn">{t('u.newManuscript')}</a>
+        <a href={lhref('/manuskripter/ny')} class="user-btn">{t('u.newManuscript')}</a>
       </div>
       <div class="user-list" data-list>
         {devs.map((d) => (
-          <a class="user-card" href={`/manuskripter/${d.slug}`}>
+          <a class="user-card" href={lhref(`/manuskripter/${d.slug}`)}>
             <span class="user-card-title">{d.title || '(uten tittel)'}</span>
             <span class="user-card-meta">{d.type || ''}</span>
           </a>
@@ -354,7 +354,7 @@ function DevotionalEditor(props: { slug?: string; locale: Locale; path: string }
               <input type="text" data-editor-title placeholder={t('u.titlePh')} class="user-input editor-title" aria-label="Tittel" />
               <div class="editor-actions">
                 <button type="button" class="user-btn" data-editor-save>{t('common.save')}</button>
-                <a href="/manuskripter" class="user-btn-ghost">{t('common.cancel')}</a>
+                <a href={lhref('/manuskripter')} class="user-btn-ghost">{t('common.cancel')}</a>
               </div>
             </div>
             <p class="editor-hint">
@@ -544,7 +544,7 @@ r.get('/innstillinger', (c) => {
           <legend>{t('nav.translations')}</legend>
           <p class="user-note">
             Velg hvilke oversettelser som vises i bibelvelgeren på lesesidene. Egne bibler lastes
-            opp på <a href="/oversettelser">{t('nav.translations')}</a>-siden.
+            opp på <a href={lhref('/oversettelser')}>{t('nav.translations')}</a>-siden.
           </p>
           <div data-bible-visibility>
             <p class="user-note">{t('common.loading')}</p>
@@ -682,7 +682,7 @@ r.get('/oversettelser', async (c) => {
         <ul class="trans-builtin">
           {editions.map((e) => (
             <li>
-              <a href={`/oversettelser/${e.id}`}>
+              <a href={lhref(`/oversettelser/${e.id}`)}>
                 {e.name_native}
                 {e.abbreviation ? ` (${e.abbreviation})` : ''}
               </a>

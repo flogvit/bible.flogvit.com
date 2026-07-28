@@ -19,7 +19,7 @@ import {
   getBookUrlSlug,
   type PersonData,
 } from '../../lib/bible.ts';
-import { layoutProps, tFor } from '../../lib/i18n.ts';
+import { layoutProps, tFor, lhref } from '../../lib/i18n.ts';
 
 const r = new Hono<AppEnv>();
 
@@ -103,7 +103,7 @@ r.get('/personer', async (c) => {
           <div class="persons-list" id="person-list">
             {persons.map((p) => (
               <a
-                href={`/personer/${p.id}`}
+                href={lhref(`/personer/${p.id}`)}
                 class="persons-card"
                 data-era={p.era}
                 data-roles={p.roles.join(' ')}
@@ -218,7 +218,7 @@ r.get('/personer/:personId', async (c) => {
               <h2>{t('persons.family')}</h2>
               <div class="person-family-list">
                 {familyMembers.map((m) => (
-                  <a href={`/personer/${m.id}`} class="person-family-member">
+                  <a href={lhref(`/personer/${m.id}`)} class="person-family-member">
                     <span class="person-family-relation">{m.relation}</span>
                     <span class="person-family-name">{m.name}</span>
                   </a>
@@ -241,7 +241,7 @@ r.get('/personer/:personId', async (c) => {
                   const bookName = book?.name_no || `Bok ${ref.bookId}`;
                   const slug = book ? getBookUrlSlug(book) : '';
                   return (
-                    <a href={`/${slug}/${ref.chapterId}#v${ref.verseId}`} class="person-ref-chip">
+                    <a href={lhref(`/${slug}/${ref.chapterId}#v${ref.verseId}`)} class="person-ref-chip">
                       {bookName} {ref.chapterId}:{ref.verseId}
                     </a>
                   );
@@ -255,7 +255,7 @@ r.get('/personer/:personId', async (c) => {
               <h2>{t('persons.related')}</h2>
               <div class="person-related-list">
                 {related.map((rp) => (
-                  <a href={`/personer/${rp.id}`} class="person-related-person">
+                  <a href={lhref(`/personer/${rp.id}`)} class="person-related-person">
                     <span class="person-related-name">{rp.name}</span>
                     <span class="person-related-title">{rp.title}</span>
                   </a>

@@ -66,7 +66,7 @@ import type {
 } from '../../lib/bible.ts';
 import { mapChapter, resolveMappingId, getAvailableMappings } from '../../lib/verse-mapper.ts';
 import { getWorksForChapter, workHref, encodeKvn, type WorkRef } from '../../lib/works.ts';
-import { layoutProps, tFor, type Translator } from '../../lib/i18n.ts';
+import { layoutProps, tFor, type Translator, lhref } from '../../lib/i18n.ts';
 import { localeToContentLanguage } from '../../lib/lang.ts';
 
 const r = new Hono<AppEnv>();
@@ -319,7 +319,7 @@ async function TemplateText({ text }: { text: string }) {
       const label = `${first.bookShortName} ${first.chapter}`;
       if (!textJoined) return <span class="vtt-missing">[{part.content}]</span>;
       return (
-        <a href={refSegmentToUrl(first)} class="inline-ref vtt-verse" data-ref={part.refString} title={label}>
+        <a href={lhref(refSegmentToUrl(first))} class="inline-ref vtt-verse" data-ref={part.refString} title={label}>
           {textJoined}
         </a>
       );
@@ -352,7 +352,7 @@ function ChapterToc({
       <div class="toc-chapter-grid">
         {Array.from({ length: book.chapters }, (_, i) => i + 1).map((ch) => (
           <a
-            href={`/${bookSlug}/${ch}${query}`}
+            href={lhref(`/${bookSlug}/${ch}${query}`)}
             class={`toc-chapter-cell ${ch === chapter ? 'is-active' : ''}`}
             aria-current={ch === chapter ? 'page' : undefined}
           >
@@ -366,7 +366,7 @@ function ChapterToc({
           <div class="toc-group-label">{category.label}</div>
           {siblings.map((b) => (
             <a
-              href={`/${toUrlSlug(b.short_name)}/1${query}`}
+              href={lhref(`/${toUrlSlug(b.short_name)}/1${query}`)}
               class={`toc-item ${b.id === book.id ? 'is-active' : ''}`}
             >
               <span class="toc-item-name">{b.name_no}</span>
@@ -377,7 +377,7 @@ function ChapterToc({
       )}
 
       <div class="toc-group-label">{t('rd.allBooks')}</div>
-      <a href="/" class="toc-item">
+      <a href={lhref('/')} class="toc-item">
         <span class="toc-item-name">{t('rd.toFrontPage')}</span>
       </a>
     </nav>
@@ -433,7 +433,7 @@ function InsightContent({ t, insight }: { t: Translator; insight: any }) {
 function PersonLink({ personId, name, className }: { personId?: string; name: string; className: string }) {
   if (personId) {
     return (
-      <a href={`/personer/${personId}`} class={className} title={`Les mer om ${name}`}>
+      <a href={lhref(`/personer/${personId}`)} class={className} title={`Les mer om ${name}`}>
         {name}
       </a>
     );
@@ -479,7 +479,7 @@ function GenealogyContent({ insight }: { insight: any }) {
                 {insight.footer.links.map((link: any, i: number) => (
                   <span>
                     {i > 0 && ', '}
-                    <a href={`/personer/${link.personId}`} class="ins-footer-link">
+                    <a href={lhref(`/personer/${link.personId}`)} class="ins-footer-link">
                       {link.text}
                     </a>
                   </span>
@@ -676,7 +676,7 @@ async function GospelColumn({
           {isCurrentGospel && <span class="gospel-current-label">(du leser)</span>}
         </span>
         {!isCurrentGospel && (
-          <a href={passageUrl(passage)} class="gospel-reference-link">
+          <a href={lhref(passageUrl(passage))} class="gospel-reference-link">
             {passage.reference}
           </a>
         )}
@@ -937,7 +937,7 @@ function VerseDetailPanel({
                 <strong data-w4w-out-word></strong>
                 <span class="w4w-pron-inline" data-w4w-out-pron></span>
                 <p data-w4w-out-expl></p>
-                <a class="search-original-button" data-w4w-search href="/sok/original">
+                <a class="search-original-button" data-w4w-search href={lhref('/sok/original')}>
                   Søk alle forekomster
                 </a>
               </div>
@@ -953,7 +953,7 @@ function VerseDetailPanel({
             {data.references.length > 0 ? (
               data.references.map((ref) => (
                 <a
-                  href={`/${toUrlSlug(ref.book_short_name || '')}/${ref.to_chapter}#v${ref.to_verse_start}`}
+                  href={lhref(`/${toUrlSlug(ref.book_short_name || '')}/${ref.to_chapter}#v${ref.to_verse_start}`)}
                   class="vd-reference"
                 >
                   <span class="vd-ref-link">{formatReference(ref)}</span>
@@ -967,7 +967,7 @@ function VerseDetailPanel({
             ) : (
               <p class="text-muted">{t('rd.noRefs')}</p>
             )}
-            <a href={`/bidra?vers=${verseRef}`} class="write-devotional-link">
+            <a href={lhref(`/bidra?vers=${verseRef}`)} class="write-devotional-link">
               {t('contrib.suggestWork')}
             </a>
           </div>
@@ -992,7 +992,7 @@ function VerseDetailPanel({
           <div class="vd-pane" data-vd-pane="prophecies" hidden>
             <div class="vd-prophecies">
               {data.prophecies.map((prophecy) => (
-                <a href={`/profetier#${prophecy.id}`} class="vd-prophecy">
+                <a href={lhref(`/profetier#${prophecy.id}`)} class="vd-prophecy">
                   <span class="vd-prophecy-title">{prophecy.title}</span>
                   <span class="vd-prophecy-category">{prophecy.category?.name}</span>
                   {prophecy.explanation && (
@@ -1039,7 +1039,7 @@ function VerseDetailPanel({
             <div data-devotionals-list>
               <p class="text-muted">{t('rd.noManuscripts')}</p>
             </div>
-            <a href={`/manuskripter/ny?vers=${verseRef}`} class="write-devotional-link">
+            <a href={lhref(`/manuskripter/ny?vers=${verseRef}`)} class="write-devotional-link">
               Skriv manuskript om dette verset
             </a>
           </div>
@@ -1221,7 +1221,7 @@ function StudyPanel({
           <div data-lookup-results></div>
           <noscript>
             <p class="st-empty">
-              Oppslag krever JavaScript — bruk <a href="/sok">søkesiden</a>.
+              Oppslag krever JavaScript — bruk <a href={lhref('/sok')}>søkesiden</a>.
             </p>
           </noscript>
         </div>
@@ -1241,13 +1241,13 @@ function StudyPanel({
           <>
             <div class="st-chip-row">
               {data.persons.map((p) => (
-                <a href={`/personer/${p.id}`} class="st-chip">
+                <a href={lhref(`/personer/${p.id}`)} class="st-chip">
                   {p.name}
                   {p.verses.length > 0 && <span class="st-chip-num">{p.verses.length}</span>}
                 </a>
               ))}
             </div>
-            <a href="/personer" class="st-see-all">
+            <a href={lhref('/personer')} class="st-see-all">
               Alle personer →
             </a>
           </>
@@ -1285,14 +1285,14 @@ function StudyPanel({
             {data.timelineEvents.slice(0, 6).map((e) => (
               <li class="st-timeline-item">
                 <span class="st-timeline-year">{e.year_display || ''}</span>
-                <a href={`/tidslinje#${e.id}`} class="st-timeline-title">
+                <a href={lhref(`/tidslinje#${e.id}`)} class="st-timeline-title">
                   {e.title}
                 </a>
               </li>
             ))}
           </ol>
         )}
-        <a href="/tidslinje" class="st-see-all">
+        <a href={lhref('/tidslinje')} class="st-see-all">
           Se hele tidslinjen →
         </a>
       </StudyBlock>
@@ -1301,14 +1301,14 @@ function StudyPanel({
         {data.themes.length > 0 && (
           <div class="st-chip-row">
             {data.themes.map((t) => (
-              <a href={`/temaer/${t.name || String(t.id)}`} class="st-chip">
+              <a href={lhref(`/temaer/${t.name || String(t.id)}`)} class="st-chip">
                 {t.title || t.name}
                 {t.verses.length > 0 && <span class="st-chip-num">{t.verses.length}</span>}
               </a>
             ))}
           </div>
         )}
-        <a href="/temaer" class="st-see-all">
+        <a href={lhref('/temaer')} class="st-see-all">
           Alle temaer →
         </a>
       </StudyBlock>
@@ -1318,7 +1318,7 @@ function StudyPanel({
           <ul class="st-prop-list">
             {data.chapterProphecies.slice(0, 6).map((p) => (
               <li class="st-prop-item">
-                <a href={`/profetier#${p.id}`} class="st-prop-title">
+                <a href={lhref(`/profetier#${p.id}`)} class="st-prop-title">
                   {p.title}
                 </a>
                 {p.category?.name && <span class="st-prop-cat">{p.category.name}</span>}
@@ -1326,7 +1326,7 @@ function StudyPanel({
             ))}
           </ul>
         )}
-        <a href="/profetier" class="st-see-all">
+        <a href={lhref('/profetier')} class="st-see-all">
           Alle profetier →
         </a>
       </StudyBlock>
@@ -1336,7 +1336,7 @@ function StudyPanel({
           <ul class="st-prop-list">
             {data.stories.map((s) => (
               <li class="st-prop-item">
-                <a href={`/historier/${s.slug}`} class="st-prop-title">
+                <a href={lhref(`/historier/${s.slug}`)} class="st-prop-title">
                   {s.title}
                 </a>
                 {s.category && <span class="st-prop-cat">{s.category}</span>}
@@ -1344,7 +1344,7 @@ function StudyPanel({
             ))}
           </ul>
         )}
-        <a href="/historier" class="st-see-all">
+        <a href={lhref('/historier')} class="st-see-all">
           Alle bibelhistorier →
         </a>
       </StudyBlock>
@@ -1356,7 +1356,7 @@ function StudyPanel({
               const gospels = GOSPELS.filter((g) => p.passages?.[g]).map((g) => GOSPEL_NAMES[g]);
               return (
                 <li class="st-prop-item">
-                  <a href="/paralleller" class="st-prop-title">
+                  <a href={lhref('/paralleller')} class="st-prop-title">
                     {p.title}
                   </a>
                   {gospels.length > 0 && <span class="st-prop-cat">{gospels.join(' · ')}</span>}
@@ -1365,7 +1365,7 @@ function StudyPanel({
             })}
           </ul>
         )}
-        <a href="/paralleller" class="st-see-all">
+        <a href={lhref('/paralleller')} class="st-see-all">
           Alle paralleller →
         </a>
       </StudyBlock>
@@ -1374,14 +1374,14 @@ function StudyPanel({
         {data.numbers.length > 0 && (
           <div class="st-chip-row">
             {data.numbers.map((n) => (
-              <a href={`/tall/${n.number}`} class="st-chip">
+              <a href={lhref(`/tall/${n.number}`)} class="st-chip">
                 {n.number}
                 {n.meaning && <span class="st-chip-num">{n.meaning}</span>}
               </a>
             ))}
           </div>
         )}
-        <a href="/tall" class="st-see-all">
+        <a href={lhref('/tall')} class="st-see-all">
           Alle tall →
         </a>
       </StudyBlock>
@@ -1391,7 +1391,7 @@ function StudyPanel({
           <ul class="st-ms-list">
             {data.readingTexts.map((rt) => (
               <li class="st-ms-item">
-                <a href={`/lesetekster/${rt.id}`} class="st-ms-title">
+                <a href={lhref(`/lesetekster/${rt.id}`)} class="st-ms-title">
                   {rt.name}
                 </a>
                 {rt.date && <span class="st-ms-type">{rt.date}</span>}
@@ -1399,7 +1399,7 @@ function StudyPanel({
             ))}
           </ul>
         )}
-        <a href="/lesetekster" class="st-see-all">
+        <a href={lhref('/lesetekster')} class="st-see-all">
           Alle lesetekster →
         </a>
       </StudyBlock>
@@ -1422,7 +1422,7 @@ function StudyPanel({
       <StudyBlock id="manuskripter" title={t('nav.manuscripts')} defaultOpen>
         {/* Lokale manuskripter (localStorage) fylles inn av studium.js */}
         <ul class="st-ms-list" data-chapter-devotionals data-chapter-prefix={`${book.short_name.toLowerCase()}-${chapter}-`}></ul>
-        <a href={`/manuskripter/ny?ref=${encodeURIComponent(newManuscriptRef)}`} class="st-new-ms-link">
+        <a href={lhref(`/manuskripter/ny?ref=${encodeURIComponent(newManuscriptRef)}`)} class="st-new-ms-link">
           + Skriv nytt manuskript om {book.name_no} {chapter}
         </a>
       </StudyBlock>
@@ -1437,7 +1437,7 @@ function PanelTimeline({ t, events, bookId, chapter }: { t: Translator; events: 
     return (
       <div class="panel-timeline">
         <p class="st-empty">{t('rd.noTimelineEvents')}</p>
-        <a href="/tidslinje" class="st-see-all">
+        <a href={lhref('/tidslinje')} class="st-see-all">
           Se hele tidslinjen →
         </a>
       </div>
@@ -1465,7 +1465,7 @@ function PanelTimeline({ t, events, bookId, chapter }: { t: Translator; events: 
                   ref.verse_start === ref.verse_end ? `${ref.verse_start}` : `${ref.verse_start}-${ref.verse_end}`;
                 return (
                   <a
-                    href={`/${toUrlSlug(ref.book_short_name || '')}/${ref.chapter}#v${ref.verse_start}`}
+                    href={lhref(`/${toUrlSlug(ref.book_short_name || '')}/${ref.chapter}#v${ref.verse_start}`)}
                     class={`pt-ref-link ${isCurrent ? 'is-current' : ''}`}
                   >
                     {ref.book_short_name} {ref.chapter}:{range}
@@ -1477,7 +1477,7 @@ function PanelTimeline({ t, events, bookId, chapter }: { t: Translator; events: 
           )}
         </div>
       ))}
-      <a href="/tidslinje" class="st-see-all">
+      <a href={lhref('/tidslinje')} class="st-see-all">
         Se hele tidslinjen →
       </a>
     </div>
@@ -1516,7 +1516,7 @@ function MobileToolbar({
     <>
       <div class="mobile-toolbar" data-mobile-toolbar>
         <a
-          href={chapter > 1 ? `/${bookSlug}/${chapter - 1}${query}` : undefined}
+          href={chapter > 1 ? lhref(`/${bookSlug}/${chapter - 1}${query}`) : undefined}
           class={`mt-nav ${chapter === 1 ? 'is-disabled' : ''}`}
           aria-label={`Forrige kapittel${chapter > 1 ? `: ${book.name_no} ${chapter - 1}` : ' (ikke tilgjengelig)'}`}
           aria-disabled={chapter === 1 ? 'true' : undefined}
@@ -1533,7 +1533,7 @@ function MobileToolbar({
           ⚙
         </button>
         <a
-          href={chapter < maxChapter ? `/${bookSlug}/${chapter + 1}${query}` : undefined}
+          href={chapter < maxChapter ? lhref(`/${bookSlug}/${chapter + 1}${query}`) : undefined}
           class={`mt-nav ${chapter === maxChapter ? 'is-disabled' : ''}`}
           aria-label={`Neste kapittel${chapter < maxChapter ? `: ${book.name_no} ${chapter + 1}` : ' (ikke tilgjengelig)'}`}
           aria-disabled={chapter === maxChapter ? 'true' : undefined}
@@ -1560,7 +1560,7 @@ function MobileToolbar({
           >
             {Array.from({ length: maxChapter }, (_, i) => i + 1).map((ch) => (
               <a
-                href={`/${bookSlug}/${ch}${query}`}
+                href={lhref(`/${bookSlug}/${ch}${query}`)}
                 class={`mt-chapter-cell ${ch === chapter ? 'is-active' : ''}`}
               >
                 {ch}
@@ -1613,13 +1613,13 @@ function MobileToolbar({
             <span class="tools-section-title">{t('rd.translation')}</span>
             <div class="tools-bibles">
               <a
-                href={`/${bookSlug}/${chapter}${buildQuery('osnb', mapping, secondary, defaultBible)}`}
+                href={lhref(`/${bookSlug}/${chapter}${buildQuery('osnb', mapping, secondary, defaultBible)}`)}
                 class={`tools-bible-button ${bible === 'osnb' ? 'is-active' : ''}`}
               >
                 OSNB (bokmål)
               </a>
               <a
-                href={`/${bookSlug}/${chapter}${buildQuery('osnn', mapping, secondary, defaultBible)}`}
+                href={lhref(`/${bookSlug}/${chapter}${buildQuery('osnn', mapping, secondary, defaultBible)}`)}
                 class={`tools-bible-button ${bible === 'osnn' ? 'is-active' : ''}`}
               >
                 OSNN (nynorsk)
@@ -1670,7 +1670,7 @@ function MobileToolbar({
             </div>
           </div>
           <div class="tools-section">
-            <a href="/innstillinger" class="tools-settings-link">
+            <a href={lhref('/innstillinger')} class="tools-settings-link">
               Alle innstillinger →
             </a>
           </div>
@@ -1845,7 +1845,7 @@ r.get('/:book/:chapter', async (c) => {
 
             <div class="chapter-rail">
               <a
-                href={`/${canonicalSlug}/${chapter}${buildQuery(requestedBible, mapping ?? undefined, undertekstOn ? undefined : otherNorwegian, localeDefault.id)}`}
+                href={lhref(`/${canonicalSlug}/${chapter}${buildQuery(requestedBible, mapping ?? undefined, undertekstOn ? undefined : otherNorwegian, localeDefault.id)}`)}
                 class={`rail-chip ${undertekstOn ? 'is-on' : ''}`}
                 aria-current={undertekstOn ? 'true' : undefined}
                 title="Undertekst under hvert vers"
@@ -1853,30 +1853,30 @@ r.get('/:book/:chapter', async (c) => {
                 + Undertekst
               </a>
               <a
-                href={`/${canonicalSlug}/${chapter}${buildQuery(requestedBible, mapping ?? undefined, grunntekstOn ? undefined : 'original', localeDefault.id)}`}
+                href={lhref(`/${canonicalSlug}/${chapter}${buildQuery(requestedBible, mapping ?? undefined, grunntekstOn ? undefined : 'original', localeDefault.id)}`)}
                 class={`rail-chip ${grunntekstOn ? 'is-on' : ''}`}
                 aria-current={grunntekstOn ? 'true' : undefined}
               >
                 Grunntekst
               </a>
               {chapter > 1 && (
-                <a href={`/${canonicalSlug}/${chapter - 1}${query}`} class="rail-chip">
+                <a href={lhref(`/${canonicalSlug}/${chapter - 1}${query}`)} class="rail-chip">
                   ← Forrige
                 </a>
               )}
               {chapter < maxChapter ? (
-                <a href={`/${canonicalSlug}/${chapter + 1}${query}`} class="rail-chip">
+                <a href={lhref(`/${canonicalSlug}/${chapter + 1}${query}`)} class="rail-chip">
                   Neste →
                 </a>
               ) : (
                 nextBook &&
                 nextBookSlug && (
-                  <a href={`/${nextBookSlug}/1${query}`} class="rail-chip">
+                  <a href={lhref(`/${nextBookSlug}/1${query}`)} class="rail-chip">
                     {nextBook.name_no} →
                   </a>
                 )
               )}
-              <a href={`/bidra?kap=${canonicalSlug}-${chapter}`} class="rail-chip">
+              <a href={lhref(`/bidra?kap=${canonicalSlug}-${chapter}`)} class="rail-chip">
                 {t('contrib.title')}
               </a>
             </div>
@@ -1899,18 +1899,18 @@ r.get('/:book/:chapter', async (c) => {
             <footer class="chapter-footer">
               <div class="nav-buttons">
                 {chapter > 1 && (
-                  <a href={`/${canonicalSlug}/${chapter - 1}${query}`} class="nav-button">
+                  <a href={lhref(`/${canonicalSlug}/${chapter - 1}${query}`)} class="nav-button">
                     ← Forrige kapittel
                   </a>
                 )}
                 {chapter < maxChapter ? (
-                  <a href={`/${canonicalSlug}/${chapter + 1}${query}`} class="nav-button">
+                  <a href={lhref(`/${canonicalSlug}/${chapter + 1}${query}`)} class="nav-button">
                     Neste kapittel →
                   </a>
                 ) : (
                   nextBook &&
                   nextBookSlug && (
-                    <a href={`/${nextBookSlug}/1${query}`} class="nav-button">
+                    <a href={lhref(`/${nextBookSlug}/1${query}`)} class="nav-button">
                       {nextBook.name_no} →
                     </a>
                   )
@@ -1953,7 +1953,7 @@ r.get('/:book/:chapter', async (c) => {
                       const gospels = GOSPELS.filter((g) => p.passages?.[g]).map((g) => GOSPEL_NAMES[g]);
                       return (
                         <li class="st-prop-item">
-                          <a href="/paralleller" class="st-prop-title">
+                          <a href={lhref('/paralleller')} class="st-prop-title">
                             {p.title}
                           </a>
                           {gospels.length > 0 && <span class="st-prop-cat">{gospels.join(' · ')}</span>}
@@ -2103,7 +2103,7 @@ r.get('/tekst', async (c) => {
                   <div class="text-passage">
                     <div class="text-passage-header">
                       <h2>
-                        <a href={contextUrl}>
+                        <a href={lhref(contextUrl)}>
                           {group.bookShortName} {group.chapter}:{verseRange}
                         </a>
                       </h2>

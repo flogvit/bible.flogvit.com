@@ -30,7 +30,7 @@ import {
 import { DEFAULT_CONTENT_LANGUAGE } from '../../lib/lang.ts';
 import { booksData, getBookInfoById, type BookInfo } from '../../lib/books-data.ts';
 import { toUrlSlug } from '../../lib/url-utils.ts';
-import { layoutProps, tFor, type Translator } from '../../lib/i18n.ts';
+import { layoutProps, tFor, type Translator, lhref } from '../../lib/i18n.ts';
 
 const r = new Hono<AppEnv>();
 
@@ -149,8 +149,8 @@ r.get('/', async (c) => {
               </div>
             </div>
             <div class="home-actions">
-              <a href="/1mos/1" class="home-btn home-btn-primary">{t('home.startGenesis')}</a>
-              <a href="/joh/1" class="home-btn home-btn-ghost">{t('home.orJohn')}</a>
+              <a href={lhref('/1mos/1')} class="home-btn home-btn-primary">{t('home.startGenesis')}</a>
+              <a href={lhref('/joh/1')} class="home-btn home-btn-ghost">{t('home.orJohn')}</a>
             </div>
           </div>
 
@@ -161,7 +161,7 @@ r.get('/', async (c) => {
                 <>
                   <p class="home-vod-text">«{verse.text}»</p>
                   <div class="home-vod-foot">
-                    <a href={`/${toUrlSlug(verse.shortName)}/${verse.chapter}#v${verse.verseStart}`}>
+                    <a href={lhref(`/${toUrlSlug(verse.shortName)}/${verse.chapter}#v${verse.verseStart}`)}>
                       {verse.display}
                     </a>
                     {verse.note && <span class="home-vod-note"> · {verse.note}</span>}
@@ -180,7 +180,7 @@ r.get('/', async (c) => {
               </div>
               <div class="home-plans-empty">
                 <p>{t('home.noPlanYet')}</p>
-                <a href="/leseplan" class="home-plans-btn">{t('home.choosePlan')}</a>
+                <a href={lhref('/leseplan')} class="home-plans-btn">{t('home.choosePlan')}</a>
               </div>
             </div>
           </div>
@@ -192,7 +192,7 @@ r.get('/', async (c) => {
               <div class="home-todays-day">
                 <div class="home-todays-day-head">
                   <h3>
-                    <a href={`/dager/${day.id}`}>{day.name}</a>
+                    <a href={lhref(`/dager/${day.id}`)}>{day.name}</a>
                   </h3>
                   <span class="home-todays-day-cat">{DAY_CATEGORY_LABELS[day.category] || day.category}</span>
                 </div>
@@ -203,16 +203,16 @@ r.get('/', async (c) => {
                     {(day.references ?? [])
                       .filter((ref) => ref.relevance === 'primary')
                       .map((ref) => (
-                        <a href={dayRefUrl(ref)} class="home-todays-day-ref">{dayRefLabel(ref)}</a>
+                        <a href={lhref(dayRefUrl(ref))} class="home-todays-day-ref">{dayRefLabel(ref)}</a>
                       ))}
                     {(day.references ?? [])
                       .filter((ref) => ref.relevance === 'secondary')
                       .map((ref) => (
-                        <a href={dayRefUrl(ref)} class="home-todays-day-ref is-secondary">{dayRefLabel(ref)}</a>
+                        <a href={lhref(dayRefUrl(ref))} class="home-todays-day-ref is-secondary">{dayRefLabel(ref)}</a>
                       ))}
                   </div>
                 )}
-                <a href={`/dager/${day.id}`} class="home-todays-day-more">Les mer om {day.name} →</a>
+                <a href={lhref(`/dager/${day.id}`)} class="home-todays-day-more">Les mer om {day.name} →</a>
               </div>
             ))}
           </div>
@@ -226,7 +226,7 @@ r.get('/', async (c) => {
                   DnK lesetekster{t.series ? ` · Rekke ${t.series}` : ''}
                 </div>
                 <h3>
-                  <a href={`/lesetekster/${t.id}`}>{t.name}</a>
+                  <a href={lhref(`/lesetekster/${t.id}`)}>{t.name}</a>
                 </h3>
               </div>
             ))}
@@ -242,7 +242,7 @@ r.get('/', async (c) => {
               <div class="home-book-group-label">{group.label}</div>
               <div class="home-book-grid">
                 {group.books.map((book) => (
-                  <a href={`/${toUrlSlug(book.short_name)}/1`} class="home-book">
+                  <a href={lhref(`/${toUrlSlug(book.short_name)}/1`)} class="home-book">
                     <span class="home-book-name">{book.name_no}</span>
                     <span class="home-book-meta">{book.chapters} kap.</span>
                   </a>
@@ -259,7 +259,7 @@ r.get('/', async (c) => {
           </div>
           <div class="home-discover-grid">
             {discover(t).map((item) => (
-              <a href={item.to} class="home-disc">
+              <a href={lhref(item.to)} class="home-disc">
                 <h4>{item.title}</h4>
                 <p>{item.desc}</p>
               </a>
@@ -296,7 +296,7 @@ function trunc(text: string | null | undefined, max = 100): string | undefined {
 function ExtraSection({ title, typeKey, cards, moreLabel }: { title: string; typeKey: string; cards: ExtraCard[]; moreLabel: string }) {
   if (cards.length === 0) return null;
   const Card = ({ card }: { card: ExtraCard }) => (
-    <a href={card.href} class="search-extra-card">
+    <a href={lhref(card.href)} class="search-extra-card">
       <span class="search-extra-card-title">
         {card.title}
         {card.badge && <span class="search-type-badge">{card.badge}</span>}
@@ -421,7 +421,7 @@ r.get('/sok', async (c) => {
           </form>
           <p class="search-hint">
             Søker du etter et bestemt vers? Skriv f.eks. «Joh 3,16» i hurtigsøket (⌘K). For
-            grunntekst, se <a href="/sok/original">søk i originalspråk</a>.
+            grunntekst, se <a href={lhref('/sok/original')}>søk i originalspråk</a>.
           </p>
 
           {extra.length > 0 && (
@@ -439,7 +439,7 @@ r.get('/sok', async (c) => {
               </p>
               <div class="search-results">
                 {res.results.map((v) => (
-                  <a href={`/${toUrlSlug(v.book_short_name)}/${v.chapter}#v${v.verse}`} class="search-result">
+                  <a href={lhref(`/${toUrlSlug(v.book_short_name)}/${v.chapter}#v${v.verse}`)} class="search-result">
                     <span class="search-result-ref">
                       {v.book_name_no} {v.chapter}:{v.verse}
                     </span>
@@ -449,12 +449,12 @@ r.get('/sok', async (c) => {
               </div>
               <div class="search-pager">
                 {side > 1 && (
-                  <a href={`/sok?q=${encodeURIComponent(query)}&side=${side - 1}`} class="search-page-link">
+                  <a href={lhref(`/sok?q=${encodeURIComponent(query)}&side=${side - 1}`)} class="search-page-link">
                     ← Forrige
                   </a>
                 )}
                 {res.hasMore && (
-                  <a href={`/sok?q=${encodeURIComponent(query)}&side=${side + 1}`} class="search-page-link">
+                  <a href={lhref(`/sok?q=${encodeURIComponent(query)}&side=${side + 1}`)} class="search-page-link">
                     Vis flere →
                   </a>
                 )}
@@ -516,7 +516,7 @@ r.get('/sok/original', async (c) => {
               </p>
               <div class="search-results">
                 {res.results.map((v) => (
-                  <a href={`/${toUrlSlug(v.book_short_name)}/${v.chapter}#v${v.verse}`} class="search-result">
+                  <a href={lhref(`/${toUrlSlug(v.book_short_name)}/${v.chapter}#v${v.verse}`)} class="search-result">
                     <span class="search-result-ref">
                       {v.book_name_no} {v.chapter}:{v.verse}
                     </span>
@@ -533,12 +533,12 @@ r.get('/sok/original', async (c) => {
               </div>
               <div class="search-pager">
                 {side > 1 && (
-                  <a href={`/sok/original?q=${encodeURIComponent(query)}&side=${side - 1}`} class="search-page-link">
+                  <a href={lhref(`/sok/original?q=${encodeURIComponent(query)}&side=${side - 1}`)} class="search-page-link">
                     ← Forrige
                   </a>
                 )}
                 {res.hasMore && (
-                  <a href={`/sok/original?q=${encodeURIComponent(query)}&side=${side + 1}`} class="search-page-link">
+                  <a href={lhref(`/sok/original?q=${encodeURIComponent(query)}&side=${side + 1}`)} class="search-page-link">
                     Vis flere →
                   </a>
                 )}

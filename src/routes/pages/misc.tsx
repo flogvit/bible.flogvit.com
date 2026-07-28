@@ -10,7 +10,7 @@ import { Hono } from 'hono';
 import type { AppEnv } from '../../lib/session.ts';
 import { Layout } from '../../views/layout.tsx';
 import { Breadcrumbs } from '../../views/breadcrumbs.tsx';
-import { layoutProps, makeT, tFor, type Locale } from '../../lib/i18n.ts';
+import { layoutProps, makeT, tFor, type Locale, lhref } from '../../lib/i18n.ts';
 
 const r = new Hono<AppEnv>();
 
@@ -184,12 +184,12 @@ r.get('/om', (c) => {
 
             <h3>{t('nav.verseLists')}</h3>
             <p>
-              {t('about.under')} <a href="/lister">{t('nav.verseLists')}</a> {t('about.verseListsBody')}
+              {t('about.under')} <a href={lhref('/lister')}>{t('nav.verseLists')}</a> {t('about.verseListsBody')}
             </p>
 
             <h3>{t('nav.manuscripts')}</h3>
             <p>
-              {t('about.under')} <a href="/manuskripter">{t('nav.manuscripts')}</a>{' '}
+              {t('about.under')} <a href={lhref('/manuskripter')}>{t('nav.manuscripts')}</a>{' '}
               {t('about.manuscriptsBody1')} <code>[ref:Joh 3,16]</code> {t('about.manuscriptsBody2')}
             </p>
             <ul>
@@ -212,7 +212,7 @@ r.get('/om', (c) => {
 
             <h3>{t('about.downloadAll')}</h3>
             <p>
-              {t('about.downloadAllBody')} <a href="/offline">{t('about.offlinePage')}</a>{' '}
+              {t('about.downloadAllBody')} <a href={lhref('/offline')}>{t('about.offlinePage')}</a>{' '}
               {t('about.downloadAllBody2')}
             </p>
             <ul>
@@ -415,7 +415,7 @@ export function NotFoundPage({ locale, path }: { locale: Locale; path: string })
       <div class="reading-container" style="text-align: center; padding: 4rem 1rem;">
         <h1>404 – {t('error.notFound')}</h1>
         <p>{t('error.notFoundBody')}</p>
-        <a href="/">{t('error.goHome')}</a>
+        <a href={lhref('/')}>{t('error.goHome')}</a>
       </div>
     </Layout>
   );

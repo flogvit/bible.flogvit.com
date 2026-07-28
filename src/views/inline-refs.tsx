@@ -18,6 +18,7 @@
 
 import { parseStandardRef, refSegmentToUrl, findBookClient } from '../lib/standard-ref-parser.ts';
 import { getBookInfoBySlug } from '../lib/books-data.ts';
+import { lhref } from '../lib/i18n.ts';
 
 // Samme mønster som i React-utgaven (re-eksportert for gjenbruk i andre views)
 export const REF_PATTERN = /\[(vers|ref|manuskript|andakt|tema|person|profeti|parallell|historie):([^\]]+)\]/g;
@@ -185,7 +186,7 @@ function LinkedText({ text }: { text: string }) {
   for (const r of refs) {
     if (r.start > last) parts.push(<>{text.substring(last, r.start)}</>);
     parts.push(
-      <a href={r.url} class="inline-ref" data-ref={r.ref} title={`Vis ${r.text}`}>
+      <a href={lhref(r.url)} class="inline-ref" data-ref={r.ref} title={`Vis ${r.text}`}>
         {r.text}
       </a>,
     );
@@ -204,7 +205,7 @@ function VerseRefLink({ refStr, isLegacy, customLabel }: { refStr: string; isLeg
     if (!parsed) return <>{displayLabel}</>;
     return (
       <a
-        href={`/${parsed.slug}/${parsed.chapter}#v${parsed.verse}`}
+        href={lhref(`/${parsed.slug}/${parsed.chapter}#v${parsed.verse}`)}
         class="inline-ref"
         data-ref={`${parsed.shortName} ${parsed.chapter},${parsed.verse}`}
         title={`Vis ${displayLabel}`}
@@ -220,7 +221,7 @@ function VerseRefLink({ refStr, isLegacy, customLabel }: { refStr: string; isLeg
   const first = segments[0];
   const url = first ? refSegmentToUrl(first) : '#';
   return (
-    <a href={url} class="inline-ref" data-ref={ref} data-bible={bibleOverride} title={`Vis ${displayLabel}`}>
+    <a href={lhref(url)} class="inline-ref" data-ref={ref} data-bible={bibleOverride} title={`Vis ${displayLabel}`}>
       {displayLabel}
     </a>
   );
@@ -249,7 +250,7 @@ export function InlineRefs({ text }: InlineRefsProps) {
         if (seg.type === 'manuskript') {
           const { val, label } = splitLabel(seg.value);
           return (
-            <a href={`/manuskripter/${val}`} class="inline-ref-manus" title={label || val}>
+            <a href={lhref(`/manuskripter/${val}`)} class="inline-ref-manus" title={label || val}>
               {label || val}
             </a>
           );
@@ -264,7 +265,7 @@ export function InlineRefs({ text }: InlineRefsProps) {
           const { val, label } = splitLabel(seg.value);
           const displayLabel = label || val;
           return (
-            <a href={getResourceUrl(seg.type, val)} class="inline-ref-resource" title={`Vis ${displayLabel}`}>
+            <a href={lhref(getResourceUrl(seg.type, val))} class="inline-ref-resource" title={`Vis ${displayLabel}`}>
               {displayLabel}
             </a>
           );

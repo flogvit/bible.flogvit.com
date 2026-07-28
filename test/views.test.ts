@@ -88,8 +88,8 @@ describe('InlineRefs', () => {
     const res = await app.request('/inline-refs');
     expect(res.status).toBe(200);
     const html = await res.text();
-    expect(html).toContain('href="/joh/3#v16"');
-    expect(html).toContain('href="/1mos/1#v1"');
+    expect(html).toContain('href="/en/joh/3#v16"');
+    expect(html).toContain('href="/en/1mos/1#v1"');
     expect(html).toContain('data-ref="Joh 3,16"');
     expect(html).toContain('data-ref="1Mos 1,1-3"');
     expect(html.match(/class="inline-ref"/g)?.length).toBe(2);
@@ -102,10 +102,10 @@ describe('InlineRefs', () => {
 
   test('klammer-referanser med etikett og ressurslenker', async () => {
     const html = await (await app.request('/inline-refs-bracket')).text();
-    expect(html).toContain('href="/joh/3#v16"');
+    expect(html).toContain('href="/en/joh/3#v16"');
     expect(html).toContain('>Johannes</a>');
     expect(html).toContain('data-ref="Joh 3,16"');
-    expect(html).toContain('href="/personer/moses"');
+    expect(html).toContain('href="/en/personer/moses"');
     expect(html).toContain('class="inline-ref-resource"');
     expect(html).toContain('>Moses</a>');
   });
@@ -126,7 +126,7 @@ describe('verse-display (DB)', () => {
     expect(html).toContain('Verdens mest kjente vers.');
     expect(html).toContain('Joh 3:16');
     expect(html).toContain('Vis i kontekst →');
-    expect(html).toContain('href="/joh/3#v16"');
+    expect(html).toContain('href="/en/joh/3#v16"');
     // Selve versteksten fra databasen (Joh 3,16 inneholder alltid «elsket»)
     expect(html).toContain('class="verse-text"');
     expect(html.toLowerCase()).toContain('elsket');
@@ -139,7 +139,7 @@ describe('verse-display (DB)', () => {
     expect(html.match(/class="verse-group"/g)?.length).toBe(2);
     expect(html).toContain('1Mos 1:1');
     expect(html).toContain('1Mos 1:2');
-    expect(html).toContain('href="/1mos/1#v1"');
+    expect(html).toContain('href="/en/1mos/1#v1"');
     // Hebraisk grunntekst, rtl
     expect(html).toContain('class="original-verse hebrew"');
     expect(html).toContain('dir="rtl"');
