@@ -127,6 +127,15 @@ import). Nøkkelregler:
   «Litteratur» i versdetaljen (presise treff) og studium-blokka
   (kapittel-/bok-nivå).
 
+## Lastvern (anonyme sidevisninger)
+
+`src/lib/page-cache.ts` er både mikrocache OG lastavvisning (#4, #14): anonyme
+GET-HTML-sider caches 5 min, og render over semafor-taket får utløpt
+cache-innhold (stale) eller 503 + `Retry-After: 30` etter kort kø. Innloggede
+går alltid utenom. Env: `RENDER_MAX_CONCURRENT` (24), `RENDER_QUEUE_WAIT_MS`
+(3000), `DB_POOL_MAX` (5 lokalt; **20 i prod** `server/bibel.env`). Målt i prod
+2026-07-28 (DEV1-S): ~5 kalde render/s ved metning, cache-hits ≥147 sider/s.
+
 ## Regler
 - Minimal deps: innebygd/web-standard fremfor npm-pakker. Aldri React/Express/ORM-er.
 - Bibeldata er derivert og regenererbar — aldri inn i Docker-imaget; import kjøres separat mot DB-en.
