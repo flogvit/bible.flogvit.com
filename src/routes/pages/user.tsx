@@ -404,6 +404,18 @@ r.get('/innstillinger', (c) => {
           </label>
         </fieldset>
         <fieldset class="settings-group">
+          <legend>{t('u.readTracking')}</legend>
+          <label class="settings-row">
+            <span>{t('u.readTrackingMode')}</span>
+            <select data-setting="readTracking" class="user-input">
+              <option value="suggest">{t('u.readTrackingSuggest')}</option>
+              <option value="auto">{t('u.readTrackingAuto')}</option>
+              <option value="manual">{t('u.readTrackingManual')}</option>
+            </select>
+          </label>
+          <p class="settings-hint">{t('u.readTrackingHint')}</p>
+        </fieldset>
+        <fieldset class="settings-group">
           <legend>{t('u.translationAndNumbering')}</legend>
           <label class="settings-row">
             <span>{t('u.bibleEdition')}</span>

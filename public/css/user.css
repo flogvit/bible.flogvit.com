@@ -82,6 +82,7 @@ a.user-card:hover { border-color: var(--gold); }
 .settings-form { display: flex; flex-direction: column; gap: 24px; max-width: 560px; }
 .settings-group { border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 18px; }
 .settings-group legend { padding: 0 8px; font-weight: 600; color: var(--ink); }
+.settings-hint { margin: 8px 0 0; font-size: 0.85rem; color: var(--muted); }
 .settings-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 8px 0; }
 .settings-toggle { display: flex; align-items: center; gap: 10px; padding: 6px 0; cursor: pointer; }
 
