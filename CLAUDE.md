@@ -136,6 +136,35 @@ går alltid utenom. Env: `RENDER_MAX_CONCURRENT` (24), `RENDER_QUEUE_WAIT_MS`
 (3000), `DB_POOL_MAX` (5 lokalt; **20 i prod** `server/bibel.env`). Målt i prod
 2026-07-28 (DEV1-S): ~5 kalde render/s ved metning, cache-hits ≥147 sider/s.
 
+## Lesesporing (GitHub #16)
+
+`/lesekart` viser hvor i Bibelen brukeren faktisk leser. **Lesing er en HENDELSE,
+ikke en tilstand** — `{ firstAt, lastAt, count, opens, verses? }` per kapittel, så
+gjenlesing gir framdrift i stedet for «allerede lest», og varmekartet kan vise
+intensitet. `firstAt`/`lastAt = null` betyr «lest, tidspunkt ukjent» (bulk-markert
+historikk) og holdes utenfor tidslinje/ferskhet framfor å gjettes inn.
+
+- **Kjernelogikken bor i `public/js/reading-progress.js`** — en ren ES-modul som
+  IMPORTERES BÅDE av klienten (`reading.js`, `user.js`, `sync.js`) og av serveren
+  (`routes/sync.ts`, `lib/reading-map.ts`). Terskler og flettregler finnes ett sted;
+  ikke dupliser dem.
+- **`sync.ts` har `MERGERS`** — datatyper som må flettes framfor å overskrives.
+  `readingProgress` bruker en kommutativ merge (maks på tellere, ytterpunkter på
+  tidspunkt, union på delvis leste vers), fordi nyeste-vinner ville latt én enhet
+  slette en annens framdrift. Klienten fletter med SAMME funksjon (`spec.merge` i
+  `sync.js` MAP).
+- **Måling: tid per VERS, ikke per side.** Total tid + total dekning som
+  uavhengige betingelser kan oppfylles hver for seg (parker fanen, scroll til
+  bunns). Per-vers-attribusjon + Page Visibility + tak per vers fjerner begge
+  hullene. Gulvet er kalibrert mot en rask leser (~550 wpm): falske negativer
+  er dyrere enn falske positive, fordi kartet er brukerens eget.
+- **`readTracking`-innstillingen** (`suggest` standard / `auto` / `manual`):
+  `manual` måler INGENTING — verken lesing eller åpning. Det er en
+  personvern-kontroll, ikke bare en preferanse.
+- **Alt er pull.** Statistikken bor på en side brukeren oppsøker. Ingen varsler,
+  ingen påminnelser. Gamification (streaks/merker/nivåer) er et bevisst
+  NON-GOAL — vil man presses, velger man en leseplan.
+
 ## Regler
 - Minimal deps: innebygd/web-standard fremfor npm-pakker. Aldri React/Express/ORM-er.
 - Bibeldata er derivert og regenererbar — aldri inn i Docker-imaget; import kjøres separat mot DB-en.
