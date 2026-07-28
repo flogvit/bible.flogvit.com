@@ -1,14 +1,14 @@
 # Bibel — Bun + Hono (main)
 
 Full omskriving av bibel-appen: Bun + Hono + hono/jsx SSR + vanilla JS-øyer, Bun.sql
-(mysql-adapter) mot MySQL. Kjører på **bible.flogvit.com** (bibel.flogvit.com 301-er dit) (deploy: `deploy/deploy-bibel.sh`).
-Den gamle appen (Vite+React+Express+SQLite) ligger fryst på branchen **`bibel-no`** og
-serverer bibel.flogvit.no inntil videre — deploy til .no må skje fra en checkout av den
-branchen (`../server/deploy-bibel.sh`).
+(mysql-adapter) mot MySQL. FLOGVITs egen instans kjører på **bible.flogvit.com**.
+
+> Dette repoet inneholder APPEN, ikke hvordan FLOGVIT deployer den. Miljøspesifikke
+> skript (VM, registry, env-filer) bor i driftsrepoet vårt og er bevisst holdt utenfor.
 
 ## Oppsett
 - `bun install` — eneste runtime-dependency er `hono` + lokal `@free-bible/kvn`.
-- `kvn-package/` er gitignort og stages fra `../free-bible/kvn/` av `deploy/deploy-bibel.sh`.
+- `kvn-package/` er gitignort og stages fra `../free-bible/kvn/` før bygg.
 - `.env` (gitignort): `DB_PORT=3312` for lokal DBngin-MySQL (root, tomt passord, db `flogvit_bibel`).
 - Prod-DB: managed MySQL (db-flogvit) via `DB_HOST`/`DB_PORT`/`DB_USER`/`DB_PASSWORD`/`DB_NAME`.
 
@@ -34,20 +34,21 @@ bibel-dev peker allerede på http://localhost:3020 (session.ts). Registrer en br
 fv-session-cookien deles på localhost på tvers av porter, så bibel ser innloggingen og
 sync mot lokal MySQL virker.
 
-## Innholdsoppdatering til prod
-**Bruk `deploy/deploy-bibel-data.sh`** — data-motstykket til `deploy-bibel.sh`. Det
-gjør hele flyten i én kommando: import lokalt → atomisk per-tabell replace til prod
-(`START TRANSACTION; DELETE; INSERT…; COMMIT`, ingen nedetid, håndterer sletninger) →
-restart `bibel-hono`.
+## Innholdsoppdatering
+
+Bibeldata er DERIVERT og regenererbart — det ligger aldri i imaget, og importeres
+separat mot databasen:
+
 ```bash
-deploy/deploy-bibel-data.sh                          # full innholds-paritet (alle tabeller)
-deploy/deploy-bibel-data.sh references_ persons stories content_hashes db_meta  # kun endrede
+bun scripts/init-db.ts        # opprett/løft skjema
+bun scripts/import-bible.ts   # importer innhold fra free-bible (inkrementell, --full for alt)
 ```
-Under panseret: prod-DB nås via engangs `mysql:8`-klientcontainer på docker-nettet
-`server_default` med env fra `/srv/flogvit.com/server/bibel.env`. Kun import-eide
-innholdstabeller røres — aldri brukertabeller. Ta gjerne `mysqldump --skip-lock-tables`
-av tabellene fra prod først (prod-brukeren mangler `RELOAD`, så `--single-transaction`
-feiler der).
+
+Kun import-eide innholdstabeller røres — aldri brukertabeller. Kilden resolveres via
+`FREE_BIBLE_DIR` (default: søsterkatalogen `free-bible`).
+
+> Hvordan FLOGVIT ruller dette ut til sin egen prod er miljøspesifikt og bor i
+> driftsrepoet, ikke her.
 
 ## Språkdimensjon (innhold)
 
@@ -79,8 +80,7 @@ unik-nøkkelen**, så flere språk kan ligge side om side. Kontrakten bor i
 - **Migrering:** `ensureSchema()` kjører `runMigrations()` etter CREATE-ene, som
   legger til kolonnen og bytter nøklene idempotent. `CREATE TABLE IF NOT EXISTS`
   treffer bare nye baser, så skjemaendringer på eksisterende tabeller MÅ uttrykkes
-  der. Kjør `bun scripts/init-db.ts` (eller `deploy-bibel-data.sh`) for å løfte en
-  base.
+  der. Kjør `bun scripts/init-db.ts` for å løfte en base.
 
 ### Bibel-ID-er: `osnb`/`osnn` (omdøpt fra `osnb2`/`osnn1` 2026-07-26)
 
@@ -96,16 +96,15 @@ koden — den ligger i `verses.bible`, `word4word.bible`, `bible_editions.id`,
   eldre klienters localStorage. Alt som kommer utenfra går derfor gjennom
   `normalizeBibleId()` (`bible.ts`); `public/js/sync.js` migrerer den lokale
   cachen tilsvarende. **Ikke fjern aliasene** uten å vite at ingen lenker igjen.
-- **Rekkefølge ved utrulling:** kode FØR data. `deploy-bibel.sh` migrerer
-  skjemaet og renamer verdiene før restart; kjører du `deploy-bibel-data.sh`
-  først, får prod nye ID-er mens gammel kode spør etter de gamle → blank side.
+- **Rekkefølge ved utrulling:** kode FØR data. Skjemamigreringen og
+  ID-renamingen må kjøre før restart; ruller du data først, får basen nye ID-er
+  mens gammel kode spør etter de gamle → blank side.
 
 ### KILDE: pass på riktig free-bible
 Import leser `$FREE_BIBLE_DIR` (default: `flogvit.com/free-bible`, som er en **symlink**
 → det ekte `../free-bible`-repoet). Historisk felle: `flogvit.com/free-bible` var en
 egen, stale klon — standard-importen leste da feil data og rapporterte «0 endringer».
-Symlinken fikser dette; `deploy-bibel-data.sh` setter i tillegg `FREE_BIBLE_DIR`
-eksplisitt til den resolverte stien.
+Symlinken fikser dette; sett `FREE_BIBLE_DIR` eksplisitt om du er i tvil.
 
 ## Contrib (bruker-innsendte artikler/bøker)
 
@@ -133,8 +132,8 @@ import). Nøkkelregler:
 GET-HTML-sider caches 5 min, og render over semafor-taket får utløpt
 cache-innhold (stale) eller 503 + `Retry-After: 30` etter kort kø. Innloggede
 går alltid utenom. Env: `RENDER_MAX_CONCURRENT` (24), `RENDER_QUEUE_WAIT_MS`
-(3000), `DB_POOL_MAX` (5 lokalt; **20 i prod** `server/bibel.env`). Målt i prod
-2026-07-28 (DEV1-S): ~5 kalde render/s ved metning, cache-hits ≥147 sider/s.
+(3000) og `DB_POOL_MAX` (default 5 — sett den etter hva databasen din tåler; en for
+liten pool var nettopp det som ga 502 under samtidighet).
 
 ## Lesesporing (GitHub #16)
 
@@ -167,9 +166,8 @@ historikk) og holdes utenfor tidslinje/ferskhet framfor å gjettes inn.
 
 ## Testene — tre nivåer og hva hvert av dem faktisk fanger
 
-`bun test` kjøres AUTOMATISK av `deploy/deploy-bibel.sh` sammen med typecheck, og
-deployen avbrytes hvis noe er rødt (`SKIP_TESTS=1` finnes for nødfikser — bruk den
-bevisst). Det finnes ingen CI, så deploy-skriptet er eneste reelle port.
+Kjør `bun test` og `bun run typecheck` før du ruller ut. FLOGVITs eget deploy-skript
+gjør dette automatisk og avbryter ved rødt.
 
 1. **Ren logikk** — `reading-progress.test.ts`, `lang.test.ts` osv. Rask, ingen DB.
 2. **Sidekontrakt** — `page-contract.test.ts`. En SVEIP: hver invariant sjekkes mot
@@ -214,4 +212,3 @@ ikke på grep.
 - Bibeldata er derivert og regenererbar — aldri inn i Docker-imaget; import kjøres separat mot DB-en.
 - **Issues spores KUN på GitHub** (`flogvit/bible.flogvit.com`; main er .com-appen). Som i resten av flogvit.com-produktene. Omskrivingens
   historikk (#1–#18) lå i ISSUES.md — slettet 2026-07-22, se git-historikken ved behov.
-- .no (branch `bibel-no`) skal IKKE røres — parallell drift til cutover-beslutning.
