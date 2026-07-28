@@ -165,6 +165,23 @@ historikk) og holdes utenfor tidslinje/ferskhet framfor å gjettes inn.
   ingen påminnelser. Gamification (streaks/merker/nivåer) er et bevisst
   NON-GOAL — vil man presses, velger man en leseplan.
 
+## Lenker og lokale vakter
+
+**Alle interne lenker skal bruke `lhref(path)`** (`lib/i18n.ts`), aldri `href="/…"` rått.
+Uprefiksede lenker 302-redirecter til den FORHANDLEDE locale-en, ikke den leseren er på
+— en norsk nettleser på den engelske utgaven ble kastet til /nb/ ved første klikk (#18).
+`lhref` henter locale fra `contextStorage()` (montert i `app.ts`), så ingen komponent
+trenger å ta imot `locale` som prop. Unntak som SKAL være uprefikset: `/js/`, `/css/`,
+`/api/`, statiske filer.
+
+`test/link-prefix.test.ts` er vakten: den rendrer 16 sider og feiler på enhver intern
+lenke uten prefiks, og sveiper alle 8 ordbøker for manglende nøkler (`makeT` returnerer
+NØKKELEN ved miss, så en glemt oversettelse vises som «rd.markRead» uten å feile).
+
+**Lærdom fra #18:** lenker som bygges i en variabel før bruk (`const url = …; <a
+href={url}>`) er usynlige for tekstsøk etter `href="/`. Stol på den rendrede HTML-en,
+ikke på grep.
+
 ## Regler
 - Minimal deps: innebygd/web-standard fremfor npm-pakker. Aldri React/Express/ORM-er.
 - Bibeldata er derivert og regenererbar — aldri inn i Docker-imaget; import kjøres separat mot DB-en.
