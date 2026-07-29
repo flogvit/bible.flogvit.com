@@ -1,6 +1,10 @@
 // Global PWA-øy (#14): registrerer service worker, viser oppdaterings-banner
 // når en ny versjon er installert, og en offline/online-indikator.
 
+import { readStrings } from './locale.js';
+
+const t = readStrings(document.body);
+
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('/sw.js', { scope: '/' }).then((reg) => {
     reg.addEventListener('updatefound', () => {
@@ -26,18 +30,18 @@ function showUpdateBanner(reg) {
   bar.className = 'pwa-update';
   bar.setAttribute('role', 'status');
   const text = document.createElement('span');
-  text.textContent = 'En ny versjon av bibelen er tilgjengelig.';
+  text.textContent = t('pwa.newVersion');
   const update = document.createElement('button');
   update.type = 'button';
   update.className = 'pwa-update-btn';
-  update.textContent = 'Oppdater nå';
+  update.textContent = t('pwa.updateNow');
   update.addEventListener('click', () => {
     reg.waiting?.postMessage({ type: 'SKIP_WAITING' });
   });
   const later = document.createElement('button');
   later.type = 'button';
   later.className = 'pwa-update-later';
-  later.textContent = 'Senere';
+  later.textContent = t('pwa.later');
   later.addEventListener('click', () => bar.remove());
   bar.append(text, update, later);
   document.body.append(bar);
@@ -53,11 +57,11 @@ let onlineTimer = null;
 function setNet(online, first) {
   clearTimeout(onlineTimer);
   if (!online) {
-    badge.textContent = 'Offline';
+    badge.textContent = t('pwa.offline');
     badge.dataset.state = 'offline';
     badge.hidden = false;
   } else if (!first) {
-    badge.textContent = 'Online igjen';
+    badge.textContent = t('pwa.backOnline');
     badge.dataset.state = 'online';
     badge.hidden = false;
     onlineTimer = setTimeout(() => (badge.hidden = true), 2000);

@@ -17,8 +17,26 @@ import { ACCOUNT_URL } from '../lib/session.ts';
 import { DEFAULT_LOCALE, LOCALES, href, makeT, ogLocale, type Locale, type Translator, lhref } from '../lib/i18n.ts';
 import { tCtx, islandStrings } from '../lib/i18n.ts';
 
-/** Strenger klient-øyene som lastes på hver side trenger (plus.js sin CTA). */
-const CHROME_ISLAND_KEYS = ['plus.requires', 'plus.readAbout', 'chrome.login', 'common.close'] as const;
+/**
+ * Strenger klient-øyene som lastes på HVER side trenger: plus-CTA-en (plus.js),
+ * kommandopaletten (cmdk.js), oppdaterings-banneret (pwa.js) og
+ * versforhåndsvisningen (ref-preview.js). Alle fire bygger DOM selv og sto
+ * dermed utenfor ordboka — de var norske på alle åtte språk (#33).
+ */
+const CHROME_ISLAND_KEYS = [
+  'plus.requires', 'plus.readAbout', 'chrome.login', 'common.close', 'chrome.settings',
+  'cmdk.aria', 'cmdk.placeholder', 'cmdk.select', 'cmdk.open', 'cmdk.close', 'cmdk.empty',
+  'cmdk.newManuscript', 'cmdk.searchInText', 'cmdk.searchOriginalFor', 'cmdk.fulltext',
+  'cmdk.hebrewGreek', 'cmdk.goToVerse', 'cmdk.downloadBible', 'cmdk.accountSync',
+  'cmdk.searchGroup', 'nav.searchOriginal',
+  'nav.mine', 'nav.studies', 'nav.overview', 'nav.favorites', 'nav.topicsMine', 'nav.notes',
+  'nav.verseLists', 'nav.readingPlan', 'nav.manuscripts', 'nav.knownVerses', 'nav.themes',
+  'nav.stories', 'nav.prophecies', 'nav.parallels', 'nav.persons', 'nav.numbers',
+  'nav.timeline', 'nav.readingTexts', 'nav.statistics', 'nav.translations',
+  'foot.home', 'foot.about', 'foot.a11y', 'foot.offline',
+  'pwa.newVersion', 'pwa.updateNow', 'pwa.later', 'pwa.offline', 'pwa.backOnline',
+  'ref.notFound',
+] as const;
 
 const SITE = 'https://bible.flogvit.com';
 
