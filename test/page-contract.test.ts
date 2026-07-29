@@ -217,14 +217,20 @@ describe('sidekontrakt', () => {
   // Ordlista er bevisst KORT og inneholder bare funksjonsord som ikke også er
   // engelske. «her», «men», «last» og «bare» er utelatt nettopp fordi de
   // finnes i begge språk: en vakt med falske positive blir slått av.
+  //
+  // Den må derimot dekke KORTE etiketter eksplisitt. Første utgave hadde bare
+  // «oversettelse», og slapp da gjennom «Oversettelser» i en <title>, «skrift
+  // Latn», «GT:» og et enslig «Nei» — fire ord som ikke lignet nok på noe i
+  // lista. Legger du til en etikett, legg ordet her også.
   const NORWEGIAN_ONLY = [
     'ikke', 'som', 'dette', 'denne', 'disse', 'ingen', 'alle', 'andre',
     'hvor', 'hva', 'hvis', 'når', 'fordi', 'eller', 'også',
     'være', 'har', 'kan', 'vil', 'skal', 'blir', 'ble', 'gjør',
     'med', 'til', 'fra', 'etter', 'før', 'ved', 'uten', 'mellom', 'gjennom',
     'din', 'dine', 'ditt', 'hans', 'hennes', 'deres', 'vår', 'våre',
-    'vers', 'kapittel', 'bibelen', 'oversettelse', 'grunntekst', 'søk', 'lukk',
-    'velg', 'skriv', 'legg', 'hopp', 'innhold', 'kategorier', 'kontekst',
+    'vers', 'kapittel', 'bibelen', 'oversettelse', 'oversettelser', 'oversetter',
+    'oversettere', 'grunntekst', 'søk', 'lukk', 'velg', 'skriv', 'legg', 'hopp',
+    'innhold', 'kategorier', 'kontekst', 'skrift', 'nei', 'gt',
   ];
   const NORWEGIAN_RE = new RegExp(
     `(?:^|[^\\p{L}])(${NORWEGIAN_ONLY.join('|')})(?![\\p{L}])`,

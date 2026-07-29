@@ -658,9 +658,9 @@ r.get('/oversettelser', async (c) => {
 
   return c.html(
     <UserPage {...layoutProps(c)}
-      title="Oversettelser"
-      crumb="Oversettelser"
-      heading="Oversettelser"
+      title={t('nav.translations')}
+      crumb={t('nav.translations')}
+      heading={t('nav.translations')}
       page="translations"
       intro={t('tr.intro')}
       styles={['translations.css']}

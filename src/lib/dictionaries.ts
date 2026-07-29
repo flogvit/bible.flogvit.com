@@ -740,6 +740,13 @@ const en = {
   // Velger-etiketter (#23)
   "rd.secondaryText": "Secondary text",
   "rd.versification": "Versification",
+
+  // Utgavesiden, siste rest (#22)
+  "ed.ntShort": "NT",
+  "ed.otShort": "OT",
+  "ed.script": "script {script}",
+  "ed.translator": "Translator",
+  "ed.translators": "Translators",
 };
 
 type Dict = Record<keyof typeof en, string>;
@@ -1478,6 +1485,13 @@ const nb: Dict = {
   // Velger-etiketter (#23)
   "rd.secondaryText": "Undertekst",
   "rd.versification": "Versnummerering",
+
+  // Utgavesiden, siste rest (#22)
+  "ed.ntShort": "NT",
+  "ed.otShort": "GT",
+  "ed.script": "skrift {script}",
+  "ed.translator": "Oversetter",
+  "ed.translators": "Oversettere",
 };
 
 const nn: Dict = {
@@ -2214,6 +2228,13 @@ const nn: Dict = {
   // Velger-etiketter (#23)
   "rd.secondaryText": "Undertekst",
   "rd.versification": "Versnummerering",
+
+  // Utgavesiden, siste rest (#22)
+  "ed.ntShort": "NT",
+  "ed.otShort": "GT",
+  "ed.script": "skrift {script}",
+  "ed.translator": "Omsetjar",
+  "ed.translators": "Omsetjarar",
 };
 
 const sv: Dict = {
@@ -2950,6 +2971,13 @@ const sv: Dict = {
   // Velger-etiketter (#23)
   "rd.secondaryText": "Undertext",
   "rd.versification": "Versnumrering",
+
+  // Utgavesiden, siste rest (#22)
+  "ed.ntShort": "NT",
+  "ed.otShort": "GT",
+  "ed.script": "skrift {script}",
+  "ed.translator": "Översättare",
+  "ed.translators": "Översättare",
 };
 
 const fr: Dict = {
@@ -3686,6 +3714,13 @@ const fr: Dict = {
   // Velger-etiketter (#23)
   "rd.secondaryText": "Texte secondaire",
   "rd.versification": "Numérotation des versets",
+
+  // Utgavesiden, siste rest (#22)
+  "ed.ntShort": "NT",
+  "ed.otShort": "AT",
+  "ed.script": "écriture {script}",
+  "ed.translator": "Traducteur",
+  "ed.translators": "Traducteurs",
 };
 
 const es: Dict = {
@@ -4422,6 +4457,13 @@ const es: Dict = {
   // Velger-etiketter (#23)
   "rd.secondaryText": "Texto secundario",
   "rd.versification": "Numeración de versículos",
+
+  // Utgavesiden, siste rest (#22)
+  "ed.ntShort": "NT",
+  "ed.otShort": "AT",
+  "ed.script": "escritura {script}",
+  "ed.translator": "Traductor",
+  "ed.translators": "Traductores",
 };
 
 const fi: Dict = {
@@ -5158,6 +5200,13 @@ const fi: Dict = {
   // Velger-etiketter (#23)
   "rd.secondaryText": "Toissijainen teksti",
   "rd.versification": "Jaenumerointi",
+
+  // Utgavesiden, siste rest (#22)
+  "ed.ntShort": "UT",
+  "ed.otShort": "VT",
+  "ed.script": "kirjoitus {script}",
+  "ed.translator": "Kääntäjä",
+  "ed.translators": "Kääntäjät",
 };
 
 const de: Dict = {
@@ -5894,6 +5943,13 @@ const de: Dict = {
   // Velger-etiketter (#23)
   "rd.secondaryText": "Zweittext",
   "rd.versification": "Verszählung",
+
+  // Utgavesiden, siste rest (#22)
+  "ed.ntShort": "NT",
+  "ed.otShort": "AT",
+  "ed.script": "Schrift {script}",
+  "ed.translator": "Übersetzer",
+  "ed.translators": "Übersetzer",
 };
 
 export const DICTIONARIES = { en, nb, nn, sv, fr, es, fi, de };

@@ -78,8 +78,8 @@ r.get('/oversettelser/:id', async (c) => {
   const { meta, license } = edition;
   const name = edition.name_native;
   const basis = [
-    ...(meta.textual_basis?.ot ?? []).map((b) => ({ testament: 'GT', module: b })),
-    ...(meta.textual_basis?.nt ?? []).map((b) => ({ testament: 'NT', module: b })),
+    ...(meta.textual_basis?.ot ?? []).map((b) => ({ testament: 'ed.otShort' as const, module: b })),
+    ...(meta.textual_basis?.nt ?? []).map((b) => ({ testament: 'ed.ntShort' as const, module: b })),
   ];
 
   // Krediteringskravet forplanter seg til oversettelser som bygger på kilden, så
@@ -93,7 +93,7 @@ r.get('/oversettelser/:id', async (c) => {
 
   return c.html(
     <Layout {...layoutProps(c)}
-      title={`${name} — Oversettelser — FLOGVIT.bible`}
+      title={`${name} — ${t('nav.translations')} — FLOGVIT.bible`}
       description={`Om ${name}${edition.abbreviation ? ` (${edition.abbreviation})` : ''}: tekstgrunnlag, oversettelsesmetode, dekning og lisens.`}
       styles={['overview.css']}
       canonical={`https://bible.flogvit.com${lhref(`/oversettelser/${edition.id}`)}`}
@@ -120,7 +120,7 @@ r.get('/oversettelser/:id', async (c) => {
               {edition.abbreviation ? <EditionRow term={t('ed.abbreviation')}>{edition.abbreviation}</EditionRow> : null}
               <EditionRow term={t('ed.language')}>
                 {[edition.lang_iso639_1, edition.lang_iso639_3].filter(Boolean).join(' / ')}
-                {edition.script ? ` — skrift ${edition.script}` : ''}
+                {edition.script ? ` — ${t('ed.script', { script: edition.script })}` : ''}
                 {edition.direction === 'rtl' ? ' (høyre-til-venstre)' : ''}
               </EditionRow>
               {label('ed.philosophy.', edition.philosophy)
@@ -130,7 +130,7 @@ r.get('/oversettelser/:id', async (c) => {
               {edition.body ? <EditionRow term={t('ed.body')}>{edition.body}</EditionRow> : null}
               {meta.publisher ? <EditionRow term={t('ed.imprint')}>{meta.publisher}</EditionRow> : null}
               {meta.translators?.length
-                ? <EditionRow term={meta.translators.length > 1 ? 'Oversettere' : 'Oversetter'}>{meta.translators.join(', ')}</EditionRow> : null}
+                ? <EditionRow term={meta.translators.length > 1 ? t('ed.translators') : t('ed.translator')}>{meta.translators.join(', ')}</EditionRow> : null}
               {edition.year_published
                 ? <EditionRow term={t('ed.published')}>{edition.year_published}{meta.year?.revised ? `, ${t('ed.revised', { year: meta.year.revised })}` : ''}</EditionRow> : null}
               {meta.work?.method?.length
@@ -139,7 +139,7 @@ r.get('/oversettelser/:id', async (c) => {
                 ? <EditionRow term={t('ed.translatedFrom')}>{meta.work.source_languages.join(', ')}</EditionRow> : null}
               {basis.length
                 ? <EditionRow term={t('ed.textualBasis')}>
-                    {basis.map((b) => `${b.testament}: ${label('ed.basis.', b.module)}`).join(' · ')}
+                    {basis.map((b) => `${t(b.testament)}: ${label('ed.basis.', b.module)}`).join(' · ')}
                   </EditionRow> : null}
               {meta.derived_from?.module
                 ? <EditionRow term={t('ed.basedOn')}>
@@ -164,7 +164,7 @@ r.get('/oversettelser/:id', async (c) => {
                 {edition.chapters ? <EditionRow term={t('ed.chapters')}>{edition.chapters}</EditionRow> : null}
                 {edition.verses ? <EditionRow term={t('ed.verses')}>{edition.verses}</EditionRow> : null}
                 <EditionRow term={t('ed.deutero')}>
-                  {meta.coverage?.deuterocanonical ? 'Ja' : 'Nei'}
+                  {meta.coverage?.deuterocanonical ? t('common.yes') : t('common.no')}
                 </EditionRow>
                 {meta.features?.strongs ? <EditionRow term={t('ed.strongs')}>{t('common.yes')}</EditionRow> : null}
               </dl>
