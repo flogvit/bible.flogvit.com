@@ -2,6 +2,18 @@
 // hentes lazy fra API-et ved klikk (som gamle appen). Uten JS vises
 // oversettelses-ordene.
 
+import { readStrings } from './locale.js';
+
+const t = readStrings(document.body);
+
+/** Status-rad i ordlista (laster / feilet). Tekst via textContent, aldri innerHTML. */
+function loadingRow(text) {
+  const li = document.createElement('li');
+  li.className = 'stat-word-loading';
+  li.textContent = text;
+  return li;
+}
+
 const tabs = document.querySelectorAll('.stat-word-tab');
 const listEl = document.getElementById('stat-words');
 if (tabs.length && listEl) {
@@ -34,14 +46,16 @@ if (tabs.length && listEl) {
       tab === 'translation'
         ? `/api/statistics/top-words?bible=${encodeURIComponent(bible)}&limit=100`
         : `/api/statistics/top-words/${tab}?limit=100`;
-    listEl.innerHTML = '<li class="stat-word-loading">Laster…</li>';
+    listEl.textContent = '';
+    listEl.appendChild(loadingRow(t('common.loading')));
     try {
       const res = await fetch(url);
       const data = await res.json();
       render(data.words || []);
       cache[tab] = listEl.innerHTML;
     } catch {
-      listEl.innerHTML = '<li class="stat-word-loading">Kunne ikke laste ord.</li>';
+      listEl.textContent = '';
+      listEl.appendChild(loadingRow(t('is.noWords')));
     }
   }
 

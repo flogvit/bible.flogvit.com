@@ -3,6 +3,17 @@
 // Boknavn matches greedy (lengste prefiks) mot mappingens bookNames, deretter
 // «kapittel,vers tekst». Versene beholder opplastingens egen nummerering.
 
+import { readStrings } from './locale.js';
+
+// Denne modulen er ren parsing og importeres også av `bun test`, der det ikke
+// finnes noe DOM. Oversetteren hentes derfor LATT: utenfor nettleseren blir
+// advarslene nøklene sine, som er riktig — de vises aldri der.
+let translate;
+function t(key, params) {
+  translate ??= readStrings(typeof document === 'undefined' ? null : document.body);
+  return translate(key, params);
+}
+
 const MAX_WARNINGS = 50;
 
 /**
@@ -33,13 +44,13 @@ export function parseBibleText(text, bookNames, bibleId) {
       }
     }
     if (bookId == null) {
-      if (warnings.length < MAX_WARNINGS) warnings.push(`Linje ${lineNo}: fant ikke boknavn — «${line.slice(0, 60)}»`);
+      if (warnings.length < MAX_WARNINGS) warnings.push(t('is.parseNoBook', { line: lineNo, text: line.slice(0, 60) }));
       continue;
     }
 
     const m = rest.match(/^(\d+),(\d+)\s+(.+)$/);
     if (!m) {
-      if (warnings.length < MAX_WARNINGS) warnings.push(`Linje ${lineNo}: forventet «kapittel,vers tekst» — «${rest.slice(0, 60)}»`);
+      if (warnings.length < MAX_WARNINGS) warnings.push(t('is.parseBadFormat', { line: lineNo, text: rest.slice(0, 60) }));
       continue;
     }
     const chapter = parseInt(m[1], 10);

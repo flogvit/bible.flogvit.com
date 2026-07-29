@@ -3,7 +3,9 @@
 // kapitler fra IndexedDB; andre stier får en oversikt over nedlastet innhold.
 
 import { getBooks, getChapter, countChapters } from './offline-db.js';
-import { localeHref } from './locale.js';
+import { readStrings, localeHref } from './locale.js';
+
+const t = readStrings(document.body);
 
 const root = document.querySelector('[data-offline-reader]');
 
@@ -51,20 +53,20 @@ async function renderChapter(book, chapter, books) {
   root.textContent = '';
 
   const crumbs = el('p', 'offline-crumbs');
-  const home = el('a', '', 'Forside');
+  const home = el('a', '', t('foot.home'));
   home.href = localeHref('/');
   crumbs.append(home, ` / ${book.name_no} ${chapter} (offline)`);
   root.append(crumbs);
 
   if (!stored) {
     root.append(el('h1', '', `${book.name_no} ${chapter}`));
-    root.append(el('p', 'user-note', 'Dette kapittelet er ikke lastet ned for offline-bruk.'));
+    root.append(el('p', 'user-note', t('is.chapterNotDownloaded')));
     await renderIndex(false);
     return;
   }
 
   const h1 = el('h1', '', '');
-  h1.append(el('span', 'chapter-book', book.name_no), el('span', 'chapter-number', `Kapittel ${chapter}`));
+  h1.append(el('span', 'chapter-book', book.name_no), el('span', 'chapter-number', t('is.chapterN', { n: chapter })));
   h1.className = 'chapter-title';
   root.append(h1);
 
@@ -89,22 +91,22 @@ async function renderChapter(book, chapter, books) {
     nav.append(next);
   }
   root.append(nav);
-  root.append(el('p', 'user-note', 'Du leser offline — studieverktøy og søk krever nett.'));
+  root.append(el('p', 'user-note', t('is.offlineNotice')));
 }
 
 async function renderIndex(withHeading = true) {
   const count = await countChapters();
   if (withHeading) {
     root.textContent = '';
-    root.append(el('h1', '', 'Du er offline'));
+    root.append(el('h1', '', t('is.youAreOffline')));
   }
   if (count === 0) {
     root.append(
-      el('p', 'user-note', 'Ingen bibeltekst er lastet ned. Gå til Offline-siden når du er på nett for å laste ned.'),
+      el('p', 'user-note', t('is.nothingDownloadedYet')),
     );
     return;
   }
-  root.append(el('p', '', `${count} kapitler er tilgjengelige offline. Velg bok:`));
+  root.append(el('p', '', t('is.chaptersAvailableOffline', { n: count })));
   const books = await getBooks();
   const list = el('div', 'offline-book-list');
   for (const book of books) {
@@ -121,5 +123,5 @@ try {
   else await renderIndex();
 } catch {
   root.textContent = '';
-  root.append(el('h1', '', 'Du er offline'), el('p', 'user-note', 'Kunne ikke lese nedlastet innhold.'));
+  root.append(el('h1', '', t('is.youAreOffline')), el('p', 'user-note', t('is.couldNotReadOffline')));
 }

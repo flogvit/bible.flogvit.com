@@ -17,7 +17,9 @@ import {
   getMeta,
   deleteDatabase,
 } from './offline-db.js';
-import { intlLocale, langParam, localeHref } from './locale.js';
+import { readStrings, intlLocale, langParam, localeHref } from './locale.js';
+
+const t = readStrings(document.body);
 
 const $ = (sel) => document.querySelector(sel);
 const statusBox = $('[data-offline-status]');
@@ -53,13 +55,13 @@ async function renderStatus() {
   };
   statusBox.textContent = '';
   const list = el('ul', 'offline-status-list');
-  list.append(el('li', '', `Nedlastede kapitler: ${total} (OSNB: ${nb}, OSNN: ${nn})`));
+  list.append(el('li', '', t('is.downloadedChapters', { total, detail: `OSNB: ${nb}, OSNN: ${nn}` })));
   const supportText = Object.entries(support)
     .map(([name, ok]) => `${name} ${ok ? '✓' : '—'}`)
     .join(' · ');
-  list.append(el('li', '', `Støttedata: ${supportText}`));
-  if (downloadedAt) list.append(el('li', '', `Sist nedlastet: ${new Date(downloadedAt).toLocaleString(intlLocale())}`));
-  if (syncVersion) list.append(el('li', '', `Innholdsversjon: ${syncVersion}`));
+  list.append(el('li', '', t('is.supportData', { detail: supportText })));
+  if (downloadedAt) list.append(el('li', '', t('is.lastDownloaded', { when: new Date(downloadedAt).toLocaleString(intlLocale()) })));
+  if (syncVersion) list.append(el('li', '', t('is.contentVersion', { version: syncVersion })));
   if (navigator.storage?.estimate) {
     const est = await navigator.storage.estimate();
     list.append(el('li', '', `Lagringsplass brukt: ${fmtBytes(est.usage)} av ${fmtBytes(est.quota)}`));
@@ -74,7 +76,7 @@ async function renderContent() {
   contentBox.textContent = '';
   const builtin = keys.filter(([, , bible]) => !String(bible).startsWith('user:'));
   if (builtin.length === 0) {
-    contentBox.append(el('p', 'user-note', 'Ingenting er lastet ned ennå.'));
+    contentBox.append(el('p', 'user-note', t('is.nothingDownloaded')));
     return;
   }
   const perBook = new Map();
@@ -120,7 +122,7 @@ async function downloadSupportData(signal) {
 }
 
 async function startDownload() {
-  if (!window.fvPlus?.gate('Offline-nedlasting')) return;
+  if (!window.fvPlus?.gate(t('is.offlineDownload'))) return;
   const bibles = [...document.querySelectorAll('[data-dl-bible]:checked')].map((i) => i.dataset.dlBible);
   if (bibles.length === 0) return;
   const startBtn = $('[data-dl-start]');
@@ -180,10 +182,11 @@ async function startDownload() {
       done += batch.length;
       const pct = Math.round((done / jobs.length) * 100);
       fill.style.width = `${pct}%`;
-      text.textContent = `${done} av ${jobs.length} kapitler (${pct}%)${skipped ? `, ${skipped} hoppet over` : ''}`;
+      text.textContent = t('is.downloadProgress', { done, total: jobs.length, pct }) +
+      (skipped ? t('is.downloadSkipped', { n: skipped }) : '');
     }
 
-    text.textContent = 'Laster ned støttedata…';
+    text.textContent = t('is.downloadingSupport');
     await downloadSupportData(signal);
     try {
       const v = await fetch('/api/version', { signal }).then((r) => r.json());
@@ -191,12 +194,12 @@ async function startDownload() {
     } catch {}
     await setMeta('downloadedAt', Date.now());
     if (navigator.storage?.persist) navigator.storage.persist().catch(() => {});
-    text.textContent = 'Nedlasting fullført — bibelen kan nå leses offline.';
+    text.textContent = t('is.downloadDone');
   } catch (err) {
     if (err && err.name === 'AbortError') {
-      text.textContent = 'Nedlasting satt på pause — trykk «Last ned» for å fortsette.';
+      text.textContent = t('is.downloadPaused');
     } else {
-      text.textContent = 'Nedlastingen feilet — prøv igjen.';
+      text.textContent = t('is.downloadFailed');
     }
   } finally {
     controller = null;
@@ -208,7 +211,7 @@ async function startDownload() {
 }
 
 async function clearAll() {
-  if (!confirm('Slette alt nedlastet innhold? Egne oversettelser slettes også.')) return;
+  if (!confirm(t('is.deleteAllConfirm'))) return;
   navigator.serviceWorker?.controller?.postMessage({ type: 'CLEAR_CACHE' });
   await deleteDatabase();
   location.reload();

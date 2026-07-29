@@ -5,7 +5,9 @@
 // TODO(#14): offline-nedlasting + service worker.
 
 import { recordRead, mergeProgress, heatLevel } from './reading-progress.js';
-import { localeHref } from './locale.js';
+import { readStrings, localeHref } from './locale.js';
+
+const t = readStrings(document.body);
 
 const KEYS = {
   favorites: 'bible-favorites',
@@ -111,7 +113,7 @@ if (root) {
           (data.verseTopics || []).filter((vt) => vt.topicId === t.id).length;
         const card = el('div', 'user-card');
         card.appendChild(el('span', 'user-card-title', t.name));
-        card.appendChild(el('span', 'user-card-meta', `${count} merket`));
+        card.appendChild(el('span', 'user-card-meta', t('is.taggedCount', { n: count })));
         list.appendChild(card);
       });
     };
@@ -131,7 +133,7 @@ if (root) {
         .forEach((l) => {
           const card = el('div', 'user-card');
           card.appendChild(el('span', 'user-card-title', l.name));
-          card.appendChild(el('span', 'user-card-meta', `${(l.refs || []).length} vers`));
+          card.appendChild(el('span', 'user-card-meta', t('is.verseCount', { n: (l.refs || []).length })));
           list.appendChild(card);
         });
     };
@@ -144,7 +146,7 @@ if (root) {
         const input = form.querySelector('input');
         const name = input.value.trim();
         if (!name) return;
-        if (!window.fvPlus?.gate('Verslister')) return;
+        if (!window.fvPlus?.gate(t('nav.verseLists'))) return;
         const lists = read(KEYS.verseLists, []);
         const now = Date.now();
         lists.push({ id: `list-${now}`, name, refs: [], createdAt: now, updatedAt: now });
@@ -162,7 +164,7 @@ if (root) {
       a.addEventListener('click', (e) => {
         if (window.fvPlus?.has()) return;
         e.preventDefault();
-        window.fvPlus?.cta('Manuskripter');
+        window.fvPlus?.cta(t('nav.manuscripts'));
       });
     });
     const renderDevotionals = () => {
@@ -175,7 +177,7 @@ if (root) {
         .forEach((d) => {
           const a = el('a', 'user-card');
           a.href = localeHref(`/manuskripter/${d.slug}`);
-          a.appendChild(el('span', 'user-card-title', d.title || '(uten tittel)'));
+          a.appendChild(el('span', 'user-card-title', d.title || t('is.untitled')));
           a.appendChild(el('span', 'user-card-meta', d.type || ''));
           list.appendChild(a);
         });
@@ -282,7 +284,7 @@ if (root) {
           if (active) {
             input.checked = true;
             input.disabled = true;
-            input.title = 'Aktiv oversettelse kan ikke skjules';
+            input.title = t('is.activeCantHide');
           }
           input.addEventListener('change', () => {
             const next = read(KEYS.settings, {});
@@ -334,10 +336,10 @@ if (root) {
             n++;
           }
         }
-        if (status) status.textContent = n > 0 ? `Importerte ${n} datasett — laster siden på nytt…` : 'Fant ingen kjente data i filen.';
+        if (status) status.textContent = n > 0 ? t('is.importedDatasets', { n }) : t('is.noKnownData');
         if (n > 0) setTimeout(() => location.reload(), 800);
       } catch {
-        if (status) status.textContent = 'Kunne ikke lese filen — er den en gyldig eksport?';
+        if (status) status.textContent = t('is.importFailed');
       }
       e.target.value = '';
     });
@@ -349,10 +351,10 @@ if (root) {
     if (box && navigator.storage && navigator.storage.estimate) {
       navigator.storage.estimate().then((est) => {
         const usedMb = Math.round((est.usage || 0) / 1e6);
-        box.textContent = `Brukt lagringsplass i nettleseren: ~${usedMb} MB.`;
+        box.textContent = t('is.storageUsed', { mb: usedMb });
       });
     } else if (box) {
-      box.textContent = 'Lagringsstatus er ikke tilgjengelig i denne nettleseren.';
+      box.textContent = t('is.storageUnavailable');
     }
   }
 
@@ -390,15 +392,15 @@ if (root) {
     // deaktiver Lagre — den stille lagringsgaten ville ellers latt «Lagre»
     // se ut som den virket.
     if (!window.fvPlus?.has()) {
-      window.fvPlus?.cta('Manuskripter');
+      window.fvPlus?.cta(t('nav.manuscripts'));
       saveBtn.disabled = true;
-      saveBtn.title = 'Manuskripter krever FLOGVIT.plus';
+      saveBtn.title = t('plus.requires', { what: t('nav.manuscripts') });
     }
     saveBtn.addEventListener('click', () => {
-      if (!window.fvPlus?.gate('Manuskripter')) return;
+      if (!window.fvPlus?.gate(t('nav.manuscripts'))) return;
       const devs = read(KEYS.devotionals, []);
       const now = Date.now();
-      const title = titleEl.value.trim() || 'Uten tittel';
+      const title = titleEl.value.trim() || t('is.untitledDoc');
       const content = contentEl.value;
       if (current) {
         current.title = title;
@@ -436,11 +438,11 @@ if (root) {
       showList(root, false);
     } else {
       showList(root, true);
-      const h1 = el('h1', null, dev.title || '(uten tittel)');
+      const h1 = el('h1', null, dev.title || t('is.untitled'));
       article.appendChild(h1);
       const draft = (dev.versions || []).find((v) => !v.locked) || dev.versions?.[0];
       article.appendChild(renderMarkdown(draft?.content || ''));
-      const editLink = el('a', 'user-btn-ghost', 'Rediger');
+      const editLink = el('a', 'user-btn-ghost', t('common.edit'));
       editLink.href = localeHref(`/manuskripter/${slug}/rediger`);
       article.appendChild(editLink);
     }
@@ -551,7 +553,7 @@ if (mapRoot) {
   hydrate();
 
   function applyBook(bookId, at) {
-    if (!window.fvPlus?.gate('Lesekart')) return;
+    if (!window.fvPlus?.gate(t('is.readingMap'))) return;
     const section = mapRoot.querySelector(`[data-map-book="${bookId}"]`);
     if (!section) return;
     const chapters = parseInt(section.dataset.bookChapters, 10) || 0;

@@ -1763,7 +1763,7 @@ r.get('/:book/:chapter', async (c) => {
   // Kontrakten mot shortcuts.js: data-attributter på <body>.
   const bodyData = `(function(d){d.bookSlug=${JSON.stringify(canonicalSlug)};d.chapter='${chapter}';d.maxChapter='${maxChapter}';${
     nextBookSlug ? `d.nextBookSlug=${JSON.stringify(nextBookSlug)};` : ''
-  }d.bibleQuery=${JSON.stringify(query)};d.bookId='${book.id}';d.bookName=${JSON.stringify(bookName(book))};d.totalVerses='${data.verses.length}';${
+  }d.bibleQuery=${JSON.stringify(query)};d.bookId='${book.id}';d.bookName=${JSON.stringify(bookName(book))};d.bibleName=${JSON.stringify(bible.toUpperCase())};d.totalVerses='${data.verses.length}';${
     userBible ? `d.userBible=${JSON.stringify(userBible)};` : ''
   }${userSecondary ? `d.userSecondary=${JSON.stringify(userSecondary)};` : ''}})(document.body.dataset);`;
 

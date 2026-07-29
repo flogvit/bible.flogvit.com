@@ -15,7 +15,7 @@ import { getContext } from 'hono/context-storage';
 import type { AppEnv } from '../lib/session.ts';
 import { ACCOUNT_URL } from '../lib/session.ts';
 import { DEFAULT_LOCALE, LOCALES, href, makeT, ogLocale, type Locale, type Translator, lhref } from '../lib/i18n.ts';
-import { tCtx, islandStrings } from '../lib/i18n.ts';
+import { tCtx, islandStrings, type MessageKey } from '../lib/i18n.ts';
 
 /**
  * Strenger klient-øyene som lastes på HVER side trenger: plus-CTA-en (plus.js),
@@ -36,7 +36,53 @@ const CHROME_ISLAND_KEYS = [
   'foot.home', 'foot.about', 'foot.a11y', 'foot.offline',
   'pwa.newVersion', 'pwa.updateNow', 'pwa.later', 'pwa.offline', 'pwa.backOnline',
   'ref.notFound',
+  // Hurtigtast-hjelpen (shortcuts.js) — «?» virker på hver side.
+  'kbd.title', 'kbd.general', 'kbd.toggleHelp', 'kbd.gotoSearch', 'kbd.normalView',
+  'kbd.readingMode', 'kbd.panelMode', 'kbd.closeDialogs', 'kbd.chapterNav',
+  'kbd.chapterPagesOnly', 'kbd.prevChapter', 'kbd.nextChapter', 'kbd.switchPanelTab',
+  'kbd.jumpToVerse', 'kbd.quickNav', 'kbd.useModMac', 'kbd.useModPc', 'kbd.homeBookList',
+  'nav.days',
+  // sync.js sin statuslinje.
+  'is.syncedChanges',
 ] as const;
+
+/**
+ * Strenger for de SIDESPESIFIKKE øyene, slått opp på skriptnavn.
+ *
+ * Nøklene blir bare med på sidene som faktisk laster øya — å legge alt på
+ * <body> overalt ville lagt flere kB på hver eneste sidevisning for strenger
+ * de fleste sidene aldri bruker.
+ */
+const PAGE_ISLAND_KEYS: Record<string, readonly MessageKey[]> = {
+  'reading.js': ['is.favOn', 'is.favOff', 'is.delete', 'nav.favorites', 'nav.notes', 'is.readTracking'],
+  'user.js': [
+    'nav.verseLists', 'nav.manuscripts', 'is.readingMap', 'is.activeCantHide', 'is.importFailed',
+    'is.storageUsed', 'is.storageUnavailable', 'is.untitled', 'is.taggedCount', 'is.verseCount',
+  ],
+  'offline.js': [
+    'is.offlineDownload', 'is.downloadProgress', 'is.downloadSkipped', 'is.downloadingSupport',
+    'is.downloadDone', 'is.downloadPaused', 'is.downloadFailed', 'is.nothingDownloaded',
+  ],
+  'offline-reader.js': [
+    'is.chapterNotDownloaded', 'is.chapterN', 'is.offlineNotice', 'is.nothingDownloadedYet',
+    'is.youAreOffline', 'is.couldNotReadOffline',
+  ],
+  'studium.js': ['is.noManuscriptsHere', 'is.searchTextFor', 'is.searchStudyFor'],
+  'tagging.js': ['is.removeTopic', 'is.newTopic', 'nav.topicsMine'],
+  'translations.js': [
+    'is.ownTranslations', 'is.delete', 'is.noTextToParse', 'is.noVersesFound', 'is.parseFailed',
+    'is.uploadingToAccount', 'is.syncedToAccount', 'is.uploadFailedRetry',
+  ],
+  'statistics.js': ['common.loading', 'is.noWords'],
+  'person-filter.js': ['is.personCount'],
+  'user-bibles.js': ['is.chapterMissingInOwn', 'is.showingOwn'],
+};
+
+function islandKeysFor(scripts: readonly string[]): MessageKey[] {
+  const keys = new Set<MessageKey>(CHROME_ISLAND_KEYS);
+  for (const s of scripts) for (const k of PAGE_ISLAND_KEYS[s] ?? []) keys.add(k);
+  return [...keys];
+}
 
 const SITE = 'https://bible.flogvit.com';
 
@@ -401,7 +447,7 @@ export function Layout(props: LayoutProps) {
         {/* Strenger øyer som finnes på HVER side trenger (plus-CTA-en). Uten
             dem var CTA-en norsk på alle åtte språk — samme hull som #33: en
             klient-øy bygger DOM selv og står utenfor ordboka. */}
-        <body data-strings={islandStrings(tCtx(), CHROME_ISLAND_KEYS)}>
+        <body data-strings={islandStrings(tCtx(), islandKeysFor(props.scripts ?? []))}>
           <a class="skip-link" href="#innhold">
             {tCtx()('common.skipToContent')}
           </a>
