@@ -7,6 +7,9 @@ deploy continuously.
 
 **New features**
 
+- These release notes are now a page: **What's new**, linked from the footer.
+  They were written at every deploy but only existed in the source repository,
+  which meant nobody could read them.
 - The front page now shows your active reading plan: which plan, how far in you
   are, days in a row, and today's chapters. Until now it always claimed you had
   no plan, even when you did.
