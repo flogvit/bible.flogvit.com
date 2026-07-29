@@ -17,6 +17,7 @@ import {
   getBookUrlSlug,
   type PersonData,
 } from '../../lib/bible.ts';
+import { bookNameById } from '../../lib/books-data.ts';
 import { layoutProps, tFor, lhref, tEnum, type Translator } from '../../lib/i18n.ts';
 
 const r = new Hono<AppEnv>();
@@ -252,11 +253,11 @@ r.get('/personer/:personId', async (c) => {
               <div class="person-ref-list">
                 {person.references.map((ref) => {
                   const book = getBookById(ref.bookId);
-                  const bookName = book?.name_no || `Bok ${ref.bookId}`;
+                  const label = bookNameById(ref.bookId) || `Bok ${ref.bookId}`;
                   const slug = book ? getBookUrlSlug(book) : '';
                   return (
                     <a href={lhref(`/${slug}/${ref.chapterId}#v${ref.verseId}`)} class="person-ref-chip">
-                      {bookName} {ref.chapterId}:{ref.verseId}
+                      {label} {ref.chapterId}:{ref.verseId}
                     </a>
                   );
                 })}

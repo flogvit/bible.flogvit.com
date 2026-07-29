@@ -4,6 +4,7 @@ import { getSql } from '../../lib/db.ts';
 import { normalizeBibleId } from '../../lib/bible.ts';
 import { DEFAULT_CONTENT_LANGUAGE } from '../../lib/lang.ts';
 import { NO_CACHE } from './util.ts';
+import { bookNameByShort } from '../../lib/books-data.ts';
 
 const r = new Hono();
 
@@ -50,12 +51,12 @@ async function dailyVerseResponse(c: Context, date: string): Promise<Response> {
       date,
       reference: {
         bookId: dailyVerse.book_id,
-        bookName: book.name_no,
+        bookName: bookNameByShort(book.short_name),
         shortName: book.short_name,
         chapter: dailyVerse.chapter,
         verseStart: dailyVerse.verse_start,
         verseEnd: dailyVerse.verse_end,
-        display: `${book.name_no} ${dailyVerse.chapter}:${verseDisplay}`,
+        display: `${bookNameByShort(book.short_name)} ${dailyVerse.chapter}:${verseDisplay}`,
       },
       text: verseText,
       note: dailyVerse.note,

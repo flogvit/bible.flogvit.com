@@ -14,6 +14,7 @@ import { Layout } from '../../views/layout.tsx';
 import { Breadcrumbs } from '../../views/breadcrumbs.tsx';
 import type { Child } from 'hono/jsx';
 import { getSql } from '../../lib/db.ts';
+import { bookNameByShort } from '../../lib/books-data.ts';
 import { getUserItems, getUserSingleton, getReadingProgress } from '../../lib/user-data.ts';
 import { summarizeProgress, fullHeat, stalestBooks } from '../../lib/reading-map.ts';
 import { getBibleEditions } from '../../lib/bible.ts';
@@ -81,7 +82,7 @@ r.get('/favoritter', async (c) => {
             if (!v) return null;
             return {
               href: `/${v.short_name.toLowerCase()}/${f.chapter}#v${f.verse}`,
-              ref: `${v.name_no} ${f.chapter}:${f.verse}`,
+              ref: `${bookNameByShort(v.short_name)} ${f.chapter}:${f.verse}`,
               text: v.text,
             };
           }),

@@ -11,6 +11,7 @@ import { Breadcrumbs } from '../../views/breadcrumbs.tsx';
 import { InlineRefs } from '../../views/inline-refs.tsx';
 import { ItemTagging } from '../../views/item-tagging.tsx';
 import { VerseRefList } from '../../views/verse-display.tsx';
+import { bookNameByShort, bookAbbrByShort } from '../../lib/books-data.ts';
 import {
   getAllWellKnownVerses,
   getAllReadingTexts,
@@ -293,7 +294,7 @@ r.get('/kjente-vers', async (c) => {
         class="famous-verse-card"
       >
         <span class="famous-verse-ref">
-          {v.book_name_no} {v.chapter}:{v.verse}
+          {bookNameByShort(v.book_short_name)} {v.chapter}:{v.verse}
         </span>
         <p class="famous-verse-text">{v.verse_text}</p>
       </a>
@@ -780,7 +781,7 @@ r.get('/tidslinje', async (c) => {
                               href={lhref(`/${toUrlSlug(ref.book_short_name || '')}/${ref.chapter}#v${ref.verse_start}`)}
                               class="person-ref-chip"
                             >
-                              {ref.book_short_name} {ref.chapter}:{ref.verse_start}
+                              {bookAbbrByShort(ref.book_short_name)} {ref.chapter}:{ref.verse_start}
                             </a>
                           ))}
                         </div>

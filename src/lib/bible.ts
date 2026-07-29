@@ -10,6 +10,7 @@ import {
   contentLanguageChain,
   currentContentLanguage,
 } from './lang.ts';
+import { bookAbbrByShort } from './books-data.ts';
 
 // Re-export toUrlSlug for convenience (server-side usage)
 export { toUrlSlug } from './url-utils.ts';
@@ -361,11 +362,16 @@ export async function getVerseSermon(
   return result?.sermon ?? null;
 }
 
-export function formatReference(ref: Reference): string {
+/**
+ * Referansechipen slik den VISES. Forkortelsen i raden (`book_short_name`) er
+ * den norske nøkkelen fra `books`; her oversettes den til sidens språk (#20),
+ * mens lenkene fortsatt bygges av nøkkelen.
+ */
+export function formatReference(ref: Reference, lang = currentContentLanguage()): string {
   const verseRange = ref.to_verse_start === ref.to_verse_end
     ? `${ref.to_verse_start}`
     : `${ref.to_verse_start}-${ref.to_verse_end}`;
-  return `${ref.book_short_name} ${ref.to_chapter}:${verseRange}`;
+  return `${bookAbbrByShort(ref.book_short_name, lang)} ${ref.to_chapter}:${verseRange}`;
 }
 
 export interface ImportantVerse {

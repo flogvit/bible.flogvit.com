@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
 import { getSql } from '../../lib/db.ts';
+import { bookNameByShort } from '../../lib/books-data.ts';
 
 const r = new Hono();
 
@@ -35,7 +36,7 @@ r.post('/', async (c) => {
             bookId: fav.bookId,
             chapter: fav.chapter,
             verse: fav.verse,
-            bookName: verse.book_name,
+            bookName: bookNameByShort(verse.book_short_name),
             bookShortName: verse.book_short_name,
             text: verse.text,
           };

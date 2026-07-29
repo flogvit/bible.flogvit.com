@@ -26,7 +26,7 @@ import {
   type DayData,
   type DayReference,
 } from '../../lib/bible.ts';
-import { getBookInfoById } from '../../lib/books-data.ts';
+import { getBookInfoById, bookName } from '../../lib/books-data.ts';
 import { toUrlSlug } from '../../lib/url-utils.ts';
 import { layoutProps, tFor, lhref, currentIntlTag, tEnum, type Translator } from '../../lib/i18n.ts';
 
@@ -241,8 +241,8 @@ r.get('/historier/:slug', async (c) => {
               const sameChapter = ref.startChapter === ref.endChapter;
               const label = book
                 ? sameChapter
-                  ? `${book.name_no} ${ref.startChapter},${ref.startVerse}${ref.startVerse !== ref.endVerse ? `-${ref.endVerse}` : ''}`
-                  : `${book.name_no} ${ref.startChapter},${ref.startVerse}-${ref.endChapter},${ref.endVerse}`
+                  ? `${bookName(book)} ${ref.startChapter},${ref.startVerse}${ref.startVerse !== ref.endVerse ? `-${ref.endVerse}` : ''}`
+                  : `${bookName(book)} ${ref.startChapter},${ref.startVerse}-${ref.endChapter},${ref.endVerse}`
                 : '';
               // Bygg eksplisitte verslister per kapittel (som gamle StoryPage:
               // 1..200 for mellomkapitler, endVerse for siste). Ikke-eksisterende
@@ -328,7 +328,7 @@ r.get('/tall/:number', async (c) => {
   }
   function refLabel(ref: { bookId: number; chapterId: number; fromVerseId: number; toVerseId: number }): string {
     const book = getBookInfoById(ref.bookId);
-    const name = book?.name_no || `Bok ${ref.bookId}`;
+    const name = book ? bookName(book) : `Bok ${ref.bookId}`;
     return ref.fromVerseId === ref.toVerseId
       ? `${name} ${ref.chapterId}:${ref.fromVerseId}`
       : `${name} ${ref.chapterId}:${ref.fromVerseId}-${ref.toVerseId}`;
@@ -472,7 +472,7 @@ r.get('/dager/:dayId', async (c) => {
   }
   function refLabel(ref: DayReference): string {
     const book = getBookInfoById(ref.bookId);
-    const name = book?.name_no || `Bok ${ref.bookId}`;
+    const name = book ? bookName(book) : `Bok ${ref.bookId}`;
     return ref.fromVerseId === ref.toVerseId
       ? `${name} ${ref.chapterId}:${ref.fromVerseId}`
       : `${name} ${ref.chapterId}:${ref.fromVerseId}-${ref.toVerseId}`;

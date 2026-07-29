@@ -28,7 +28,7 @@ import {
   normalizeBibleId,
 } from '../../lib/bible.ts';
 import { DEFAULT_CONTENT_LANGUAGE } from '../../lib/lang.ts';
-import { booksData, getBookInfoById, type BookInfo } from '../../lib/books-data.ts';
+import { booksData, getBookInfoById, bookName, bookNameById, bookNameByShort, type BookInfo } from '../../lib/books-data.ts';
 import { toUrlSlug } from '../../lib/url-utils.ts';
 import { layoutProps, tFor, type Translator, lhref } from '../../lib/i18n.ts';
 
@@ -66,11 +66,11 @@ async function loadDailyVerse(bible = 'osnb'): Promise<DailyVerse | null> {
   `) as { text: string }[];
   const range = dv.verse_start === dv.verse_end ? `${dv.verse_start}` : `${dv.verse_start}-${dv.verse_end}`;
   return {
-    bookName: book.name_no,
+    bookName: bookNameByShort(book.short_name),
     shortName: book.short_name,
     chapter: dv.chapter,
     verseStart: dv.verse_start,
-    display: `${book.name_no} ${dv.chapter}:${range}`,
+    display: `${bookNameByShort(book.short_name)} ${dv.chapter}:${range}`,
     text: verses.map((v) => v.text).join(' '),
     note: dv.note,
   };
@@ -112,7 +112,7 @@ const DAY_CATEGORY_LABELS: Record<string, string> = {
 };
 
 function dayRefLabel(ref: DayReference): string {
-  const name = getBookInfoById(ref.bookId)?.name_no || `Bok ${ref.bookId}`;
+  const name = bookNameById(ref.bookId) || `Bok ${ref.bookId}`;
   return ref.fromVerseId === ref.toVerseId
     ? `${name} ${ref.chapterId}:${ref.fromVerseId}`
     : `${name} ${ref.chapterId}:${ref.fromVerseId}-${ref.toVerseId}`;
@@ -243,7 +243,7 @@ r.get('/', async (c) => {
               <div class="home-book-grid">
                 {group.books.map((book) => (
                   <a href={lhref(`/${toUrlSlug(book.short_name)}/1`)} class="home-book">
-                    <span class="home-book-name">{book.name_no}</span>
+                    <span class="home-book-name">{bookName(book)}</span>
                     <span class="home-book-meta">{book.chapters} kap.</span>
                   </a>
                 ))}
@@ -371,7 +371,7 @@ async function loadExtraResults(query: string) {
     },
     {
       title: 'Viktige ord', typeKey: 'words', moreLabel: 'viktige ord',
-      cards: words.map((w) => ({ href: `/${toUrlSlug(w.book_short_name)}/${w.chapter}`, title: w.word, badge: 'Viktig ord', meta: `${w.book_name_no} ${w.chapter}`, desc: trunc(w.explanation) })),
+      cards: words.map((w) => ({ href: `/${toUrlSlug(w.book_short_name)}/${w.chapter}`, title: w.word, badge: 'Viktig ord', meta: `${bookNameByShort(w.book_short_name)} ${w.chapter}`, desc: trunc(w.explanation) })),
     },
     {
       title: 'Tall', typeKey: 'numberSymbolism', moreLabel: 'tall',
@@ -441,7 +441,7 @@ r.get('/sok', async (c) => {
                 {res.results.map((v) => (
                   <a href={lhref(`/${toUrlSlug(v.book_short_name)}/${v.chapter}#v${v.verse}`)} class="search-result">
                     <span class="search-result-ref">
-                      {v.book_name_no} {v.chapter}:{v.verse}
+                      {bookNameByShort(v.book_short_name)} {v.chapter}:{v.verse}
                     </span>
                     <p class="search-result-text">{v.text}</p>
                   </a>
@@ -518,7 +518,7 @@ r.get('/sok/original', async (c) => {
                 {res.results.map((v) => (
                   <a href={lhref(`/${toUrlSlug(v.book_short_name)}/${v.chapter}#v${v.verse}`)} class="search-result">
                     <span class="search-result-ref">
-                      {v.book_name_no} {v.chapter}:{v.verse}
+                      {bookNameByShort(v.book_short_name)} {v.chapter}:{v.verse}
                     </span>
                     <p class="search-result-text">{v.text}</p>
                     <p
