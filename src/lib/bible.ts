@@ -2311,7 +2311,9 @@ export interface BibleEditionMeta {
     team_size?: number;
   };
   links?: { homepage?: string; wikipedia?: string };
-  legacy?: { tag?: string; text?: string }[];
+  // `text` er et språkkart (free-bible#23). Strengformen er den gamle og lever
+  // til alle meta.json er lagt om — se pickLocalisedText().
+  legacy?: { tag?: string; text?: string | Record<string, string> }[];
   coverage?: {
     testament?: string;
     books?: number;

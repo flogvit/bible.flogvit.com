@@ -35,6 +35,7 @@ import { enrichWithVerseText, readingTypeKey } from '../../lib/reading-text-enri
 import { toUrlSlug } from '../../lib/url-utils.ts';
 import { layoutProps, tFor, lhref, currentIntlTag, langName, scriptName } from '../../lib/i18n.ts';
 import { tCtx, tEnum } from '../../lib/i18n.ts';
+import { pickLocalisedText } from '../../lib/lang.ts';
 
 const r = new Hono<AppEnv>();
 
@@ -94,6 +95,13 @@ r.get('/oversettelser/:id', async (c) => {
     ...(meta.derived_from?.module ? [meta.derived_from.module] : []),
   ].filter((m, i, arr) => arr.indexOf(m) === i);
   const attributionSources = sourceModules.filter((m) => known.has(m) && m !== edition.id);
+
+  // «Karakter»-punktene er utsagn om utgaven, men de leses av den som er på
+  // siden — de hører til leserens språk, ikke utgavens (free-bible#23).
+  // Punkter uten tekst i noe språk i kjeden faller bort framfor å bli tomme <li>.
+  const legacyNotes = (meta.legacy ?? [])
+    .map((l) => pickLocalisedText(l.text))
+    .filter((n): n is { text: string; lang: string | null } => n !== null);
 
   return c.html(
     <Layout {...layoutProps(c)}
@@ -182,11 +190,11 @@ r.get('/oversettelser/:id', async (c) => {
             </section>
           ) : null}
 
-          {meta.legacy?.length ? (
+          {legacyNotes.length ? (
             <section class="overview-section">
               <h2>{t('ed.character')}</h2>
               <ul class="edition-notes">
-                {meta.legacy.map((l) => <li>{l.text}</li>)}
+                {legacyNotes.map((n) => <li lang={n.lang ?? undefined}>{n.text}</li>)}
               </ul>
             </section>
           ) : null}
@@ -238,8 +246,14 @@ r.get('/oversettelser/:id', async (c) => {
             <section class="overview-section">
               <h2>{t('ed.sources')}</h2>
               <p class="overview-intro">
-                Feltene over er {meta.provenance.method === 'manual' ? 'manuelt kontrollert' : 'maskinelt hentet'}
-                {meta.provenance.generated ? `, sist oppdatert ${meta.provenance.generated}` : ''}.
+                {meta.provenance.generated
+                  ? t('ed.provenanceUpdated', {
+                      method: tEnum(t, 'ed.provMethod.', meta.provenance.method ?? ''),
+                      date: meta.provenance.generated,
+                    })
+                  : t('ed.provenance', {
+                      method: tEnum(t, 'ed.provMethod.', meta.provenance.method ?? ''),
+                    })}
               </p>
               {meta.provenance.sources?.length ? (
                 <ul class="edition-notes">
@@ -247,7 +261,7 @@ r.get('/oversettelser/:id', async (c) => {
                     <li>
                       {s.url ? (
                         <a href={s.url} target="_blank" rel="noopener noreferrer">{s.url}</a>
-                      ) : 'ukjent kilde'}
+                      ) : t('ed.unknownSource')}
                       {s.fields?.length ? <span class="edition-spdx"> {s.fields.join(', ')}</span> : null}
                     </li>
                   ))}

@@ -134,3 +134,33 @@ export function contentLanguageChain(requested: string | null | undefined): stri
   }
   return result;
 }
+
+/**
+ * Plukker teksten for leserens språk ut av et språkkart, via samme
+ * fallback-kjede som alt annet innhold.
+ *
+ * Returnerer også hvilket språk som faktisk vant, slik at kalleren kan sette
+ * `lang` på elementet når teksten ikke er på sidens språk. Uten det leser en
+ * skjermleser engelsk tekst med tysk uttale.
+ *
+ * Tåler at `value` er en ren streng: `legacy[].text` var det fram til
+ * free-bible#23, og de to formene lever side om side til dataene er lagt om.
+ * En streng har ukjent språk, så `lang` er null — merking ville vært en gjetning.
+ */
+export function pickLocalisedText(
+  value: string | Record<string, string> | null | undefined,
+  requested?: string | null,
+): { text: string; lang: string | null } | null {
+  if (value == null) return null;
+  if (typeof value === 'string') {
+    return value ? { text: value, lang: null } : null;
+  }
+  const pageLanguage = localeToContentLanguage(requested ?? currentContentLanguage());
+  for (const candidate of contentLanguageChain(requested ?? currentContentLanguage())) {
+    const text = value[candidate];
+    if (typeof text === 'string' && text) {
+      return { text, lang: candidate === pageLanguage ? null : candidate };
+    }
+  }
+  return null;
+}
