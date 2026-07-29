@@ -76,10 +76,13 @@ describe('Footnotes', () => {
     expect(html).toContain('<details class="footnotes"');
     expect(html).not.toContain('<details class="footnotes" open');
     expect(html).toContain('>*</summary>');
-    expect(html).toContain('2 fotnoter');
+    // Uten locale i konteksten er gulvet engelsk (#26). `source` står på norsk
+    // i dataene fordi den er en delt identifikator — den skal oversettes ved
+    // visning, og det er nettopp det denne linja vokter.
+    expect(html).toContain('2 footnotes');
     expect(html).toContain('Første fotnote');
     expect(html).toContain('Andre fotnote');
-    expect(html).toContain('Rabbinsk');
+    expect(html).toContain('Rabbinic');
     // Kun én kilde er satt
     expect(html.match(/footnote-source/g)?.length).toBe(1);
   });
@@ -131,12 +134,14 @@ describe('verse-display (DB)', () => {
     expect(html).toContain('class="event-list"');
     expect(html).toContain('<h3>Guds kjærlighet</h3>');
     expect(html).toContain('Verdens mest kjente vers.');
-    expect(html).toContain('Joh 3:16');
-    expect(html).toContain('Vis i kontekst →');
+    expect(html).toContain('John 3:16');
+    expect(html).toContain('Show in context →');
     expect(html).toContain('href="/en/joh/3#v16"');
-    // Selve versteksten fra databasen (Joh 3,16 inneholder alltid «elsket»)
+    // Selve versteksten fra databasen. Uten locale i konteksten er gulvet
+    // engelsk (#26), så sitatet skal komme fra osen — ikke fra osnb, som var
+    // hardkodet som default på hvert sitatsted.
     expect(html).toContain('class="verse-text"');
-    expect(html.toLowerCase()).toContain('elsket');
+    expect(html.toLowerCase()).toContain('for god so loved the world');
     // Gresk grunntekst under
     expect(html).toContain('class="original-verse greek"');
   });
@@ -144,8 +149,8 @@ describe('verse-display (DB)', () => {
   test('VerseRefList rendrer flere vers med kontekstlenker', async () => {
     const html = await (await app.request('/verse-ref-list')).text();
     expect(html.match(/class="verse-group"/g)?.length).toBe(2);
-    expect(html).toContain('1Mos 1:1');
-    expect(html).toContain('1Mos 1:2');
+    expect(html).toContain('Gen 1:1');
+    expect(html).toContain('Gen 1:2');
     expect(html).toContain('href="/en/1mos/1#v1"');
     // Hebraisk grunntekst, rtl
     expect(html).toContain('class="original-verse hebrew"');

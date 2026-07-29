@@ -29,6 +29,7 @@ import {
   type ProphecyReference,
   type VerseRef,
   normalizeBibleId,
+  defaultBibleForLanguage,
 } from '../../lib/bible.ts';
 import { enrichWithVerseText, getReadingType } from '../../lib/reading-text-enrich.ts';
 import { toUrlSlug } from '../../lib/url-utils.ts';
@@ -423,7 +424,7 @@ r.get('/lesetekster/:id', async (c) => {
   if (!text) return c.notFound();
 
   // Prefs (bibel/mapping) er klient-side i dag; osnb er standard server-side.
-  const bible = normalizeBibleId(c.req.query('bible')) || 'osnb';
+  const bible = normalizeBibleId(c.req.query('bible')) || (await defaultBibleForLanguage());
   const mapping = normalizeBibleId(c.req.query('mapping')) || 'osnb';
   const enriched = await enrichWithVerseText(text, bible, mapping);
 
@@ -534,7 +535,7 @@ r.get('/profetier', async (c) => {
 
           <div class="study-filter-buttons" data-card-catfilter>
             <button type="button" class="persons-filter-button active" data-value="">
-              Alle kategorier
+              {t('common.allCategories')}
             </button>
             {categories.map((cat) => (
               <button type="button" class="persons-filter-button" data-value={cat.id}>
@@ -653,7 +654,7 @@ r.get('/paralleller', async (c) => {
 
           <div class="study-filter-buttons" data-card-catfilter>
             <button type="button" class="persons-filter-button active" data-value="">
-              Alle deler
+              {t('common.allParts')}
             </button>
             {sections.map((s) => (
               <button type="button" class="persons-filter-button" data-value={s.id}>
@@ -824,7 +825,7 @@ function nf(n: number): string {
 
 r.get('/statistikk', async (c) => {
   const t = tFor(c);
-  const bible = normalizeBibleId(c.req.query('bible')) || 'osnb';
+  const bible = normalizeBibleId(c.req.query('bible')) || (await defaultBibleForLanguage());
   const stats = await getBibleStatistics(bible);
   const topWords = await getTopWords(bible, 100, false);
   const ot = stats.books.filter((b) => b.testament === 'OT');

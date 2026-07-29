@@ -15,6 +15,7 @@ import { getContext } from 'hono/context-storage';
 import type { AppEnv } from '../lib/session.ts';
 import { ACCOUNT_URL } from '../lib/session.ts';
 import { DEFAULT_LOCALE, LOCALES, href, makeT, ogLocale, type Locale, type Translator, lhref } from '../lib/i18n.ts';
+import { tCtx } from '../lib/i18n.ts';
 
 const SITE = 'https://bible.flogvit.com';
 
@@ -376,7 +377,7 @@ export function Layout(props: LayoutProps) {
         </head>
         <body>
           <a class="skip-link" href="#innhold">
-            Hopp til innhold
+            {tCtx()('common.skipToContent')}
           </a>
           <Header t={t} u={u} />
           <main id="innhold" class="site-main">

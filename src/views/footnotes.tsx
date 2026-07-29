@@ -3,17 +3,9 @@
 // komponenten virker uten JS (progressiv forbedring er standard her).
 
 import type { VerseFootnote } from '../lib/bible.ts';
+import { tCtx, tEnum } from '../lib/i18n.ts';
 
 export type { VerseFootnote as Footnote };
-
-const sourceLabels: Record<string, string> = {
-  rabbinsk: 'Rabbinsk',
-  kabbalistisk: 'Kabbalistisk',
-  lingvistisk: 'Lingvistisk',
-  historisk: 'Historisk',
-  arkeologisk: 'Arkeologisk',
-  teologisk: 'Teologisk',
-};
 
 export interface FootnotesProps {
   footnotes: VerseFootnote[];
@@ -23,7 +15,11 @@ export interface FootnotesProps {
 export function Footnotes({ footnotes, defaultOpen = false }: FootnotesProps) {
   if (footnotes.length === 0) return null;
 
-  const label = `${footnotes.length} fotnoter`;
+  // `source` er en DELT IDENTIFIKATOR og står på norsk i free-bible uansett
+  // språk (bevisst, se free-bible/CLAUDE.md). Den skal derfor oversettes ved
+  // visning, ikke i dataene.
+  const t = tCtx();
+  const label = t('fn.count', { n: footnotes.length });
 
   return (
     <details class="footnotes" open={defaultOpen}>
@@ -33,7 +29,7 @@ export function Footnotes({ footnotes, defaultOpen = false }: FootnotesProps) {
       <div class="footnotes-panel">
         {footnotes.map((fn) => (
           <div class="footnote">
-            {fn.source && <span class="footnote-source">{sourceLabels[fn.source] || fn.source}</span>}
+            {fn.source && <span class="footnote-source">{tEnum(t, 'fn.', fn.source.toLowerCase())}</span>}
             <p>{fn.text}</p>
           </div>
         ))}

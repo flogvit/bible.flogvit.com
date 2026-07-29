@@ -611,6 +611,35 @@ const en = {
   "u.choosePlanThis": "Choose this one",
   "u.favEmpty": "You have no favourites yet. Click the heart on a verse to add it.",
   "u.favIntro": "Your marked verses. Remembering is part of FLOGVIT.plus.",
+
+  // Funn fra sidesveipen (#23)
+  "common.allCategories": "All categories",
+  "common.allParts": "All parts",
+  "common.chapter": "Chapter",
+  "common.showAllOf": "See all",
+  "common.showInContext": "Show in context",
+  "common.skipToContent": "Skip to content",
+  "rd.addNote": "Add note",
+  "rd.andMore": "and {n} more",
+  "rd.rendering": "Rendering",
+
+  // Grunntekst-etiketter (#23)
+  "lang.greekShort": "Gk",
+  "lang.hebrewShort": "Heb",
+
+  // Fotnote-kilder (#23)
+  "fn.count": "{n} footnotes",
+  "fn.historisk": "History",
+  "fn.lingvistisk": "Language",
+  "fn.liturgisk": "Liturgy",
+  "fn.oversettelse": "Translation",
+  "fn.tekstkritisk": "Textual criticism",
+  "fn.teologisk": "Theology",
+
+  // Fotnote-kilder, resten (#23)
+  "fn.arkeologisk": "Archaeology",
+  "fn.kabbalistisk": "Kabbalistic",
+  "fn.rabbinsk": "Rabbinic",
 };
 
 type Dict = Record<keyof typeof en, string>;
@@ -1220,6 +1249,35 @@ const nb: Dict = {
   "u.choosePlanThis": "Velg denne",
   "u.favEmpty": "Du har ingen favoritter ennå. Klikk hjertet på et vers for å legge det til.",
   "u.favIntro": "Dine merkede vers. Husking er en del av FLOGVIT.plus.",
+
+  // Funn fra sidesveipen (#23)
+  "common.allCategories": "Alle kategorier",
+  "common.allParts": "Alle deler",
+  "common.chapter": "Kapittel",
+  "common.showAllOf": "Alle",
+  "common.showInContext": "Vis i kontekst",
+  "common.skipToContent": "Hopp til innhold",
+  "rd.addNote": "Legg til notat",
+  "rd.andMore": "+ {n} til",
+  "rd.rendering": "Oversettelse",
+
+  // Grunntekst-etiketter (#23)
+  "lang.greekShort": "gresk",
+  "lang.hebrewShort": "hebr",
+
+  // Fotnote-kilder (#23)
+  "fn.count": "{n} fotnoter",
+  "fn.historisk": "Historisk",
+  "fn.lingvistisk": "Lingvistisk",
+  "fn.liturgisk": "Liturgisk",
+  "fn.oversettelse": "Oversettelse",
+  "fn.tekstkritisk": "Tekstkritisk",
+  "fn.teologisk": "Teologisk",
+
+  // Fotnote-kilder, resten (#23)
+  "fn.arkeologisk": "Arkeologisk",
+  "fn.kabbalistisk": "Kabbalistisk",
+  "fn.rabbinsk": "Rabbinsk",
 };
 
 const nn: Dict = {
@@ -1827,6 +1885,35 @@ const nn: Dict = {
   "u.choosePlanThis": "Vel denne",
   "u.favEmpty": "Du har ingen favorittar enno. Klikk hjartet på eit vers for å leggje det til.",
   "u.favIntro": "Dine merkte vers. Husking er ein del av FLOGVIT.plus.",
+
+  // Funn fra sidesveipen (#23)
+  "common.allCategories": "Alle kategoriar",
+  "common.allParts": "Alle delar",
+  "common.chapter": "Kapittel",
+  "common.showAllOf": "Alle",
+  "common.showInContext": "Vis i kontekst",
+  "common.skipToContent": "Hopp til innhald",
+  "rd.addNote": "Legg til notat",
+  "rd.andMore": "+ {n} til",
+  "rd.rendering": "Omsetjing",
+
+  // Grunntekst-etiketter (#23)
+  "lang.greekShort": "gresk",
+  "lang.hebrewShort": "hebr",
+
+  // Fotnote-kilder (#23)
+  "fn.count": "{n} fotnotar",
+  "fn.historisk": "Historisk",
+  "fn.lingvistisk": "Lingvistisk",
+  "fn.liturgisk": "Liturgisk",
+  "fn.oversettelse": "Omsetjing",
+  "fn.tekstkritisk": "Tekstkritisk",
+  "fn.teologisk": "Teologisk",
+
+  // Fotnote-kilder, resten (#23)
+  "fn.arkeologisk": "Arkeologisk",
+  "fn.kabbalistisk": "Kabbalistisk",
+  "fn.rabbinsk": "Rabbinsk",
 };
 
 const sv: Dict = {
@@ -2434,6 +2521,35 @@ const sv: Dict = {
   "u.choosePlanThis": "Välj den här",
   "u.favEmpty": "Du har inga favoriter än. Klicka på hjärtat vid en vers för att lägga till den.",
   "u.favIntro": "Dina markerade verser. Att komma ihåg är en del av FLOGVIT.plus.",
+
+  // Funn fra sidesveipen (#23)
+  "common.allCategories": "Alla kategorier",
+  "common.allParts": "Alla delar",
+  "common.chapter": "Kapitel",
+  "common.showAllOf": "Alla",
+  "common.showInContext": "Visa i sammanhang",
+  "common.skipToContent": "Hoppa till innehåll",
+  "rd.addNote": "Lägg till anteckning",
+  "rd.andMore": "+ {n} till",
+  "rd.rendering": "Översättning",
+
+  // Grunntekst-etiketter (#23)
+  "lang.greekShort": "grek",
+  "lang.hebrewShort": "hebr",
+
+  // Fotnote-kilder (#23)
+  "fn.count": "{n} fotnoter",
+  "fn.historisk": "Historiskt",
+  "fn.lingvistisk": "Språkligt",
+  "fn.liturgisk": "Liturgiskt",
+  "fn.oversettelse": "Översättning",
+  "fn.tekstkritisk": "Textkritiskt",
+  "fn.teologisk": "Teologiskt",
+
+  // Fotnote-kilder, resten (#23)
+  "fn.arkeologisk": "Arkeologiskt",
+  "fn.kabbalistisk": "Kabbalistiskt",
+  "fn.rabbinsk": "Rabbinskt",
 };
 
 const fr: Dict = {
@@ -3041,6 +3157,35 @@ const fr: Dict = {
   "u.choosePlanThis": "Choisir celui-ci",
   "u.favEmpty": "Vous n’avez pas encore de favoris. Cliquez sur le cœur d’un verset pour l’ajouter.",
   "u.favIntro": "Vos versets marqués. La mémorisation fait partie de FLOGVIT.plus.",
+
+  // Funn fra sidesveipen (#23)
+  "common.allCategories": "Toutes les catégories",
+  "common.allParts": "Toutes les parties",
+  "common.chapter": "Chapitre",
+  "common.showAllOf": "Voir tout",
+  "common.showInContext": "Voir dans le contexte",
+  "common.skipToContent": "Aller au contenu",
+  "rd.addNote": "Ajouter une note",
+  "rd.andMore": "+ {n} de plus",
+  "rd.rendering": "Traduction",
+
+  // Grunntekst-etiketter (#23)
+  "lang.greekShort": "grec",
+  "lang.hebrewShort": "héb",
+
+  // Fotnote-kilder (#23)
+  "fn.count": "{n} notes",
+  "fn.historisk": "Histoire",
+  "fn.lingvistisk": "Linguistique",
+  "fn.liturgisk": "Liturgie",
+  "fn.oversettelse": "Traduction",
+  "fn.tekstkritisk": "Critique textuelle",
+  "fn.teologisk": "Théologie",
+
+  // Fotnote-kilder, resten (#23)
+  "fn.arkeologisk": "Archéologie",
+  "fn.kabbalistisk": "Kabbalistique",
+  "fn.rabbinsk": "Rabbinique",
 };
 
 const es: Dict = {
@@ -3648,6 +3793,35 @@ const es: Dict = {
   "u.choosePlanThis": "Elegir este",
   "u.favEmpty": "Aún no tienes favoritos. Haz clic en el corazón de un versículo para añadirlo.",
   "u.favIntro": "Tus versículos marcados. Recordar forma parte de FLOGVIT.plus.",
+
+  // Funn fra sidesveipen (#23)
+  "common.allCategories": "Todas las categorías",
+  "common.allParts": "Todas las partes",
+  "common.chapter": "Capítulo",
+  "common.showAllOf": "Ver todos",
+  "common.showInContext": "Ver en contexto",
+  "common.skipToContent": "Ir al contenido",
+  "rd.addNote": "Añadir una nota",
+  "rd.andMore": "+ {n} más",
+  "rd.rendering": "Traducción",
+
+  // Grunntekst-etiketter (#23)
+  "lang.greekShort": "gr",
+  "lang.hebrewShort": "heb",
+
+  // Fotnote-kilder (#23)
+  "fn.count": "{n} notas",
+  "fn.historisk": "Historia",
+  "fn.lingvistisk": "Lingüística",
+  "fn.liturgisk": "Liturgia",
+  "fn.oversettelse": "Traducción",
+  "fn.tekstkritisk": "Crítica textual",
+  "fn.teologisk": "Teología",
+
+  // Fotnote-kilder, resten (#23)
+  "fn.arkeologisk": "Arqueología",
+  "fn.kabbalistisk": "Cabalística",
+  "fn.rabbinsk": "Rabínica",
 };
 
 const fi: Dict = {
@@ -4255,6 +4429,35 @@ const fi: Dict = {
   "u.choosePlanThis": "Valitse tämä",
   "u.favEmpty": "Sinulla ei ole vielä suosikkeja. Napsauta jakeen sydäntä lisätäksesi sen.",
   "u.favIntro": "Merkitsemäsi jakeet. Muistaminen kuuluu FLOGVIT.plus-palveluun.",
+
+  // Funn fra sidesveipen (#23)
+  "common.allCategories": "Kaikki luokat",
+  "common.allParts": "Kaikki osat",
+  "common.chapter": "Luku",
+  "common.showAllOf": "Kaikki",
+  "common.showInContext": "Näytä asiayhteydessä",
+  "common.skipToContent": "Siirry sisältöön",
+  "rd.addNote": "Lisää muistiinpano",
+  "rd.andMore": "+ {n} lisää",
+  "rd.rendering": "Käännös",
+
+  // Grunntekst-etiketter (#23)
+  "lang.greekShort": "kreik",
+  "lang.hebrewShort": "hepr",
+
+  // Fotnote-kilder (#23)
+  "fn.count": "{n} alaviitettä",
+  "fn.historisk": "Historia",
+  "fn.lingvistisk": "Kielitiede",
+  "fn.liturgisk": "Liturgia",
+  "fn.oversettelse": "Käännös",
+  "fn.tekstkritisk": "Tekstikritiikki",
+  "fn.teologisk": "Teologia",
+
+  // Fotnote-kilder, resten (#23)
+  "fn.arkeologisk": "Arkeologia",
+  "fn.kabbalistisk": "Kabbalistinen",
+  "fn.rabbinsk": "Rabbiininen",
 };
 
 const de: Dict = {
@@ -4862,6 +5065,35 @@ const de: Dict = {
   "u.choosePlanThis": "Diesen wählen",
   "u.favEmpty": "Sie haben noch keine Favoriten. Klicken Sie auf das Herz bei einem Vers.",
   "u.favIntro": "Ihre markierten Verse. Das Merken gehört zu FLOGVIT.plus.",
+
+  // Funn fra sidesveipen (#23)
+  "common.allCategories": "Alle Kategorien",
+  "common.allParts": "Alle Teile",
+  "common.chapter": "Kapitel",
+  "common.showAllOf": "Alle",
+  "common.showInContext": "Im Kontext anzeigen",
+  "common.skipToContent": "Zum Inhalt springen",
+  "rd.addNote": "Notiz hinzufügen",
+  "rd.andMore": "+ {n} weitere",
+  "rd.rendering": "Übersetzung",
+
+  // Grunntekst-etiketter (#23)
+  "lang.greekShort": "griech",
+  "lang.hebrewShort": "hebr",
+
+  // Fotnote-kilder (#23)
+  "fn.count": "{n} Fußnoten",
+  "fn.historisk": "Historisch",
+  "fn.lingvistisk": "Sprachlich",
+  "fn.liturgisk": "Liturgisch",
+  "fn.oversettelse": "Übersetzung",
+  "fn.tekstkritisk": "Textkritisch",
+  "fn.teologisk": "Theologisch",
+
+  // Fotnote-kilder, resten (#23)
+  "fn.arkeologisk": "Archäologisch",
+  "fn.kabbalistisk": "Kabbalistisch",
+  "fn.rabbinsk": "Rabbinisch",
 };
 
 export const DICTIONARIES = { en, nb, nn, sv, fr, es, fi, de };

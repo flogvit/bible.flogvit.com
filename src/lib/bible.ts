@@ -165,8 +165,16 @@ export function normalizeBibleId(id?: string): string | undefined {
   return id === undefined ? undefined : (LEGACY_BIBLE_IDS[id] ?? id);
 }
 
-export async function getVerses(bookId: number, chapter: number, bible = 'osnb'): Promise<Verse[]> {
+/**
+ * Versene i et kapittel. Utgaven er valgfri: uten den følger den språket
+ * (#26) framfor et hardkodet `'osnb'`, som var grunnen til at
+ * evangelieparallellene og profetiene siterte norsk tekst på engelske sider.
+ * Kallere som SKAL ha en bestemt utgave (KVN-pivoten i verse-mapper) sender
+ * den eksplisitt og er uendret.
+ */
+export async function getVerses(bookId: number, chapter: number, bible?: string): Promise<Verse[]> {
   const sql = getSql();
+  bible = bible ?? (await defaultBibleForLanguage());
   const rows = await sql`
     SELECT * FROM verses WHERE book_id = ${bookId} AND chapter = ${chapter} AND bible = ${bible} ORDER BY verse
   ` as VerseRow[];
@@ -229,7 +237,8 @@ export async function getOriginalVerse(bookId: number, chapter: number, verseNum
   return row;
 }
 
-export async function getVersesWithOriginal(refs: VerseRef[], bible = 'osnb'): Promise<VerseWithOriginal[]> {
+export async function getVersesWithOriginal(refs: VerseRef[], bible?: string): Promise<VerseWithOriginal[]> {
+  bible = bible ?? (await defaultBibleForLanguage());
   const results: VerseWithOriginal[] = [];
 
   for (const ref of refs) {
@@ -2321,6 +2330,21 @@ export async function readableBibleCandidates(requested: string): Promise<BibleC
   if (!result.some((r) => r.id === 'osen')) result.push({ id: 'osen', lang: BASE_CONTENT_LANGUAGE });
   if (!result.some((r) => r.id === 'osnb')) result.push({ id: 'osnb', lang: 'nb' });
   return result;
+}
+
+/**
+ * Utgaven en side skal SITERE fra når leseren ikke har valgt noe selv — første
+ * kandidat i språkets kjede (#26). Finnes fordi `'osnb'` lå som hardkodet
+ * default på hvert sitatsted, og et engelsk sitat da kom på norsk: forsidens
+ * dagens vers, profetiene, evangelieparallellene, favorittene og
+ * ord-statistikken hentet alle norsk tekst uansett språk.
+ *
+ * Et EKSPLISITT `?bible=` overstyrer som før — utgavevalget er brukerens eget
+ * (I18N.md-akse 3) og skal ikke rives med av språkvalget.
+ */
+export async function defaultBibleForLanguage(lang = currentContentLanguage()): Promise<string> {
+  const [first] = await readableBibleCandidates(lang);
+  return first?.id ?? 'osnb';
 }
 
 export async function getBibleEditionById(id: string): Promise<

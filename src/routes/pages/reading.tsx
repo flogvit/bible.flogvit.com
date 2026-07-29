@@ -53,6 +53,7 @@ import {
   formatReference,
   normalizeBibleId,
   readableBibleCandidates,
+  defaultBibleForLanguage,
 } from '../../lib/bible.ts';
 import type {
   BibleCandidate,
@@ -775,6 +776,7 @@ function VerseStrip({
   secondary: string | undefined;
   hebrew: boolean;
 }) {
+  const t = tCtx();
   if (secondary === 'original' && originalText) {
     return (
       <div
@@ -783,7 +785,7 @@ function VerseStrip({
         lang={hebrew ? 'he' : 'el'}
       >
         <span class="undertekst-label" aria-hidden="true">
-          {hebrew ? 'hebr' : 'gresk'}
+          {t(hebrew ? 'lang.hebrewShort' : 'lang.greekShort')}
         </span>
         {originalText}
       </div>
@@ -1025,7 +1027,7 @@ function VerseDetailPanel({
                 data-note-input
               ></textarea>
               <button type="button" class="note-add-button" data-note-add disabled>
-                Legg til notat
+                {t('rd.addNote')}
               </button>
             </div>
             <noscript>
@@ -1272,7 +1274,7 @@ function StudyPanel({
               </li>
             ))}
             {data.importantWords.length > 8 && (
-              <li class="st-word-more">+ {data.importantWords.length - 8} til</li>
+              <li class="st-word-more">{t('rd.andMore', { n: data.importantWords.length - 8 })}</li>
             )}
           </ul>
         ) : (
@@ -1810,7 +1812,7 @@ r.get('/:book/:chapter', async (c) => {
               {/* Én h1 med bok + kapittel (SEO/skjermleser); visuelt to linjer som før. */}
               <h1 class="chapter-title">
                 <span class="chapter-book">{bookName(book)}</span>
-                <span class="chapter-number">Kapittel {chapter}</span>
+                <span class="chapter-number">{t('common.chapter')} {chapter}</span>
               </h1>
               {/* Progresjonsringen ER knappen (#16): den fyller seg selv i
                   auto/foreslå-modus, og klikkes i manuell. Skjult til
@@ -2023,7 +2025,7 @@ function parseRefs(refsParam: string | undefined): ParsedTextRef[] {
 r.get('/tekst', async (c) => {
   const t = tFor(c);
   const refsParam = c.req.query('refs');
-  const bible = normalizeBibleId(c.req.query('bible')) || 'osnb';
+  const bible = normalizeBibleId(c.req.query('bible')) || (await defaultBibleForLanguage());
   const parsedRefs = parseRefs(refsParam);
 
   // Slug → VerseRef via bok-metadata (alias-støtte som ellers).
@@ -2109,7 +2111,7 @@ r.get('/tekst', async (c) => {
                         </a>
                       </h2>
                       <a href={contextUrl} class="text-context-link">
-                        Vis i kontekst →
+                        {t('common.showInContext')} →
                       </a>
                     </div>
                     <div class="text-verse-list">

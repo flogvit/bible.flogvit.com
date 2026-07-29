@@ -4,12 +4,14 @@
 // src/lib/bible.ts (getVersesWithOriginal) i stedet for POST /api/verses fra
 // klienten — samme markupstruktur og tekster.
 
-import { getVersesWithOriginal, getBookUrlSlug, getBookById } from '../lib/bible.ts';
+import { getVersesWithOriginal, getBookUrlSlug, getBookById, defaultBibleForLanguage } from '../lib/bible.ts';
 import type { PersonKeyEvent, VerseRef, VerseWithOriginal } from '../lib/bible.ts';
 import { toUrlSlug } from '../lib/url-utils.ts';
 import { InlineRefs } from './inline-refs.tsx';
 import { Footnotes } from './footnotes.tsx';
 import { lhref } from '../lib/i18n.ts';
+import { tCtx } from '../lib/i18n.ts';
+import { bookAbbrByShort } from '../lib/books-data.ts';
 
 /** Statisk enkeltvers: nummer + tekst (+ fotnoter og grunntekst). */
 export function VerseView({ data }: { data: VerseWithOriginal }) {
@@ -30,7 +32,7 @@ export function VerseView({ data }: { data: VerseWithOriginal }) {
           lang={hebrew ? 'he' : 'el'}
         >
           <span class="undertekst-label" aria-hidden="true">
-            {hebrew ? 'hebr' : 'gresk'}
+            {tCtx()(hebrew ? 'lang.hebrewShort' : 'lang.greekShort')}
           </span>
           {originalText}
         </div>
@@ -46,10 +48,10 @@ function VerseGroup({ data }: { data: VerseWithOriginal }) {
     <div class="verse-group">
       <div class="verse-header">
         <a href={lhref(url)} class="verse-ref-link">
-          {data.bookShortName} {data.verse.chapter}:{data.verse.verse}
+          {bookAbbrByShort(data.bookShortName)} {data.verse.chapter}:{data.verse.verse}
         </a>
         <a href={lhref(url)} class="open-context">
-          Vis i kontekst →
+          {tCtx()('common.showInContext')} →
         </a>
       </div>
       <VerseView data={data} />
@@ -58,8 +60,8 @@ function VerseGroup({ data }: { data: VerseWithOriginal }) {
 }
 
 /** Async: henter og rendrer en liste versreferanser som vers-grupper. */
-export async function VerseRefList({ refs, bible = 'osnb' }: { refs: VerseRef[]; bible?: string }) {
-  const verses = await getVersesWithOriginal(refs, bible);
+export async function VerseRefList({ refs, bible }: { refs: VerseRef[]; bible?: string }) {
+  const verses = await getVersesWithOriginal(refs, bible ?? (await defaultBibleForLanguage()));
   return (
     <>
       {verses.map((v) => (
@@ -75,11 +77,12 @@ export async function VerseRefList({ refs, bible = 'osnb' }: { refs: VerseRef[];
  * fordelte dem tilbake per hendelse; server-side henter vi per hendelse
  * (samme resultat, uten fordelingsheuristikken).
  */
-export async function KeyEventList({ keyEvents, bible = 'osnb' }: { keyEvents: PersonKeyEvent[]; bible?: string }) {
+export async function KeyEventList({ keyEvents, bible }: { keyEvents: PersonKeyEvent[]; bible?: string }) {
+  const edition = bible ?? (await defaultBibleForLanguage());
   const events = await Promise.all(
     keyEvents.map(async (event) => ({
       event,
-      verses: await getVersesWithOriginal(event.verses, bible),
+      verses: await getVersesWithOriginal(event.verses, edition),
     })),
   );
 

@@ -26,6 +26,7 @@ import {
   searchDays,
   type DayReference,
   normalizeBibleId,
+  defaultBibleForLanguage,
 } from '../../lib/bible.ts';
 import { DEFAULT_CONTENT_LANGUAGE } from '../../lib/lang.ts';
 import { booksData, getBookInfoById, bookName, bookNameById, bookNameByShort, type BookInfo } from '../../lib/books-data.ts';
@@ -47,7 +48,8 @@ interface DailyVerse {
   note: string | null;
 }
 
-async function loadDailyVerse(bible = 'osnb'): Promise<DailyVerse | null> {
+async function loadDailyVerse(bible?: string): Promise<DailyVerse | null> {
+  bible = bible ?? (await defaultBibleForLanguage());
   const sql = getSql();
   const date = new Date().toISOString().slice(0, 10);
   const [dv] = (await sql`
@@ -393,7 +395,7 @@ r.get('/sok', async (c) => {
   const query = (c.req.query('q') || '').trim();
   const side = Math.max(1, parseInt(c.req.query('side') || '1', 10) || 1);
   const offset = (side - 1) * PAGE_SIZE;
-  const bible = normalizeBibleId(c.req.query('bible')) || 'osnb';
+  const bible = normalizeBibleId(c.req.query('bible')) || (await defaultBibleForLanguage());
 
   const res = query.length >= 2 ? await searchVerses(query, PAGE_SIZE, offset, bible) : null;
   // Andre ressurstyper vises kun på side 1 (som i gamle appen).
