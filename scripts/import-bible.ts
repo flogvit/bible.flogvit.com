@@ -26,6 +26,7 @@ import { getChapterVerseCount } from '../src/lib/verse-counts.ts';
 import { parseRefMarkup } from '@free-bible/kvn/ref';
 import { BOOK_IDS } from '@free-bible/kvn/types';
 import { UkvnMapper, loadUkvnMapping, ukvnEncode, ukvnDecode, resolveMappingId } from '@free-bible/kvn';
+import { IMPORTED_BIBLES } from '../src/lib/editions.ts';
 
 // Kilde for bibelinnhold. Standard: ../free-bible relativt til cwd (som er en
 // symlink til det ekte free-bible-repoet). Kan overstyres eksplisitt med
@@ -70,15 +71,9 @@ const forLang = (lang: string) => `  [${lang}]`;
 const args = process.argv.slice(2);
 const isFullImport = args.includes('--full');
 
-/**
- * Oversettelsene vi importerer TEKST for. Dette er en bevisst, kort liste — ikke
- * alt som ligger i `bibles_raw` (82 moduler, de fleste med lisenser vi ikke kan
- * publisere under).
- *
- * Listen styrer også metadata-importen (`bible_editions`), så en ny oversettelse
- * her drar meta.json/license.json og info-siden med seg automatisk.
- */
-const BIBLES = ['osnb', 'osnn', 'osen', 'sblgnt', 'tanach'];
+// Lista bor i src/lib/editions.ts — sitemap-generatoren trenger den også,
+// og den har ingen database å slå den opp i.
+const BIBLES: readonly string[] = IMPORTED_BIBLES;
 
 // Statistics tracking
 interface ImportStats {

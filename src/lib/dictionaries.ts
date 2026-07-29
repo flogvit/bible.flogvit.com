@@ -747,6 +747,12 @@ const en = {
   "ed.script": "script {script}",
   "ed.translator": "Translator",
   "ed.translators": "Translators",
+
+  // Versnummerering: standardvalg (#27)
+  "u.followsEdition": "Follows the edition",
+
+  // Plus-krav på opplasting (#29)
+  "u.uploadPlusNotice": "Storing your own translation is part of FLOGVIT.plus. You can upload and preview a file without an account — saving it requires plus.",
 };
 
 type Dict = Record<keyof typeof en, string>;
@@ -1492,6 +1498,12 @@ const nb: Dict = {
   "ed.script": "skrift {script}",
   "ed.translator": "Oversetter",
   "ed.translators": "Oversettere",
+
+  // Versnummerering: standardvalg (#27)
+  "u.followsEdition": "Følger utgaven",
+
+  // Plus-krav på opplasting (#29)
+  "u.uploadPlusNotice": "Å lagre en egen oversettelse er en del av FLOGVIT.plus. Du kan laste opp og se gjennom en fil uten konto — å lagre den krever plus.",
 };
 
 const nn: Dict = {
@@ -2235,6 +2247,12 @@ const nn: Dict = {
   "ed.script": "skrift {script}",
   "ed.translator": "Omsetjar",
   "ed.translators": "Omsetjarar",
+
+  // Versnummerering: standardvalg (#27)
+  "u.followsEdition": "Følgjer utgåva",
+
+  // Plus-krav på opplasting (#29)
+  "u.uploadPlusNotice": "Å lagre ei eiga omsetjing er ein del av FLOGVIT.plus. Du kan laste opp og sjå gjennom ei fil utan konto — å lagre henne krev plus.",
 };
 
 const sv: Dict = {
@@ -2978,6 +2996,12 @@ const sv: Dict = {
   "ed.script": "skrift {script}",
   "ed.translator": "Översättare",
   "ed.translators": "Översättare",
+
+  // Versnummerering: standardvalg (#27)
+  "u.followsEdition": "Följer utgåvan",
+
+  // Plus-krav på opplasting (#29)
+  "u.uploadPlusNotice": "Att spara en egen översättning ingår i FLOGVIT.plus. Du kan ladda upp och förhandsgranska en fil utan konto — att spara den kräver plus.",
 };
 
 const fr: Dict = {
@@ -3721,6 +3745,12 @@ const fr: Dict = {
   "ed.script": "écriture {script}",
   "ed.translator": "Traducteur",
   "ed.translators": "Traducteurs",
+
+  // Versnummerering: standardvalg (#27)
+  "u.followsEdition": "Suit l’édition",
+
+  // Plus-krav på opplasting (#29)
+  "u.uploadPlusNotice": "Enregistrer votre propre traduction fait partie de FLOGVIT.plus. Vous pouvez importer et prévisualiser un fichier sans compte — l’enregistrer nécessite plus.",
 };
 
 const es: Dict = {
@@ -4464,6 +4494,12 @@ const es: Dict = {
   "ed.script": "escritura {script}",
   "ed.translator": "Traductor",
   "ed.translators": "Traductores",
+
+  // Versnummerering: standardvalg (#27)
+  "u.followsEdition": "Sigue la edición",
+
+  // Plus-krav på opplasting (#29)
+  "u.uploadPlusNotice": "Guardar tu propia traducción forma parte de FLOGVIT.plus. Puedes subir y previsualizar un archivo sin cuenta; guardarlo requiere plus.",
 };
 
 const fi: Dict = {
@@ -5207,6 +5243,12 @@ const fi: Dict = {
   "ed.script": "kirjoitus {script}",
   "ed.translator": "Kääntäjä",
   "ed.translators": "Kääntäjät",
+
+  // Versnummerering: standardvalg (#27)
+  "u.followsEdition": "Seuraa laitosta",
+
+  // Plus-krav på opplasting (#29)
+  "u.uploadPlusNotice": "Oman käännöksen tallentaminen kuuluu FLOGVIT.plus-palveluun. Voit ladata ja esikatsella tiedoston ilman tiliä — tallentaminen vaatii plussan.",
 };
 
 const de: Dict = {
@@ -5950,6 +5992,12 @@ const de: Dict = {
   "ed.script": "Schrift {script}",
   "ed.translator": "Übersetzer",
   "ed.translators": "Übersetzer",
+
+  // Versnummerering: standardvalg (#27)
+  "u.followsEdition": "Folgt der Ausgabe",
+
+  // Plus-krav på opplasting (#29)
+  "u.uploadPlusNotice": "Das Speichern einer eigenen Übersetzung gehört zu FLOGVIT.plus. Sie können eine Datei ohne Konto hochladen und ansehen — das Speichern erfordert plus.",
 };
 
 export const DICTIONARIES = { en, nb, nn, sv, fr, es, fi, de };

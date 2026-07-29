@@ -238,6 +238,11 @@ if (root) {
         const idb = await import('./offline-db.js');
         userBibles = await idb.getUserBibles();
       } catch {}
+      // Fanges FØR løkka under, som legger egne bibler inn i samme select —
+      // ellers ville de talt to ganger i synlighets-togglene.
+      const fromServer = [...root.querySelectorAll('[data-setting="bible"] option')]
+        .map((o) => ({ value: o.value, label: o.textContent }))
+        .filter((o) => o.value);
       for (const sel of ['bible', 'secondaryBible']) {
         const select = root.querySelector(`[data-setting="${sel}"]`);
         if (!select) continue;
@@ -253,9 +258,12 @@ if (root) {
       const box = root.querySelector('[data-bible-visibility]');
       if (box) {
         box.textContent = '';
+        // Utgavene kommer fra bibelvelgeren serveren allerede har rendret
+        // (fra bible_editions) — ikke fra en egen liste her. Den lista var
+        // hardkodet til osnb/osnn, så OSEN manglet i togglene selv når den
+        // sto i velgeren rett over (#28). Én kilde, ingen drift.
         const versions = [
-          { value: 'osnb', label: 'OSNB (bokmål)' },
-          { value: 'osnn', label: 'OSNN (nynorsk)' },
+          ...fromServer,
           ...userBibles.map((b) => ({ value: b.id, label: b.name })),
         ];
         const hidden = new Set((read(KEYS.settings, {}).hiddenBibles || []));

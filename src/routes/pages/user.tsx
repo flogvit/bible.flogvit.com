@@ -17,7 +17,7 @@ import { getSql } from '../../lib/db.ts';
 import { bookNameByShort } from '../../lib/books-data.ts';
 import { getUserItems, getUserSingleton, getReadingProgress } from '../../lib/user-data.ts';
 import { summarizeProgress, fullHeat, stalestBooks } from '../../lib/reading-map.ts';
-import { getBibleEditions, getAllReadingPlansList } from '../../lib/bible.ts';
+import { getBibleEditions, getAllReadingPlansList, type BibleEdition } from '../../lib/bible.ts';
 import { getAvailableMappings } from '../../lib/verse-mapper.ts';
 import { layoutProps, makeT, tFor, type Locale, type MessageKey, lhref } from '../../lib/i18n.ts';
 import { tCtx } from '../../lib/i18n.ts';
@@ -389,6 +389,16 @@ r.get('/manuskripter/:slug', (c) => {
   );
 });
 
+/**
+ * Etiketten for en utgave i velgerne. Navnet står på utgavens EGET språk
+ * («Open Source Norsk Bokmål»), for det er slik utgaven heter — ikke noe som
+ * skal oversettes. Forkortelsen tas med fordi den er det brukeren ser i
+ * URL-er og delte lenker.
+ */
+function editionLabel(e: BibleEdition): string {
+  return e.abbreviation ? `${e.name_native} (${e.abbreviation})` : e.name_native;
+}
+
 // ---------- /innstillinger ----------
 const TOGGLE_KEYS = [
   'showBookSummary', 'showChapterSummary', 'showChapterContext', 'showChapterInsights',
@@ -413,10 +423,14 @@ const SEARCH_TYPE_TOGGLES: { key: string; label: MessageKey }[] = [
   { key: 'numberSymbolism', label: 'nav.numbers' },
   { key: 'days', label: 'nav.days' },
 ];
-r.get('/innstillinger', (c) => {
+r.get('/innstillinger', async (c) => {
   const t = tFor(c);
   const user = c.var.user;
   const mappings = getAvailableMappings();
+  // Bare lesbare utgaver hører hjemme i «bibeloversettelse» — grunntekstene
+  // (SBLGNT, Tanach) velges som UNDERTEKST, ikke som hovedtekst, og ligger
+  // allerede der som «Grunntekst».
+  const readable = (await getBibleEditions()).filter((e) => e.philosophy !== 'source_text');
   return c.html(
     <UserPage {...layoutProps(c)} title={t('chrome.settings')} crumb={t('chrome.settings')} heading={t('chrome.settings')} page="settings" intro={t('set.intro')}>
       <form data-settings-form class="settings-form">
@@ -498,11 +512,16 @@ r.get('/innstillinger', (c) => {
         </fieldset>
         <fieldset class="settings-group">
           <legend>{t('u.translationAndNumbering')}</legend>
+          {/* Utgavene kommer fra bible_editions, ikke fra en liste her (#28).
+              Hardkodet osnb/osnn betydde at OSEN aldri dukket opp — og at
+              enhver ny oversettelse ville krevd en kodeendring, stikk i strid
+              med hele poenget med tabellen. */}
           <label class="settings-row">
             <span>{t('u.bibleEdition')}</span>
             <select data-setting="bible" class="user-input" data-proper-names>
-              <option value="osnb">OSNB (bokmål)</option>
-              <option value="osnn">OSNN (nynorsk)</option>
+              {readable.map((e) => (
+                <option value={e.id}>{editionLabel(e)}</option>
+              ))}
             </select>
           </label>
           <label class="settings-row">
@@ -510,14 +529,21 @@ r.get('/innstillinger', (c) => {
             <select data-setting="secondaryBible" class="user-input" data-proper-names>
               <option value="">{t('common.none')}</option>
               <option value="original">{t('u.originalText')}</option>
-              <option value="osnb">OSNB (bokmål)</option>
-              <option value="osnn">OSNN (nynorsk)</option>
+              {readable.map((e) => (
+                <option value={e.id}>{editionLabel(e)}</option>
+              ))}
             </select>
           </label>
           {mappings.length > 0 && (
             <label class="settings-row">
               <span>{t('u.versification')}</span>
+              {/* Uten en standardoppføring vant den ALFABETISK første, så
+                  «aceh» sto som brukerens valg — og ble skrevet inn i
+                  innstillingene ved første lagring på siden (#27).
+                  Versnummerering er en overstyring, ikke et valg de fleste
+                  skal ta, så tom verdi = følg utgaven. */}
               <select data-setting="verseMapping" class="user-input" data-proper-names>
+                <option value="">{t('u.followsEdition')}</option>
                 {mappings.map((m) => (
                   <option value={m.id}>{m.displayName}</option>
                 ))}
@@ -689,6 +715,11 @@ r.get('/oversettelser', async (c) => {
 
       <section class="trans-section" data-trans-upload>
         <h2>{t('u.uploadNew')}</h2>
+        {/* Plus-kravet står FØR skjemaet, ikke i porten på siste steg (#29).
+            Porten i translations.js står der fortsatt og er uendret — dette
+            er ikke en innstramming, bare at brukeren får vite det før hen
+            velger fil og venter på analysen. */}
+        <p class="user-note trans-plus-notice">{t('u.uploadPlusNotice')}</p>
         <p class="user-note">
           {t('u.uploadHelp')}
         </p>
