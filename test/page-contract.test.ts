@@ -60,6 +60,16 @@ const PAGES: { path: string; name: string }[] = [
   { path: '/manuskripter', name: 'manuskripter' },
   { path: '/om', name: 'om' },
   { path: '/sok?q=gud', name: 'søk med treff' },
+  // Brukersidene og detaljsidene manglet i matrisen, og der lå det norsk igjen
+  // som sveipen ikke kunne se — den sjekker bare sidene som STÅR her. Ny side
+  // ⇒ legg den til, ellers er den utenfor alle invariantene.
+  { path: '/emner', name: 'emner' },
+  { path: '/notater', name: 'notater' },
+  { path: '/lister', name: 'verslister' },
+  { path: '/offline', name: 'offline' },
+  { path: '/bidra', name: 'bidra' },
+  { path: '/sok/original?q=chesed', name: 'søk i grunnteksten' },
+  { path: '/tilgjengelighet', name: 'tilgjengelighet' },
   { path: '/finnes-ikke', name: '404-siden' },
 ];
 

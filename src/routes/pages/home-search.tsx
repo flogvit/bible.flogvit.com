@@ -561,7 +561,7 @@ r.get('/sok/original', async (c) => {
   return c.html(
     <Layout {...layoutProps(c)}
       title={query ? `${t('search.originalTitle')}: ${query} — FLOGVIT.bible` : `${t('search.inOriginal')} — FLOGVIT.bible`}
-      description="Søk i den hebraiske og greske grunnteksten."
+      description={t('so.originalMeta')}
       styles={['search.css']}
     >
       <div class="search-main">
@@ -570,7 +570,7 @@ r.get('/sok/original', async (c) => {
             items={[
               { label: tCtx()('common.home'), href: '/' },
               { label: 'Søk', href: '/sok' },
-              { label: 'Originalspråk' },
+              { label: t('so.originalLangs') },
             ]}
           />
           <h1>{t('search.inOriginal')}</h1>
@@ -581,7 +581,7 @@ r.get('/sok/original', async (c) => {
               name="q"
               value={query}
               placeholder="Skriv et hebraisk eller gresk ord…"
-              aria-label="Søk i grunnteksten"
+              aria-label={t('so.searchOriginalAria')}
               class="search-input"
             />
             <button type="submit" class="search-submit">{t('search.title')}</button>
@@ -591,7 +591,7 @@ r.get('/sok/original', async (c) => {
             <>
               <p class="search-count">
                 {res.total === 0
-                  ? `Ingen treff på «${query}».`
+                  ? t('so.noHits', { q: query })
                   : `${res.total} treff (${res.language === 'hebrew' ? 'hebraisk' : 'gresk'}).`}
               </p>
               <div class="search-results">

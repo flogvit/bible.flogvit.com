@@ -68,7 +68,7 @@ import type {
 } from '../../lib/bible.ts';
 import { mapChapter, resolveMappingId, getAvailableMappings } from '../../lib/verse-mapper.ts';
 import { getWorksForChapter, workHref, encodeKvn, type WorkRef } from '../../lib/works.ts';
-import { layoutProps, tFor, type Translator, lhref } from '../../lib/i18n.ts';
+import { layoutProps, tFor, type Translator, type MessageKey, lhref } from '../../lib/i18n.ts';
 import { localeToContentLanguage } from '../../lib/lang.ts';
 
 const r = new Hono<AppEnv>();
@@ -115,14 +115,15 @@ function excerpt(text: string, max = 160): string {
 }
 
 // Samme bokgrupper som gamle ChapterToc
-const TOC_CATEGORIES: { label: string; range: [number, number] }[] = [
-  { label: 'Mosebøkene', range: [1, 5] },
-  { label: 'Historiske', range: [6, 17] },
-  { label: 'Poetiske', range: [18, 22] },
-  { label: 'Profetene', range: [23, 39] },
-  { label: 'Evangeliene & Apg', range: [40, 44] },
-  { label: 'Paulus-brev', range: [45, 57] },
-  { label: 'Øvrige brev & Åp.', range: [58, 66] },
+// Samme gruppenøkler som forsidens bokliste — etikettene bor ett sted.
+const TOC_CATEGORIES: { key: MessageKey; range: [number, number] }[] = [
+  { key: 'grp.pentateuch', range: [1, 5] },
+  { key: 'grp.historical', range: [6, 17] },
+  { key: 'grp.poetic', range: [18, 22] },
+  { key: 'grp.prophets', range: [23, 39] },
+  { key: 'grp.gospels', range: [40, 44] },
+  { key: 'grp.pauline', range: [45, 57] },
+  { key: 'grp.other', range: [58, 66] },
 ];
 
 // ── Datamodell for SSR-kapittelet ────────────────────────────────────
@@ -365,7 +366,7 @@ function ChapterToc({
 
       {category && siblings.length > 1 && (
         <>
-          <div class="toc-group-label">{category.label}</div>
+          <div class="toc-group-label">{tCtx()(category.key)}</div>
           {siblings.map((b) => (
             <a
               href={lhref(`/${toUrlSlug(b.short_name)}/1${query}`)}
@@ -1138,7 +1139,7 @@ function VerseBlock({
         data-verse-toggle
         aria-expanded="false"
         aria-controls={`v${n}-detail`}
-        aria-label={`Vers ${n}. Klikk for å se original tekst og referanser`}
+        aria-label={tCtx()('rd.verseAria', { n })}
       >
         {n}
       </button>
@@ -1218,7 +1219,7 @@ function StudyPanel({
           <input
             type="search"
             class="st-lookup-input"
-            placeholder='"Joh 3,16", "Abraham", "nåde"…'
+            placeholder={tCtx()('rd.refPlaceholder')}
             aria-label={t('rd.lookup')}
             data-lookup-input
           />
@@ -1754,7 +1755,7 @@ r.get('/:book/:chapter', async (c) => {
   const title = `${bookName(book)} ${chapter} — FLOGVIT.bible`;
   const description = data.summary
     ? excerpt(data.summary)
-    : `${bookName(book)} kapittel ${chapter} — les med grunntekst, referanser og studieverktøy.`;
+    : t('rd.chapterMeta', { book: bookName(book), chapter });
 
   const undertekstOn = !!secondary && secondary !== 'original';
   const grunntekstOn = secondary === 'original';
@@ -1923,7 +1924,7 @@ r.get('/:book/:chapter', async (c) => {
             </footer>
           </article>
 
-          <aside class="reading-sidebar" aria-label="Verktøypanel" data-panel-tabs>
+          <aside class="reading-sidebar" aria-label={tCtx()('rd.toolPanelAria')} data-panel-tabs>
             <div
               class="sidebar-resize"
               data-sidebar-resize
@@ -2056,7 +2057,7 @@ r.get('/tekst', async (c) => {
   return c.html(
     <Layout {...layoutProps(c)}
       title="Bibelpassasjer — FLOGVIT.bible"
-      description="Vis utvalgte bibelpassasjer samlet på én side."
+      description={t('rd.passagesMeta')}
       canonical={SITE + lhref('/tekst')}
       styles={['reading.css']}
       scripts={['ref-preview.js']}

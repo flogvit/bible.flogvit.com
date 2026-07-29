@@ -1,5 +1,6 @@
 
-import { lhref } from '../lib/i18n.ts';// Brødsmulesti — port av React-appens Breadcrumbs (samme markup-kontrakt:
+import { lhref, tCtx } from '../lib/i18n.ts';
+// Brødsmulesti — port av React-appens Breadcrumbs (samme markup-kontrakt:
 // nav > ol > li med lenker, siste element uten lenke).
 
 export interface Crumb {
@@ -9,7 +10,7 @@ export interface Crumb {
 
 export function Breadcrumbs({ items }: { items: Crumb[] }) {
   return (
-    <nav class="breadcrumbs" aria-label="Brødsmulesti">
+    <nav class="breadcrumbs" aria-label={tCtx()('common.breadcrumbAria')}>
       <ol>
         {items.map((item, i) => (
           <li>

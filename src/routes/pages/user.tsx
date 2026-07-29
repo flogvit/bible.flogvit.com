@@ -119,16 +119,16 @@ r.get('/emner', async (c) => {
       (data.verseTopics ?? []).filter((vt) => vt.topicId === t.id).length,
   }));
   return c.html(
-    <UserPage {...layoutProps(c)} title={t('nav.topicsMine')} crumb={t('nav.topicsMine')} heading={t('nav.topicsMine')} page="topics" intro="Egne emner du har tagget vers, personer og annet innhold med.">
+    <UserPage {...layoutProps(c)} title={t('nav.topicsMine')} crumb={t('nav.topicsMine')} heading={t('nav.topicsMine')} page="topics" intro={t('u.topicsIntro')}>
       <div class="user-list" data-list>
         {topics.map((t) => (
           <div class="user-card">
             <span class="user-card-title">{t.name}</span>
-            <span class="user-card-meta">{t.count} merket</span>
+            <span class="user-card-meta">{tCtx()('is.taggedCount', { n: t.count })}</span>
           </div>
         ))}
       </div>
-      <p class="user-empty" data-empty hidden={topics.length > 0}>Du har ingen emner ennå. Tag innhold med «Emner»-knappen på vers- og innholdssider.</p>
+      <p class="user-empty" data-empty hidden={topics.length > 0}>{t('u.noTopics')}</p>
     </UserPage>,
   );
 });
@@ -141,7 +141,7 @@ r.get('/notater', async (c) => {
   const user = c.var.user;
   const notes = user?.plus ? (await getUserItems<NoteItem>(user.id, 'notes')).sort((a, b) => b.updatedAt - a.updatedAt) : [];
   return c.html(
-    <UserPage {...layoutProps(c)} title={t('nav.notes')} crumb={t('nav.notes')} heading={t('nav.notes')} page="notes" intro="Dine notater på vers.">
+    <UserPage {...layoutProps(c)} title={t('nav.notes')} crumb={t('nav.notes')} heading={t('nav.notes')} page="notes" intro={t('u.notesIntro')}>
       <div class="user-list" data-list>
         {notes.map((n) => (
           <div class="user-card">
@@ -163,16 +163,16 @@ r.get('/lister', async (c) => {
   const user = c.var.user;
   const lists = user?.plus ? (await getUserItems<VerseListItem>(user.id, 'verseLists')).sort((a, b) => b.updatedAt - a.updatedAt) : [];
   return c.html(
-    <UserPage {...layoutProps(c)} title={t('nav.verseLists')} crumb={t('nav.verseLists')} heading={t('nav.verseLists')} page="verselists" intro="Samle vers i navngitte lister for manuskripter, bibeltimer og studier.">
+    <UserPage {...layoutProps(c)} title={t('nav.verseLists')} crumb={t('nav.verseLists')} heading={t('nav.verseLists')} page="verselists" intro={t('u.listsIntro')}>
       <form class="user-create" data-create-list>
-        <input type="text" name="name" placeholder={t('u.newListPh')} aria-label="Navn på liste" class="user-input" />
+        <input type="text" name="name" placeholder={t('u.newListPh')} aria-label={t('u.listNameAria')} class="user-input" />
         <button type="submit" class="user-btn">{t('u.createList')}</button>
       </form>
       <div class="user-list" data-list>
         {lists.map((l) => (
           <div class="user-card">
             <span class="user-card-title">{l.name}</span>
-            <span class="user-card-meta">{(l.refs ?? []).length} vers</span>
+            <span class="user-card-meta">{t('is.verseCount', { n: (l.refs ?? []).length })}</span>
           </div>
         ))}
       </div>
@@ -623,7 +623,7 @@ r.get('/offline', (c) => {
       crumb="Offline"
       heading="Offline-tilgang"
       page="offline"
-      intro="Last ned bibeltekst og støttedata for lesing uten internett. Nedlasting er en del av FLOGVIT.plus."
+      intro={t('u.offlineIntro')}
       styles={['offline.css']}
       scripts={['offline.js']}
     >
@@ -652,11 +652,7 @@ r.get('/offline', (c) => {
             <p class="user-note" data-dl-text></p>
           </div>
         </div>
-        <p class="user-note">
-          Nedlastingen henter alle 1189 kapitler per valgt oversettelse (med grunntekst, ord-for-ord
-          og kryssreferanser) pluss tidslinje, profetier, personer og leseplaner. Regn med noen
-          minutter og et par hundre MB lagringsplass.
-        </p>
+        <p class="user-note">{t('u.offlineNote')}</p>
       </section>
 
       <section class="offline-section">
