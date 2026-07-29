@@ -188,6 +188,51 @@ export function tEnum(t: Translator, prefix: string, value: string): string {
   return isMessageKey(key) ? t(key) : value;
 }
 
+/**
+ * Strengene en klient-øy trenger, som JSON til et `data-strings`-attributt.
+ *
+ * Finnes fordi øyene i `public/js/` bygger DOM selv og dermed sto HELT utenfor
+ * ordboka: de fire strengene `home.js` skriver var norske på alle åtte språk,
+ * og hverken nøkkelsveipen eller norsk-vakta kunne se dem — de rendrer SSR-HTML
+ * (#33). Ordboka blir værende på serveren; øya får bare nøklene den bruker, med
+ * `{plassholdere}` i behold og `fillIn()` som substitusjon.
+ */
+export function islandStrings(t: Translator, keys: readonly MessageKey[]): string {
+  const out: Record<string, string> = {};
+  for (const k of keys) out[k] = t(k);
+  return JSON.stringify(out);
+}
+
+/**
+ * Visningsnavn for en språkkode (ISO 639-1 eller -3) på sidens språk.
+ *
+ * Utgavedataene har over 70 språkkoder og 17 skriftkoder; å legge dem i
+ * ordboka ville vært ~700 strenger som ICU alt kan. `Intl.DisplayNames` er
+ * innebygd og web-standard, altså førstevalget her (jf. minimal deps).
+ * Ordboka får overstyre først, fordi ICU mangler et par bibelspråk (`hbo`).
+ * En kode ICU ikke kjenner viser seg selv framfor å bli tom — samme regel som
+ * `tEnum`.
+ */
+export function langName(t: Translator, code: string): string {
+  const override = `ed.lang.${code}`;
+  if (isMessageKey(override)) return t(override);
+  return displayName('language', code);
+}
+
+/** Visningsnavn for en ISO 15924-skriftkode (`Latn` → «latinsk»). */
+export function scriptName(code: string): string {
+  return displayName('script', code);
+}
+
+function displayName(type: 'language' | 'script', code: string): string {
+  try {
+    return new Intl.DisplayNames([currentIntlTag()], { type, fallback: 'none' }).of(code) ?? code;
+  } catch {
+    // Strukturelt ugyldig kode — Intl kaster, koden vises rå.
+    return code;
+  }
+}
+
 export function makeT(locale: Locale): Translator {
   const chain: Locale[] = [locale, ...(FALLBACKS[locale] ?? ['en'])];
   return (key, params) => {

@@ -3,6 +3,7 @@
 // kapitler fra IndexedDB; andre stier får en oversikt over nedlastet innhold.
 
 import { getBooks, getChapter, countChapters } from './offline-db.js';
+import { localeHref } from './locale.js';
 
 const root = document.querySelector('[data-offline-reader]');
 
@@ -51,7 +52,7 @@ async function renderChapter(book, chapter, books) {
 
   const crumbs = el('p', 'offline-crumbs');
   const home = el('a', '', 'Forside');
-  home.href = '/';
+  home.href = localeHref('/');
   crumbs.append(home, ` / ${book.name_no} ${chapter} (offline)`);
   root.append(crumbs);
 
@@ -79,12 +80,12 @@ async function renderChapter(book, chapter, books) {
   const nav = el('nav', 'offline-chapter-nav');
   if (chapter > 1) {
     const prev = el('a', 'offline-nav-link', `← ${book.name_no} ${chapter - 1}`);
-    prev.href = `/${slugFor(book)}/${chapter - 1}`;
+    prev.href = localeHref(`/${slugFor(book)}/${chapter - 1}`);
     nav.append(prev);
   }
   if (chapter < book.chapters) {
     const next = el('a', 'offline-nav-link', `${book.name_no} ${chapter + 1} →`);
-    next.href = `/${slugFor(book)}/${chapter + 1}`;
+    next.href = localeHref(`/${slugFor(book)}/${chapter + 1}`);
     nav.append(next);
   }
   root.append(nav);
@@ -108,7 +109,7 @@ async function renderIndex(withHeading = true) {
   const list = el('div', 'offline-book-list');
   for (const book of books) {
     const link = el('a', 'offline-book-link', book.name_no);
-    link.href = `/${slugFor(book)}/1`;
+    link.href = localeHref(`/${slugFor(book)}/1`);
     list.append(link);
   }
   root.append(list);

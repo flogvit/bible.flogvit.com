@@ -1,16 +1,21 @@
 import { Hono } from 'hono';
-import { getSql } from '../../lib/db.ts';
+import { getAllReadingPlansList, getReadingPlanById } from '../../lib/bible.ts';
 import { NO_CACHE } from './util.ts';
 
 const r = new Hono();
 
+/**
+ * Leseplaner er språk-scopet innhold, men begge rutene her spurte rått uten
+ * språkfilter: lista returnerte HVER plan én gang per språk (74 rader for 37
+ * planer), og detaljruta plukket en tilfeldig rad — i praksis den norske, også
+ * for en engelsk leser. Getterne i bible.ts filtrerer på locale fra
+ * contextStorage (satt av /api/*-middlewaren, #24) og har fallback-kjeden.
+ */
+
 /** GET /api/reading-plans — alle leseplaner (uten readings-data). */
 r.get('/', async (c) => {
   try {
-    const plans = await getSql()`
-      SELECT id, name, description, category, days FROM reading_plans ORDER BY days, seq
-    `;
-    return c.json(plans, 200, NO_CACHE);
+    return c.json(await getAllReadingPlansList(), 200, NO_CACHE);
   } catch (error) {
     console.error('Error fetching reading plans:', error);
     return c.json({ error: 'Internal server error' }, 500);
@@ -20,12 +25,9 @@ r.get('/', async (c) => {
 /** GET /api/reading-plans/:id — full plan med readings. */
 r.get('/:id', async (c) => {
   try {
-    const [plan] = (await getSql()`
-      SELECT id, name, description, category, days, content
-      FROM reading_plans WHERE id = ${c.req.param('id')}
-    `) as { content: string }[];
+    const plan = await getReadingPlanById(c.req.param('id'));
     if (!plan) return c.json({ error: 'Reading plan not found' }, 404);
-    return c.json(JSON.parse(plan.content), 200, NO_CACHE);
+    return c.json(plan, 200, NO_CACHE);
   } catch (error) {
     console.error('Error fetching reading plan:', error);
     return c.json({ error: 'Internal server error' }, 500);

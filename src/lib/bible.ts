@@ -565,6 +565,61 @@ export async function getDayById(id: string, lang = currentContentLanguage()): P
   return row;
 }
 
+export interface DailyVerse {
+  bookId: number;
+  shortName: string;
+  chapter: number;
+  verseStart: number;
+  verseEnd: number;
+  text: string;
+  note: string | null;
+}
+
+/**
+ * Dagens vers med notat, på innholdsspråket.
+ *
+ * Lå som rå SQL i forside-ruta med `language` hardkodet til gulvet, så notatet
+ * sto på engelsk uansett hvilket språk leseren var på — «Grace and truth meet»
+ * på /nb/ (#34). Rå SQL mot en innholdstabell i en rute er dessuten forbudt
+ * nettopp fordi språkfilteret da blir noe hvert kallsted må huske.
+ */
+export async function getDailyVerse(
+  bible?: string,
+  lang = currentContentLanguage(),
+): Promise<DailyVerse | null> {
+  const sql = getSql();
+  const resolved = bible ?? (await defaultBibleForLanguage(lang));
+  const date = new Date().toISOString().slice(0, 10);
+
+  const [dv] = await inLanguage(lang, (language) => sql`
+    SELECT book_id, chapter, verse_start, verse_end, note
+    FROM daily_verses WHERE date = ${date} AND language = ${language}
+  ` as Promise<{ book_id: number; chapter: number; verse_start: number; verse_end: number; note: string | null }[]>);
+  if (!dv) return null;
+
+  const [book] = (await sql`
+    SELECT short_name FROM books WHERE id = ${dv.book_id}
+  `) as { short_name: string }[];
+  if (!book) return null;
+
+  const verses = (await sql`
+    SELECT text FROM verses
+    WHERE book_id = ${dv.book_id} AND chapter = ${dv.chapter}
+      AND verse >= ${dv.verse_start} AND verse <= ${dv.verse_end} AND bible = ${resolved}
+    ORDER BY verse
+  `) as { text: string }[];
+
+  return {
+    bookId: dv.book_id,
+    shortName: book.short_name,
+    chapter: dv.chapter,
+    verseStart: dv.verse_start,
+    verseEnd: dv.verse_end,
+    text: verses.map((v) => v.text).join(' '),
+    note: dv.note,
+  };
+}
+
 export async function getTodaysDays(lang = currentContentLanguage()): Promise<DayData[]> {
   const sql = getSql();
   const today = new Date().toISOString().substring(0, 10);
@@ -2690,6 +2745,33 @@ export async function getAllReadingPlansList(lang = currentContentLanguage()): P
     SELECT id, name, description, category, days FROM reading_plans
     WHERE language = ${language} ORDER BY days, seq
   ` as Promise<ReadingPlanSearchResult[]>);
+}
+
+/**
+ * Én leseplan med dagene sine. `/api/reading-plans/:id` spurte rått uten
+ * språkfilter og fikk dermed en tilfeldig rad blant språkene — planen kunne
+ * komme tilbake på norsk til en engelsk leser (samme felle som listeruta over).
+ */
+export async function getReadingPlanById(
+  id: string,
+  lang = currentContentLanguage(),
+): Promise<(ReadingPlanSearchResult & { readings: unknown[] }) | null> {
+  const sql = getSql();
+  const [plan] = await inLanguage(lang, (language) => sql`
+    SELECT id, name, description, category, days, content
+    FROM reading_plans WHERE id = ${id} AND language = ${language}
+  ` as Promise<(ReadingPlanSearchResult & { content: string })[]>);
+  if (!plan) return null;
+
+  let readings: unknown[] = [];
+  try {
+    const parsed = JSON.parse(plan.content) as { readings?: unknown[] };
+    readings = parsed?.readings ?? [];
+  } catch {
+    // Ugyldig JSON skal ikke ta ned kallet — planen vises uten dager.
+  }
+  const { content: _content, ...rest } = plan;
+  return { ...rest, readings };
 }
 
 export interface ImportantWordSearchResult {

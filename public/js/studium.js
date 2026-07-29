@@ -3,7 +3,7 @@
 // manuskripter og hele mobil-verktøylinja (kapittelvelger, hjelpemidler,
 // studium-overlegg). reading.js eier versdetaljer/layout/posisjon/kopiering.
 
-import { langParam } from './locale.js';
+import { langParam, localeHref } from './locale.js';
 
 const KEYS = {
   settings: 'bible-settings',
@@ -131,7 +131,7 @@ if (sidebar) {
         for (const item of items) {
           const li = el('li');
           const a = el('a', item.cls || 'st-lookup-link', item.label);
-          a.href = item.href;
+          a.href = localeHref(item.href);
           li.appendChild(a);
           listEl.appendChild(li);
         }
@@ -148,7 +148,7 @@ if (sidebar) {
     devs.forEach((d) => {
       const li = el('li', 'st-ms-item');
       const a = el('a', 'st-ms-title', d.title || '(uten tittel)');
-      a.href = `/manuskripter/${d.slug}`;
+      a.href = localeHref(`/manuskripter/${d.slug}`);
       li.appendChild(a);
       if (d.type) li.appendChild(el('span', 'st-ms-type', d.type));
       chDevs.appendChild(li);
@@ -227,7 +227,7 @@ if (toolbar) {
         grid.textContent = '';
         for (let ch = 1; ch <= chapters; ch++) {
           const a = el('a', 'mt-chapter-cell', String(ch));
-          a.href = `/${slug}/${ch}${query}`;
+          a.href = localeHref(`/${slug}/${ch}${query}`);
           if (slug === grid.dataset.currentSlug && String(ch) === grid.dataset.currentChapter) {
             a.classList.add('is-active');
           }

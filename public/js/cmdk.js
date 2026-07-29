@@ -2,7 +2,7 @@
 // vanilla (global øy). Åpnes med ⌘/Ctrl+K eller klikk på hurtigsøk-triggeren
 // i headeren (som ellers faller tilbake til GET /sok uten JS).
 
-import { langParam } from './locale.js';
+import { langParam, localeHref } from './locale.js';
 
 const PAGES = [
   { label: 'Hjem', to: '/', hint: 'Forside' },
@@ -143,7 +143,7 @@ function setSelected(i) {
 }
 
 function select(r) {
-  if (r && r.to) location.href = r.to;
+  if (r && r.to) location.href = localeHref(r.to);
   close();
 }
 

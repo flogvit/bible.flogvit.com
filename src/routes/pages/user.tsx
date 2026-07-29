@@ -299,7 +299,8 @@ r.get('/leseplan', async (c) => {
                     {p.category && <span class="plan-cat">{p.category}</span>}
                   </div>
                   <div class="plan-actions">
-                    <button type="button" class="user-btn plan-activate" data-plan={p.id}>
+                    <button type="button" class="user-btn plan-activate" data-plan={p.id}
+                      data-active-label={t('u.activePlan')} data-gate-label={t('nav.readingPlan')}>
                       {activePlan === p.id ? t('u.activePlan') : t('u.choosePlanThis')}
                     </button>
                     <span class="plan-active-badge" hidden={activePlan !== p.id}>{t('u.active')}</span>

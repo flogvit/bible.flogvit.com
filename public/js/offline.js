@@ -17,7 +17,7 @@ import {
   getMeta,
   deleteDatabase,
 } from './offline-db.js';
-import { intlLocale, langParam } from './locale.js';
+import { intlLocale, langParam, localeHref } from './locale.js';
 
 const $ = (sel) => document.querySelector(sel);
 const statusBox = $('[data-offline-status]');
@@ -84,7 +84,7 @@ async function renderContent() {
     const n = perBook.get(book.id);
     if (!n) continue;
     const link = el('a', 'offline-book-link', `${book.name_no} (${n})`);
-    link.href = `/${(book.short_name || '').toLowerCase()}/1`;
+    link.href = localeHref(`/${(book.short_name || '').toLowerCase()}/1`);
     list.append(link);
   }
   contentBox.append(list);

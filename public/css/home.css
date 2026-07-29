@@ -4,18 +4,54 @@
 .home-wrap { padding: 32px 0 64px; display: flex; flex-direction: column; gap: 44px; }
 
 /* hero */
-.home-hero { display: grid; grid-template-columns: 1.4fr 1fr; gap: 20px; }
+.home-hero { display: grid; grid-template-columns: 1.4fr 1fr; gap: 20px; align-items: start; }
 .home-continue {
+  position: relative;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
-  gap: 20px;
+  gap: 24px;
   padding: 28px;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-sm);
 }
+/* Hero-kortet ble strukket til sidekolonnens høyde og `space-between` skjøv
+   knappene til bunnen — et ~200 px tomrom midt på forsiden (#37). Kortet slutter
+   nå der innholdet slutter, og gløden fra det gamle designet er tilbake som den
+   eneste dekorasjonen. */
+.home-continue::after {
+  content: '';
+  position: absolute;
+  top: -70px;
+  right: -70px;
+  width: 260px;
+  height: 260px;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--gold-bg) 0%, transparent 70%);
+  opacity: 0.7;
+  pointer-events: none;
+}
+.home-continue > * { position: relative; }
+.home-continue-verse {
+  margin-top: 12px;
+  font-family: var(--font-serif);
+  color: var(--ink-2);
+  line-height: 1.6;
+  max-width: 52ch;
+}
+.home-clear-btn {
+  margin-left: auto;
+  padding: 4px 10px;
+  background: none;
+  border: none;
+  color: var(--muted);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+}
+.home-clear-btn:hover { color: var(--ink); }
 .home-continue-title { font-family: var(--font-serif); font-size: 30px; margin: 4px 0; }
 .home-continue-sub { color: var(--ink-2); }
 .home-actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
@@ -43,10 +79,45 @@
   box-shadow: var(--shadow-sm);
 }
 .home-card h3 { font-size: 15px; margin-bottom: 10px; }
-.home-vod-text { font-family: var(--font-serif); line-height: 1.6; color: var(--ink); }
-.home-vod-foot { margin-top: 12px; font-size: 14px; }
+.home-vod-text { font-family: var(--font-serif); line-height: 1.6; color: var(--ink); margin: 0; }
+/* Lange vers klippes med uttoning framfor å skyve kortet ut. `has-more`
+   settes av home.js først når teksten faktisk flommer over. */
+.home-vod-scroll { position: relative; max-height: 8.5em; overflow: hidden; }
+.home-vod-scroll.is-open { max-height: none; }
+.home-vod-scroll.has-more:not(.is-open)::after {
+  content: '';
+  position: absolute;
+  inset: auto 0 0 0;
+  height: 3em;
+  background: linear-gradient(to bottom, transparent, var(--surface));
+  pointer-events: none;
+}
+.home-vod-more {
+  margin-top: 6px;
+  padding: 0;
+  background: none;
+  border: none;
+  color: var(--gold-text);
+  font-size: 13px;
+  cursor: pointer;
+}
+.home-vod-more:hover { text-decoration: underline; }
+.home-vod-foot { margin-top: 12px; font-size: 14px; display: flex; align-items: center; gap: 10px; }
+.home-vod-ref { flex: 1; min-width: 0; }
 .home-vod-foot a { color: var(--gold-text); font-family: var(--font-mono); font-size: 13px; }
 .home-vod-note { color: var(--muted); }
+.home-vod-actions { display: flex; gap: 4px; }
+.home-vod-fav {
+  display: inline-flex;
+  padding: 5px;
+  background: none;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+}
+.home-vod-fav:hover { color: var(--gold-text); background: var(--gold-bg); }
+.home-vod-fav.is-on { color: var(--gold-text); }
 .home-vod-empty { color: var(--muted); font-style: italic; }
 .home-plans-head { display: flex; align-items: baseline; justify-content: space-between; }
 .home-plans-count { font-size: 12px; color: var(--muted); font-family: var(--font-mono); }
@@ -60,6 +131,32 @@
   font-size: 14px;
   text-decoration: none;
 }
+/* Aktiv plan (#35) — fylles av home.js. */
+.home-plans-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0; }
+.home-plans-tab {
+  padding: 4px 10px;
+  font-size: 13px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  color: var(--ink-2);
+  text-decoration: none;
+}
+.home-plans-tab.is-on { background: var(--gold-bg); color: var(--gold-text); border-color: transparent; }
+.home-plans-tab-add:hover { border-color: var(--gold); }
+.home-plans-streak { display: flex; align-items: baseline; gap: 8px; }
+.home-plans-streak-num { font-family: var(--font-serif); font-size: 26px; color: var(--ink); }
+.home-plans-streak small { color: var(--muted); font-size: 12px; }
+.home-plans-prog {
+  margin: 10px 0;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--border);
+  overflow: hidden;
+}
+.home-plans-prog span { display: block; height: 100%; background: var(--gold); }
+.home-plans-today { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; font-size: 13px; }
+.home-plans-what { color: var(--ink-2); }
+.home-plans-when { color: var(--muted); font-family: var(--font-mono); font-size: 12px; }
 
 /* dagens lesetekst */
 .home-lesetekster { display: flex; flex-direction: column; gap: 12px; }
@@ -80,27 +177,73 @@
 .home-todays-reading h3 { font-size: 18px; }
 .home-todays-reading a { color: var(--ink); }
 .home-todays-reading a:hover { color: var(--gold-text); }
+/* Selve lesningene (#36): etikett + referansechips per slot. */
+.home-todays-slots { display: flex; flex-direction: column; gap: 5px; margin: 10px 0; }
+.home-todays-slot { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px; }
+.home-todays-slot-label {
+  min-width: 90px;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  font-family: var(--font-mono);
+}
+.home-todays-slot-refs { display: flex; flex-wrap: wrap; gap: 6px; }
+.home-todays-ref {
+  padding: 2px 9px;
+  font-size: 13px;
+  background: var(--paper);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--gold-text);
+  text-decoration: none;
+}
+.home-todays-ref:hover { background: var(--gold-bg); }
+.home-todays-reading .home-todays-ref { color: var(--gold-text); }
 
 /* seksjoner */
 .home-section-head { display: flex; align-items: baseline; gap: 12px; margin-bottom: 16px; }
 .home-section-sub { color: var(--muted); font-size: 14px; }
 
-/* bøker */
-.home-book-group { margin-bottom: 20px; }
-.home-book-group-label { font-size: 13px; color: var(--muted); margin-bottom: 8px; font-family: var(--font-mono); }
-.home-book-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+/* bøker — rammeløst typografisk rutenett. Én ramme per bok ga 66 bokser som
+   druknet gruppeoverskriftene og gjorde forsiden dobbelt så lang (#37). */
+.home-book-views { display: flex; gap: 4px; margin-left: auto; }
+.home-book-view {
+  padding: 4px 12px;
+  font-size: 13px;
+  background: none;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  color: var(--muted);
+  cursor: pointer;
+}
+.home-book-view:hover { color: var(--ink); }
+.home-book-view.is-on { background: var(--surface); border-color: var(--border); color: var(--ink); }
+.home-book-group { margin-bottom: 24px; }
+.home-book-group-label {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  font-family: var(--font-mono);
+  padding-bottom: 6px;
+  margin-bottom: 10px;
+  border-bottom: 1px solid var(--border);
+}
+.home-book-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 4px 16px; }
 .home-book {
   display: flex;
   flex-direction: column;
-  padding: 10px 14px;
-  background: var(--surface);
-  border: 1px solid var(--border);
+  padding: 7px 8px;
   border-radius: var(--radius-sm);
   text-decoration: none;
 }
-.home-book:hover { border-color: var(--gold); }
-.home-book-name { color: var(--ink); font-weight: 500; }
-.home-book-meta { color: var(--muted); font-size: 12px; }
+.home-book:hover { background: var(--gold-bg); }
+.home-book-name { color: var(--ink); }
+.home-book:hover .home-book-name { color: var(--gold-text); }
+.home-book-meta { color: var(--muted); font-size: 12px; font-family: var(--font-mono); }
+.home-book.is-current { background: var(--gold-bg); box-shadow: inset 2px 0 0 var(--gold); }
+.home-book.is-current .home-book-name { color: var(--gold-text); font-weight: 500; }
 
 /* utforsk */
 .home-discover-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
@@ -114,11 +257,14 @@
   transition: box-shadow 0.12s ease, transform 0.12s ease;
 }
 .home-disc:hover { box-shadow: var(--shadow-md); transform: translateY(-2px); }
+.home-disc-icon { display: block; color: var(--gold-text); margin-bottom: 10px; }
 .home-disc h4 { font-size: 16px; margin-bottom: 4px; color: var(--ink); }
 .home-disc p { color: var(--ink-2); font-size: 14px; line-height: 1.5; margin: 0; }
 
 @media (max-width: 768px) {
   .home-hero { grid-template-columns: 1fr; }
+  .home-section-head { flex-wrap: wrap; }
+  .home-book-views { margin-left: 0; }
 }
 
 /* Dagens helligdag (GitHub #3) — samme kortspråk som dagens lesetekst */

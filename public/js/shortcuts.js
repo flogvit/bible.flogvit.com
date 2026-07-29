@@ -5,6 +5,8 @@
 // Layout-modus (R/N/P) og panelfaner (1-4) sendes som CustomEvent
 // ('bibel:layout-mode' / 'bibel:panel-tab') som lesesiden lytter på.
 
+import { localeHref } from './locale.js';
+
 const isMac = /Mac|iP(hone|ad|od)/.test(navigator.platform);
 
 const NAV = {
@@ -147,13 +149,13 @@ document.addEventListener('keydown', (e) => {
 
     if (e.key === 'ArrowLeft' && !e.metaKey && !e.ctrlKey && !e.altKey) {
       e.preventDefault();
-      if (cur > 1) location.href = `/${bookSlug}/${cur - 1}${q}`;
+      if (cur > 1) location.href = localeHref(`/${bookSlug}/${cur - 1}${q}`);
       return;
     }
     if (e.key === 'ArrowRight' && !e.metaKey && !e.ctrlKey && !e.altKey) {
       e.preventDefault();
-      if (cur < max) location.href = `/${bookSlug}/${cur + 1}${q}`;
-      else if (nextBookSlug) location.href = `/${nextBookSlug}/1${q}`;
+      if (cur < max) location.href = localeHref(`/${bookSlug}/${cur + 1}${q}`);
+      else if (nextBookSlug) location.href = localeHref(`/${nextBookSlug}/1${q}`);
       return;
     }
     if (!e.metaKey && !e.ctrlKey && !e.altKey && /^[1-9]$/.test(e.key)) {
@@ -175,6 +177,6 @@ document.addEventListener('keydown', (e) => {
 
   if (e.altKey && e.shiftKey && NAV[e.code]) {
     e.preventDefault();
-    location.href = NAV[e.code];
+    location.href = localeHref(NAV[e.code]);
   }
 });

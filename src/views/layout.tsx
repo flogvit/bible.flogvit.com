@@ -15,7 +15,10 @@ import { getContext } from 'hono/context-storage';
 import type { AppEnv } from '../lib/session.ts';
 import { ACCOUNT_URL } from '../lib/session.ts';
 import { DEFAULT_LOCALE, LOCALES, href, makeT, ogLocale, type Locale, type Translator, lhref } from '../lib/i18n.ts';
-import { tCtx } from '../lib/i18n.ts';
+import { tCtx, islandStrings } from '../lib/i18n.ts';
+
+/** Strenger klient-øyene som lastes på hver side trenger (plus.js sin CTA). */
+const CHROME_ISLAND_KEYS = ['plus.requires', 'plus.readAbout', 'chrome.login', 'common.close'] as const;
 
 const SITE = 'https://bible.flogvit.com';
 
@@ -377,7 +380,10 @@ export function Layout(props: LayoutProps) {
             <link rel="stylesheet" href={`/css/${s}`} />
           ))}
         </head>
-        <body>
+        {/* Strenger øyer som finnes på HVER side trenger (plus-CTA-en). Uten
+            dem var CTA-en norsk på alle åtte språk — samme hull som #33: en
+            klient-øy bygger DOM selv og står utenfor ordboka. */}
+        <body data-strings={islandStrings(tCtx(), CHROME_ISLAND_KEYS)}>
           <a class="skip-link" href="#innhold">
             {tCtx()('common.skipToContent')}
           </a>

@@ -1,5 +1,7 @@
 import { Hono } from 'hono';
-import { getVersesWithOriginal, normalizeBibleId, type VerseRef } from '../../lib/bible.ts';
+import {
+  getVersesWithOriginal, normalizeBibleId, defaultBibleForLanguage, type VerseRef,
+} from '../../lib/bible.ts';
 import { parseStandardRef, refSegmentsToVerseRefs } from '../../lib/standard-ref-parser.ts';
 import { NO_CACHE } from './util.ts';
 
@@ -8,7 +10,10 @@ const r = new Hono();
 /** GET /api/verses?ref=Joh+3,16-19&bible=osnb — norsk standardreferanse → vers. */
 r.get('/', async (c) => {
   const ref = c.req.query('ref');
-  const bible = normalizeBibleId(c.req.query('bible')) || 'osnb';
+  // Uten eksplisitt utgave sto default på 'osnb': en engelsk leser fikk norsk
+  // verstekst tilbake. `defaultBibleForLanguage()` leser locale fra
+  // contextStorage, som /api/*-middlewaren allerede setter (#24).
+  const bible = normalizeBibleId(c.req.query('bible')) || (await defaultBibleForLanguage());
 
   if (!ref) return c.json({ error: 'Missing ref parameter' }, 400);
 
@@ -28,8 +33,8 @@ r.get('/', async (c) => {
 /** POST /api/verses — body: { refs: VerseRef[], bible? } */
 r.post('/', async (c) => {
   const body = await c.req.json().catch(() => null);
-  const { refs, bible: rawBible = 'osnb' } = (body ?? {}) as { refs?: VerseRef[]; bible?: string };
-  const bible = normalizeBibleId(rawBible);
+  const { refs, bible: rawBible } = (body ?? {}) as { refs?: VerseRef[]; bible?: string };
+  const bible = normalizeBibleId(rawBible) || (await defaultBibleForLanguage());
 
   if (!refs || !Array.isArray(refs)) return c.json({ error: 'Missing refs array' }, 400);
 

@@ -5,6 +5,7 @@
 // TODO(#14): offline-nedlasting + service worker.
 
 import { recordRead, mergeProgress, heatLevel } from './reading-progress.js';
+import { localeHref } from './locale.js';
 
 const KEYS = {
   favorites: 'bible-favorites',
@@ -64,7 +65,7 @@ if (root) {
           list.textContent = '';
           for (const v of verses) {
             const a = el('a', 'user-card');
-            a.href = `/${v.bookShortName.toLowerCase()}/${v.chapter}#v${v.verse}`;
+            a.href = localeHref(`/${v.bookShortName.toLowerCase()}/${v.chapter}#v${v.verse}`);
             a.appendChild(el('span', 'user-card-ref', `${v.bookName} ${v.chapter}:${v.verse}`));
             a.appendChild(el('p', 'user-card-text', v.text));
             list.appendChild(a);
@@ -173,7 +174,7 @@ if (root) {
         .sort((a, b) => b.updatedAt - a.updatedAt)
         .forEach((d) => {
           const a = el('a', 'user-card');
-          a.href = `/manuskripter/${d.slug}`;
+          a.href = localeHref(`/manuskripter/${d.slug}`);
           a.appendChild(el('span', 'user-card-title', d.title || '(uten tittel)'));
           a.appendChild(el('span', 'user-card-meta', d.type || ''));
           list.appendChild(a);
@@ -192,12 +193,16 @@ if (root) {
       const btn = card.querySelector('.plan-activate');
       if (id === active) {
         if (badge) badge.hidden = false;
-        if (btn) btn.textContent = 'Aktiv plan';
+        if (btn && btn.dataset.activeLabel) btn.textContent = btn.dataset.activeLabel;
       }
       if (btn) {
-        btn.addEventListener('click', () => {
-          if (!window.fvPlus?.gate('Leseplaner')) return;
-          write(KEYS.activePlan, id);
+        btn.addEventListener('click', async () => {
+          if (!window.fvPlus?.gate(btn.dataset.gateLabel || '')) return;
+          // START planen, ikke bare merk den aktiv: framdriftsraden er det som
+          // gir `startDate`, og uten den kan forsidens panel hverken vise «dag
+          // X av Y» eller dagens lesning (#35).
+          const plan = await import('./reading-plan.js');
+          plan.startPlan(id);
           location.reload();
         });
       }
@@ -418,7 +423,7 @@ if (root) {
         current = devs[devs.length - 1];
       }
       write(KEYS.devotionals, devs);
-      location.href = `/manuskripter/${current.slug}`;
+      location.href = localeHref(`/manuskripter/${current.slug}`);
     });
   }
 
@@ -436,7 +441,7 @@ if (root) {
       const draft = (dev.versions || []).find((v) => !v.locked) || dev.versions?.[0];
       article.appendChild(renderMarkdown(draft?.content || ''));
       const editLink = el('a', 'user-btn-ghost', 'Rediger');
-      editLink.href = `/manuskripter/${slug}/rediger`;
+      editLink.href = localeHref(`/manuskripter/${slug}/rediger`);
       article.appendChild(editLink);
     }
   }
@@ -498,7 +503,7 @@ function inlineInto(node, text) {
     else if (m[3]) {
       const ref = m[3].split('@')[0].split('|')[0];
       const a = el('a', 'inline-ref', ref);
-      a.href = `/sok?q=${encodeURIComponent(ref)}`;
+      a.href = localeHref(`/sok?q=${encodeURIComponent(ref)}`);
       a.dataset.ref = ref;
       node.appendChild(a);
     }

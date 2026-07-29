@@ -14,7 +14,7 @@ import {
   recordOpen,
   emptyProgress,
 } from './reading-progress.js';
-import { intlLocale } from './locale.js';
+import { intlLocale, localeHref } from './locale.js';
 
 const KEYS = {
   favorites: 'bible-favorites',
@@ -186,7 +186,7 @@ if (rootPage) {
       box.querySelector('[data-w4w-out-pron]').textContent = btn.dataset.pron ? `(${btn.dataset.pron})` : '';
       box.querySelector('[data-w4w-out-expl]').textContent = btn.dataset.expl || 'Ingen forklaring tilgjengelig.';
       const search = box.querySelector('[data-w4w-search]');
-      if (search) search.href = `/sok/original?q=${encodeURIComponent(btn.dataset.word || '')}`;
+      if (search) search.href = localeHref(`/sok/original?q=${encodeURIComponent(btn.dataset.word || '')}`);
       box.hidden = false;
     });
   });
@@ -287,7 +287,7 @@ if (rootPage) {
     listBox.textContent = '';
     devs.forEach((d) => {
       const a = el('a', 'vd-devotional-link', d.title || '(uten tittel)');
-      a.href = `/manuskripter/${d.slug}`;
+      a.href = localeHref(`/manuskripter/${d.slug}`);
       listBox.appendChild(a);
     });
   }
