@@ -228,6 +228,35 @@ trenger å ta imot `locale` som prop. Unntak som SKAL være uprefikset: `/js/`, 
 lenke uten prefiks, og sveiper alle 8 ordbøker for manglende nøkler (`makeT` returnerer
 NØKKELEN ved miss, så en glemt oversettelse vises som «rd.markRead» uten å feile).
 
+## Klient-øyene: tekst og lenker (#33)
+
+Øyene i `public/js/` bygger DOM i nettleseren og er derfor USYNLIGE for både
+`link-prefix.test.ts` og `page-contract.test.ts`, som rendrer SSR-HTML. Da det
+ble sjekket, lå det 21 uprefiksede interne lenker og ~130 norske strenger der —
+hele kommandopaletten, hele hurtigtast-hjelpen, plus-CTA-en, PWA-banneret,
+offline-nedlastingen.
+
+- **Tekst:** `readStrings(el)` (`public/js/locale.js`) leser strengene serveren
+  la på `data-strings` via `islandStrings(t, keys)` (`lib/i18n.ts`). Ordboka
+  blir værende på serveren; øya får bare nøklene den bruker, med
+  `{plassholdere}` i behold.
+- **Nøkler:** `CHROME_ISLAND_KEYS` i `layout.tsx` for øyene som lastes på HVER
+  side; `PAGE_ISLAND_KEYS` slås opp på skriptnavn for resten, så en side ikke
+  bærer strenger den aldri bruker. **Glemmer du nøkkelen der, viser øya
+  nøkkelen** — akkurat som `makeT`.
+- **Lenker:** `localeHref(path)` er klientsidens `lhref()`. Samme unntak
+  (`/js/`, `/css/`, `/api/`).
+
+**Vaktene må være STRUKTURELLE, ikke språklige.** Første utgave av
+`island-strings.test.ts` var en liste over norske ord, og mutasjonstesten viste
+at «Senere» gikk rett gjennom — ingen æøå, ingen av ordene. Vakta sjekker nå
+HVOR en strengliteral havner (`textContent`, `title`, `placeholder`,
+`aria-label`, `el()`), og fanger dermed både «Senere» og «Later».
+`island-links.test.ts` gjør det samme for lenker.
+
+Moduler som også importeres av `bun test` (f.eks. `bible-text-parser.js`) må
+hente oversetteren LATT — det finnes ikke noe `document` der.
+
 ## Ingen norsk tekst på en ikke-norsk side (#23)
 
 `page-contract.test.ts` sveiper hele `PAGES` under `/en/` og feiler på norsk
