@@ -80,7 +80,7 @@ r.get('/temaer', async (c) => {
           <Breadcrumbs items={[{ label: tCtx()('common.home'), href: '/' }, { label: tCtx()('nav.themes') }]} />
           <h1>{t('themes.title')}</h1>
           <div class="study-search-container">
-            <input type="text" class="study-search-input" data-card-search placeholder={t('themes.searchPh')} aria-label="Søk etter tema" autocomplete="off" />
+            <input type="text" class="study-search-input" data-card-search placeholder={t('themes.searchPh')} aria-label={t('themes.searchPh')} autocomplete="off" />
           </div>
           <div class="study-grid" data-card-list>
             {items.map((t) => (
@@ -184,7 +184,7 @@ r.get('/historier', async (c) => {
           <Breadcrumbs items={[{ label: tCtx()('common.home'), href: '/' }, { label: tCtx()('nav.stories') }]} />
           <h1>{t('stories.title')}</h1>
           <div class="study-search-container">
-            <input type="text" class="study-search-input" data-card-search placeholder={t('stories.searchPh')} aria-label="Søk etter historie" autocomplete="off" />
+            <input type="text" class="study-search-input" data-card-search placeholder={t('stories.searchPh')} aria-label={t('stories.searchPh')} autocomplete="off" />
           </div>
           <div class="study-filter-buttons" data-card-catfilter>
             <button type="button" class="persons-filter-button active" data-value="">{t('common.all')}</button>

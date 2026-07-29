@@ -14,7 +14,9 @@ import {
   recordOpen,
   emptyProgress,
 } from './reading-progress.js';
-import { intlLocale } from './locale.js';
+import { readStrings, intlLocale, localeHref } from './locale.js';
+
+const t = readStrings(document.body);
 
 const KEYS = {
   favorites: 'bible-favorites',
@@ -184,9 +186,9 @@ if (rootPage) {
       btn.setAttribute('aria-pressed', 'true');
       box.querySelector('[data-w4w-out-word]').textContent = btn.dataset.word || '';
       box.querySelector('[data-w4w-out-pron]').textContent = btn.dataset.pron ? `(${btn.dataset.pron})` : '';
-      box.querySelector('[data-w4w-out-expl]').textContent = btn.dataset.expl || 'Ingen forklaring tilgjengelig.';
+      box.querySelector('[data-w4w-out-expl]').textContent = btn.dataset.expl || t('is.noExplanation');
       const search = box.querySelector('[data-w4w-search]');
-      if (search) search.href = `/sok/original?q=${encodeURIComponent(btn.dataset.word || '')}`;
+      if (search) search.href = localeHref(`/sok/original?q=${encodeURIComponent(btn.dataset.word || '')}`);
       box.hidden = false;
     });
   });
@@ -199,12 +201,12 @@ if (rootPage) {
     return favs.some((x) => x.bookId === f.bookId && x.chapter === f.chapter && x.verse === f.verse);
   }
   function paintFav(btn, on) {
-    btn.textContent = on ? '★ Favoritt' : '☆ Legg til favoritt';
+    btn.textContent = on ? t('is.favOn') : t('is.favOff');
     btn.classList.toggle('is-active', on);
   }
   document.querySelectorAll('[data-fav-toggle]').forEach((btn) => {
     btn.addEventListener('click', () => {
-      if (!window.fvPlus?.gate('Favoritter')) return;
+      if (!window.fvPlus?.gate(t('nav.favorites'))) return;
       const f = favKeyOf(btn.closest('.verse'));
       let favs = read(KEYS.favorites, []);
       const on = isFav(f, favs);
@@ -244,7 +246,7 @@ if (rootPage) {
         const card = el('div', 'note-item');
         card.appendChild(el('p', 'note-content', n.content));
         const meta = el('div', 'note-meta', new Date(n.updatedAt).toLocaleDateString(intlLocale()));
-        const del = el('button', 'note-delete', 'Slett');
+        const del = el('button', 'note-delete', t('is.delete'));
         del.type = 'button';
         del.addEventListener('click', () => {
           write(KEYS.notes, read(KEYS.notes, []).filter((x) => x.id !== n.id));
@@ -263,7 +265,7 @@ if (rootPage) {
       add.disabled = input.value.trim() === '';
     });
     add.addEventListener('click', () => {
-      if (!window.fvPlus?.gate('Notater')) return;
+      if (!window.fvPlus?.gate(t('nav.notes'))) return;
       const detail = box.closest('.verse-detail');
       const { bookId: b, chapter: c2, verse: v } = noteRef(detail);
       const now = Date.now();
@@ -286,8 +288,8 @@ if (rootPage) {
     if (devs.length === 0) return;
     listBox.textContent = '';
     devs.forEach((d) => {
-      const a = el('a', 'vd-devotional-link', d.title || '(uten tittel)');
-      a.href = `/manuskripter/${d.slug}`;
+      const a = el('a', 'vd-devotional-link', d.title || t('is.untitled'));
+      a.href = localeHref(`/manuskripter/${d.slug}`);
       listBox.appendChild(a);
     });
   }
@@ -381,7 +383,7 @@ if (rootPage) {
     const label = btn.querySelector('[data-crr-label]');
     if (!label) return;
     if (!done) {
-      label.textContent = btn.dataset.labelMark || 'Marker som lest';
+      label.textContent = btn.dataset.labelMark || t('rd.markRead');
       return;
     }
     // Sidens språk, ikke nettleserens: en norsk side skal ikke vise 7/28/2026.

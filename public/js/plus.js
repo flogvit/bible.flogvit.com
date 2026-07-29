@@ -6,6 +6,8 @@
 //
 // Må lastes FØR sync.js (som også patcher localStorage.setItem).
 
+import { readStrings, localeHref } from './locale.js';
+
 const GATED_KEYS = [
   'bible-favorites',
   'bible-notes',
@@ -38,28 +40,29 @@ function loggedIn() {
 let cta = null;
 
 function showCta(what) {
+  const t = readStrings(document.body);
   if (cta) cta.remove();
   cta = document.createElement('div');
   cta.className = 'plus-cta';
   cta.setAttribute('role', 'status');
   const text = document.createElement('span');
-  text.textContent = `${what} krever FLOGVIT.plus.`;
+  text.textContent = t('plus.requires', { what });
   const link = document.createElement('a');
   link.className = 'plus-cta-link';
   link.href = 'https://flogvit.com/plus/';
-  link.textContent = 'Les om FLOGVIT.plus';
+  link.textContent = t('plus.readAbout');
   cta.append(text, link);
   if (!loggedIn()) {
     const login = document.createElement('a');
     login.className = 'plus-cta-link';
-    login.href = '/logg-inn';
-    login.textContent = 'Logg inn';
+    login.href = localeHref('/logg-inn');
+    login.textContent = t('chrome.login');
     cta.append(login);
   }
   const close = document.createElement('button');
   close.type = 'button';
   close.className = 'plus-cta-close';
-  close.setAttribute('aria-label', 'Lukk');
+  close.setAttribute('aria-label', t('common.close'));
   close.textContent = '✕';
   close.addEventListener('click', () => cta.remove());
   cta.append(close);

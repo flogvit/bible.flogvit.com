@@ -3,6 +3,10 @@
 // verseteksten fra GET /api/verses?ref=... og vises i en posisjonert tooltip.
 // Erstatter klikk-ekspanderingen i gamle React-InlineRefs.
 
+import { readStrings } from './locale.js';
+
+const t = readStrings(document.body);
+
 const cache = new Map(); // "ref|bible" -> Promise<VerseWithOriginal[]>
 let tip = null;
 let currentLink = null;
@@ -37,7 +41,7 @@ function renderTip(verses) {
   if (!Array.isArray(verses) || verses.length === 0) {
     const empty = document.createElement('span');
     empty.className = 'ref-preview-empty';
-    empty.textContent = 'Vers ikke funnet';
+    empty.textContent = t('ref.notFound');
     t.appendChild(empty);
     return;
   }

@@ -10,6 +10,10 @@
 // samme data. IndexedDB/synk-motoren er ikke portert.
 // TODO(#12): sync-kobling
 
+import { readStrings } from './locale.js';
+
+const t = readStrings(document.body);
+
 const STORAGE_KEY = 'bible-topics';
 
 function loadData() {
@@ -115,7 +119,7 @@ function initContainer(container) {
   const inputWrapper = el('div', 'tagging-input-wrapper');
   const input = el('input', 'tagging-input');
   input.type = 'text';
-  input.placeholder = 'Legg til emne...';
+  input.placeholder = t('is.addTopicPlaceholder');
   const suggestionsBox = el('div', 'tagging-suggestions');
   suggestionsBox.hidden = true;
   inputWrapper.appendChild(input);
@@ -146,7 +150,7 @@ function initContainer(container) {
     toggleBtn.appendChild(el('span', 'tagging-icon', '🏷'));
     if (count > 0) toggleBtn.appendChild(el('span', 'tagging-count', String(count)));
     toggleBtn.classList.toggle('has-tags', count > 0);
-    toggleBtn.title = count > 0 ? `${count} emne${count > 1 ? 'r' : ''}` : 'Legg til emne';
+    toggleBtn.title = count > 0 ? t('is.taggedCount', { n: count }) : t('is.addTopic');
   }
 
   function renderTags() {
@@ -158,7 +162,7 @@ function initContainer(container) {
       const tag = el('span', 'tagging-tag', topic.name);
       const remove = el('button', 'tagging-remove', '×');
       remove.type = 'button';
-      remove.title = 'Fjern emne';
+      remove.title = t('is.removeTopic');
       remove.addEventListener('click', () => {
         const d = loadData();
         removeTopicFromItem(d, itemType, itemId, topic.id);
@@ -174,7 +178,7 @@ function initContainer(container) {
   function commitAdd(existingTopic) {
     const value = input.value.trim();
     if (!value && !existingTopic) return;
-    if (!window.fvPlus?.gate('Emner')) return;
+    if (!window.fvPlus?.gate(t('nav.topicsMine'))) return;
     const data = loadData();
     const topic = existingTopic ? existingTopic : addTopic(data, value);
     addTopicToItem(data, itemType, itemId, topic.id);
@@ -205,7 +209,7 @@ function initContainer(container) {
     }
     if (isNew) {
       const item = el('div', 'tagging-suggestion', value);
-      item.appendChild(el('span', 'tagging-new-label', '(nytt emne)'));
+      item.appendChild(el('span', 'tagging-new-label', t('is.newTopic')));
       item.addEventListener('mousedown', (e) => {
         e.preventDefault();
         commitAdd(null);

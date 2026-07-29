@@ -2,6 +2,10 @@
 // data-attributtene som SSR la på hvert kort (data-era, data-roles, data-name,
 // data-search). Uten JS er hele lista synlig.
 
+import { readStrings } from './locale.js';
+
+const t = readStrings(document.body);
+
 const list = document.getElementById('person-list');
 if (list) {
   const search = document.getElementById('person-search');
@@ -48,7 +52,7 @@ if (list) {
     if (count) {
       count.hidden = !active;
       const n = scored.length;
-      count.textContent = `${n} ${n === 1 ? 'person' : 'personer'} funnet`;
+      count.textContent = t('is.personCount', { n });
     }
     if (empty) empty.hidden = scored.length !== 0;
   }

@@ -24,3 +24,38 @@ export function intlLocale() {
 export function langParam() {
   return `lang=${encodeURIComponent(pageLocale())}`;
 }
+
+/**
+ * Klient-sidens `lhref()`: prefiks en intern sti med sidens språk.
+ *
+ * Lenker en øy bygger uten prefiks 302-redirecter til den FORHANDLEDE
+ * locale-en, ikke den leseren står på — nøyaktig #18, men i DOM-en, der
+ * `link-prefix.test.ts` (som rendrer SSR-HTML) ikke ser den. `home.js` sendte
+ * en engelsk leser til /nb/ på første klikk fra forsiden (#33).
+ *
+ * Unntakene fra SSR-siden gjelder her også: `/js/`, `/css/`, `/api/` og
+ * eksterne URL-er skal IKKE prefikses.
+ */
+export function localeHref(path) {
+  if (!path || !path.startsWith('/') || /^\/(js|css|api|img|fonts)\//.test(path)) return path;
+  return `/${pageLocale()}${path === '/' ? '' : path}`;
+}
+
+/**
+ * Strengene serveren la på et `data-strings`-attributt (`islandStrings()` i
+ * lib/i18n.ts). Ordboka bor på serveren; øya får bare nøklene den bruker.
+ * Mangler attributtet, returneres nøkkelen — synlig, men ikke ødeleggende.
+ */
+export function readStrings(el) {
+  let dict = {};
+  try {
+    dict = JSON.parse(el?.dataset?.strings || '{}');
+  } catch {
+    dict = {};
+  }
+  return (key, params) => {
+    let out = dict[key] ?? key;
+    if (params) for (const [k, v] of Object.entries(params)) out = out.replaceAll(`{${k}}`, String(v));
+    return out;
+  };
+}

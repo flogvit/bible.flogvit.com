@@ -5,6 +5,18 @@
 // bibler og respekterer settings.hiddenBibles.
 
 import { getChapter, getUserBibles } from './offline-db.js';
+import { readStrings } from './locale.js';
+
+const t = readStrings(document.body);
+
+/**
+ * Navnet på utgaven studieverktøyene faller tilbake til. Sto hardkodet som
+ * «OSNB» i begge notatene, som er både norsk og feil på en engelsk side —
+ * lesesiden vet hvilken utgave den faktisk rendret.
+ */
+function fallbackName() {
+  return document.body.dataset.bibleName || document.body.dataset.bible || '';
+}
 
 const ds = document.body.dataset;
 const bookId = parseInt(ds.bookId || '', 10);
@@ -29,12 +41,12 @@ function currentQueryWith(name, value) {
 async function applyUserPrimary(userBibleId, bibles) {
   const stored = await getChapter(bookId, chapter, userBibleId);
   const meta = bibles.find((b) => b.id === userBibleId);
-  const name = meta ? meta.name : 'Egen oversettelse';
+  const name = meta ? meta.name : t('is.ownTranslation');
   const rail = document.querySelector('.chapter-rail');
   const note = document.createElement('p');
   note.className = 'user-bible-note';
   if (!stored) {
-    note.textContent = `«${name}» har ikke dette kapittelet — viser OSNB.`;
+    note.textContent = t('is.chapterMissingInOwn', { name, fallback: fallbackName() });
     rail?.after(note);
     return;
   }
@@ -51,7 +63,7 @@ async function applyUserPrimary(userBibleId, bibles) {
       verseEl.classList.add('user-bible-missing');
     }
   });
-  note.textContent = `Viser «${name}» (egen oversettelse). Studieverktøyene følger OSNB.`;
+  note.textContent = t('is.showingOwn', { name, fallback: fallbackName() });
   rail?.after(note);
 }
 

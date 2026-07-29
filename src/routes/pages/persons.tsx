@@ -168,18 +168,18 @@ r.get('/personer/:personId', async (c) => {
   const familyMembers: { id: string; name: string; relation: string }[] = [];
   if (person.family) {
     const far = await lookup(person.family.father);
-    if (far) familyMembers.push({ ...far, relation: 'Far' });
+    if (far) familyMembers.push({ ...far, relation: t('rel.father') });
     const mor = await lookup(person.family.mother);
-    if (mor) familyMembers.push({ ...mor, relation: 'Mor' });
+    if (mor) familyMembers.push({ ...mor, relation: t('rel.mother') });
     const ekte = await lookup(person.family.spouse);
-    if (ekte) familyMembers.push({ ...ekte, relation: 'Ektefelle' });
+    if (ekte) familyMembers.push({ ...ekte, relation: t('rel.spouse') });
     for (const id of person.family.siblings || []) {
       const m = await lookup(id);
-      if (m) familyMembers.push({ ...m, relation: 'Søsken' });
+      if (m) familyMembers.push({ ...m, relation: t('rel.sibling') });
     }
     for (const id of person.family.children || []) {
       const m = await lookup(id);
-      if (m) familyMembers.push({ ...m, relation: 'Barn' });
+      if (m) familyMembers.push({ ...m, relation: t('rel.child') });
     }
   }
 
@@ -210,7 +210,7 @@ r.get('/personer/:personId', async (c) => {
             <h1>{person.name}</h1>
             <p class="person-title">{person.title}</p>
             {person.aliases && person.aliases.length > 0 && (
-              <p class="person-aliases">Også kjent som: {person.aliases.join(', ')}</p>
+              <p class="person-aliases">{t('pe.alsoKnownAs')} {person.aliases.join(', ')}</p>
             )}
             <div class="person-meta">
               <span class="persons-era-badge">{eraLabel(t, person.era)}</span>

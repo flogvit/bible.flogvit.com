@@ -5,6 +5,13 @@
 // Layout-modus (R/N/P) og panelfaner (1-4) sendes som CustomEvent
 // ('bibel:layout-mode' / 'bibel:panel-tab') som lesesiden lytter på.
 
+import { localeHref, readStrings } from './locale.js';
+
+const t = readStrings(document.body);
+
+/** Attributt- og HTML-sikker escaping for tekst som limes inn i malstrengene. */
+const esc = (v) => String(v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+
 const isMac = /Mac|iP(hone|ad|od)/.test(navigator.platform);
 
 const NAV = {
@@ -30,12 +37,13 @@ function mod(key) {
   return isMac ? `<kbd>⌥</kbd>+<kbd>⇧</kbd>+<kbd>${key}</kbd>` : `<kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>${key}</kbd>`;
 }
 
+// Etikettene finnes allerede i ordboka som nav.*; hjelpen gjenbruker dem.
 const NAV_LABELS = [
-  ['H', 'Hjem (bokliste)'], ['S', 'Søk'], ['L', 'Leseplan'], ['T', 'Tidslinje'],
-  ['P', 'Profetier'], ['F', 'Favoritter'], ['E', 'Emner'], ['N', 'Notater'],
-  ['K', 'Kjente vers'], ['O', 'Personer'], ['V', 'Verslister'], ['A', 'Paralleller'],
-  ['I', 'Statistikk'], ['M', 'Manuskripter'], ['C', 'Temaer'], ['D', 'Dager'], ['Y', 'Tall'],
-];
+  ['H', 'kbd.homeBookList'], ['S', 'cmdk.searchGroup'], ['L', 'nav.readingPlan'], ['T', 'nav.timeline'],
+  ['P', 'nav.prophecies'], ['F', 'nav.favorites'], ['E', 'nav.topicsMine'], ['N', 'nav.notes'],
+  ['K', 'nav.knownVerses'], ['O', 'nav.persons'], ['V', 'nav.verseLists'], ['A', 'nav.parallels'],
+  ['I', 'nav.statistics'], ['M', 'nav.manuscripts'], ['C', 'nav.themes'], ['D', 'nav.days'], ['Y', 'nav.numbers'],
+].map(([key, label]) => [key, t(label)]);
 
 function buildOverlay() {
   const el = document.createElement('div');
@@ -43,36 +51,36 @@ function buildOverlay() {
   el.innerHTML = `
     <div class="kbd-modal" role="dialog" aria-modal="true" aria-labelledby="shortcuts-title">
       <div class="kbd-header">
-        <h2 id="shortcuts-title">Hurtigtaster</h2>
-        <button class="kbd-close" aria-label="Lukk">×</button>
+        <h2 id="shortcuts-title">${esc(t('kbd.title'))}</h2>
+        <button class="kbd-close" aria-label="${esc(t('common.close'))}">×</button>
       </div>
       <div class="kbd-content">
         <section class="kbd-section">
-          <h3>Generelt</h3>
+          <h3>${esc(t('kbd.general'))}</h3>
           <dl class="kbd-shortcuts">
-            <div class="kbd-shortcut"><dt><kbd>?</kbd></dt><dd>Vis/skjul denne hjelpen</dd></div>
-            <div class="kbd-shortcut"><dt><kbd>/</kbd></dt><dd>Gå til søkefeltet</dd></div>
-            <div class="kbd-shortcut"><dt><kbd>N</kbd></dt><dd>Normal visning</dd></div>
-            <div class="kbd-shortcut"><dt><kbd>R</kbd></dt><dd>Lesemodus</dd></div>
-            <div class="kbd-shortcut"><dt><kbd>P</kbd></dt><dd>Panelmodus (50/50)</dd></div>
-            <div class="kbd-shortcut"><dt><kbd>Esc</kbd></dt><dd>Lukk dialoger</dd></div>
+            <div class="kbd-shortcut"><dt><kbd>?</kbd></dt><dd>${esc(t('kbd.toggleHelp'))}</dd></div>
+            <div class="kbd-shortcut"><dt><kbd>/</kbd></dt><dd>${esc(t('kbd.gotoSearch'))}</dd></div>
+            <div class="kbd-shortcut"><dt><kbd>N</kbd></dt><dd>${esc(t('kbd.normalView'))}</dd></div>
+            <div class="kbd-shortcut"><dt><kbd>R</kbd></dt><dd>${esc(t('kbd.readingMode'))}</dd></div>
+            <div class="kbd-shortcut"><dt><kbd>P</kbd></dt><dd>${esc(t('kbd.panelMode'))}</dd></div>
+            <div class="kbd-shortcut"><dt><kbd>Esc</kbd></dt><dd>${esc(t('kbd.closeDialogs'))}</dd></div>
           </dl>
         </section>
         <section class="kbd-section">
-          <h3>Kapittelnavigasjon</h3>
-          <p class="kbd-hint">Fungerer kun på kapittelsider</p>
+          <h3>${esc(t('kbd.chapterNav'))}</h3>
+          <p class="kbd-hint">${esc(t('kbd.chapterPagesOnly'))}</p>
           <dl class="kbd-shortcuts">
-            <div class="kbd-shortcut"><dt><kbd>←</kbd></dt><dd>Forrige kapittel</dd></div>
-            <div class="kbd-shortcut"><dt><kbd>→</kbd></dt><dd>Neste kapittel</dd></div>
-            <div class="kbd-shortcut"><dt><kbd>1</kbd>-<kbd>4</kbd></dt><dd>Bytt panelfane</dd></div>
-            <div class="kbd-shortcut"><dt><kbd>5</kbd>-<kbd>9</kbd></dt><dd>Hopp til vers 5-9</dd></div>
+            <div class="kbd-shortcut"><dt><kbd>←</kbd></dt><dd>${esc(t('kbd.prevChapter'))}</dd></div>
+            <div class="kbd-shortcut"><dt><kbd>→</kbd></dt><dd>${esc(t('kbd.nextChapter'))}</dd></div>
+            <div class="kbd-shortcut"><dt><kbd>1</kbd>-<kbd>4</kbd></dt><dd>${esc(t('kbd.switchPanelTab'))}</dd></div>
+            <div class="kbd-shortcut"><dt><kbd>5</kbd>-<kbd>9</kbd></dt><dd>${esc(t('kbd.jumpToVerse'))}</dd></div>
           </dl>
         </section>
         <section class="kbd-section">
-          <h3>Hurtignavigasjon</h3>
-          <p class="kbd-hint">${isMac ? 'Bruk ⌥ Option + ⇧ Shift + bokstav' : 'Bruk Alt + Shift + bokstav'}</p>
+          <h3>${esc(t('kbd.quickNav'))}</h3>
+          <p class="kbd-hint">${esc(isMac ? t('kbd.useModMac') : t('kbd.useModPc'))}</p>
           <dl class="kbd-shortcuts">
-            ${NAV_LABELS.map(([k, label]) => `<div class="kbd-shortcut"><dt>${mod(k)}</dt><dd>${label}</dd></div>`).join('')}
+            ${NAV_LABELS.map(([k, label]) => `<div class="kbd-shortcut"><dt>${mod(k)}</dt><dd>${esc(label)}</dd></div>`).join('')}
           </dl>
         </section>
       </div>
@@ -147,13 +155,13 @@ document.addEventListener('keydown', (e) => {
 
     if (e.key === 'ArrowLeft' && !e.metaKey && !e.ctrlKey && !e.altKey) {
       e.preventDefault();
-      if (cur > 1) location.href = `/${bookSlug}/${cur - 1}${q}`;
+      if (cur > 1) location.href = localeHref(`/${bookSlug}/${cur - 1}${q}`);
       return;
     }
     if (e.key === 'ArrowRight' && !e.metaKey && !e.ctrlKey && !e.altKey) {
       e.preventDefault();
-      if (cur < max) location.href = `/${bookSlug}/${cur + 1}${q}`;
-      else if (nextBookSlug) location.href = `/${nextBookSlug}/1${q}`;
+      if (cur < max) location.href = localeHref(`/${bookSlug}/${cur + 1}${q}`);
+      else if (nextBookSlug) location.href = localeHref(`/${nextBookSlug}/1${q}`);
       return;
     }
     if (!e.metaKey && !e.ctrlKey && !e.altKey && /^[1-9]$/.test(e.key)) {
@@ -175,6 +183,6 @@ document.addEventListener('keydown', (e) => {
 
   if (e.altKey && e.shiftKey && NAV[e.code]) {
     e.preventDefault();
-    location.href = NAV[e.code];
+    location.href = localeHref(NAV[e.code]);
   }
 });

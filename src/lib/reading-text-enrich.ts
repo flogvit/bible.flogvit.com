@@ -90,12 +90,20 @@ export async function enrichWithVerseText(
   return { ...text, verses };
 }
 
-/** Lesetype-etikett ut fra bok-id (som gamle ReadingTextPage). */
-export function getReadingType(bookId: number): string {
-  if (bookId === 19) return 'Salme';
-  if (bookId <= 39) return 'GT-tekst';
-  if (bookId === 44) return 'Lesning fra Apostlene';
-  if (bookId >= 40 && bookId <= 43) return 'Evangelium';
-  if (bookId === 66) return 'Åpenbaringen';
-  return 'Brev';
+/**
+ * Ordboksnøkkelen for lesningstypen en bok hører til.
+ *
+ * Returnerer NØKKELEN, ikke teksten. Funksjonen returnerte norske etiketter
+ * («Salme», «GT-tekst»), og den lekkasjen var usynlig for norsk-vakta fordi
+ * lesetekstene bare finnes på `nb` og blokka derfor aldri rendres under `/en/`
+ * (#34). Kallstedene oversetter selv.
+ */
+export function readingTypeKey(bookId: number):
+  'rt.psalm' | 'rt.ot' | 'rt.acts' | 'rt.gospel' | 'rt.revelation' | 'rt.epistle' {
+  if (bookId === 19) return 'rt.psalm';
+  if (bookId <= 39) return 'rt.ot';
+  if (bookId === 44) return 'rt.acts';
+  if (bookId >= 40 && bookId <= 43) return 'rt.gospel';
+  if (bookId === 66) return 'rt.revelation';
+  return 'rt.epistle';
 }

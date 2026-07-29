@@ -3,7 +3,9 @@
 // manuskripter og hele mobil-verktøylinja (kapittelvelger, hjelpemidler,
 // studium-overlegg). reading.js eier versdetaljer/layout/posisjon/kopiering.
 
-import { langParam } from './locale.js';
+import { readStrings, langParam, localeHref } from './locale.js';
+
+const t = readStrings(document.body);
 
 const KEYS = {
   settings: 'bible-settings',
@@ -123,15 +125,15 @@ if (sidebar) {
         } catch {}
         if (mySeq !== seq) return;
         items.push(
-          { label: `Søk «${q}» i bibelteksten →`, href: `/sok?q=${encodeURIComponent(q)}` },
-          { label: `Søk «${q}» i personer og temaer →`, href: `/sok?q=${encodeURIComponent(q)}` },
+          { label: t('is.searchTextFor', { q }), href: `/sok?q=${encodeURIComponent(q)}` },
+          { label: t('is.searchStudyFor', { q }), href: `/sok?q=${encodeURIComponent(q)}` },
         );
         results.textContent = '';
         const listEl = el('ul', 'st-lookup-list');
         for (const item of items) {
           const li = el('li');
           const a = el('a', item.cls || 'st-lookup-link', item.label);
-          a.href = item.href;
+          a.href = localeHref(item.href);
           li.appendChild(a);
           listEl.appendChild(li);
         }
@@ -147,14 +149,14 @@ if (sidebar) {
     const devs = read(KEYS.devotionals, []).filter((d) => (d.verses || []).some((v) => v.startsWith(prefix)));
     devs.forEach((d) => {
       const li = el('li', 'st-ms-item');
-      const a = el('a', 'st-ms-title', d.title || '(uten tittel)');
-      a.href = `/manuskripter/${d.slug}`;
+      const a = el('a', 'st-ms-title', d.title || t('is.untitled'));
+      a.href = localeHref(`/manuskripter/${d.slug}`);
       li.appendChild(a);
       if (d.type) li.appendChild(el('span', 'st-ms-type', d.type));
       chDevs.appendChild(li);
     });
     if (devs.length === 0) {
-      const li = el('li', 'st-empty', 'Ingen manuskripter for dette kapittelet ennå.');
+      const li = el('li', 'st-empty', t('is.noManuscriptsHere'));
       chDevs.appendChild(li);
     }
   }
@@ -227,7 +229,7 @@ if (toolbar) {
         grid.textContent = '';
         for (let ch = 1; ch <= chapters; ch++) {
           const a = el('a', 'mt-chapter-cell', String(ch));
-          a.href = `/${slug}/${ch}${query}`;
+          a.href = localeHref(`/${slug}/${ch}${query}`);
           if (slug === grid.dataset.currentSlug && String(ch) === grid.dataset.currentChapter) {
             a.classList.add('is-active');
           }

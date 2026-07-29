@@ -13,7 +13,9 @@ import {
   getAllChapterKeys,
   getChapter,
 } from './offline-db.js';
-import { intlLocale } from './locale.js';
+import { readStrings, intlLocale } from './locale.js';
+
+const t = readStrings(document.body);
 
 const $ = (sel) => document.querySelector(sel);
 const listBox = $('[data-trans-list]');
@@ -46,9 +48,13 @@ async function renderList() {
     info.append(el('strong', '', bible.name));
     const totalVerses = Object.values(bible.verseCounts || {}).reduce((a, b) => a + b, 0);
     info.append(
-      el('span', 'user-note', ` ${totalVerses} vers · nummerering: ${bible.mappingId} · lastet opp ${new Date(bible.uploadedAt).toLocaleDateString(intlLocale())}`),
+      el('span', 'user-note', ` ${t('is.uploadedMeta', {
+        verses: totalVerses,
+        mapping: bible.mappingId,
+        when: new Date(bible.uploadedAt).toLocaleDateString(intlLocale()),
+      })}`),
     );
-    const del = el('button', 'user-btn-ghost', 'Slett');
+    const del = el('button', 'user-btn-ghost', t('is.delete'));
     del.type = 'button';
     del.addEventListener('click', async () => {
       if (!confirm(`Slette «${bible.name}»?`)) return;
@@ -154,7 +160,7 @@ async function loadMappings() {
       if (!name.value) name.value = select.selectedOptions[0]?.textContent || '';
     });
   } catch {
-    select.append(el('option', '', 'Kunne ikke laste nummereringer'));
+    select.append(el('option', '', t('is.numberingsFailed')));
   }
 }
 
@@ -165,7 +171,7 @@ async function handleParse() {
   result.hidden = false;
   result.textContent = '';
   if (!text.trim()) {
-    result.append(el('p', 'trans-error', 'Ingen tekst å analysere — velg fil eller lim inn.'));
+    result.append(el('p', 'trans-error', t('is.noTextToParse')));
     return;
   }
   try {
@@ -176,11 +182,13 @@ async function handleParse() {
     parsed = { ...parseBibleText(text, mapping.bookNames || {}, bibleId), bibleId, mappingId };
     if (parsed.stats.verses === 0) {
       parsed = null;
-      result.append(el('p', 'trans-error', 'Fant ingen vers — sjekk at linjene har formatet «Boknavn kapittel,vers tekst».'));
+      result.append(el('p', 'trans-error', t('is.noVersesFound')));
       return;
     }
     result.append(
-      el('p', '', `Fant ${parsed.stats.verses} vers i ${parsed.stats.chapters} kapitler fra ${parsed.stats.books} bøker.`),
+      el('p', '', t('is.parsedSummary', {
+        verses: parsed.stats.verses, chapters: parsed.stats.chapters, books: parsed.stats.books,
+      })),
     );
     if (parsed.warnings.length > 0) {
       const details = el('details', 'trans-warnings');
@@ -192,17 +200,17 @@ async function handleParse() {
     }
     $('[data-trans-import]').hidden = false;
   } catch {
-    result.append(el('p', 'trans-error', 'Analysen feilet — prøv igjen.'));
+    result.append(el('p', 'trans-error', t('is.parseFailed')));
   }
 }
 
 async function handleImport() {
   if (!parsed) return;
-  if (!window.fvPlus?.gate('Egne oversettelser')) return;
+  if (!window.fvPlus?.gate(t('is.ownTranslations'))) return;
   const progress = $('[data-trans-progress]');
   const fill = $('[data-trans-fill]');
   const result = $('[data-trans-result]');
-  const name = $('[data-trans-name]').value.trim() || 'Egen oversettelse';
+  const name = $('[data-trans-name]').value.trim() || t('is.ownTranslation');
   progress.hidden = false;
   const { chapters, bibleId, mappingId } = parsed;
   for (let i = 0; i < chapters.length; i += 100) {
@@ -218,17 +226,17 @@ async function handleImport() {
   progress.hidden = true;
   fill.style.width = '0';
   result.textContent = '';
-  result.append(el('p', '', `«${name}» er importert og kan velges som oversettelse på lesesidene.`));
+  result.append(el('p', '', t('is.importedTranslation', { name })));
   renderList();
   if (hasPlus()) {
-    result.append(el('p', 'user-note', 'Laster opp til kontoen din…'));
+    result.append(el('p', 'user-note', t('is.uploadingToAccount')));
     try {
       await pushMetadata();
       await pushChapters(bibleId);
       await addUserBible({ id: bibleId, name, mappingId, verseCounts, uploadedAt: Date.now(), syncedAt: Date.now() });
-      result.lastChild.textContent = 'Synkronisert til kontoen din.';
+      result.lastChild.textContent = t('is.syncedToAccount');
     } catch {
-      result.lastChild.textContent = 'Kunne ikke laste opp til kontoen nå — prøver igjen automatisk neste gang du er på nett.';
+      result.lastChild.textContent = t('is.uploadFailedRetry');
     }
   }
 }

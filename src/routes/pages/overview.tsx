@@ -31,10 +31,11 @@ import {
   normalizeBibleId,
   defaultBibleForLanguage,
 } from '../../lib/bible.ts';
-import { enrichWithVerseText, getReadingType } from '../../lib/reading-text-enrich.ts';
+import { enrichWithVerseText, readingTypeKey } from '../../lib/reading-text-enrich.ts';
 import { toUrlSlug } from '../../lib/url-utils.ts';
-import { layoutProps, tFor, lhref } from '../../lib/i18n.ts';
+import { layoutProps, tFor, lhref, currentIntlTag, langName, scriptName } from '../../lib/i18n.ts';
 import { tCtx, tEnum } from '../../lib/i18n.ts';
+import { pickLocalisedText } from '../../lib/lang.ts';
 
 const r = new Hono<AppEnv>();
 
@@ -84,17 +85,28 @@ r.get('/oversettelser/:id', async (c) => {
 
   // Krediteringskravet forplanter seg til oversettelser som bygger på kilden, så
   // vi lenker til kildeutgavene som HAR info-side hos oss.
-  const known = new Set((await getBibleEditions()).map((e) => e.id));
+  // Navn per id, ikke bare id-ene: lenketeksten var modul-id-en («sblgnt»)
+  // framfor utgavens navn (#38).
+  const knownNames = new Map((await getBibleEditions()).map((e) => [e.id, e.name_native] as const));
+  const known = new Set(knownNames.keys());
+  const editionLabel = (id: string) => knownNames.get(id) ?? id;
   const sourceModules = [
     ...basis.map((b) => b.module),
     ...(meta.derived_from?.module ? [meta.derived_from.module] : []),
   ].filter((m, i, arr) => arr.indexOf(m) === i);
   const attributionSources = sourceModules.filter((m) => known.has(m) && m !== edition.id);
 
+  // «Karakter»-punktene er utsagn om utgaven, men de leses av den som er på
+  // siden — de hører til leserens språk, ikke utgavens (free-bible#23).
+  // Punkter uten tekst i noe språk i kjeden faller bort framfor å bli tomme <li>.
+  const legacyNotes = (meta.legacy ?? [])
+    .map((l) => pickLocalisedText(l.text))
+    .filter((n): n is { text: string; lang: string | null } => n !== null);
+
   return c.html(
     <Layout {...layoutProps(c)}
       title={`${name} — ${t('nav.translations')} — FLOGVIT.bible`}
-      description={`Om ${name}${edition.abbreviation ? ` (${edition.abbreviation})` : ''}: tekstgrunnlag, oversettelsesmetode, dekning og lisens.`}
+      description={t('ed.metaDesc', { name: edition.abbreviation ? `${name} (${edition.abbreviation})` : name })}
       styles={['overview.css']}
       canonical={`https://bible.flogvit.com${lhref(`/oversettelser/${edition.id}`)}`}
     >
@@ -118,10 +130,13 @@ r.get('/oversettelser/:id', async (c) => {
             <h2>{t('ed.about')}</h2>
             <dl class="edition-facts">
               {edition.abbreviation ? <EditionRow term={t('ed.abbreviation')}>{edition.abbreviation}</EditionRow> : null}
+              {/* ISO-kodene sto rått («en / eng — skrift Latn»); dataene har
+                  70+ språkkoder og 17 skriftkoder, så navnene kommer fra Intl
+                  med ordboka som overstyring der ICU mangler noe (#38). */}
               <EditionRow term={t('ed.language')}>
-                {[edition.lang_iso639_1, edition.lang_iso639_3].filter(Boolean).join(' / ')}
-                {edition.script ? ` — ${t('ed.script', { script: edition.script })}` : ''}
-                {edition.direction === 'rtl' ? ' (høyre-til-venstre)' : ''}
+                {langName(t, edition.lang_iso639_1 || edition.lang_iso639_3 || '')}
+                {edition.script ? ` — ${t('ed.script', { script: scriptName(edition.script) })}` : ''}
+                {edition.direction === 'rtl' ? ` (${t('ed.rtl')})` : ''}
               </EditionRow>
               {label('ed.philosophy.', edition.philosophy)
                 ? <EditionRow term={t('ed.philosophy')}>{label('ed.philosophy.', edition.philosophy)}</EditionRow> : null}
@@ -136,7 +151,9 @@ r.get('/oversettelser/:id', async (c) => {
               {meta.work?.method?.length
                 ? <EditionRow term={t('ed.method')}>{meta.work.method.map((m) => label('ed.method.', m)).join(', ')}</EditionRow> : null}
               {meta.work?.source_languages?.length
-                ? <EditionRow term={t('ed.translatedFrom')}>{meta.work.source_languages.join(', ')}</EditionRow> : null}
+                ? <EditionRow term={t('ed.translatedFrom')}>
+                    {meta.work.source_languages.map((l) => langName(t, l)).join(', ')}
+                  </EditionRow> : null}
               {basis.length
                 ? <EditionRow term={t('ed.textualBasis')}>
                     {basis.map((b) => `${t(b.testament)}: ${label('ed.basis.', b.module)}`).join(' · ')}
@@ -144,9 +161,11 @@ r.get('/oversettelser/:id', async (c) => {
               {meta.derived_from?.module
                 ? <EditionRow term={t('ed.basedOn')}>
                     {known.has(meta.derived_from.module)
-                      ? <a href={lhref(`/oversettelser/${meta.derived_from.module}`)}>{meta.derived_from.module}</a>
-                      : meta.derived_from.module}
-                    {meta.derived_from.relation === 'revision_of' ? ' (revisjon)' : ''}
+                      ? <a href={lhref(`/oversettelser/${meta.derived_from.module}`)}>
+                          {editionLabel(meta.derived_from.module)}
+                        </a>
+                      : editionLabel(meta.derived_from.module)}
+                    {meta.derived_from.relation === 'revision_of' ? ` (${t('ed.revision')})` : ''}
                   </EditionRow> : null}
               {meta.links?.homepage
                 ? <EditionRow term={t('ed.homepage')}>
@@ -171,11 +190,11 @@ r.get('/oversettelser/:id', async (c) => {
             </section>
           ) : null}
 
-          {meta.legacy?.length ? (
+          {legacyNotes.length ? (
             <section class="overview-section">
               <h2>{t('ed.character')}</h2>
               <ul class="edition-notes">
-                {meta.legacy.map((l) => <li>{l.text}</li>)}
+                {legacyNotes.map((n) => <li lang={n.lang ?? undefined}>{n.text}</li>)}
               </ul>
             </section>
           ) : null}
@@ -215,7 +234,7 @@ r.get('/oversettelser/:id', async (c) => {
                 {attributionSources.map((m, i) => (
                   <>
                     {i > 0 ? ', ' : ''}
-                    <a href={lhref(`/oversettelser/${m}`)}>{m}</a>
+                    <a href={lhref(`/oversettelser/${m}`)}>{editionLabel(m)}</a>
                   </>
                 ))}
                 . {t('ed.inheritedTerms')}
@@ -227,8 +246,14 @@ r.get('/oversettelser/:id', async (c) => {
             <section class="overview-section">
               <h2>{t('ed.sources')}</h2>
               <p class="overview-intro">
-                Feltene over er {meta.provenance.method === 'manual' ? 'manuelt kontrollert' : 'maskinelt hentet'}
-                {meta.provenance.generated ? `, sist oppdatert ${meta.provenance.generated}` : ''}.
+                {meta.provenance.generated
+                  ? t('ed.provenanceUpdated', {
+                      method: tEnum(t, 'ed.provMethod.', meta.provenance.method ?? ''),
+                      date: meta.provenance.generated,
+                    })
+                  : t('ed.provenance', {
+                      method: tEnum(t, 'ed.provMethod.', meta.provenance.method ?? ''),
+                    })}
               </p>
               {meta.provenance.sources?.length ? (
                 <ul class="edition-notes">
@@ -236,7 +261,7 @@ r.get('/oversettelser/:id', async (c) => {
                     <li>
                       {s.url ? (
                         <a href={s.url} target="_blank" rel="noopener noreferrer">{s.url}</a>
-                      ) : 'ukjent kilde'}
+                      ) : t('ed.unknownSource')}
                       {s.fields?.length ? <span class="edition-spdx"> {s.fields.join(', ')}</span> : null}
                     </li>
                   ))}
@@ -305,18 +330,25 @@ r.get('/kjente-vers', async (c) => {
 
 // ---------- /lesetekster ----------
 
-const MONTHS: Record<string, string> = {
-  '01': 'Januar', '02': 'Februar', '03': 'Mars', '04': 'April', '05': 'Mai', '06': 'Juni',
-  '07': 'Juli', '08': 'August', '09': 'September', '10': 'Oktober', '11': 'November', '12': 'Desember',
-};
-const WEEKDAYS = ['søndag', 'mandag', 'tirsdag', 'onsdag', 'torsdag', 'fredag', 'lørdag'];
+// Datoene her var norske ordlister med kommentaren «deterministisk norsk
+// datoformat uten locale-avhengighet» — altså nøyaktig #25 i en annen form:
+// «søndag 26. juli» på alle åtte språk. Intl kjenner sidens locale
+// (`currentIntlTag()`), og datoene er UTC-normaliserte, så resultatet er like
+// deterministisk som før.
+function fmtDate(date: string, opts: Intl.DateTimeFormatOptions): string {
+  return new Intl.DateTimeFormat(currentIntlTag(), { ...opts, timeZone: 'UTC' })
+    .format(new Date(`${date}T00:00:00Z`));
+}
 
-// Deterministisk norsk datoformat uten locale-avhengighet.
+/** «søndag 26. juli» — dag og måned, uten år. */
 function formatDate(date: string): string {
-  const d = new Date(date + 'T00:00:00Z');
-  const wd = WEEKDAYS[d.getUTCDay()] ?? '';
-  const month = MONTHS[date.slice(5, 7)]?.toLowerCase() ?? '';
-  return `${wd} ${d.getUTCDate()}. ${month}`;
+  return fmtDate(date, { weekday: 'long', day: 'numeric', month: 'long' });
+}
+
+/** Månedsoverskrift over en gruppe lesetekster: «Juli 2026». */
+function formatMonth(yearMonth: string): string {
+  const label = fmtDate(`${yearMonth}-01`, { month: 'long', year: 'numeric' });
+  return label.charAt(0).toUpperCase() + label.slice(1);
 }
 
 r.get('/lesetekster', async (c) => {
@@ -336,7 +368,7 @@ r.get('/lesetekster', async (c) => {
   return c.html(
     <Layout {...layoutProps(c)}
       title={`${t('nav.readingTexts')} — FLOGVIT.bible`}
-      description="Lesetekster fra Den norske kirkes tekstrekkesystem — GT, brev og evangelium for hver søndag og helligdag."
+      description={t('rt.intro')}
       styles={['overview.css']}
     >
       <div class="overview-main">
@@ -352,9 +384,7 @@ r.get('/lesetekster', async (c) => {
           ) : (
             [...groups.entries()].map(([key, group]) => (
               <section class="overview-section">
-                <h2>
-                  {MONTHS[key.slice(5, 7)]} {key.slice(0, 4)}
-                </h2>
+                <h2>{formatMonth(key)}</h2>
                 <div class="reading-text-list">
                   {group.map((t) => (
                     <a href={lhref(`/lesetekster/${t.id}`)} class="reading-text-card">
@@ -375,12 +405,9 @@ r.get('/lesetekster', async (c) => {
   );
 });
 
-// Deterministisk fulldato (lørdag 5. juli 2026-stil) uten locale.
+/** Fulldato med år: «lørdag 5. juli 2026». */
 function formatFullDate(date: string): string {
-  const d = new Date(date + 'T00:00:00Z');
-  const wd = WEEKDAYS[d.getUTCDay()] ?? '';
-  const month = MONTHS[date.slice(5, 7)]?.toLowerCase() ?? '';
-  return `${wd} ${d.getUTCDate()}. ${month} ${d.getUTCFullYear()}`;
+  return fmtDate(date, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 }
 
 r.get('/lesetekster/:id', async (c) => {
@@ -397,8 +424,8 @@ r.get('/lesetekster/:id', async (c) => {
 
   return c.html(
     <Layout {...layoutProps(c)}
-      title={`${text.name} — Lesetekster — FLOGVIT.bible`}
-      description={`Lesetekster for ${text.name}: GT, brev og evangelium.`}
+      title={`${text.name} — ${t('nav.readingTexts')} — FLOGVIT.bible`}
+      description={t('rt.detailMeta', { name: text.name })}
       styles={['overview.css']}
     >
       <div class="overview-main">
@@ -413,7 +440,9 @@ r.get('/lesetekster/:id', async (c) => {
           <h1>{text.name}</h1>
           <div class="reading-text-detail-meta">
             <span class="reading-text-date">{formatFullDate(text.date)}</span>
-            {text.series && <span class="reading-text-series">Rekke {text.series}</span>}
+            {text.series && (
+              <span class="reading-text-series">{t('home.lectionarySeries', { series: text.series })}</span>
+            )}
           </div>
 
           {enriched.slots.map((slot) => {
@@ -424,12 +453,12 @@ r.get('/lesetekster/:id', async (c) => {
                   <div class={hasAlternatives ? 'reading-text-option reading-text-alt' : 'reading-text-option'}>
                     {optIdx > 0 && (
                       <div class="reading-text-or">
-                        <span>eller</span>
+                        <span>{t('rt.or')}</span>
                       </div>
                     )}
                     {option.parts.map((part) => {
                       const type =
-                        part.ranges.length > 0 ? getReadingType(part.ranges[0]!.book_id) : '';
+                        part.ranges.length > 0 ? t(readingTypeKey(part.ranges[0]!.book_id)) : '';
                       const verses = enriched.verses[part.display_ref] || [];
                       return (
                         <div class="reading-text-part">
@@ -454,9 +483,7 @@ r.get('/lesetekster/:id', async (c) => {
                               })}
                             </div>
                           ) : (
-                            <p class="reading-text-missing">
-                              Verstekst ikke tilgjengelig for denne oversettelsen.
-                            </p>
+                            <p class="reading-text-missing">{t('rt.verseUnavailable')}</p>
                           )}
                         </div>
                       );
@@ -467,9 +494,7 @@ r.get('/lesetekster/:id', async (c) => {
             );
           })}
 
-          <a href={lhref('/lesetekster')} class="reading-text-back">
-            ← Alle lesetekster
-          </a>
+          <a href={lhref('/lesetekster')} class="reading-text-back">{t('rt.backToAll')}</a>
         </div>
       </div>
     </Layout>,
