@@ -22,11 +22,12 @@ import { InlineRefs } from '../../views/inline-refs.tsx';
 import { Markdown } from '../../views/markdown.tsx';
 import { ItemTagging } from '../../views/item-tagging.tsx';
 import { VerseView } from '../../views/verse-display.tsx';
-import { booksData, getBookInfoBySlug, getBookInfoById } from '../../lib/books-data.ts';
+import { booksData, getBookInfoBySlug, getBookInfoById, bookName, bookAbbr, bookAbbrById } from '../../lib/books-data.ts';
 import type { BookInfo } from '../../lib/books-data.ts';
 import { toUrlSlug } from '../../lib/url-utils.ts';
 import { parseStandardRef, refSegmentToUrl } from '../../lib/standard-ref-parser.ts';
 import { parseVerseTemplate } from '../../lib/verse-template.ts';
+import { tCtx, tEnum } from '../../lib/i18n.ts';
 import {
   getVerses,
   getVerse,
@@ -52,6 +53,7 @@ import {
   formatReference,
   normalizeBibleId,
   readableBibleCandidates,
+  defaultBibleForLanguage,
 } from '../../lib/bible.ts';
 import type {
   BibleCandidate,
@@ -348,7 +350,7 @@ function ChapterToc({
 
   return (
     <nav class="chapter-toc-nav" aria-label={t('rd.chapterNavAria')}>
-      <div class="toc-group-label">{book.name_no}</div>
+      <div class="toc-group-label">{bookName(book)}</div>
       <div class="toc-chapter-grid">
         {Array.from({ length: book.chapters }, (_, i) => i + 1).map((ch) => (
           <a
@@ -369,7 +371,7 @@ function ChapterToc({
               href={lhref(`/${toUrlSlug(b.short_name)}/1${query}`)}
               class={`toc-item ${b.id === book.id ? 'is-active' : ''}`}
             >
-              <span class="toc-item-name">{b.name_no}</span>
+              <span class="toc-item-name">{bookName(b)}</span>
               <span class="toc-item-chapters">{b.chapters}</span>
             </a>
           ))}
@@ -656,13 +658,14 @@ async function GospelColumn({
   bible: string;
   isCurrentGospel: boolean;
 }) {
+  const t = tCtx();
   if (!passage) {
     return (
       <div class={`gospel-column gospel-${gospel}`}>
         <div class="gospel-column-header">
           <span class="gospel-badge">{GOSPEL_NAMES[gospel]}</span>
         </div>
-        <div class="gospel-no-passage">Ikke i {GOSPEL_NAMES[gospel]}</div>
+        <div class="gospel-no-passage">{t('rd.notInGospel', { gospel: GOSPEL_NAMES[gospel] ?? gospel })}</div>
       </div>
     );
   }
@@ -719,7 +722,7 @@ function ChapterParallels({
       <summary class="parallels-header">
         <span class="parallels-title">{t('rd.parallels')}</span>
         <span class="parallels-subtitle">
-          {relevant.length} {relevant.length === 1 ? 'parallell' : 'paralleller'} i dette kapitlet
+          {t('rd.parallelsInChapter', { n: relevant.length })}
         </span>
       </summary>
       <div class="parallels-list">
@@ -774,6 +777,7 @@ function VerseStrip({
   secondary: string | undefined;
   hebrew: boolean;
 }) {
+  const t = tCtx();
   if (secondary === 'original' && originalText) {
     return (
       <div
@@ -782,7 +786,7 @@ function VerseStrip({
         lang={hebrew ? 'he' : 'el'}
       >
         <span class="undertekst-label" aria-hidden="true">
-          {hebrew ? 'hebr' : 'gresk'}
+          {t(hebrew ? 'lang.hebrewShort' : 'lang.greekShort')}
         </span>
         {originalText}
       </div>
@@ -846,7 +850,7 @@ function VerseDetailPanel({
     <div class="verse-detail" id={`v${n}-detail`} hidden data-verse-key={key}>
       <div class="vd-header">
         <button type="button" class="favorite-toggle" data-fav-toggle>
-          ☆ Legg til favoritt
+          ☆ {t('rd.addFavorite')}
         </button>
         <button
           type="button"
@@ -859,12 +863,12 @@ function VerseDetailPanel({
         </button>
       </div>
 
-      <div class="vd-tabs" role="tablist" aria-label={`Detaljer for vers ${n}`}>
+      <div class="vd-tabs" role="tablist" aria-label={`${t('rd.verseDetails')} ${n}`}>
         <button type="button" class="vd-tab is-active" data-vd-tab="original">
-          Grunntekst
+          {t('u.originalText')}
         </button>
         <button type="button" class="vd-tab" data-vd-tab="references">
-          Referanser {data.references.length > 0 && `(${data.references.length})`}
+          {t('common.references')} {data.references.length > 0 && `(${data.references.length})`}
         </button>
         {data.works.length > 0 && (
           <button type="button" class="vd-tab" data-vd-tab="works">
@@ -873,26 +877,26 @@ function VerseDetailPanel({
         )}
         {data.prophecies.length > 0 && (
           <button type="button" class="vd-tab" data-vd-tab="prophecies">
-            Profetier ({data.prophecies.length})
+            {t('nav.prophecies')} ({data.prophecies.length})
           </button>
         )}
         <button type="button" class="vd-tab" data-vd-tab="topics">
-          Emner
+          {t('nav.topicsMine')}
         </button>
         <button type="button" class="vd-tab" data-vd-tab="notes">
-          Notater
+          {t('nav.notes')}
         </button>
         <button type="button" class="vd-tab" data-vd-tab="devotionals">
-          Manuskripter
+          {t('nav.manuscripts')}
         </button>
         {hasVersions && (
           <button type="button" class="vd-tab" data-vd-tab="versions">
-            Versjoner
+            {t('about.lbl.versions')}
           </button>
         )}
         {hasFootnotes && (
           <button type="button" class="vd-tab" data-vd-tab="footnotes">
-            Fotnoter ({v.footnotes!.length})
+            {t('common.footnotes')} ({v.footnotes!.length})
           </button>
         )}
       </div>
@@ -1024,7 +1028,7 @@ function VerseDetailPanel({
                 data-note-input
               ></textarea>
               <button type="button" class="note-add-button" data-note-add disabled>
-                Legg til notat
+                {t('rd.addNote')}
               </button>
             </div>
             <noscript>
@@ -1040,7 +1044,7 @@ function VerseDetailPanel({
               <p class="text-muted">{t('rd.noManuscripts')}</p>
             </div>
             <a href={lhref(`/manuskripter/ny?vers=${verseRef}`)} class="write-devotional-link">
-              Skriv manuskript om dette verset
+              {t('rd.noManuscripts')}
             </a>
           </div>
         </div>
@@ -1049,7 +1053,7 @@ function VerseDetailPanel({
         {hasVersions && (
           <div class="vd-pane" data-vd-pane="versions" hidden>
             <div class="vd-versions" data-versions={JSON.stringify(selectableVersions.map((ver) => ver.text))}>
-              <p class="versions-intro">Velg hvilken oversettelse du vil bruke for dette verset:</p>
+              <p class="versions-intro">{t('rd.chooseVersion')}</p>
               <div class="version-option">
                 <label class="version-label">
                   <input type="radio" name={`version-${key}`} value="" checked data-version-radio />
@@ -1098,7 +1102,7 @@ function VerseDetailPanel({
               {v.footnotes!.map((fn) => (
                 <div class="vd-footnote">
                   {fn.source && (
-                    <span class="vd-footnote-source">{fn.source.charAt(0).toUpperCase() + fn.source.slice(1)}</span>
+                    <span class="vd-footnote-source">{tEnum(t, 'fn.', fn.source.toLowerCase())}</span>
                   )}
                   <p>{fn.text}</p>
                 </div>
@@ -1228,8 +1232,8 @@ function StudyPanel({
       </StudyBlock>
 
       <StudyBlock id="sammendrag" title={t('rd.summary')} count={summaryCount} defaultOpen>
-        {data.summary && <SummaryItem title={`Kapittel ${chapter}`} content={data.summary} kind="chapter" />}
-        {data.bookSummary && <SummaryItem title={`Om ${book.name_no}`} content={data.bookSummary} kind="book" />}
+        {data.summary && <SummaryItem title={`${t('common.chapter')} ${chapter}`} content={data.summary} kind="chapter" />}
+        {data.bookSummary && <SummaryItem title={`${t('rd.aboutBook')} ${bookName(book)}`} content={data.bookSummary} kind="book" />}
         {data.context && <SummaryItem title={t('rd.historicalContext')} content={data.context} kind="context" />}
         {!data.summary && !data.bookSummary && !data.context && (
           <p class="st-empty">{t('rd.noSummary')}</p>
@@ -1248,7 +1252,7 @@ function StudyPanel({
               ))}
             </div>
             <a href={lhref('/personer')} class="st-see-all">
-              Alle personer →
+              {t('st.allOf', { what: t('nav.persons').toLowerCase() })} →
             </a>
           </>
         ) : (
@@ -1271,7 +1275,7 @@ function StudyPanel({
               </li>
             ))}
             {data.importantWords.length > 8 && (
-              <li class="st-word-more">+ {data.importantWords.length - 8} til</li>
+              <li class="st-word-more">{t('rd.andMore', { n: data.importantWords.length - 8 })}</li>
             )}
           </ul>
         ) : (
@@ -1309,7 +1313,7 @@ function StudyPanel({
           </div>
         )}
         <a href={lhref('/temaer')} class="st-see-all">
-          Alle temaer →
+          {t('st.allOf', { what: t('nav.themes').toLowerCase() })} →
         </a>
       </StudyBlock>
 
@@ -1327,7 +1331,7 @@ function StudyPanel({
           </ul>
         )}
         <a href={lhref('/profetier')} class="st-see-all">
-          Alle profetier →
+          {t('st.allOf', { what: t('nav.prophecies').toLowerCase() })} →
         </a>
       </StudyBlock>
 
@@ -1345,7 +1349,7 @@ function StudyPanel({
           </ul>
         )}
         <a href={lhref('/historier')} class="st-see-all">
-          Alle bibelhistorier →
+          {t('st.allOf', { what: t('nav.stories').toLowerCase() })} →
         </a>
       </StudyBlock>
 
@@ -1366,7 +1370,7 @@ function StudyPanel({
           </ul>
         )}
         <a href={lhref('/paralleller')} class="st-see-all">
-          Alle paralleller →
+          {t('st.allOf', { what: t('nav.parallels').toLowerCase() })} →
         </a>
       </StudyBlock>
 
@@ -1382,7 +1386,7 @@ function StudyPanel({
           </div>
         )}
         <a href={lhref('/tall')} class="st-see-all">
-          Alle tall →
+          {t('st.allOf', { what: t('nav.numbers').toLowerCase() })} →
         </a>
       </StudyBlock>
 
@@ -1400,7 +1404,7 @@ function StudyPanel({
           </ul>
         )}
         <a href={lhref('/lesetekster')} class="st-see-all">
-          Alle lesetekster →
+          {t('st.allOf', { what: t('nav.readingTexts').toLowerCase() })} →
         </a>
       </StudyBlock>
 
@@ -1423,7 +1427,7 @@ function StudyPanel({
         {/* Lokale manuskripter (localStorage) fylles inn av studium.js */}
         <ul class="st-ms-list" data-chapter-devotionals data-chapter-prefix={`${book.short_name.toLowerCase()}-${chapter}-`}></ul>
         <a href={lhref(`/manuskripter/ny?ref=${encodeURIComponent(newManuscriptRef)}`)} class="st-new-ms-link">
-          + Skriv nytt manuskript om {book.name_no} {chapter}
+          + {`${t('rd.newManuscriptAbout')} ${bookName(book)} ${chapter}`}
         </a>
       </StudyBlock>
     </div>
@@ -1468,8 +1472,8 @@ function PanelTimeline({ t, events, bookId, chapter }: { t: Translator; events: 
                     href={lhref(`/${toUrlSlug(ref.book_short_name || '')}/${ref.chapter}#v${ref.verse_start}`)}
                     class={`pt-ref-link ${isCurrent ? 'is-current' : ''}`}
                   >
-                    {ref.book_short_name} {ref.chapter}:{range}
-                    {isCurrent && <span class="pt-here"> ← Du er her</span>}
+                    {bookAbbrById(ref.book_id)} {ref.chapter}:{range}
+                    {isCurrent && <span class="pt-here"> ← {t('rd.youAreHere')}</span>}
                   </a>
                 );
               })}
@@ -1518,13 +1522,13 @@ function MobileToolbar({
         <a
           href={chapter > 1 ? lhref(`/${bookSlug}/${chapter - 1}${query}`) : undefined}
           class={`mt-nav ${chapter === 1 ? 'is-disabled' : ''}`}
-          aria-label={`Forrige kapittel${chapter > 1 ? `: ${book.name_no} ${chapter - 1}` : ' (ikke tilgjengelig)'}`}
+          aria-label={`${t('rd.prevChapter')}${chapter > 1 ? `: ${bookName(book)} ${chapter - 1}` : ` (${t('rd.unavailable')})`}`}
           aria-disabled={chapter === 1 ? 'true' : undefined}
         >
           ←
         </a>
         <button type="button" class="mt-title" data-open-picker>
-          {book.name_no} {chapter} <span class="mt-title-arrow" aria-hidden="true">▼</span>
+          {bookName(book)} {chapter} <span class="mt-title-arrow" aria-hidden="true">▼</span>
         </button>
         <button type="button" class="mt-sidebar" data-open-studium title={t('rd.studyPanel')} aria-label={t('rd.openStudyPanel')}>
           ▥
@@ -1535,7 +1539,7 @@ function MobileToolbar({
         <a
           href={chapter < maxChapter ? lhref(`/${bookSlug}/${chapter + 1}${query}`) : undefined}
           class={`mt-nav ${chapter === maxChapter ? 'is-disabled' : ''}`}
-          aria-label={`Neste kapittel${chapter < maxChapter ? `: ${book.name_no} ${chapter + 1}` : ' (ikke tilgjengelig)'}`}
+          aria-label={`${t('rd.nextChapter')}${chapter < maxChapter ? `: ${bookName(book)} ${chapter + 1}` : ` (${t('rd.unavailable')})`}`}
           aria-disabled={chapter === maxChapter ? 'true' : undefined}
         >
           →
@@ -1546,7 +1550,7 @@ function MobileToolbar({
       <div class="mt-overlay" data-picker-overlay hidden>
         <div class="mt-sheet mt-picker-sheet">
           <div class="mt-sheet-header">
-            <h3 data-picker-book-name>{book.name_no}</h3>
+            <h3 data-picker-book-name>{bookName(book)}</h3>
             <button type="button" class="mt-sheet-close" data-close-overlay aria-label={t('common.close')}>
               ✕
             </button>
@@ -1575,10 +1579,10 @@ function MobileToolbar({
                   type="button"
                   class={`mt-book-cell ${b.id === book.id ? 'is-active' : ''}`}
                   data-book-slug={toUrlSlug(b.short_name)}
-                  data-book-name={b.name_no}
+                  data-book-name={bookName(b)}
                   data-book-chapters={b.chapters}
                 >
-                  {b.short_name}
+                  {bookAbbr(b)}
                 </button>
               ))}
             </div>
@@ -1589,10 +1593,10 @@ function MobileToolbar({
                   type="button"
                   class={`mt-book-cell ${b.id === book.id ? 'is-active' : ''}`}
                   data-book-slug={toUrlSlug(b.short_name)}
-                  data-book-name={b.name_no}
+                  data-book-name={bookName(b)}
                   data-book-chapters={b.chapters}
                 >
-                  {b.short_name}
+                  {bookAbbr(b)}
                 </button>
               ))}
             </div>
@@ -1628,12 +1632,12 @@ function MobileToolbar({
           </div>
           <div class="tools-section">
             <span class="tools-section-title">{t('rd.subtext')}</span>
-            <select class="tools-select" data-secondary-select aria-label="Undertekst">
+            <select class="tools-select" data-secondary-select aria-label={t('rd.secondaryText')} data-proper-names>
               <option value="" selected={!secondary}>
-                Ingen
+                {t('common.none')}
               </option>
               <option value="original" selected={secondary === 'original'}>
-                Grunntekst
+                {t('u.originalText')}
               </option>
               <option value="osnb" selected={secondary === 'osnb'}>
                 OSNB (bokmål)
@@ -1646,7 +1650,7 @@ function MobileToolbar({
           {mappings.length > 0 && (
             <div class="tools-section">
               <span class="tools-section-title">{t('u.versification')}</span>
-              <select class="tools-select" data-mapping-select aria-label="Versnummerering">
+              <select class="tools-select" data-mapping-select aria-label={t('rd.versification')} data-proper-names>
                 {mappings.map((m) => (
                   <option value={m.id} selected={(mapping || 'osnb') === m.id}>
                     {m.displayName}
@@ -1671,7 +1675,7 @@ function MobileToolbar({
           </div>
           <div class="tools-section">
             <a href={lhref('/innstillinger')} class="tools-settings-link">
-              Alle innstillinger →
+              {t('u.allSettings')} →
             </a>
           </div>
         </div>
@@ -1681,7 +1685,7 @@ function MobileToolbar({
       <div class="studium-overlay" data-studium-overlay hidden>
         <div class="studium-overlay-header">
           <div class="studium-overlay-title">{t('rd.study')}</div>
-          <button type="button" class="mt-sheet-close" data-close-overlay aria-label="Lukk panel">
+          <button type="button" class="mt-sheet-close" data-close-overlay aria-label={t('rd.closePanel')}>
             ✕
           </button>
         </div>
@@ -1747,10 +1751,10 @@ r.get('/:book/:chapter', async (c) => {
   // defaulten holdes ute av URL-ene så fallbacken virker per kapittel.
   const query = buildQuery(requestedBible, mapping ?? undefined, requestedSecondary, localeDefault.id);
 
-  const title = `${book.name_no} ${chapter} — FLOGVIT.bible`;
+  const title = `${bookName(book)} ${chapter} — FLOGVIT.bible`;
   const description = data.summary
     ? excerpt(data.summary)
-    : `${book.name_no} kapittel ${chapter} — les med grunntekst, referanser og studieverktøy.`;
+    : `${bookName(book)} kapittel ${chapter} — les med grunntekst, referanser og studieverktøy.`;
 
   const undertekstOn = !!secondary && secondary !== 'original';
   const grunntekstOn = secondary === 'original';
@@ -1759,7 +1763,7 @@ r.get('/:book/:chapter', async (c) => {
   // Kontrakten mot shortcuts.js: data-attributter på <body>.
   const bodyData = `(function(d){d.bookSlug=${JSON.stringify(canonicalSlug)};d.chapter='${chapter}';d.maxChapter='${maxChapter}';${
     nextBookSlug ? `d.nextBookSlug=${JSON.stringify(nextBookSlug)};` : ''
-  }d.bibleQuery=${JSON.stringify(query)};d.bookId='${book.id}';d.bookName=${JSON.stringify(book.name_no)};d.totalVerses='${data.verses.length}';${
+  }d.bibleQuery=${JSON.stringify(query)};d.bookId='${book.id}';d.bookName=${JSON.stringify(bookName(book))};d.totalVerses='${data.verses.length}';${
     userBible ? `d.userBible=${JSON.stringify(userBible)};` : ''
   }${userSecondary ? `d.userSecondary=${JSON.stringify(userSecondary)};` : ''}})(document.body.dataset);`;
 
@@ -1782,8 +1786,8 @@ r.get('/:book/:chapter', async (c) => {
             <div class="chapter-meta">
               <Breadcrumbs
                 items={[
-                  { label: 'Hjem', href: '/' },
-                  { label: book.name_no, href: `/${canonicalSlug}/1${query}` },
+                  { label: tCtx()('common.home'), href: '/' },
+                  { label: bookName(book), href: `/${canonicalSlug}/1${query}` },
                   { label: `Kap. ${chapter}` },
                 ]}
               />
@@ -1808,8 +1812,8 @@ r.get('/:book/:chapter', async (c) => {
             <header class="chapter-header">
               {/* Én h1 med bok + kapittel (SEO/skjermleser); visuelt to linjer som før. */}
               <h1 class="chapter-title">
-                <span class="chapter-book">{book.name_no}</span>
-                <span class="chapter-number">Kapittel {chapter}</span>
+                <span class="chapter-book">{bookName(book)}</span>
+                <span class="chapter-number">{t('common.chapter')} {chapter}</span>
               </h1>
               {/* Progresjonsringen ER knappen (#16): den fyller seg selv i
                   auto/foreslå-modus, og klikkes i manuell. Skjult til
@@ -1832,7 +1836,7 @@ r.get('/:book/:chapter', async (c) => {
 
             {/* Foreslå-modus: heuristikken spør i stedet for å markere selv. */}
             <div class="read-suggestion" data-read-suggestion hidden>
-              <span>{t('rd.markReadPrompt').replace('%s', `${book.name_no} ${chapter}`)}</span>
+              <span>{t('rd.markReadPrompt').replace('%s', `${bookName(book)} ${chapter}`)}</span>
               <button type="button" class="rs-yes" data-suggestion-yes>{t('rd.yes')}</button>
               <button type="button" class="rs-no" data-suggestion-no>{t('common.close')}</button>
             </div>
@@ -1848,7 +1852,7 @@ r.get('/:book/:chapter', async (c) => {
                 href={lhref(`/${canonicalSlug}/${chapter}${buildQuery(requestedBible, mapping ?? undefined, undertekstOn ? undefined : otherNorwegian, localeDefault.id)}`)}
                 class={`rail-chip ${undertekstOn ? 'is-on' : ''}`}
                 aria-current={undertekstOn ? 'true' : undefined}
-                title="Undertekst under hvert vers"
+                title={t('rd.secondaryUnderVerse')}
               >
                 + Undertekst
               </a>
@@ -1857,16 +1861,16 @@ r.get('/:book/:chapter', async (c) => {
                 class={`rail-chip ${grunntekstOn ? 'is-on' : ''}`}
                 aria-current={grunntekstOn ? 'true' : undefined}
               >
-                Grunntekst
+                {t('u.originalText')}
               </a>
               {chapter > 1 && (
                 <a href={lhref(`/${canonicalSlug}/${chapter - 1}${query}`)} class="rail-chip">
-                  ← Forrige
+                  ← {t('rd.prevShort')}
                 </a>
               )}
               {chapter < maxChapter ? (
                 <a href={lhref(`/${canonicalSlug}/${chapter + 1}${query}`)} class="rail-chip">
-                  Neste →
+                  {t('rd.nextShort')} →
                 </a>
               ) : (
                 nextBook &&
@@ -1900,12 +1904,12 @@ r.get('/:book/:chapter', async (c) => {
               <div class="nav-buttons">
                 {chapter > 1 && (
                   <a href={lhref(`/${canonicalSlug}/${chapter - 1}${query}`)} class="nav-button">
-                    ← Forrige kapittel
+                    ← {t('rd.prevChapter')}
                   </a>
                 )}
                 {chapter < maxChapter ? (
                   <a href={lhref(`/${canonicalSlug}/${chapter + 1}${query}`)} class="nav-button">
-                    Neste kapittel →
+                    {t('rd.nextChapter')} →
                   </a>
                 ) : (
                   nextBook &&
@@ -1923,20 +1927,20 @@ r.get('/:book/:chapter', async (c) => {
             <div
               class="sidebar-resize"
               data-sidebar-resize
-              title="Dra for å endre bredde, dobbelklikk for 50%"
+              title={t('rd.resizeHint')}
             ></div>
             <div class="panel-tabbar" role="tablist" aria-label="Panelfaner">
               <button type="button" class="panel-tab is-active" data-panel-tab="1">
-                Studium
+                {t('rd.study')}
               </button>
               <button type="button" class="panel-tab" data-panel-tab="2">
-                Tidslinje
+                {t('nav.timeline')}
               </button>
               <button type="button" class="panel-tab" data-panel-tab="3">
-                Paralleller
+                {t('nav.parallels')}
               </button>
               <button type="button" class="panel-tab" data-panel-tab="4">
-                Innsikt
+                {t('rd.insight')}
               </button>
             </div>
             <div class="sidebar-content" data-sidebar-content>
@@ -2022,7 +2026,7 @@ function parseRefs(refsParam: string | undefined): ParsedTextRef[] {
 r.get('/tekst', async (c) => {
   const t = tFor(c);
   const refsParam = c.req.query('refs');
-  const bible = normalizeBibleId(c.req.query('bible')) || 'osnb';
+  const bible = normalizeBibleId(c.req.query('bible')) || (await defaultBibleForLanguage());
   const parsedRefs = parseRefs(refsParam);
 
   // Slug → VerseRef via bok-metadata (alias-støtte som ellers).
@@ -2059,7 +2063,7 @@ r.get('/tekst', async (c) => {
     >
       <div class="text-page">
         <div class="reading-container">
-          <Breadcrumbs items={[{ label: 'Hjem', href: '/' }, { label: 'Bibelpassasjer' }]} />
+          <Breadcrumbs items={[{ label: tCtx()('common.home'), href: '/' }, { label: 'Bibelpassasjer' }]} />
 
           <h1>{t('rd.passages')}</h1>
 
@@ -2108,7 +2112,7 @@ r.get('/tekst', async (c) => {
                         </a>
                       </h2>
                       <a href={contextUrl} class="text-context-link">
-                        Vis i kontekst →
+                        {t('common.showInContext')} →
                       </a>
                     </div>
                     <div class="text-verse-list">

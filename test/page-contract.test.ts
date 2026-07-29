@@ -203,6 +203,68 @@ describe('sidekontrakt', () => {
     });
   });
 
+  // ── Ingen norsk tekst på en ikke-norsk side (GitHub #23) ───────────
+  //
+  // Sidekontrakten fanget lenge NULL av dette, og grunnen er verdt å merke
+  // seg: den sveiper etter MANGLENDE ordboksnøkler, og en hardkodet
+  // «Grunntekst» er ikke en nøkkel som mangler — den er tekst som aldri gikk
+  // gjennom ordboka. En glemt oversettelse ser derfor helt normal ut.
+  //
+  // Etter #26 er engelsk gulvet i innholdskjeden, så innhold som MANGLER på
+  // engelsk vises ikke i det hele tatt framfor å falle til norsk. Norsk tekst
+  // på en engelsk side er dermed alltid en feil — ikke en fallback.
+  //
+  // Ordlista er bevisst KORT og inneholder bare funksjonsord som ikke også er
+  // engelske. «her», «men», «last» og «bare» er utelatt nettopp fordi de
+  // finnes i begge språk: en vakt med falske positive blir slått av.
+  const NORWEGIAN_ONLY = [
+    'ikke', 'som', 'dette', 'denne', 'disse', 'ingen', 'alle', 'andre',
+    'hvor', 'hva', 'hvis', 'når', 'fordi', 'eller', 'også',
+    'være', 'har', 'kan', 'vil', 'skal', 'blir', 'ble', 'gjør',
+    'med', 'til', 'fra', 'etter', 'før', 'ved', 'uten', 'mellom', 'gjennom',
+    'din', 'dine', 'ditt', 'hans', 'hennes', 'deres', 'vår', 'våre',
+    'vers', 'kapittel', 'bibelen', 'oversettelse', 'grunntekst', 'søk', 'lukk',
+    'velg', 'skriv', 'legg', 'hopp', 'innhold', 'kategorier', 'kontekst',
+  ];
+  const NORWEGIAN_RE = new RegExp(
+    `(?:^|[^\\p{L}])(${NORWEGIAN_ONLY.join('|')})(?![\\p{L}])`,
+    'giu',
+  );
+
+  /**
+   * Den synlige teksten, uten det som med rette står på norsk:
+   *
+   * - `lang="nb"`/`lang="nn"` — sitert norsk i dokumentasjonen på /om.
+   * - `data-proper-names` — lister over EGENNAVN fra dataene (navnene på
+   *   bibeloversettelser og versnummereringer). «Bibelen Guds Ord» er tittelen
+   *   på en faktisk utgave og skal ikke oversettes.
+   */
+  function visibleText(html: string): string {
+    return html
+      .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+      .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+      .replace(/<([a-z]+)[^>]*\blang="(?:nb|nn)"[^>]*>[\s\S]*?<\/\1>/gi, ' ')
+      .replace(/<([a-z]+)[^>]*\bdata-proper-names[^>]*>[\s\S]*?<\/\1>/gi, ' ')
+      .replace(/<[^>]+>/g, '\n')
+      .replace(/&[a-z]+;|&#\d+;/gi, ' ');
+  }
+
+  describe('ingen norsk tekst under /en/', () => {
+    for (const page of PAGES) {
+      test(page.name, async () => {
+        const { html } = await fetchPage('en', page.path);
+        const funn: string[] = [];
+        for (const line of visibleText(html).split('\n')) {
+          const text = line.trim();
+          if (text.length < 4) continue;
+          if (NORWEGIAN_RE.test(text)) funn.push(text.slice(0, 90));
+          NORWEGIAN_RE.lastIndex = 0;
+        }
+        expect({ side: page.path, norsk: funn.slice(0, 5) }).toEqual({ side: page.path, norsk: [] });
+      });
+    }
+  });
+
   test('basespråket er x-default i hreflang-klyngen', async () => {
     const { html } = await fetchPage('de', '/1mos/1');
     expect(html).toContain(`hreflang="x-default" href="${SITE}/${DEFAULT_LOCALE}/1mos/1"`);

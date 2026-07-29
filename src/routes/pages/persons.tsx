@@ -11,17 +11,33 @@ import { InlineRefs } from '../../views/inline-refs.tsx';
 import { ItemTagging } from '../../views/item-tagging.tsx';
 import { KeyEventList } from '../../views/verse-display.tsx';
 import {
-  eraLabels,
-  roleLabels,
   getAllPersonsData,
   getPersonData,
   getBookById,
   getBookUrlSlug,
   type PersonData,
 } from '../../lib/bible.ts';
-import { layoutProps, tFor, lhref } from '../../lib/i18n.ts';
+import { bookNameById } from '../../lib/books-data.ts';
+import { layoutProps, tFor, lhref, tEnum, type Translator } from '../../lib/i18n.ts';
+import { tCtx } from '../../lib/i18n.ts';
 
 const r = new Hono<AppEnv>();
+
+/**
+ * Epoken er en enum-nøkkel i dataene (`exodus`, `divided-kingdom`) og lik på
+ * alle språk, så etiketten hører hjemme i ordboka (#21).
+ */
+const eraLabel = (t: Translator, era: string) => tEnum(t, 'era.', era);
+
+/**
+ * Rollene er derimot fritekst som ALLEREDE er oversatt i dataene (382 norske
+ * og 402 engelske verdier), så de skal ikke slås opp — bare få stor
+ * forbokstav. Det gamle `roleLabels`-kartet dekket 12 norske nøkler og lot
+ * engelsk stå med små bokstaver ved siden av norske med store.
+ */
+function capitalize(value: string): string {
+  return value.charAt(0).toUpperCase() + value.slice(1);
+}
 
 /** /personer — full liste SSR; filter/søk er en øy over data-attributtene. */
 r.get('/personer', async (c) => {
@@ -37,7 +53,7 @@ r.get('/personer', async (c) => {
       p.title,
       p.summary,
       p.roles.join(' '),
-      eraLabels[p.era] || p.era,
+      eraLabel(t, p.era),
       ...(p.aliases || []),
     ].join(' ');
   }
@@ -78,7 +94,7 @@ r.get('/personer', async (c) => {
                 </button>
                 {eras.map((e) => (
                   <button type="button" class="persons-filter-button" data-value={e}>
-                    {eraLabels[e] || e}
+                    {eraLabel(t, e)}
                   </button>
                 ))}
               </div>
@@ -91,7 +107,7 @@ r.get('/personer', async (c) => {
                 </button>
                 {roles.map((role) => (
                   <button type="button" class="persons-filter-button" data-value={role}>
-                    {roleLabels[role] || role}
+                    {capitalize(role)}
                   </button>
                 ))}
               </div>
@@ -115,9 +131,9 @@ r.get('/personer', async (c) => {
                 </div>
                 <p class="persons-card-title">{p.title}</p>
                 <div class="persons-card-meta">
-                  <span class="persons-era-badge">{eraLabels[p.era] || p.era}</span>
+                  <span class="persons-era-badge">{eraLabel(t, p.era)}</span>
                   {p.roles.map((role) => (
-                    <span class="persons-role-badge">{roleLabels[role] || role}</span>
+                    <span class="persons-role-badge">{capitalize(role)}</span>
                   ))}
                 </div>
                 <p class="persons-card-summary">
@@ -127,7 +143,7 @@ r.get('/personer', async (c) => {
             ))}
           </div>
           <p class="persons-no-results" id="person-empty" hidden>
-            Ingen personer matcher søket.
+            {t('persons.noMatch')}
           </p>
         </div>
       </div>
@@ -184,8 +200,8 @@ r.get('/personer/:personId', async (c) => {
         <div class="reading-container">
           <Breadcrumbs
             items={[
-              { label: 'Hjem', href: '/' },
-              { label: 'Personer', href: '/personer' },
+              { label: tCtx()('common.home'), href: '/' },
+              { label: tCtx()('nav.persons'), href: '/personer' },
               { label: person.name },
             ]}
           />
@@ -197,9 +213,9 @@ r.get('/personer/:personId', async (c) => {
               <p class="person-aliases">Også kjent som: {person.aliases.join(', ')}</p>
             )}
             <div class="person-meta">
-              <span class="persons-era-badge">{eraLabels[person.era] || person.era}</span>
+              <span class="persons-era-badge">{eraLabel(t, person.era)}</span>
               {person.roles.map((role) => (
-                <span class="persons-role-badge">{roleLabels[role] || role}</span>
+                <span class="persons-role-badge">{capitalize(role)}</span>
               ))}
               {person.lifespan && <span class="person-lifespan">{person.lifespan}</span>}
             </div>
@@ -234,15 +250,15 @@ r.get('/personer/:personId', async (c) => {
 
           {person.references && person.references.length > 0 && (
             <section class="person-references-section">
-              <h2>Nevnt i Bibelen ({person.references.length})</h2>
+              <h2>{t('persons.mentionedIn', { n: person.references.length })}</h2>
               <div class="person-ref-list">
                 {person.references.map((ref) => {
                   const book = getBookById(ref.bookId);
-                  const bookName = book?.name_no || `Bok ${ref.bookId}`;
+                  const label = bookNameById(ref.bookId) || `Bok ${ref.bookId}`;
                   const slug = book ? getBookUrlSlug(book) : '';
                   return (
                     <a href={lhref(`/${slug}/${ref.chapterId}#v${ref.verseId}`)} class="person-ref-chip">
-                      {bookName} {ref.chapterId}:{ref.verseId}
+                      {label} {ref.chapterId}:{ref.verseId}
                     </a>
                   );
                 })}

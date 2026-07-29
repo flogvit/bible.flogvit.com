@@ -1,4 +1,5 @@
 import { Hono } from 'hono';
+import { bookNameById } from '../../lib/books-data.ts';
 import {
   getBookById,
   getBookSummary,
@@ -63,7 +64,7 @@ r.post('/', async (c) => {
       results.push({
         bookId,
         chapter,
-        bookName: book?.name_no ?? null,
+        bookName: bookNameById(bookId) || null,
         bookShortName: book?.short_name ?? null,
         bookSummary: bookSummaries.get(bookId) ?? null,
         summary,

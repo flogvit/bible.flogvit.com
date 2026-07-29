@@ -26,26 +26,25 @@ import {
   type DayData,
   type DayReference,
 } from '../../lib/bible.ts';
-import { getBookInfoById } from '../../lib/books-data.ts';
+import { getBookInfoById, bookName } from '../../lib/books-data.ts';
 import { toUrlSlug } from '../../lib/url-utils.ts';
-import { layoutProps, tFor, lhref } from '../../lib/i18n.ts';
+import { layoutProps, tFor, lhref, currentIntlTag, tEnum, type Translator } from '../../lib/i18n.ts';
+import { tCtx } from '../../lib/i18n.ts';
 
 const r = new Hono<AppEnv>();
 
-const STORY_CATEGORIES: Record<string, string> = {
-  skapelsen: 'Skapelsen', patriarkene: 'Patriarkene', moses: 'Moses',
-  oerkenvandringen: 'Ørkenvandringen', landnaam: 'Landnåm', dommerne: 'Dommerne',
-  kongetiden: 'Kongetiden', profetene: 'Profetene', eksil: 'Eksil',
-  'jesus-liv': 'Jesu liv', 'jesu-mirakler': 'Jesu mirakler',
-  'jesu-lignelser': 'Jesu lignelser', 'jesu-lidelse': 'Jesu lidelse',
-  urkirken: 'Urkirken', paulus: 'Paulus',
-};
+// Kategoriene er enum-nøkler i dataene og like på alle språk. Etikettene bor i
+// ordboka (`story.cat.*`, `day.cat.*`, #21) — her ligger bare REKKEFØLGEN, som
+// er redaksjonell (kronologisk gjennom Bibelen) og ikke kan utledes av en
+// alfabetisk sortering på et vilkårlig språk.
+const STORY_CATEGORY_ORDER = [
+  'skapelsen', 'patriarkene', 'moses', 'oerkenvandringen', 'landnaam', 'dommerne',
+  'kongetiden', 'profetene', 'eksil', 'jesus-liv', 'jesu-mirakler', 'jesu-lignelser',
+  'jesu-lidelse', 'urkirken', 'paulus',
+];
 
-const DAY_CATEGORIES: Record<string, string> = {
-  advent: 'Advent', christmas: 'Jul', epiphany: 'Åpenbaring', lent: 'Faste',
-  easter: 'Påske', ascension: 'Himmelfart', pentecost: 'Pinse',
-  trinity: 'Treenighetstiden', special: 'Spesielle dager', jewish: 'Jødiske høytider',
-};
+const storyCat = (t: Translator, key: string) => tEnum(t, 'story.cat.', key);
+const dayCat = (t: Translator, key: string) => tEnum(t, 'day.cat.', key);
 
 // ---------- /temaer ----------
 
@@ -78,7 +77,7 @@ r.get('/temaer', async (c) => {
     <Layout {...layoutProps(c)} title={`${t('themes.title')} — FLOGVIT.bible`} description={t('themes.meta')} styles={['study.css']} scripts={['card-filter.js']}>
       <div class="study-main">
         <div class="container">
-          <Breadcrumbs items={[{ label: 'Hjem', href: '/' }, { label: 'Temaer' }]} />
+          <Breadcrumbs items={[{ label: tCtx()('common.home'), href: '/' }, { label: tCtx()('nav.themes') }]} />
           <h1>{t('themes.title')}</h1>
           <div class="study-search-container">
             <input type="text" class="study-search-input" data-card-search placeholder={t('themes.searchPh')} aria-label="Søk etter tema" autocomplete="off" />
@@ -117,7 +116,7 @@ r.get('/temaer/:tema', async (c) => {
     <Layout {...layoutProps(c)} title={`${title} — FLOGVIT.bible`} description={json?.introduction?.slice(0, 155) || `Tematisk bibelstudie: ${title}`} styles={['study.css']} scripts={['tagging.js']}>
       <div class="study-main">
         <div class="reading-container">
-          <Breadcrumbs items={[{ label: 'Hjem', href: '/' }, { label: 'Temaer', href: '/temaer' }, { label: title }]} />
+          <Breadcrumbs items={[{ label: tCtx()('common.home'), href: '/' }, { label: tCtx()('nav.themes'), href: '/temaer' }, { label: title }]} />
           <h1>{title}</h1>
           <div class="study-tagging"><ItemTagging itemType="theme" itemId={tema} /></div>
 
@@ -176,21 +175,21 @@ r.get('/historier', async (c) => {
   const t = tFor(c);
   const stories = await getAllStories();
   const cats = new Set(stories.map((s) => s.category));
-  const availableCategories = Object.entries(STORY_CATEGORIES).filter(([k]) => cats.has(k));
+  const availableCategories = STORY_CATEGORY_ORDER.filter((k) => cats.has(k));
 
   return c.html(
     <Layout {...layoutProps(c)} title={`${t('stories.title')} — FLOGVIT.bible`} description={t('stories.meta')} styles={['study.css']} scripts={['card-filter.js']}>
       <div class="study-main">
         <div class="container">
-          <Breadcrumbs items={[{ label: 'Hjem', href: '/' }, { label: 'Bibelhistorier' }]} />
+          <Breadcrumbs items={[{ label: tCtx()('common.home'), href: '/' }, { label: tCtx()('nav.stories') }]} />
           <h1>{t('stories.title')}</h1>
           <div class="study-search-container">
             <input type="text" class="study-search-input" data-card-search placeholder={t('stories.searchPh')} aria-label="Søk etter historie" autocomplete="off" />
           </div>
           <div class="study-filter-buttons" data-card-catfilter>
             <button type="button" class="persons-filter-button active" data-value="">{t('common.all')}</button>
-            {availableCategories.map(([key, label]) => (
-              <button type="button" class="persons-filter-button" data-value={key}>{label}</button>
+            {availableCategories.map((key) => (
+              <button type="button" class="persons-filter-button" data-value={key}>{storyCat(t, key)}</button>
             ))}
           </div>
           <div class="study-grid" data-card-list>
@@ -201,7 +200,7 @@ r.get('/historier', async (c) => {
                 data-cat={s.category}
                 data-search={`${s.title} ${s.keywords} ${s.description ?? ''}`.toLowerCase()}
               >
-                <span class="study-card-cat">{STORY_CATEGORIES[s.category] || s.category}</span>
+                <span class="study-card-cat">{storyCat(t, s.category)}</span>
                 <h2 class="study-card-title">{s.title}</h2>
                 {s.description && <p class="study-card-desc">{s.description}</p>}
               </a>
@@ -229,8 +228,8 @@ r.get('/historier/:slug', async (c) => {
     <Layout {...layoutProps(c)} title={`${data.title} — FLOGVIT.bible`} description={data.description?.slice(0, 155)} styles={['study.css']} scripts={['tagging.js']}>
       <div class="study-main">
         <div class="reading-container">
-          <Breadcrumbs items={[{ label: 'Hjem', href: '/' }, { label: 'Bibelhistorier', href: '/historier' }, { label: data.title }]} />
-          <span class="study-card-cat">{STORY_CATEGORIES[data.category] || data.category}</span>
+          <Breadcrumbs items={[{ label: tCtx()('common.home'), href: '/' }, { label: tCtx()('nav.stories'), href: '/historier' }, { label: data.title }]} />
+          <span class="study-card-cat">{storyCat(t, data.category)}</span>
           <h1>{data.title}</h1>
           {data.description && (
             <p class="study-introduction">
@@ -243,8 +242,8 @@ r.get('/historier/:slug', async (c) => {
               const sameChapter = ref.startChapter === ref.endChapter;
               const label = book
                 ? sameChapter
-                  ? `${book.name_no} ${ref.startChapter},${ref.startVerse}${ref.startVerse !== ref.endVerse ? `-${ref.endVerse}` : ''}`
-                  : `${book.name_no} ${ref.startChapter},${ref.startVerse}-${ref.endChapter},${ref.endVerse}`
+                  ? `${bookName(book)} ${ref.startChapter},${ref.startVerse}${ref.startVerse !== ref.endVerse ? `-${ref.endVerse}` : ''}`
+                  : `${bookName(book)} ${ref.startChapter},${ref.startVerse}-${ref.endChapter},${ref.endVerse}`
                 : '';
               // Bygg eksplisitte verslister per kapittel (som gamle StoryPage:
               // 1..200 for mellomkapitler, endVerse for siste). Ikke-eksisterende
@@ -291,7 +290,7 @@ r.get('/tall', async (c) => {
     <Layout {...layoutProps(c)} title={`${t('nav.numbers')} — FLOGVIT.bible`} description={t('numbers.meta')} styles={['study.css']} scripts={['card-filter.js']}>
       <div class="study-main">
         <div class="container">
-          <Breadcrumbs items={[{ label: 'Hjem', href: '/' }, { label: 'Tall' }]} />
+          <Breadcrumbs items={[{ label: tCtx()('common.home'), href: '/' }, { label: tCtx()('nav.numbers') }]} />
           <h1>{t('numbers.title')}</h1>
           <div class="study-search-container">
             <input type="text" class="study-search-input" data-card-search placeholder={t('numbers.searchPh')} aria-label="Søk" autocomplete="off" />
@@ -330,7 +329,7 @@ r.get('/tall/:number', async (c) => {
   }
   function refLabel(ref: { bookId: number; chapterId: number; fromVerseId: number; toVerseId: number }): string {
     const book = getBookInfoById(ref.bookId);
-    const name = book?.name_no || `Bok ${ref.bookId}`;
+    const name = book ? bookName(book) : `Bok ${ref.bookId}`;
     return ref.fromVerseId === ref.toVerseId
       ? `${name} ${ref.chapterId}:${ref.fromVerseId}`
       : `${name} ${ref.chapterId}:${ref.fromVerseId}-${ref.toVerseId}`;
@@ -340,7 +339,7 @@ r.get('/tall/:number', async (c) => {
     <Layout {...layoutProps(c)} title={`Tallet ${data.number}: ${data.meaning} — FLOGVIT.bible`} description={data.description.slice(0, 155)} styles={['study.css']} scripts={['tagging.js']}>
       <div class="study-main">
         <div class="reading-container">
-          <Breadcrumbs items={[{ label: 'Hjem', href: '/' }, { label: 'Tall', href: '/tall' }, { label: `Tallet ${data.number}` }]} />
+          <Breadcrumbs items={[{ label: tCtx()('common.home'), href: '/' }, { label: tCtx()('nav.numbers'), href: '/tall' }, { label: `Tallet ${data.number}` }]} />
           <div class="study-number-header">
             <span class="study-big-number">{data.number}</span>
             <h1>{data.meaning}</h1>
@@ -381,7 +380,11 @@ function nextDayDate(dates: Record<string, string> | undefined): string | null {
 }
 
 function formatDayDate(iso: string): string {
-  return new Date(`${iso}T12:00:00`).toLocaleDateString('nb-NO', { day: 'numeric', month: 'long', year: 'numeric' });
+  return new Date(`${iso}T12:00:00`).toLocaleDateString(currentIntlTag(), {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  });
 }
 
 r.get('/dager', async (c) => {
@@ -406,7 +409,7 @@ r.get('/dager', async (c) => {
 
   const DayCard = ({ d }: { d: (typeof items)[number] }) => (
     <a href={lhref(`/dager/${d.id}`)} class="study-card" data-search={d.search}>
-      {d.category && <span class="study-card-cat">{DAY_CATEGORIES[d.category] || d.category}</span>}
+      {d.category && <span class="study-card-cat">{dayCat(t, d.category)}</span>}
       <h2 class="study-card-title">{d.name}</h2>
       {d.description && <p class="study-card-desc">{d.description}</p>}
       {d.nextDate && <p class="study-card-date">{formatDayDate(d.nextDate)}</p>}
@@ -415,7 +418,7 @@ r.get('/dager', async (c) => {
 
   const groups = thematic
     ? DAY_CATEGORY_ORDER.map((cat) => ({
-        title: DAY_CATEGORIES[cat] || cat,
+        title: dayCat(t, cat),
         items: items.filter((d) => d.category === cat).sort(byNextDate),
       })).filter((g) => g.items.length > 0)
     : [{ title: '', items: [...items].sort(byNextDate) }];
@@ -424,7 +427,7 @@ r.get('/dager', async (c) => {
     <Layout {...layoutProps(c)} title={`${t('days.title')} — FLOGVIT.bible`} description={t('days.meta')} styles={['study.css']} scripts={['card-filter.js']}>
       <div class="study-main">
         <div class="container">
-          <Breadcrumbs items={[{ label: 'Hjem', href: '/' }, { label: 'Dager' }]} />
+          <Breadcrumbs items={[{ label: tCtx()('common.home'), href: '/' }, { label: tCtx()('nav.days') }]} />
           <h1>{t('days.title')}</h1>
           <nav class="study-view-tabs" aria-label="Visning">
             <a href={lhref('/dager')} class={`study-view-tab ${thematic ? '' : 'is-active'}`} aria-current={thematic ? undefined : 'true'}>{t('days.chronological')}</a>
@@ -470,7 +473,7 @@ r.get('/dager/:dayId', async (c) => {
   }
   function refLabel(ref: DayReference): string {
     const book = getBookInfoById(ref.bookId);
-    const name = book?.name_no || `Bok ${ref.bookId}`;
+    const name = book ? bookName(book) : `Bok ${ref.bookId}`;
     return ref.fromVerseId === ref.toVerseId
       ? `${name} ${ref.chapterId}:${ref.fromVerseId}`
       : `${name} ${ref.chapterId}:${ref.fromVerseId}-${ref.toVerseId}`;
@@ -489,11 +492,11 @@ r.get('/dager/:dayId', async (c) => {
     <Layout {...layoutProps(c)} title={`${data.name} — FLOGVIT.bible`} description={data.description.slice(0, 155)} styles={['study.css']} scripts={['tagging.js']}>
       <div class="study-main">
         <div class="reading-container">
-          <Breadcrumbs items={[{ label: 'Hjem', href: '/' }, { label: 'Dager', href: '/dager' }, { label: data.name }]} />
+          <Breadcrumbs items={[{ label: tCtx()('common.home'), href: '/' }, { label: tCtx()('nav.days'), href: '/dager' }, { label: data.name }]} />
           <header class="study-day-header">
             <h1>{data.name}</h1>
             <div class="study-day-meta">
-              <span class="study-card-cat">{DAY_CATEGORIES[data.category] || data.category}</span>
+              <span class="study-card-cat">{dayCat(t, data.category)}</span>
             </div>
           </header>
           <div class="study-tagging"><ItemTagging itemType="day" itemId={data.id} /></div>

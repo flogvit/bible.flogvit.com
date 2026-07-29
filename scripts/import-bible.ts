@@ -78,7 +78,7 @@ const isFullImport = args.includes('--full');
  * Listen styrer også metadata-importen (`bible_editions`), så en ny oversettelse
  * her drar meta.json/license.json og info-siden med seg automatisk.
  */
-const BIBLES = ['osnb', 'osnn', 'sblgnt', 'tanach'];
+const BIBLES = ['osnb', 'osnn', 'osen', 'sblgnt', 'tanach'];
 
 // Statistics tracking
 interface ImportStats {
@@ -1796,7 +1796,12 @@ for (const lang of contentLanguages('stories')) {
         }
 
         try {
-          const story = JSON.parse(content);
+          // FILNAVNET er slug-en, ikke `slug` inni fila. De to har drevet fra
+          // hverandre i free-bible (20 historier), og siden innsettingen brukte
+          // fila mens oppryddingen under sammenligner mot filnavn, ble raden
+          // lagt inn og slettet igjen i samme kjøring — stille. Filnavnet er
+          // dessuten allerede både hash-nøkkel og URL-nøkkel.
+          const story = { ...JSON.parse(content), slug };
           await insertStory(tx, story, lang);
           await setContentHash(tx, 'story', contentKey, contentHash, lang);
           stats.stories.updated++;

@@ -46,7 +46,8 @@ describe('/oversettelser/:id', () => {
       // Enten står vilkårene der, eller det står eksplisitt at de mangler —
       // taushet er ikke et lovlig utfall.
       const stated = edition.license_name !== null;
-      expect(text.includes(stated ? 'Kreditering' : 'ikke registrert')).toBe(true);
+      // Radetiketten er oversatt nå (#22) — testen kjører på basespråket.
+      expect(text.includes(stated ? 'Attribution' : 'ikke registrert')).toBe(true);
     });
   }
 
@@ -55,7 +56,8 @@ describe('/oversettelser/:id', () => {
     test(`${attributed.id}: krediteringskrav er uthevet, ikke bortgjemt`, async () => {
       const res = await app.request(L(`/oversettelser/${attributed.id}`));
       const text = strip(await res.text());
-      expect(text).toContain('krever kreditering');
+      // Etiketten er oversatt (#22); testen kjører på basespråket.
+      expect(text).toContain('requires attribution');
       expect(text).toContain(attributed.license_spdx!);
     });
   }

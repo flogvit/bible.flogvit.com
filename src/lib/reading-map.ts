@@ -7,7 +7,7 @@
 // kan ikke plasseres på en tidslinje. Derfor telles de for seg som
 // `undatedChapters` framfor å gjettes inn i ferskhets-visningen.
 
-import { booksData, getBookInfoById } from './books-data.ts';
+import { booksData, getBookInfoById, bookName, bookNameById } from './books-data.ts';
 import type { ChapterProgress } from './user-data.ts';
 // @ts-expect-error — delt klient-modul uten typer
 import { heatLevel, HEAT_LEVELS as SHARED_HEAT_LEVELS } from '../../public/js/reading-progress.js';
@@ -91,7 +91,7 @@ export function bookHeat(progress: ChapterProgress[], bookId: number): BookHeat 
 
     chapters[idx] = Math.max(chapters[idx]!, heatLevel(p) as number);
   }
-  return { bookId, name: book.name_no, testament: book.testament, chapters };
+  return { bookId, name: bookName(book), testament: book.testament, chapters };
 }
 
 /** Varmekart for hele Bibelen, i kanonisk rekkefølge. */
@@ -108,7 +108,7 @@ export function stalestBooks(progress: ChapterProgress[], limit = 5): { name: st
     if (cur == null || p.lastAt > cur) newestPerBook.set(p.bookId, p.lastAt);
   }
   return [...newestPerBook.entries()]
-    .map(([bookId, lastAt]) => ({ name: getBookInfoById(bookId)?.name_no ?? String(bookId), lastAt }))
+    .map(([bookId, lastAt]) => ({ name: bookNameById(bookId) || String(bookId), lastAt }))
     .sort((a, b) => a.lastAt - b.lastAt)
     .slice(0, limit);
 }

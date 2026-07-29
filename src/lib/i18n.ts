@@ -42,6 +42,21 @@ const INTL_TAG: Record<Locale, string> = {
 export const ogLocale = (l: Locale) => INTL_TAG[l].replace('-', '_');
 export const intlTag = (l: Locale) => INTL_TAG[l];
 
+/**
+ * BCP-47-taggen for forespørselens locale, hentet fra contextStorage — samme
+ * kilde som `lhref()`. Finnes fordi datoformatering skjer dypt nede i
+ * komponenter som ikke har noen annen grunn til å kjenne språket, og fordi
+ * alternativet (`toLocaleDateString('nb-NO')`) gir norske datoer på alle
+ * språk uten å feile noe sted (#25).
+ */
+export function currentIntlTag(): string {
+  try {
+    return INTL_TAG[getContext<{ Variables: { locale?: Locale } }>().var.locale ?? DEFAULT_LOCALE];
+  } catch {
+    return INTL_TAG[DEFAULT_LOCALE];
+  }
+}
+
 /** Makrospråket `no` er tvetydig og normaliseres til bokmål (I18N.md §2). */
 export function normalizeLocale(code: string | undefined | null): Locale | null {
   const c = (code || '').toLowerCase().split('-')[0]!;
@@ -74,6 +89,41 @@ export function localeFromPrefsCookie(raw: string | undefined | null): Locale | 
 
 export function negotiateLocale(cookie: string | undefined | null, accept: string | undefined | null): Locale {
   return localeFromPrefsCookie(cookie) ?? negotiateAcceptLanguage(accept) ?? DEFAULT_LOCALE;
+}
+
+/** Språkprefikset i en URL-sti, om det er der. `/en/1mos/1` → `en`. */
+export function localeFromPath(path: string | undefined | null): Locale | null {
+  const m = /^\/([a-z]{2})(?=\/|$)/.exec(path || '');
+  return m && isLocale(m[1]) ? m[1] : null;
+}
+
+/**
+ * Locale for et API-kall (#24). `/api/*` er montert uprefikset og får derfor
+ * ingen locale fra ruta slik sidene gjør, så uten dette svarte hele API-et på
+ * gulvet uansett hvilket språk leseren sto på — og alt studieinnhold som
+ * hentes etter sidevisningen ble feil språk.
+ *
+ * Rekkefølgen holder på regelen om at URL-en vinner over cookien: et
+ * eksplisitt `?lang=` først, så språkprefikset i siden som gjorde kallet
+ * (Referer er sidens URL, ikke brukerens preferanse), og først til slutt
+ * cookie/Accept-Language.
+ */
+export function apiLocale(req: {
+  query: (k: string) => string | undefined;
+  header: (k: string) => string | undefined;
+}, cookie: string | undefined | null): Locale {
+  const explicit = normalizeLocale(req.query('lang'));
+  if (explicit) return explicit;
+  const referer = req.header('referer');
+  if (referer) {
+    try {
+      const fromPage = localeFromPath(new URL(referer).pathname);
+      if (fromPage) return fromPage;
+    } catch {
+      // Ugyldig Referer — gå videre til forhandling.
+    }
+  }
+  return negotiateLocale(cookie, req.header('accept-language'));
 }
 
 /** Prefiks en sti med språkroten. Forsiden blir `/nb`, uten skråstrek til slutt. */
@@ -117,6 +167,27 @@ import { DICTIONARIES } from './dictionaries.ts';
 export type MessageKey = keyof (typeof DICTIONARIES)['en'];
 export type Translator = (key: MessageKey, params?: Record<string, string | number>) => string;
 
+/**
+ * Er dette en nøkkel ordboka faktisk har? Trengs fordi noen nøkler settes
+ * sammen først ved kjøretid fra enum-verdier i dataene (`era.exodus`,
+ * `story.cat.paulus`, `day.cat.trinity`, #21). Uten sjekken må kalleren caste,
+ * og da forsvinner nettopp den typesikkerheten som gjør at en glemt
+ * oversettelse blir en byggefeil.
+ */
+export function isMessageKey(key: string): key is MessageKey {
+  return Object.hasOwn(DICTIONARIES.en, key);
+}
+
+/**
+ * Oppslag for slike sammensatte nøkler. En enum-verdi vi ikke har etikett for
+ * viser seg selv (`divided-kingdom`) framfor å bli tom — synlig, men ikke
+ * ødeleggende, og lett å oppdage.
+ */
+export function tEnum(t: Translator, prefix: string, value: string): string {
+  const key = `${prefix}${value}`;
+  return isMessageKey(key) ? t(key) : value;
+}
+
 export function makeT(locale: Locale): Translator {
   const chain: Locale[] = [locale, ...(FALLBACKS[locale] ?? ['en'])];
   return (key, params) => {
@@ -153,6 +224,21 @@ export function layoutProps(c: { get: (k: 'locale') => unknown; req: { path: str
 }
 
 /** Oversetteren for gjeldende request. */
+/**
+ * Oversetteren for forespørselen vi står i, uten å tre `c` gjennom hvert
+ * komponentkall — samme contextStorage-kilde som `lhref()`. Dype
+ * presentasjonskomponenter (`views/`) har ingen annen grunn til å kjenne
+ * konteksten, og uten dette endte teksten deres som hardkodede strenger (#22).
+ */
+export function tCtx(): Translator {
+  try {
+    const locale = getContext<{ Variables: { locale?: Locale } }>().var.locale;
+    return makeT(isLocale(locale) ? locale : DEFAULT_LOCALE);
+  } catch {
+    return makeT(DEFAULT_LOCALE);
+  }
+}
+
 export function tFor(c: { get: (k: 'locale') => unknown }): Translator {
   const raw = c.get('locale');
   return makeT(isLocale(raw as string) ? (raw as Locale) : DEFAULT_LOCALE);

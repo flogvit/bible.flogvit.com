@@ -12,26 +12,41 @@
 // Derfor: bruk `localeToContentLanguage()` i grensesnittet mellom URL/locale og
 // databasen, aldri locale-koden rått i en spørring.
 //
-// **Norsk er gulvet.** I18N.md §1: opphavsspråket finnes for alt innhold, så en
-// forespørsel om et språk vi ikke har generert ender alltid på `nb` framfor å
-// vise en tom side. Fallback-kjeden er språkbevisst: nynorsk faller til bokmål
-// (ikke til engelsk), og `nb` er terminal.
+// **Engelsk er gulvet** (GitHub #26, endret fra `nb` 2026-07-29). I18N.md §1:
+// engelsk er basespråket, og med osen og alt avledet innhold på plass finnes
+// engelsk for praktisk talt alt. En forespørsel om et språk vi ikke har
+// generert ender derfor på `en` framfor å vise norsk tekst på en side som ikke
+// er norsk. Kjeden er fortsatt språkbevisst: nynorsk faller til bokmål før
+// engelsk, fordi nabospråket ligger nærmere enn basespråket.
+//
+// Konsekvensen er bevisst: mangler noe også på engelsk, vises INGENTING framfor
+// norsk. Norsk-spesifikt innhold (`important_verses`, `reading_texts`) blir
+// dermed tomt på andre språk — det er riktig, ikke et hull å tette.
 //
 // Nye språk krever INGEN kodeendring her: importøren oppdager språk-kataloger på
 // disk, og et språk vi ikke har innhold for faller bare gjennom kjeden.
 
-/** Innholdsspråket alt annet faller tilbake til. Finnes for alt innhold. */
-export const DEFAULT_CONTENT_LANGUAGE = 'nb';
+import { getContext } from 'hono/context-storage';
 
-/** Basespråk for oversettelser (I18N.md §1) — forsøkes før gulvet. */
+/**
+ * Innholdsspråket alt annet faller tilbake til, og terminalt i kjeden.
+ * Sammenfaller med basespråket etter #26 — de to var skilt så lenge
+ * opphavsspråket (norsk) var det eneste komplette.
+ */
+export const DEFAULT_CONTENT_LANGUAGE = 'en';
+
+/** Basespråk for oversettelser (I18N.md §1). Se over: nå samme som gulvet. */
 export const BASE_CONTENT_LANGUAGE = 'en';
+
+/** Norsk bokmål — opphavsspråket for innholdet, og nynorskens nabospråk. */
+const NORWEGIAN_BOKMAAL = 'nb';
 
 /**
  * Nærmeste nabospråk, forsøkt FØR basespråket. Nynorsk-lesere skal få bokmål
  * framfor engelsk når nynorsk mangler.
  */
 const NEIGHBOUR_LANGUAGES: Record<string, string[]> = {
-  nn: [DEFAULT_CONTENT_LANGUAGE],
+  nn: [NORWEGIAN_BOKMAAL],
 };
 
 /**
@@ -66,17 +81,44 @@ export function normalizeContentLanguage(value: string | null | undefined): stri
  */
 export function localeToContentLanguage(locale: string | null | undefined): string {
   const lang = normalizeContentLanguage(locale);
-  return lang === 'no' ? DEFAULT_CONTENT_LANGUAGE : lang;
+  // `no` er norsk, ikke «gulvet» — den skal til bokmål selv etter at gulvet ble
+  // engelsk (#26). Å bruke DEFAULT_CONTENT_LANGUAGE her ville sendt norske
+  // lesere til engelsk innhold.
+  return lang === 'no' ? NORWEGIAN_BOKMAAL : lang;
+}
+
+/**
+ * Innholdsspråket for forespørselen vi står i, hentet fra AsyncLocalStorage
+ * (contextStorage-middleware i `app.ts`) — samme mekanisme som `lhref()`.
+ *
+ * Dette er DEFAULTEN til getterne i `bible.ts`. Grunnen: en getter som
+ * defaulter til et fast språk gjør «glemte å sende lang» til et USYNLIG valg
+ * — siden rendrer fint, bare på feil språk. Det var nettopp det som skjedde:
+ * kun `reading.tsx` sendte språk, så alle de andre sidene (personer,
+ * historier, temaer, tidslinje, dager …) serverte norsk innhold under /en/
+ * selv om det engelske lå i basen.
+ *
+ * Utenfor request-kontekst (tester, skript, statisk generering) faller den til
+ * gulvet framfor å kaste. Et eksplisitt `lang`-argument vinner alltid.
+ */
+export function currentContentLanguage(): string {
+  try {
+    const locale = getContext<{ Variables: { locale?: string } }>().var.locale;
+    return locale ? localeToContentLanguage(locale) : DEFAULT_CONTENT_LANGUAGE;
+  } catch {
+    // getContext() kaster utenfor request — det er den forventede veien hit.
+    return DEFAULT_CONTENT_LANGUAGE;
+  }
 }
 
 /**
  * Fallback-kjeden for et forespurt språk, i prioritert rekkefølge og uten
  * duplikater. Første språk med innhold vinner (se `bible.ts`).
  *
- *   nb      → nb                (gulvet er terminalt)
- *   nn      → nn, nb            (nabospråk framfor engelsk)
- *   en      → en, nb
- *   de      → de, en, nb
+ *   en      → en                (gulvet er terminalt)
+ *   nb      → nb, en
+ *   nn      → nn, nb, en        (nabospråk framfor basespråket)
+ *   de      → de, en
  */
 export function contentLanguageChain(requested: string | null | undefined): string[] {
   const lang = localeToContentLanguage(requested);

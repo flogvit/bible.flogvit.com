@@ -77,14 +77,25 @@ unik-nøkkelen**, så flere språk kan ligge side om side. Kontrakten bor i
 - **To akser, ikke bland dem:** UI-locale (URL-prefiks, der norsk er `no`, se
   `portal/I18N.md`) vs innholdsspråk (`nb`/`nn`/`en`, katalognavn og kolonneverdi).
   Bruk `localeToContentLanguage()` i overgangen.
-- **Fallback:** `contentLanguageChain()` — forespurt → engelsk → norsk, men
-  `nn`→`nb` (nabospråk før engelsk) og `nb` er terminalt. `bible.ts` sin
+- **Fallback:** `contentLanguageChain()` — forespurt → nabospråk → **engelsk,
+  som er terminalt** (#26, endret fra `nb` 2026-07-29). `nn`→`nb`→`en`, altså
+  nabospråk før basespråket. Mangler noe også på engelsk, vises INGENTING
+  framfor norsk tekst på en side som ikke er norsk; norsk-spesifikt innhold
+  (`important_verses`, `reading_texts`) blir dermed tomt på andre språk, og det
+  er riktig. `bible.ts` sin
   `inLanguage()` kjører spørringen per ledd og tar første som gir treff, altså
   fallback per SPØRRING (mangler et innholdsslag språket helt, får leseren hele
   settet på fallback-språket framfor en tom side).
 - **Enhver spørring mot en språk-scopet tabell MÅ filtrere på språk.** Uten
-  filter plukker den en tilfeldig rad blant språkene. Getterne i `bible.ts` tar
-  `lang` med gulvet som default, så kallere som ikke bryr seg er uendret.
+  filter plukker den en tilfeldig rad blant språkene. Getterne i `bible.ts`
+  defaulter til **`currentContentLanguage()`**, som leser locale fra
+  `contextStorage()` — samme mekanisme som `lhref()`. En getter som defaultet
+  til et FAST språk gjorde «glemte å sende lang» til et usynlig valg: siden
+  rendret fint, bare på feil språk. Det var nøyaktig det som skjedde — kun
+  `reading.tsx` sendte språk videre, så alle de andre sidene serverte norsk
+  innhold under `/en/` selv om det engelske lå i basen.
+- **Skriv aldri rå SQL mot en innholdstabell i en rute.** `/leseplan` gjorde
+  det og hadde ikke noe språkfilter i det hele tatt. Bruk getterne.
 - **Unntak (med vilje):** `books`/`verse_mappings` har egne språkakser;
   `verses`/`word4word` er scopet av `bible` (oversettelses-id, som koder språk);
   `reading_text_refs` arver språk fra forelderraden (surrogat-nøkkel).
@@ -216,6 +227,33 @@ trenger å ta imot `locale` som prop. Unntak som SKAL være uprefikset: `/js/`, 
 `test/link-prefix.test.ts` er vakten: den rendrer 16 sider og feiler på enhver intern
 lenke uten prefiks, og sveiper alle 8 ordbøker for manglende nøkler (`makeT` returnerer
 NØKKELEN ved miss, så en glemt oversettelse vises som «rd.markRead» uten å feile).
+
+## Ingen norsk tekst på en ikke-norsk side (#23)
+
+`page-contract.test.ts` sveiper hele `PAGES` under `/en/` og feiler på norsk
+tekst. Den finnes fordi nøkkelsveipen over ikke kunne se problemet: en
+hardkodet «Grunntekst» er ikke en nøkkel som MANGLER, den er tekst som aldri
+gikk gjennom ordboka. Kontrakten fanget derfor null av #20, #21 og #22.
+
+Forutsetningen er at engelsk er gulvet: innhold som mangler på engelsk vises
+ikke, så norsk på en engelsk side er alltid en defekt, aldri en fallback.
+
+To unntak, uttrykt i HTML-en framfor i testen — så de er synlige der de
+gjelder:
+
+- `lang="nb"`/`lang="nn"` — sitert norsk (dokumentasjonseksemplene på `/om`).
+- `data-proper-names` — lister over EGENNAVN fra dataene. «Bibelen Guds Ord» er
+  tittelen på en faktisk bibelutgave og skal ikke oversettes.
+
+**Tekst som skal oversettes, skal gjennom ordboka.** Trenger en komponent
+oversetteren uten å ha `c`, bruk `tCtx()`; for nøkler som settes sammen av
+enum-verdier i dataene (`era.exodus`, `fn.tekstkritisk`), bruk `tEnum()` — den
+holder på typesikkerheten, som er det som gjør en glemt oversettelse til en
+byggefeil.
+
+**Boknavn:** `name_no`/`short_name` i `books-data.ts` er NØKLER (URL-sluger,
+begge referanseparserne, `data-ref`, brukernes lagrede referanser) og skal ikke
+røres. Bruk `bookName()`/`bookAbbr()` ved visning.
 
 **Lærdom fra #18:** lenker som bygges i en variabel før bruk (`const url = …; <a
 href={url}>`) er usynlige for tekstsøk etter `href="/`. Stol på den rendrede HTML-en,

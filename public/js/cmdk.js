@@ -2,6 +2,8 @@
 // vanilla (global øy). Åpnes med ⌘/Ctrl+K eller klikk på hurtigsøk-triggeren
 // i headeren (som ellers faller tilbake til GET /sok uten JS).
 
+import { langParam } from './locale.js';
+
 const PAGES = [
   { label: 'Hjem', to: '/', hint: 'Forside' },
   { label: 'Favoritter', to: '/favoritter', hint: 'Mitt · F' },
@@ -157,7 +159,7 @@ function onQuery() {
   const id = ++refFetchId;
   refTimer = setTimeout(async () => {
     try {
-      const res = await fetch(`/api/reference?q=${encodeURIComponent(q)}`);
+      const res = await fetch(`/api/reference?q=${encodeURIComponent(q)}&${langParam()}`);
       const data = await res.json();
       if (id !== refFetchId) return;
       refResult =
