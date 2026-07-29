@@ -132,6 +132,27 @@ import { DICTIONARIES } from './dictionaries.ts';
 export type MessageKey = keyof (typeof DICTIONARIES)['en'];
 export type Translator = (key: MessageKey, params?: Record<string, string | number>) => string;
 
+/**
+ * Er dette en nøkkel ordboka faktisk har? Trengs fordi noen nøkler settes
+ * sammen først ved kjøretid fra enum-verdier i dataene (`era.exodus`,
+ * `story.cat.paulus`, `day.cat.trinity`, #21). Uten sjekken må kalleren caste,
+ * og da forsvinner nettopp den typesikkerheten som gjør at en glemt
+ * oversettelse blir en byggefeil.
+ */
+export function isMessageKey(key: string): key is MessageKey {
+  return Object.hasOwn(DICTIONARIES.en, key);
+}
+
+/**
+ * Oppslag for slike sammensatte nøkler. En enum-verdi vi ikke har etikett for
+ * viser seg selv (`divided-kingdom`) framfor å bli tom — synlig, men ikke
+ * ødeleggende, og lett å oppdage.
+ */
+export function tEnum(t: Translator, prefix: string, value: string): string {
+  const key = `${prefix}${value}`;
+  return isMessageKey(key) ? t(key) : value;
+}
+
 export function makeT(locale: Locale): Translator {
   const chain: Locale[] = [locale, ...(FALLBACKS[locale] ?? ['en'])];
   return (key, params) => {

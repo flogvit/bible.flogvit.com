@@ -491,6 +491,49 @@ const en = {
   "rd.passages": "Bible passages",
   "rd.noPassages": "No passages selected",
   "rd.noValidRefs": "No valid references found",
+
+  // Epoker for personer (#21) — nøklene er enum i dataene
+  "era.conquest": "The conquest",
+  "era.creation": "Creation",
+  "era.divided-kingdom": "The divided kingdom",
+  "era.early-church": "The early church",
+  "era.exile": "The exile",
+  "era.exodus": "The exodus",
+  "era.intertestamental": "Intertestamental period",
+  "era.jesus": "The time of Jesus",
+  "era.judges": "The judges",
+  "era.patriarchs": "The patriarchs",
+  "era.return": "The return",
+  "era.united-kingdom": "The united kingdom",
+
+  // Historie-kategorier (#21)
+  "story.cat.dommerne": "The judges",
+  "story.cat.eksil": "Exile",
+  "story.cat.jesu-lidelse": "The passion",
+  "story.cat.jesu-lignelser": "Parables of Jesus",
+  "story.cat.jesu-mirakler": "Miracles of Jesus",
+  "story.cat.jesus-liv": "The life of Jesus",
+  "story.cat.kongetiden": "The kingdom",
+  "story.cat.landnaam": "The settlement",
+  "story.cat.moses": "Moses",
+  "story.cat.oerkenvandringen": "The wilderness",
+  "story.cat.patriarkene": "The patriarchs",
+  "story.cat.paulus": "Paul",
+  "story.cat.profetene": "The prophets",
+  "story.cat.skapelsen": "Creation",
+  "story.cat.urkirken": "The early church",
+
+  // Dag-kategorier (#21)
+  "day.cat.advent": "Advent",
+  "day.cat.ascension": "Ascension",
+  "day.cat.christmas": "Christmas",
+  "day.cat.easter": "Easter",
+  "day.cat.epiphany": "Epiphany",
+  "day.cat.jewish": "Jewish festivals",
+  "day.cat.lent": "Lent",
+  "day.cat.pentecost": "Pentecost",
+  "day.cat.special": "Special days",
+  "day.cat.trinity": "Trinity season",
 };
 
 type Dict = Record<keyof typeof en, string>;
@@ -980,6 +1023,49 @@ const nb: Dict = {
   "rd.passages": "Bibelpassasjer",
   "rd.noPassages": "Ingen passasjer valgt",
   "rd.noValidRefs": "Ingen gyldige referanser funnet",
+
+  // Epoker for personer (#21) — nøklene er enum i dataene
+  "era.conquest": "Erobringen",
+  "era.creation": "Skapelsen",
+  "era.divided-kingdom": "Det delte kongerike",
+  "era.early-church": "Den tidlige kirke",
+  "era.exile": "Eksilet",
+  "era.exodus": "Utgang fra Egypt",
+  "era.intertestamental": "Mellomtestamentlig tid",
+  "era.jesus": "Jesu tid",
+  "era.judges": "Dommertiden",
+  "era.patriarchs": "Patriarkene",
+  "era.return": "Tilbakekomsten",
+  "era.united-kingdom": "Det forente kongerike",
+
+  // Historie-kategorier (#21)
+  "story.cat.dommerne": "Dommerne",
+  "story.cat.eksil": "Eksil",
+  "story.cat.jesu-lidelse": "Jesu lidelse",
+  "story.cat.jesu-lignelser": "Jesu lignelser",
+  "story.cat.jesu-mirakler": "Jesu mirakler",
+  "story.cat.jesus-liv": "Jesu liv",
+  "story.cat.kongetiden": "Kongetiden",
+  "story.cat.landnaam": "Landnåm",
+  "story.cat.moses": "Moses",
+  "story.cat.oerkenvandringen": "Ørkenvandringen",
+  "story.cat.patriarkene": "Patriarkene",
+  "story.cat.paulus": "Paulus",
+  "story.cat.profetene": "Profetene",
+  "story.cat.skapelsen": "Skapelsen",
+  "story.cat.urkirken": "Urkirken",
+
+  // Dag-kategorier (#21)
+  "day.cat.advent": "Advent",
+  "day.cat.ascension": "Himmelfart",
+  "day.cat.christmas": "Jul",
+  "day.cat.easter": "Påske",
+  "day.cat.epiphany": "Åpenbaring",
+  "day.cat.jewish": "Jødiske høytider",
+  "day.cat.lent": "Faste",
+  "day.cat.pentecost": "Pinse",
+  "day.cat.special": "Spesielle dager",
+  "day.cat.trinity": "Treenighetstiden",
 };
 
 const nn: Dict = {
@@ -1467,6 +1553,49 @@ const nn: Dict = {
   "rd.passages": "Bibelpassasjar",
   "rd.noPassages": "Ingen passasjar valde",
   "rd.noValidRefs": "Ingen gyldige referansar funne",
+
+  // Epoker for personer (#21) — nøklene er enum i dataene
+  "era.conquest": "Erobringa",
+  "era.creation": "Skapinga",
+  "era.divided-kingdom": "Det delte kongeriket",
+  "era.early-church": "Den tidlege kyrkja",
+  "era.exile": "Eksilet",
+  "era.exodus": "Utgangen frå Egypt",
+  "era.intertestamental": "Mellomtestamentleg tid",
+  "era.jesus": "Jesu tid",
+  "era.judges": "Domartida",
+  "era.patriarchs": "Patriarkane",
+  "era.return": "Heimkomsten",
+  "era.united-kingdom": "Det sameinte kongeriket",
+
+  // Historie-kategorier (#21)
+  "story.cat.dommerne": "Domarane",
+  "story.cat.eksil": "Eksil",
+  "story.cat.jesu-lidelse": "Jesu liding",
+  "story.cat.jesu-lignelser": "Jesu likningar",
+  "story.cat.jesu-mirakler": "Jesu under",
+  "story.cat.jesus-liv": "Jesu liv",
+  "story.cat.kongetiden": "Kongetida",
+  "story.cat.landnaam": "Landnåm",
+  "story.cat.moses": "Moses",
+  "story.cat.oerkenvandringen": "Ørkenvandringa",
+  "story.cat.patriarkene": "Patriarkane",
+  "story.cat.paulus": "Paulus",
+  "story.cat.profetene": "Profetane",
+  "story.cat.skapelsen": "Skapinga",
+  "story.cat.urkirken": "Urkyrkja",
+
+  // Dag-kategorier (#21)
+  "day.cat.advent": "Advent",
+  "day.cat.ascension": "Himmelferd",
+  "day.cat.christmas": "Jul",
+  "day.cat.easter": "Påske",
+  "day.cat.epiphany": "Openberring",
+  "day.cat.jewish": "Jødiske høgtider",
+  "day.cat.lent": "Faste",
+  "day.cat.pentecost": "Pinse",
+  "day.cat.special": "Særskilde dagar",
+  "day.cat.trinity": "Treeiningstida",
 };
 
 const sv: Dict = {
@@ -1954,6 +2083,49 @@ const sv: Dict = {
   "rd.passages": "Bibelpassager",
   "rd.noPassages": "Inga passager valda",
   "rd.noValidRefs": "Inga giltiga referenser hittades",
+
+  // Epoker for personer (#21) — nøklene er enum i dataene
+  "era.conquest": "Erövringen",
+  "era.creation": "Skapelsen",
+  "era.divided-kingdom": "Det delade kungariket",
+  "era.early-church": "Den tidiga kyrkan",
+  "era.exile": "Exilen",
+  "era.exodus": "Uttåget ur Egypten",
+  "era.intertestamental": "Mellantestamentlig tid",
+  "era.jesus": "Jesu tid",
+  "era.judges": "Domartiden",
+  "era.patriarchs": "Patriarkerna",
+  "era.return": "Återkomsten",
+  "era.united-kingdom": "Det enade kungariket",
+
+  // Historie-kategorier (#21)
+  "story.cat.dommerne": "Domarna",
+  "story.cat.eksil": "Exil",
+  "story.cat.jesu-lidelse": "Jesu lidande",
+  "story.cat.jesu-lignelser": "Jesu liknelser",
+  "story.cat.jesu-mirakler": "Jesu under",
+  "story.cat.jesus-liv": "Jesu liv",
+  "story.cat.kongetiden": "Kungatiden",
+  "story.cat.landnaam": "Landnamet",
+  "story.cat.moses": "Mose",
+  "story.cat.oerkenvandringen": "Ökenvandringen",
+  "story.cat.patriarkene": "Patriarkerna",
+  "story.cat.paulus": "Paulus",
+  "story.cat.profetene": "Profeterna",
+  "story.cat.skapelsen": "Skapelsen",
+  "story.cat.urkirken": "Urkyrkan",
+
+  // Dag-kategorier (#21)
+  "day.cat.advent": "Advent",
+  "day.cat.ascension": "Kristi himmelsfärd",
+  "day.cat.christmas": "Jul",
+  "day.cat.easter": "Påsk",
+  "day.cat.epiphany": "Trettondedagen",
+  "day.cat.jewish": "Judiska högtider",
+  "day.cat.lent": "Fastan",
+  "day.cat.pentecost": "Pingst",
+  "day.cat.special": "Särskilda dagar",
+  "day.cat.trinity": "Trefaldighetstiden",
 };
 
 const fr: Dict = {
@@ -2441,6 +2613,49 @@ const fr: Dict = {
   "rd.passages": "Passages bibliques",
   "rd.noPassages": "Aucun passage sélectionné",
   "rd.noValidRefs": "Aucune référence valide trouvée",
+
+  // Epoker for personer (#21) — nøklene er enum i dataene
+  "era.conquest": "La conquête",
+  "era.creation": "La création",
+  "era.divided-kingdom": "Le royaume divisé",
+  "era.early-church": "L’Église primitive",
+  "era.exile": "L’exil",
+  "era.exodus": "L’Exode",
+  "era.intertestamental": "Période intertestamentaire",
+  "era.jesus": "Le temps de Jésus",
+  "era.judges": "Les juges",
+  "era.patriarchs": "Les patriarches",
+  "era.return": "Le retour",
+  "era.united-kingdom": "Le royaume uni",
+
+  // Historie-kategorier (#21)
+  "story.cat.dommerne": "Les juges",
+  "story.cat.eksil": "L’exil",
+  "story.cat.jesu-lidelse": "La passion",
+  "story.cat.jesu-lignelser": "Les paraboles de Jésus",
+  "story.cat.jesu-mirakler": "Les miracles de Jésus",
+  "story.cat.jesus-liv": "La vie de Jésus",
+  "story.cat.kongetiden": "La royauté",
+  "story.cat.landnaam": "L’installation",
+  "story.cat.moses": "Moïse",
+  "story.cat.oerkenvandringen": "La traversée du désert",
+  "story.cat.patriarkene": "Les patriarches",
+  "story.cat.paulus": "Paul",
+  "story.cat.profetene": "Les prophètes",
+  "story.cat.skapelsen": "La création",
+  "story.cat.urkirken": "L’Église primitive",
+
+  // Dag-kategorier (#21)
+  "day.cat.advent": "Avent",
+  "day.cat.ascension": "Ascension",
+  "day.cat.christmas": "Noël",
+  "day.cat.easter": "Pâques",
+  "day.cat.epiphany": "Épiphanie",
+  "day.cat.jewish": "Fêtes juives",
+  "day.cat.lent": "Carême",
+  "day.cat.pentecost": "Pentecôte",
+  "day.cat.special": "Jours spéciaux",
+  "day.cat.trinity": "Temps de la Trinité",
 };
 
 const es: Dict = {
@@ -2928,6 +3143,49 @@ const es: Dict = {
   "rd.passages": "Pasajes bíblicos",
   "rd.noPassages": "Ningún pasaje seleccionado",
   "rd.noValidRefs": "No se han encontrado referencias válidas",
+
+  // Epoker for personer (#21) — nøklene er enum i dataene
+  "era.conquest": "La conquista",
+  "era.creation": "La creación",
+  "era.divided-kingdom": "El reino dividido",
+  "era.early-church": "La Iglesia primitiva",
+  "era.exile": "El exilio",
+  "era.exodus": "El éxodo",
+  "era.intertestamental": "Período intertestamentario",
+  "era.jesus": "El tiempo de Jesús",
+  "era.judges": "Los jueces",
+  "era.patriarchs": "Los patriarcas",
+  "era.return": "El regreso",
+  "era.united-kingdom": "El reino unido",
+
+  // Historie-kategorier (#21)
+  "story.cat.dommerne": "Los jueces",
+  "story.cat.eksil": "El exilio",
+  "story.cat.jesu-lidelse": "La pasión",
+  "story.cat.jesu-lignelser": "Las parábolas de Jesús",
+  "story.cat.jesu-mirakler": "Los milagros de Jesús",
+  "story.cat.jesus-liv": "La vida de Jesús",
+  "story.cat.kongetiden": "La monarquía",
+  "story.cat.landnaam": "El asentamiento",
+  "story.cat.moses": "Moisés",
+  "story.cat.oerkenvandringen": "El desierto",
+  "story.cat.patriarkene": "Los patriarcas",
+  "story.cat.paulus": "Pablo",
+  "story.cat.profetene": "Los profetas",
+  "story.cat.skapelsen": "La creación",
+  "story.cat.urkirken": "La Iglesia primitiva",
+
+  // Dag-kategorier (#21)
+  "day.cat.advent": "Adviento",
+  "day.cat.ascension": "Ascensión",
+  "day.cat.christmas": "Navidad",
+  "day.cat.easter": "Pascua",
+  "day.cat.epiphany": "Epifanía",
+  "day.cat.jewish": "Fiestas judías",
+  "day.cat.lent": "Cuaresma",
+  "day.cat.pentecost": "Pentecostés",
+  "day.cat.special": "Días especiales",
+  "day.cat.trinity": "Tiempo de la Trinidad",
 };
 
 const fi: Dict = {
@@ -3415,6 +3673,49 @@ const fi: Dict = {
   "rd.passages": "Raamatunkohdat",
   "rd.noPassages": "Yhtään kohtaa ei ole valittu",
   "rd.noValidRefs": "Kelvollisia viitteitä ei löytynyt",
+
+  // Epoker for personer (#21) — nøklene er enum i dataene
+  "era.conquest": "Valloitus",
+  "era.creation": "Luominen",
+  "era.divided-kingdom": "Jakautunut kuningaskunta",
+  "era.early-church": "Varhainen kirkko",
+  "era.exile": "Pakkosiirtolaisuus",
+  "era.exodus": "Lähtö Egyptistä",
+  "era.intertestamental": "Testamenttien välinen aika",
+  "era.jesus": "Jeesuksen aika",
+  "era.judges": "Tuomarien aika",
+  "era.patriarchs": "Patriarkat",
+  "era.return": "Paluu",
+  "era.united-kingdom": "Yhdistynyt kuningaskunta",
+
+  // Historie-kategorier (#21)
+  "story.cat.dommerne": "Tuomarit",
+  "story.cat.eksil": "Pakkosiirtolaisuus",
+  "story.cat.jesu-lidelse": "Jeesuksen kärsimys",
+  "story.cat.jesu-lignelser": "Jeesuksen vertaukset",
+  "story.cat.jesu-mirakler": "Jeesuksen ihmeet",
+  "story.cat.jesus-liv": "Jeesuksen elämä",
+  "story.cat.kongetiden": "Kuningasaika",
+  "story.cat.landnaam": "Asettuminen maahan",
+  "story.cat.moses": "Mooses",
+  "story.cat.oerkenvandringen": "Erämaavaellus",
+  "story.cat.patriarkene": "Patriarkat",
+  "story.cat.paulus": "Paavali",
+  "story.cat.profetene": "Profeetat",
+  "story.cat.skapelsen": "Luominen",
+  "story.cat.urkirken": "Alkukirkko",
+
+  // Dag-kategorier (#21)
+  "day.cat.advent": "Adventti",
+  "day.cat.ascension": "Helatorstai",
+  "day.cat.christmas": "Joulu",
+  "day.cat.easter": "Pääsiäinen",
+  "day.cat.epiphany": "Loppiainen",
+  "day.cat.jewish": "Juutalaiset juhlat",
+  "day.cat.lent": "Paasto",
+  "day.cat.pentecost": "Helluntai",
+  "day.cat.special": "Erityiset päivät",
+  "day.cat.trinity": "Kolminaisuuden aika",
 };
 
 const de: Dict = {
@@ -3902,6 +4203,49 @@ const de: Dict = {
   "rd.passages": "Bibelabschnitte",
   "rd.noPassages": "Keine Abschnitte ausgewählt",
   "rd.noValidRefs": "Keine gültigen Verweise gefunden",
+
+  // Epoker for personer (#21) — nøklene er enum i dataene
+  "era.conquest": "Die Landnahme",
+  "era.creation": "Die Schöpfung",
+  "era.divided-kingdom": "Das geteilte Königreich",
+  "era.early-church": "Die frühe Kirche",
+  "era.exile": "Das Exil",
+  "era.exodus": "Der Exodus",
+  "era.intertestamental": "Zwischentestamentliche Zeit",
+  "era.jesus": "Die Zeit Jesu",
+  "era.judges": "Die Richterzeit",
+  "era.patriarchs": "Die Patriarchen",
+  "era.return": "Die Rückkehr",
+  "era.united-kingdom": "Das vereinte Königreich",
+
+  // Historie-kategorier (#21)
+  "story.cat.dommerne": "Die Richter",
+  "story.cat.eksil": "Exil",
+  "story.cat.jesu-lidelse": "Die Passion",
+  "story.cat.jesu-lignelser": "Die Gleichnisse Jesu",
+  "story.cat.jesu-mirakler": "Die Wunder Jesu",
+  "story.cat.jesus-liv": "Das Leben Jesu",
+  "story.cat.kongetiden": "Die Königszeit",
+  "story.cat.landnaam": "Die Landnahme",
+  "story.cat.moses": "Mose",
+  "story.cat.oerkenvandringen": "Die Wüstenwanderung",
+  "story.cat.patriarkene": "Die Patriarchen",
+  "story.cat.paulus": "Paulus",
+  "story.cat.profetene": "Die Propheten",
+  "story.cat.skapelsen": "Die Schöpfung",
+  "story.cat.urkirken": "Die frühe Kirche",
+
+  // Dag-kategorier (#21)
+  "day.cat.advent": "Advent",
+  "day.cat.ascension": "Himmelfahrt",
+  "day.cat.christmas": "Weihnachten",
+  "day.cat.easter": "Ostern",
+  "day.cat.epiphany": "Epiphanias",
+  "day.cat.jewish": "Jüdische Feste",
+  "day.cat.lent": "Fastenzeit",
+  "day.cat.pentecost": "Pfingsten",
+  "day.cat.special": "Besondere Tage",
+  "day.cat.trinity": "Trinitatiszeit",
 };
 
 export const DICTIONARIES = { en, nb, nn, sv, fr, es, fi, de };

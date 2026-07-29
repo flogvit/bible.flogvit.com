@@ -28,24 +28,22 @@ import {
 } from '../../lib/bible.ts';
 import { getBookInfoById } from '../../lib/books-data.ts';
 import { toUrlSlug } from '../../lib/url-utils.ts';
-import { layoutProps, tFor, lhref, currentIntlTag } from '../../lib/i18n.ts';
+import { layoutProps, tFor, lhref, currentIntlTag, tEnum, type Translator } from '../../lib/i18n.ts';
 
 const r = new Hono<AppEnv>();
 
-const STORY_CATEGORIES: Record<string, string> = {
-  skapelsen: 'Skapelsen', patriarkene: 'Patriarkene', moses: 'Moses',
-  oerkenvandringen: 'Ørkenvandringen', landnaam: 'Landnåm', dommerne: 'Dommerne',
-  kongetiden: 'Kongetiden', profetene: 'Profetene', eksil: 'Eksil',
-  'jesus-liv': 'Jesu liv', 'jesu-mirakler': 'Jesu mirakler',
-  'jesu-lignelser': 'Jesu lignelser', 'jesu-lidelse': 'Jesu lidelse',
-  urkirken: 'Urkirken', paulus: 'Paulus',
-};
+// Kategoriene er enum-nøkler i dataene og like på alle språk. Etikettene bor i
+// ordboka (`story.cat.*`, `day.cat.*`, #21) — her ligger bare REKKEFØLGEN, som
+// er redaksjonell (kronologisk gjennom Bibelen) og ikke kan utledes av en
+// alfabetisk sortering på et vilkårlig språk.
+const STORY_CATEGORY_ORDER = [
+  'skapelsen', 'patriarkene', 'moses', 'oerkenvandringen', 'landnaam', 'dommerne',
+  'kongetiden', 'profetene', 'eksil', 'jesus-liv', 'jesu-mirakler', 'jesu-lignelser',
+  'jesu-lidelse', 'urkirken', 'paulus',
+];
 
-const DAY_CATEGORIES: Record<string, string> = {
-  advent: 'Advent', christmas: 'Jul', epiphany: 'Åpenbaring', lent: 'Faste',
-  easter: 'Påske', ascension: 'Himmelfart', pentecost: 'Pinse',
-  trinity: 'Treenighetstiden', special: 'Spesielle dager', jewish: 'Jødiske høytider',
-};
+const storyCat = (t: Translator, key: string) => tEnum(t, 'story.cat.', key);
+const dayCat = (t: Translator, key: string) => tEnum(t, 'day.cat.', key);
 
 // ---------- /temaer ----------
 
@@ -176,7 +174,7 @@ r.get('/historier', async (c) => {
   const t = tFor(c);
   const stories = await getAllStories();
   const cats = new Set(stories.map((s) => s.category));
-  const availableCategories = Object.entries(STORY_CATEGORIES).filter(([k]) => cats.has(k));
+  const availableCategories = STORY_CATEGORY_ORDER.filter((k) => cats.has(k));
 
   return c.html(
     <Layout {...layoutProps(c)} title={`${t('stories.title')} — FLOGVIT.bible`} description={t('stories.meta')} styles={['study.css']} scripts={['card-filter.js']}>
@@ -189,8 +187,8 @@ r.get('/historier', async (c) => {
           </div>
           <div class="study-filter-buttons" data-card-catfilter>
             <button type="button" class="persons-filter-button active" data-value="">{t('common.all')}</button>
-            {availableCategories.map(([key, label]) => (
-              <button type="button" class="persons-filter-button" data-value={key}>{label}</button>
+            {availableCategories.map((key) => (
+              <button type="button" class="persons-filter-button" data-value={key}>{storyCat(t, key)}</button>
             ))}
           </div>
           <div class="study-grid" data-card-list>
@@ -201,7 +199,7 @@ r.get('/historier', async (c) => {
                 data-cat={s.category}
                 data-search={`${s.title} ${s.keywords} ${s.description ?? ''}`.toLowerCase()}
               >
-                <span class="study-card-cat">{STORY_CATEGORIES[s.category] || s.category}</span>
+                <span class="study-card-cat">{storyCat(t, s.category)}</span>
                 <h2 class="study-card-title">{s.title}</h2>
                 {s.description && <p class="study-card-desc">{s.description}</p>}
               </a>
@@ -230,7 +228,7 @@ r.get('/historier/:slug', async (c) => {
       <div class="study-main">
         <div class="reading-container">
           <Breadcrumbs items={[{ label: 'Hjem', href: '/' }, { label: 'Bibelhistorier', href: '/historier' }, { label: data.title }]} />
-          <span class="study-card-cat">{STORY_CATEGORIES[data.category] || data.category}</span>
+          <span class="study-card-cat">{storyCat(t, data.category)}</span>
           <h1>{data.title}</h1>
           {data.description && (
             <p class="study-introduction">
@@ -410,7 +408,7 @@ r.get('/dager', async (c) => {
 
   const DayCard = ({ d }: { d: (typeof items)[number] }) => (
     <a href={lhref(`/dager/${d.id}`)} class="study-card" data-search={d.search}>
-      {d.category && <span class="study-card-cat">{DAY_CATEGORIES[d.category] || d.category}</span>}
+      {d.category && <span class="study-card-cat">{dayCat(t, d.category)}</span>}
       <h2 class="study-card-title">{d.name}</h2>
       {d.description && <p class="study-card-desc">{d.description}</p>}
       {d.nextDate && <p class="study-card-date">{formatDayDate(d.nextDate)}</p>}
@@ -419,7 +417,7 @@ r.get('/dager', async (c) => {
 
   const groups = thematic
     ? DAY_CATEGORY_ORDER.map((cat) => ({
-        title: DAY_CATEGORIES[cat] || cat,
+        title: dayCat(t, cat),
         items: items.filter((d) => d.category === cat).sort(byNextDate),
       })).filter((g) => g.items.length > 0)
     : [{ title: '', items: [...items].sort(byNextDate) }];
@@ -497,7 +495,7 @@ r.get('/dager/:dayId', async (c) => {
           <header class="study-day-header">
             <h1>{data.name}</h1>
             <div class="study-day-meta">
-              <span class="study-card-cat">{DAY_CATEGORIES[data.category] || data.category}</span>
+              <span class="study-card-cat">{dayCat(t, data.category)}</span>
             </div>
           </header>
           <div class="study-tagging"><ItemTagging itemType="day" itemId={data.id} /></div>

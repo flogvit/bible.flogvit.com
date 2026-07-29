@@ -1568,38 +1568,6 @@ export interface Person {
   content: string;
 }
 
-// Era labels in Norwegian
-export const eraLabels: Record<string, string> = {
-  'creation': 'Skapelsen',
-  'patriarchs': 'Patriarkene',
-  'exodus': 'Utgang fra Egypt',
-  'conquest': 'Erobringen',
-  'judges': 'Dommertiden',
-  'united-kingdom': 'Det forente kongerike',
-  'divided-kingdom': 'Det delte kongerike',
-  'exile': 'Eksilet',
-  'return': 'Tilbakekomsten',
-  'intertestamental': 'Mellomtestamentlig tid',
-  'jesus': 'Jesu tid',
-  'early-church': 'Den tidlige kirke'
-};
-
-// Role labels in Norwegian
-export const roleLabels: Record<string, string> = {
-  'profet': 'Profet',
-  'konge': 'Konge',
-  'dommer': 'Dommer',
-  'prest': 'Prest',
-  'apostel': 'Apostel',
-  'disippel': 'Disippel',
-  'leder': 'Leder',
-  'matriark': 'Matriark',
-  'patriark': 'Patriark',
-  'martyr': 'Martyr',
-  'kriger': 'Kriger',
-  'vismann': 'Vismann'
-};
-
 export async function getAllPersons(lang = currentContentLanguage()): Promise<Person[]> {
   const sql = getSql();
   return await inLanguage(lang, (language) => sql`
