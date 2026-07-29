@@ -13,40 +13,50 @@ import { loadChapterWithFallback } from '../src/routes/pages/reading.tsx';
 const app = createApp();
 
 describe('readableBibleCandidates', () => {
-  test('nb → kun osnb', async () => {
+  test('nb → osnb, deretter engelsk som gulv (#26)', async () => {
     const c = await readableBibleCandidates('nb');
-    expect(c.map((e) => e.id)).toEqual(['osnb']);
+    expect(c.map((e) => e.id)).toEqual(['osnb', 'osen']);
   });
 
-  test('nn → osnn før osnb', async () => {
+  test('nn → osnn, osnb, osen — nabospråk før basespråk', async () => {
     const c = await readableBibleCandidates('nn');
-    expect(c.map((e) => e.id)).toEqual(['osnn', 'osnb']);
+    expect(c.map((e) => e.id)).toEqual(['osnn', 'osnb', 'osen']);
   });
 
-  test('en → osnb så lenge osen ikke er importert', async () => {
+  test('en → osen først, osnb som gulv', async () => {
     const c = await readableBibleCandidates('en');
-    expect(c.map((e) => e.id)).toEqual(['osnb']);
+    expect(c.map((e) => e.id)).toEqual(['osen', 'osnb']);
   });
 
-  test('sv → osnb (ingen svensk eller engelsk utgave)', async () => {
+  test('sv → osen (basespråket) før osnb, ingen svensk utgave', async () => {
     const c = await readableBibleCandidates('sv');
-    expect(c.map((e) => e.id)).toEqual(['osnb']);
+    expect(c.map((e) => e.id)).toEqual(['osen', 'osnb']);
   });
 
   test('grunntekster (sblgnt/tanach) er aldri kandidater', async () => {
     for (const lang of ['el', 'he']) {
       const c = await readableBibleCandidates(lang);
-      expect(c.map((e) => e.id)).toEqual(['osnb']);
+      expect(c.map((e) => e.id)).toEqual(['osen', 'osnb']);
     }
   });
 });
 
 describe('kapittel-fallback i ruta', () => {
-  test('/en/1mos/1: 200 med norsk tekst og untranslated-hint', async () => {
+  test('/en/1mos/1: osen uten innstilling, ingen untranslated-hint', async () => {
     const res = await app.request('/en/1mos/1');
     expect(res.status).toBe(200);
     const html = await res.text();
-    expect(html).toContain('I begynnelsen skapte Gud');
+    expect(html).toContain('In the beginning God created');
+    expect(html).not.toContain('data-untranslated');
+  });
+
+  // Fallback-mekanismen selv holdes i live av et språk vi IKKE har utgave for:
+  // svensk faller til basespråket (osen), ikke til gulvet, og skal vise hintet.
+  test('/sv/1mos/1: faller til osen med untranslated-hint', async () => {
+    const res = await app.request('/sv/1mos/1');
+    expect(res.status).toBe(200);
+    const html = await res.text();
+    expect(html).toContain('In the beginning God created');
     expect(html).toContain('data-untranslated');
   });
 

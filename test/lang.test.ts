@@ -9,7 +9,7 @@ import {
 } from '../src/lib/lang.ts';
 
 // Språkdimensjonen for innhold: locale (URL) vs innholdsspråk (free-bible-katalog
-// og language-kolonnen), og fallback-kjeden der norsk er gulvet.
+// og language-kolonnen), og fallback-kjeden der engelsk er gulvet (#26).
 
 describe('normalizeContentLanguage', () => {
   test('tomt/ugyldig faller til gulvet', () => {
@@ -39,26 +39,27 @@ describe('localeToContentLanguage', () => {
 });
 
 describe('contentLanguageChain', () => {
-  test('gulvet er terminalt — ingenting forsøkes etter nb', () => {
-    expect(contentLanguageChain('nb')).toEqual(['nb']);
-    expect(contentLanguageChain('no')).toEqual(['nb']);
+  test('gulvet er terminalt — ingenting forsøkes etter en', () => {
+    expect(contentLanguageChain('en')).toEqual(['en']);
+    expect(contentLanguageChain(BASE_CONTENT_LANGUAGE)).toEqual(['en']);
   });
 
-  test('nynorsk faller til bokmål, ikke til engelsk', () => {
-    expect(contentLanguageChain('nn')).toEqual(['nn', 'nb']);
+  test('norsk faller til engelsk, ikke omvendt (#26)', () => {
+    expect(contentLanguageChain('nb')).toEqual(['nb', 'en']);
+    expect(contentLanguageChain('no')).toEqual(['nb', 'en']);
   });
 
-  test('basespråket faller til gulvet', () => {
-    expect(contentLanguageChain(BASE_CONTENT_LANGUAGE)).toEqual(['en', 'nb']);
+  test('nynorsk tar bokmål FØR engelsk — nabospråk før basespråk', () => {
+    expect(contentLanguageChain('nn')).toEqual(['nn', 'nb', 'en']);
   });
 
-  test('andre språk forsøker engelsk før gulvet', () => {
-    expect(contentLanguageChain('de')).toEqual(['de', 'en', 'nb']);
-    expect(contentLanguageChain('zh-Hans')).toEqual(['zh-Hans', 'en', 'nb']);
+  test('andre språk går rett til gulvet', () => {
+    expect(contentLanguageChain('de')).toEqual(['de', 'en']);
+    expect(contentLanguageChain('zh-Hans')).toEqual(['zh-Hans', 'en']);
   });
 
   test('ugyldig språk gir bare gulvet', () => {
-    expect(contentLanguageChain('tøys!')).toEqual(['nb']);
+    expect(contentLanguageChain('tøys!')).toEqual(['en']);
   });
 });
 

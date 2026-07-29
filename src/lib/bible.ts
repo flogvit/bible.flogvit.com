@@ -4,7 +4,12 @@
 // synkront av reference-parser.ts.
 
 import { getSql } from './db.ts';
-import { DEFAULT_CONTENT_LANGUAGE, contentLanguageChain } from './lang.ts';
+import {
+  BASE_CONTENT_LANGUAGE,
+  DEFAULT_CONTENT_LANGUAGE,
+  contentLanguageChain,
+  currentContentLanguage,
+} from './lang.ts';
 
 // Re-export toUrlSlug for convenience (server-side usage)
 export { toUrlSlug } from './url-utils.ts';
@@ -270,7 +275,7 @@ export async function getReferences(
   bookId: number,
   chapter: number,
   verse: number,
-  lang = DEFAULT_CONTENT_LANGUAGE,
+  lang = currentContentLanguage(),
 ): Promise<Reference[]> {
   const sql = getSql();
   return await inLanguage(lang, (language) => sql`
@@ -282,7 +287,7 @@ export async function getReferences(
   ` as Promise<Reference[]>);
 }
 
-export async function getBookSummary(bookId: number, lang = DEFAULT_CONTENT_LANGUAGE): Promise<string | null> {
+export async function getBookSummary(bookId: number, lang = currentContentLanguage()): Promise<string | null> {
   const sql = getSql();
   const [result] = await inLanguage(lang, (language) => sql`
     SELECT summary FROM book_summaries WHERE book_id = ${bookId} AND language = ${language}
@@ -293,7 +298,7 @@ export async function getBookSummary(bookId: number, lang = DEFAULT_CONTENT_LANG
 export async function getChapterSummary(
   bookId: number,
   chapter: number,
-  lang = DEFAULT_CONTENT_LANGUAGE,
+  lang = currentContentLanguage(),
 ): Promise<string | null> {
   const sql = getSql();
   const [result] = await inLanguage(lang, (language) => sql`
@@ -306,7 +311,7 @@ export async function getChapterSummary(
 export async function getChapterContext(
   bookId: number,
   chapter: number,
-  lang = DEFAULT_CONTENT_LANGUAGE,
+  lang = currentContentLanguage(),
 ): Promise<string | null> {
   const sql = getSql();
   const [result] = await inLanguage(lang, (language) => sql`
@@ -319,7 +324,7 @@ export async function getChapterContext(
 export async function getImportantWords(
   bookId: number,
   chapter: number,
-  lang = DEFAULT_CONTENT_LANGUAGE,
+  lang = currentContentLanguage(),
 ): Promise<{ word: string; explanation: string }[]> {
   const sql = getSql();
   return await inLanguage(lang, (language) => sql`
@@ -332,7 +337,7 @@ export async function getVersePrayer(
   bookId: number,
   chapter: number,
   verse: number,
-  lang = DEFAULT_CONTENT_LANGUAGE,
+  lang = currentContentLanguage(),
 ): Promise<string | null> {
   const sql = getSql();
   const [result] = await inLanguage(lang, (language) => sql`
@@ -346,7 +351,7 @@ export async function getVerseSermon(
   bookId: number,
   chapter: number,
   verse: number,
-  lang = DEFAULT_CONTENT_LANGUAGE,
+  lang = currentContentLanguage(),
 ): Promise<string | null> {
   const sql = getSql();
   const [result] = await inLanguage(lang, (language) => sql`
@@ -373,7 +378,7 @@ export interface ImportantVerse {
 export async function getImportantVersesForChapter(
   bookId: number,
   chapter: number,
-  lang = DEFAULT_CONTENT_LANGUAGE,
+  lang = currentContentLanguage(),
 ): Promise<number[]> {
   const sql = getSql();
   const results = await inLanguage(lang, (language) => sql`
@@ -393,7 +398,7 @@ export interface WellKnownVerse {
   verse_text: string;
 }
 
-export async function getAllWellKnownVerses(lang = DEFAULT_CONTENT_LANGUAGE): Promise<WellKnownVerse[]> {
+export async function getAllWellKnownVerses(lang = currentContentLanguage()): Promise<WellKnownVerse[]> {
   const sql = getSql();
   return await inLanguage(lang, (language) => sql`
     SELECT
@@ -453,14 +458,14 @@ export interface ThemeData {
   sections: ThemeSection[];
 }
 
-export async function getAllThemes(lang = DEFAULT_CONTENT_LANGUAGE): Promise<Theme[]> {
+export async function getAllThemes(lang = currentContentLanguage()): Promise<Theme[]> {
   const sql = getSql();
   return await inLanguage(lang, (language) => sql`
     SELECT * FROM themes WHERE language = ${language} ORDER BY name
   ` as Promise<Theme[]>);
 }
 
-export async function getThemeByName(name: string, lang = DEFAULT_CONTENT_LANGUAGE): Promise<Theme | undefined> {
+export async function getThemeByName(name: string, lang = currentContentLanguage()): Promise<Theme | undefined> {
   const sql = getSql();
   const [row] = await inLanguage(lang, (language) => sql`
     SELECT * FROM themes WHERE name = ${name} AND language = ${language}
@@ -530,14 +535,14 @@ export interface DayData {
   footnotes?: { text: string; source?: string }[];
 }
 
-export async function getAllDays(lang = DEFAULT_CONTENT_LANGUAGE): Promise<Day[]> {
+export async function getAllDays(lang = currentContentLanguage()): Promise<Day[]> {
   const sql = getSql();
   return await inLanguage(lang, (language) => sql`
     SELECT * FROM days WHERE language = ${language} ORDER BY name
   ` as Promise<Day[]>);
 }
 
-export async function getDayById(id: string, lang = DEFAULT_CONTENT_LANGUAGE): Promise<Day | undefined> {
+export async function getDayById(id: string, lang = currentContentLanguage()): Promise<Day | undefined> {
   const sql = getSql();
   const [row] = await inLanguage(lang, (language) => sql`
     SELECT * FROM days WHERE id = ${id} AND language = ${language}
@@ -545,7 +550,7 @@ export async function getDayById(id: string, lang = DEFAULT_CONTENT_LANGUAGE): P
   return row;
 }
 
-export async function getTodaysDays(lang = DEFAULT_CONTENT_LANGUAGE): Promise<DayData[]> {
+export async function getTodaysDays(lang = currentContentLanguage()): Promise<DayData[]> {
   const sql = getSql();
   const today = new Date().toISOString().substring(0, 10);
   const year = today.substring(0, 4);
@@ -566,7 +571,7 @@ export async function getTodaysDays(lang = DEFAULT_CONTENT_LANGUAGE): Promise<Da
 
 export async function searchDays(
   query: string,
-  lang = DEFAULT_CONTENT_LANGUAGE,
+  lang = currentContentLanguage(),
 ): Promise<{ id: string; name: string; description: string; category: string }[]> {
   if (!query || query.length < 2) return [];
   const sql = getSql();
@@ -617,7 +622,7 @@ export interface NumberSymbolismData {
   }[];
 }
 
-export async function getAllNumberSymbolism(lang = DEFAULT_CONTENT_LANGUAGE): Promise<NumberSymbolism[]> {
+export async function getAllNumberSymbolism(lang = currentContentLanguage()): Promise<NumberSymbolism[]> {
   const sql = getSql();
   return await inLanguage(lang, (language) => sql`
     SELECT * FROM number_symbolism WHERE language = ${language} ORDER BY number
@@ -626,7 +631,7 @@ export async function getAllNumberSymbolism(lang = DEFAULT_CONTENT_LANGUAGE): Pr
 
 export async function getNumberSymbolismByNumber(
   num: number,
-  lang = DEFAULT_CONTENT_LANGUAGE,
+  lang = currentContentLanguage(),
 ): Promise<NumberSymbolism | undefined> {
   const sql = getSql();
   const [row] = await inLanguage(lang, (language) => sql`
@@ -952,7 +957,7 @@ async function attachReferencesToEvents(
 
 type TimelineEventRow = TimelineEvent & { period_name?: string; period_color?: string; language?: string };
 
-export async function getTimelinePeriods(lang = DEFAULT_CONTENT_LANGUAGE): Promise<TimelinePeriod[]> {
+export async function getTimelinePeriods(lang = currentContentLanguage()): Promise<TimelinePeriod[]> {
   const sql = getSql();
   return await inLanguage(lang, (language) => sql`
     SELECT * FROM timeline_periods
@@ -960,7 +965,7 @@ export async function getTimelinePeriods(lang = DEFAULT_CONTENT_LANGUAGE): Promi
   ` as Promise<TimelinePeriod[]>);
 }
 
-export async function getTimelineEvents(lang = DEFAULT_CONTENT_LANGUAGE): Promise<TimelineEvent[]> {
+export async function getTimelineEvents(lang = currentContentLanguage()): Promise<TimelineEvent[]> {
   const sql = getSql();
   const events = await inLanguage(lang, (language) => sql`
     SELECT e.*, p.name as period_name, p.color as period_color
@@ -974,7 +979,7 @@ export async function getTimelineEvents(lang = DEFAULT_CONTENT_LANGUAGE): Promis
   return attachReferencesToEvents(events);
 }
 
-export async function getWorldTimelinePeriods(lang = DEFAULT_CONTENT_LANGUAGE): Promise<TimelinePeriod[]> {
+export async function getWorldTimelinePeriods(lang = currentContentLanguage()): Promise<TimelinePeriod[]> {
   const sql = getSql();
   return await inLanguage(lang, (language) => sql`
     SELECT * FROM timeline_periods
@@ -982,7 +987,7 @@ export async function getWorldTimelinePeriods(lang = DEFAULT_CONTENT_LANGUAGE): 
   ` as Promise<TimelinePeriod[]>);
 }
 
-export async function getWorldTimelineEvents(lang = DEFAULT_CONTENT_LANGUAGE): Promise<TimelineEvent[]> {
+export async function getWorldTimelineEvents(lang = currentContentLanguage()): Promise<TimelineEvent[]> {
   const sql = getSql();
   const events = await inLanguage(lang, (language) => sql`
     SELECT e.*, p.name as period_name, p.color as period_color
@@ -998,7 +1003,7 @@ export async function getWorldTimelineEvents(lang = DEFAULT_CONTENT_LANGUAGE): P
 
 export async function getBookTimelineSections(
   bookId?: number,
-  lang = DEFAULT_CONTENT_LANGUAGE,
+  lang = currentContentLanguage(),
 ): Promise<TimelineBookSection[]> {
   const sql = getSql();
   if (bookId) {
@@ -1015,7 +1020,7 @@ export async function getBookTimelineSections(
 
 export async function getBookTimelineEvents(
   bookId?: number,
-  lang = DEFAULT_CONTENT_LANGUAGE,
+  lang = currentContentLanguage(),
 ): Promise<TimelineEvent[]> {
   const sql = getSql();
   const events = bookId
@@ -1034,7 +1039,7 @@ export async function getBookTimelineEvents(
   return attachReferencesToEvents(events);
 }
 
-export async function getMultiTimeline(lang = DEFAULT_CONTENT_LANGUAGE): Promise<MultiTimelineData> {
+export async function getMultiTimeline(lang = currentContentLanguage()): Promise<MultiTimelineData> {
   const sql = getSql();
 
   // Get books that have timeline data
@@ -1065,7 +1070,7 @@ export async function getMultiTimeline(lang = DEFAULT_CONTENT_LANGUAGE): Promise
 
 export async function getTimelineEventById(
   id: string,
-  lang = DEFAULT_CONTENT_LANGUAGE,
+  lang = currentContentLanguage(),
 ): Promise<TimelineEvent | undefined> {
   const sql = getSql();
   const [event] = await inLanguage(lang, (language) => sql`
@@ -1103,7 +1108,7 @@ export async function getTimelineEventById(
 
 export async function getTimelineEventsByPeriod(
   periodId: string,
-  lang = DEFAULT_CONTENT_LANGUAGE,
+  lang = currentContentLanguage(),
 ): Promise<TimelineEvent[]> {
   const sql = getSql();
   const events = await inLanguage(lang, (language) => sql`
@@ -1118,7 +1123,7 @@ export async function getTimelineEventsByPeriod(
   return attachReferencesToEvents(events);
 }
 
-export async function getFullTimeline(lang = DEFAULT_CONTENT_LANGUAGE): Promise<TimelineData> {
+export async function getFullTimeline(lang = currentContentLanguage()): Promise<TimelineData> {
   return {
     periods: await getTimelinePeriods(lang),
     events: await getTimelineEvents(lang)
@@ -1150,7 +1155,7 @@ function sortTimelineEvents(events: TimelineEvent[]): TimelineEvent[] {
 async function getEventsForChapterDirect(
   bookId: number,
   chapter: number,
-  lang = DEFAULT_CONTENT_LANGUAGE,
+  lang = currentContentLanguage(),
 ): Promise<TimelineEvent[]> {
   const sql = getSql();
   const eventIds = await inLanguage(lang, (language) => sql`
@@ -1171,7 +1176,7 @@ async function getEventsForChapterDirect(
  * Map events to bible-type event IDs for highlighting in the main timeline.
  * For books-type events, find bible equivalent by title or nearest by year.
  */
-async function mapToBibleEventIds(events: TimelineEvent[], lang = DEFAULT_CONTENT_LANGUAGE): Promise<string[]> {
+async function mapToBibleEventIds(events: TimelineEvent[], lang = currentContentLanguage()): Promise<string[]> {
   const sql = getSql();
   const ids = new Set<string>();
   for (const event of events) {
@@ -1207,7 +1212,7 @@ async function mapToBibleEventIds(events: TimelineEvent[], lang = DEFAULT_CONTEN
 export async function getTimelineEventsForChapter(
   bookId: number,
   chapter: number,
-  lang = DEFAULT_CONTENT_LANGUAGE,
+  lang = currentContentLanguage(),
 ): Promise<TimelineEvent[]> {
   const sql = getSql();
 
@@ -1255,7 +1260,7 @@ export async function getTimelineEventsForChapter(
 export async function getChapterTimelineEventIds(
   bookId: number,
   chapter: number,
-  lang = DEFAULT_CONTENT_LANGUAGE,
+  lang = currentContentLanguage(),
 ): Promise<string[]> {
   const events = await getTimelineEventsForChapter(bookId, chapter, lang);
   return mapToBibleEventIds(events, lang);
@@ -1294,7 +1299,7 @@ export interface ProphecyData {
   prophecies: Prophecy[];
 }
 
-export async function getProphecyCategories(lang = DEFAULT_CONTENT_LANGUAGE): Promise<ProphecyCategory[]> {
+export async function getProphecyCategories(lang = currentContentLanguage()): Promise<ProphecyCategory[]> {
   const sql = getSql();
   // seq bevarer innsettingsrekkefølgen (= rekkefølgen i prophecies.json, som
   // SQLite ga implisitt via rowid).
@@ -1315,7 +1320,7 @@ type ProphecyRow = Prophecy & {
   language?: string;
 };
 
-export async function getProphecies(lang = DEFAULT_CONTENT_LANGUAGE): Promise<Prophecy[]> {
+export async function getProphecies(lang = currentContentLanguage()): Promise<Prophecy[]> {
   const sql = getSql();
   const prophecies = await inLanguage(lang, (language) => sql`
     SELECT p.*, c.name as category_name, c.description as category_description,
@@ -1378,7 +1383,7 @@ export async function getProphecies(lang = DEFAULT_CONTENT_LANGUAGE): Promise<Pr
   return result;
 }
 
-export async function getProphecyById(id: string, lang = DEFAULT_CONTENT_LANGUAGE): Promise<Prophecy | undefined> {
+export async function getProphecyById(id: string, lang = currentContentLanguage()): Promise<Prophecy | undefined> {
   const sql = getSql();
   const [prophecy] = await inLanguage(lang, (language) => sql`
     SELECT p.*, c.name as category_name, c.description as category_description,
@@ -1433,13 +1438,13 @@ export async function getProphecyById(id: string, lang = DEFAULT_CONTENT_LANGUAG
 
 export async function getPropheciesByCategory(
   categoryId: string,
-  lang = DEFAULT_CONTENT_LANGUAGE,
+  lang = currentContentLanguage(),
 ): Promise<Prophecy[]> {
   const all = await getProphecies(lang);
   return all.filter(p => p.category_id === categoryId);
 }
 
-export async function getFullProphecyData(lang = DEFAULT_CONTENT_LANGUAGE): Promise<ProphecyData> {
+export async function getFullProphecyData(lang = currentContentLanguage()): Promise<ProphecyData> {
   return {
     categories: await getProphecyCategories(lang),
     prophecies: await getProphecies(lang)
@@ -1449,7 +1454,7 @@ export async function getFullProphecyData(lang = DEFAULT_CONTENT_LANGUAGE): Prom
 export async function getPropheciesForChapter(
   bookId: number,
   chapter: number,
-  lang = DEFAULT_CONTENT_LANGUAGE,
+  lang = currentContentLanguage(),
 ): Promise<Prophecy[]> {
   const sql = getSql();
 
@@ -1481,7 +1486,7 @@ export async function getPropheciesForVerse(
   bookId: number,
   chapter: number,
   verse: number,
-  lang = DEFAULT_CONTENT_LANGUAGE,
+  lang = currentContentLanguage(),
 ): Promise<Prophecy[]> {
   const sql = getSql();
 
@@ -1595,14 +1600,14 @@ export const roleLabels: Record<string, string> = {
   'vismann': 'Vismann'
 };
 
-export async function getAllPersons(lang = DEFAULT_CONTENT_LANGUAGE): Promise<Person[]> {
+export async function getAllPersons(lang = currentContentLanguage()): Promise<Person[]> {
   const sql = getSql();
   return await inLanguage(lang, (language) => sql`
     SELECT * FROM persons WHERE language = ${language} ORDER BY name
   ` as Promise<Person[]>);
 }
 
-export async function getPersonByName(name: string, lang = DEFAULT_CONTENT_LANGUAGE): Promise<Person | undefined> {
+export async function getPersonByName(name: string, lang = currentContentLanguage()): Promise<Person | undefined> {
   const sql = getSql();
   const [row] = await inLanguage(lang, (language) => sql`
     SELECT * FROM persons WHERE name = ${name} AND language = ${language}
@@ -1618,13 +1623,13 @@ export function parsePersonContent(content: string): PersonData | null {
   }
 }
 
-export async function getPersonData(name: string, lang = DEFAULT_CONTENT_LANGUAGE): Promise<PersonData | null> {
+export async function getPersonData(name: string, lang = currentContentLanguage()): Promise<PersonData | null> {
   const person = await getPersonByName(name, lang);
   if (!person) return null;
   return parsePersonContent(person.content);
 }
 
-export async function getAllPersonsData(lang = DEFAULT_CONTENT_LANGUAGE): Promise<PersonData[]> {
+export async function getAllPersonsData(lang = currentContentLanguage()): Promise<PersonData[]> {
   const persons = await getAllPersons(lang);
   const all = persons
     .map(p => parsePersonContent(p.content))
@@ -1638,7 +1643,7 @@ export async function getAllPersonsData(lang = DEFAULT_CONTENT_LANGUAGE): Promis
 export async function getPersonsByChapter(
   bookId: number,
   chapter: number,
-  lang = DEFAULT_CONTENT_LANGUAGE,
+  lang = currentContentLanguage(),
 ): Promise<PersonData[]> {
   const sql = getSql();
   // SQLite brukte json_each/json_extract; i MySQL filtrerer vi i JS i stedet
@@ -1657,7 +1662,7 @@ export async function getPersonsByChapter(
 export async function getNumberSymbolismByChapter(
   bookId: number,
   chapter: number,
-  lang = DEFAULT_CONTENT_LANGUAGE,
+  lang = currentContentLanguage(),
 ): Promise<NumberSymbolismData[]> {
   const sql = getSql();
   // SQLite brukte json_each/json_extract; i MySQL filtrerer vi i JS i stedet
@@ -1675,7 +1680,7 @@ export async function getNumberSymbolismByChapter(
 export async function getThemesByChapter(
   bookId: number,
   chapter: number,
-  lang = DEFAULT_CONTENT_LANGUAGE,
+  lang = currentContentLanguage(),
 ): Promise<{ id: number; name: string; title: string; introduction?: string; verses: number[] }[]> {
   const sql = getSql();
   const themes = await inLanguage(lang, (language) => sql`
@@ -1707,7 +1712,7 @@ export async function getThemesByChapter(
 export async function getStoriesByChapter(
   bookId: number,
   chapter: number,
-  lang = DEFAULT_CONTENT_LANGUAGE,
+  lang = currentContentLanguage(),
 ): Promise<{ slug: string; title: string; category: string; description: string; verses: number[] }[]> {
   const sql = getSql();
   const stories = await inLanguage(lang, (language) => sql`
@@ -1735,19 +1740,19 @@ export async function getStoriesByChapter(
   });
 }
 
-export async function getPersonsByRole(role: string, lang = DEFAULT_CONTENT_LANGUAGE): Promise<PersonData[]> {
+export async function getPersonsByRole(role: string, lang = currentContentLanguage()): Promise<PersonData[]> {
   const allPersons = await getAllPersonsData(lang);
   return allPersons.filter(p => p.roles.includes(role));
 }
 
-export async function getPersonsByEra(era: string, lang = DEFAULT_CONTENT_LANGUAGE): Promise<PersonData[]> {
+export async function getPersonsByEra(era: string, lang = currentContentLanguage()): Promise<PersonData[]> {
   const allPersons = await getAllPersonsData(lang);
   return allPersons.filter(p => p.era === era);
 }
 
 export async function getRelatedPersonsData(
   personId: string,
-  lang = DEFAULT_CONTENT_LANGUAGE,
+  lang = currentContentLanguage(),
 ): Promise<PersonData[]> {
   const person = await getPersonData(personId, lang);
   if (!person || !person.relatedPersons) return [];
@@ -1781,7 +1786,7 @@ export interface ChapterInsightDbRow {
 export async function getChapterInsight(
   bookId: number,
   chapter: number,
-  lang = DEFAULT_CONTENT_LANGUAGE,
+  lang = currentContentLanguage(),
 ): Promise<any | null> {
   const sql = getSql();
   const [result] = await inLanguage(lang, (language) => sql`
@@ -1833,7 +1838,7 @@ export interface GospelParallelsData {
   parallels: GospelParallel[];
 }
 
-export async function getGospelParallelSections(lang = DEFAULT_CONTENT_LANGUAGE): Promise<GospelParallelSection[]> {
+export async function getGospelParallelSections(lang = currentContentLanguage()): Promise<GospelParallelSection[]> {
   const sql = getSql();
   return await inLanguage(lang, (language) => sql`
     SELECT * FROM gospel_parallel_sections WHERE language = ${language} ORDER BY sort_order
@@ -1846,7 +1851,7 @@ type GospelParallelRow = GospelParallel & {
   language?: string;
 };
 
-export async function getGospelParallels(lang = DEFAULT_CONTENT_LANGUAGE): Promise<GospelParallel[]> {
+export async function getGospelParallels(lang = currentContentLanguage()): Promise<GospelParallel[]> {
   const sql = getSql();
   const parallels = await inLanguage(lang, (language) => sql`
     SELECT p.*, s.name as section_name, s.description as section_description
@@ -1899,7 +1904,7 @@ export async function getGospelParallels(lang = DEFAULT_CONTENT_LANGUAGE): Promi
   return result;
 }
 
-export async function getGospelParallelsData(lang = DEFAULT_CONTENT_LANGUAGE): Promise<GospelParallelsData> {
+export async function getGospelParallelsData(lang = currentContentLanguage()): Promise<GospelParallelsData> {
   return {
     sections: await getGospelParallelSections(lang),
     parallels: await getGospelParallels(lang)
@@ -1908,7 +1913,7 @@ export async function getGospelParallelsData(lang = DEFAULT_CONTENT_LANGUAGE): P
 
 export async function getGospelParallelById(
   id: string,
-  lang = DEFAULT_CONTENT_LANGUAGE,
+  lang = currentContentLanguage(),
 ): Promise<GospelParallel | undefined> {
   const sql = getSql();
   const [parallel] = await inLanguage(lang, (language) => sql`
@@ -1961,7 +1966,7 @@ export async function getGospelParallelById(
 
 export async function getGospelParallelsBySection(
   sectionId: string,
-  lang = DEFAULT_CONTENT_LANGUAGE,
+  lang = currentContentLanguage(),
 ): Promise<GospelParallel[]> {
   const all = await getGospelParallels(lang);
   return all.filter(p => p.section_id === sectionId);
@@ -1970,7 +1975,7 @@ export async function getGospelParallelsBySection(
 export async function getGospelParallelsForChapter(
   bookId: number,
   chapter: number,
-  lang = DEFAULT_CONTENT_LANGUAGE,
+  lang = currentContentLanguage(),
 ): Promise<GospelParallel[]> {
   const sql = getSql();
 
@@ -2318,7 +2323,13 @@ export interface BibleCandidate {
  * Lesbare utgaver (ikke grunntekster) for et innholdsspråk, i fallback-
  * rekkefølge (GitHub #13): contentLanguageChain avgjør språkrekkefølgen, og
  * utgavene oppdages fra bible_editions — et nytt språk trenger altså bare en
- * importert utgave, ingen kodeendring. osnb er alltid siste utvei.
+ * importert utgave, ingen kodeendring.
+ *
+ * Til slutt legges nødløsningene på: osen (basespråket, #26) og osnb bak den.
+ * De er der for tilfellet der bible_editions er tom eller mangler utgaven —
+ * uten dem ville en kapittelside 404-et på et tomt datasett i stedet for å
+ * vise noe. Rekkefølgen speiler gulvet: engelsk først, norsk som absolutt
+ * siste utvei siden den utgaven er eldst og alltid har vært importert.
  */
 export async function readableBibleCandidates(requested: string): Promise<BibleCandidate[]> {
   const sql = getSql();
@@ -2333,7 +2344,8 @@ export async function readableBibleCandidates(requested: string): Promise<BibleC
       if (row.lang === language) result.push({ id: row.id, lang: language });
     }
   }
-  if (!result.some((r) => r.id === 'osnb')) result.push({ id: 'osnb', lang: DEFAULT_CONTENT_LANGUAGE });
+  if (!result.some((r) => r.id === 'osen')) result.push({ id: 'osen', lang: BASE_CONTENT_LANGUAGE });
+  if (!result.some((r) => r.id === 'osnb')) result.push({ id: 'osnb', lang: 'nb' });
   return result;
 }
 
@@ -2414,14 +2426,14 @@ export interface Story {
   content: string;
 }
 
-export async function getAllStories(lang = DEFAULT_CONTENT_LANGUAGE): Promise<Story[]> {
+export async function getAllStories(lang = currentContentLanguage()): Promise<Story[]> {
   const sql = getSql();
   return await inLanguage(lang, (language) => sql`
     SELECT * FROM stories WHERE language = ${language} ORDER BY category, title
   ` as Promise<Story[]>);
 }
 
-export async function getStoryBySlug(slug: string, lang = DEFAULT_CONTENT_LANGUAGE): Promise<Story | undefined> {
+export async function getStoryBySlug(slug: string, lang = currentContentLanguage()): Promise<Story | undefined> {
   const sql = getSql();
   const [row] = await inLanguage(lang, (language) => sql`
     SELECT * FROM stories WHERE slug = ${slug} AND language = ${language}
@@ -2429,7 +2441,7 @@ export async function getStoryBySlug(slug: string, lang = DEFAULT_CONTENT_LANGUA
   return row;
 }
 
-export async function searchStories(query: string, lang = DEFAULT_CONTENT_LANGUAGE): Promise<Story[]> {
+export async function searchStories(query: string, lang = currentContentLanguage()): Promise<Story[]> {
   if (!query || query.length < 2) return [];
   const sql = getSql();
 
@@ -2451,7 +2463,7 @@ export async function searchStories(query: string, lang = DEFAULT_CONTENT_LANGUA
   ) as Promise<Story[]>);
 }
 
-export async function searchThemes(query: string, lang = DEFAULT_CONTENT_LANGUAGE): Promise<Theme[]> {
+export async function searchThemes(query: string, lang = currentContentLanguage()): Promise<Theme[]> {
   if (!query || query.length < 2) return [];
   const sql = getSql();
 
@@ -2472,7 +2484,7 @@ export async function searchThemes(query: string, lang = DEFAULT_CONTENT_LANGUAG
   ) as Promise<Theme[]>);
 }
 
-export async function getStoriesByCategory(category: string, lang = DEFAULT_CONTENT_LANGUAGE): Promise<Story[]> {
+export async function getStoriesByCategory(category: string, lang = currentContentLanguage()): Promise<Story[]> {
   const sql = getSql();
   return await inLanguage(lang, (language) => sql`
     SELECT * FROM stories WHERE category = ${category} AND language = ${language} ORDER BY title
@@ -2490,7 +2502,7 @@ export interface PersonSearchResult {
   roles: string[];
 }
 
-export async function searchPersons(query: string, lang = DEFAULT_CONTENT_LANGUAGE): Promise<PersonSearchResult[]> {
+export async function searchPersons(query: string, lang = currentContentLanguage()): Promise<PersonSearchResult[]> {
   if (!query || query.length < 2) return [];
   const sql = getSql();
 
@@ -2536,7 +2548,7 @@ export interface ProphecySearchResult {
 
 export async function searchProphecies(
   query: string,
-  lang = DEFAULT_CONTENT_LANGUAGE,
+  lang = currentContentLanguage(),
 ): Promise<ProphecySearchResult[]> {
   if (!query || query.length < 2) return [];
   const sql = getSql();
@@ -2575,7 +2587,7 @@ export interface TimelineSearchResult {
 
 export async function searchTimelineEvents(
   query: string,
-  lang = DEFAULT_CONTENT_LANGUAGE,
+  lang = currentContentLanguage(),
 ): Promise<TimelineSearchResult[]> {
   if (!query || query.length < 2) return [];
   const sql = getSql();
@@ -2610,7 +2622,7 @@ export interface GospelParallelSearchResult {
 
 export async function searchGospelParallels(
   query: string,
-  lang = DEFAULT_CONTENT_LANGUAGE,
+  lang = currentContentLanguage(),
 ): Promise<GospelParallelSearchResult[]> {
   if (!query || query.length < 2) return [];
   const sql = getSql();
@@ -2646,7 +2658,7 @@ export interface ReadingPlanSearchResult {
 
 export async function searchReadingPlans(
   query: string,
-  lang = DEFAULT_CONTENT_LANGUAGE,
+  lang = currentContentLanguage(),
 ): Promise<ReadingPlanSearchResult[]> {
   if (!query || query.length < 2) return [];
   const sql = getSql();
@@ -2680,7 +2692,7 @@ export interface ImportantWordSearchResult {
 
 export async function searchImportantWords(
   query: string,
-  lang = DEFAULT_CONTENT_LANGUAGE,
+  lang = currentContentLanguage(),
 ): Promise<ImportantWordSearchResult[]> {
   if (!query || query.length < 2) return [];
   const sql = getSql();
@@ -2716,7 +2728,7 @@ export interface NumberSymbolismSearchResult {
 
 export async function searchNumberSymbolism(
   query: string,
-  lang = DEFAULT_CONTENT_LANGUAGE,
+  lang = currentContentLanguage(),
 ): Promise<NumberSymbolismSearchResult[]> {
   const sql = getSql();
 
@@ -2822,7 +2834,7 @@ export interface ReadingTextWithSlots extends ReadingText {
 /** @deprecated transitional alias — prefer ReadingTextWithSlots */
 export type ReadingTextWithRefs = ReadingTextWithSlots;
 
-export async function getAllReadingTexts(lang = DEFAULT_CONTENT_LANGUAGE): Promise<ReadingText[]> {
+export async function getAllReadingTexts(lang = currentContentLanguage()): Promise<ReadingText[]> {
   const sql = getSql();
   return await inLanguage(lang, (language) => sql`
     SELECT * FROM reading_texts WHERE language = ${language} ORDER BY date
@@ -2890,7 +2902,7 @@ export async function getReadingTextById(id: number): Promise<ReadingTextWithSlo
 
 export async function getReadingTextsByDate(
   date: string,
-  lang = DEFAULT_CONTENT_LANGUAGE,
+  lang = currentContentLanguage(),
 ): Promise<ReadingTextWithSlots[]> {
   const sql = getSql();
   const texts = await inLanguage(lang, (language) => sql`
@@ -2906,12 +2918,12 @@ export async function getReadingTextsByDate(
   return result;
 }
 
-export async function getTodaysReadingTexts(lang = DEFAULT_CONTENT_LANGUAGE): Promise<ReadingTextWithSlots[]> {
+export async function getTodaysReadingTexts(lang = currentContentLanguage()): Promise<ReadingTextWithSlots[]> {
   const today = new Date().toISOString().substring(0, 10);
   return getReadingTextsByDate(today, lang);
 }
 
-export async function getReadingTextsByChapter(bookId: number, chapter: number, lang = DEFAULT_CONTENT_LANGUAGE): Promise<{
+export async function getReadingTextsByChapter(bookId: number, chapter: number, lang = currentContentLanguage()): Promise<{
   id: number;
   name: string;
   date: string;
@@ -2933,7 +2945,7 @@ export async function getReadingTextsByChapter(bookId: number, chapter: number, 
 
 export async function searchReadingTexts(
   query: string,
-  lang = DEFAULT_CONTENT_LANGUAGE,
+  lang = currentContentLanguage(),
 ): Promise<{ id: number; name: string; date: string; series: string | null }[]> {
   const sql = getSql();
   const words = query.toLowerCase().split(/\s+/).filter(w => w.length >= 2);
