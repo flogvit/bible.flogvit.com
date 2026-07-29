@@ -33,6 +33,7 @@ import {
 import { enrichWithVerseText, getReadingType } from '../../lib/reading-text-enrich.ts';
 import { toUrlSlug } from '../../lib/url-utils.ts';
 import { layoutProps, tFor, lhref } from '../../lib/i18n.ts';
+import { tCtx } from '../../lib/i18n.ts';
 
 const r = new Hono<AppEnv>();
 
@@ -124,8 +125,8 @@ r.get('/oversettelser/:id', async (c) => {
         <div class="container">
           <Breadcrumbs
             items={[
-              { label: 'Hjem', href: '/' },
-              { label: 'Oversettelser', href: '/oversettelser' },
+              { label: tCtx()('common.home'), href: '/' },
+              { label: tCtx()('nav.translations'), href: '/oversettelser' },
               { label: edition.abbreviation ?? name },
             ]}
           />
@@ -309,7 +310,7 @@ r.get('/kjente-vers', async (c) => {
     >
       <div class="overview-main">
         <div class="container">
-          <Breadcrumbs items={[{ label: 'Hjem', href: '/' }, { label: 'Kjente vers' }]} />
+          <Breadcrumbs items={[{ label: tCtx()('common.home'), href: '/' }, { label: tCtx()('nav.knownVerses') }]} />
           <header>
             <h1>{t('kv.title')}</h1>
             <p class="overview-intro">
@@ -371,7 +372,7 @@ r.get('/lesetekster', async (c) => {
     >
       <div class="overview-main">
         <div class="reading-container">
-          <Breadcrumbs items={[{ label: 'Hjem', href: '/' }, { label: 'Lesetekster' }]} />
+          <Breadcrumbs items={[{ label: tCtx()('common.home'), href: '/' }, { label: tCtx()('nav.readingTexts') }]} />
           <h1>{t('nav.readingTexts')}</h1>
           <p class="overview-intro">
             Lesetekster fra Den norske kirkes tekstrekkesystem. Hver søndag og helligdag har tre
@@ -436,8 +437,8 @@ r.get('/lesetekster/:id', async (c) => {
         <div class="reading-container">
           <Breadcrumbs
             items={[
-              { label: 'Hjem', href: '/' },
-              { label: 'Lesetekster', href: '/lesetekster' },
+              { label: tCtx()('common.home'), href: '/' },
+              { label: tCtx()('nav.readingTexts'), href: '/lesetekster' },
               { label: text.name },
             ]}
           />
@@ -524,7 +525,7 @@ r.get('/profetier', async (c) => {
     >
       <div class="overview-main">
         <div class="reading-container">
-          <Breadcrumbs items={[{ label: 'Hjem', href: '/' }, { label: 'Profetier' }]} />
+          <Breadcrumbs items={[{ label: tCtx()('common.home'), href: '/' }, { label: tCtx()('nav.prophecies') }]} />
           <h1>{t('pr.title')}</h1>
           <p class="overview-intro">
             En oversikt over profetier i Det gamle testamente og hvordan de ble oppfylt i Det nye
@@ -642,7 +643,7 @@ r.get('/paralleller', async (c) => {
     >
       <div class="overview-main">
         <div class="container">
-          <Breadcrumbs items={[{ label: 'Hjem', href: '/' }, { label: 'Paralleller' }]} />
+          <Breadcrumbs items={[{ label: tCtx()('common.home'), href: '/' }, { label: tCtx()('nav.parallels') }]} />
           <h1>{t('pa.title')}</h1>
           <p class="overview-intro">
             Sammenlign parallelle tekster fra de fire evangeliene. Mange av Jesu ord og gjerninger
@@ -740,7 +741,7 @@ r.get('/tidslinje', async (c) => {
     >
       <div class="overview-main">
         <div class="reading-container">
-          <Breadcrumbs items={[{ label: 'Hjem', href: '/' }, { label: 'Tidslinje' }]} />
+          <Breadcrumbs items={[{ label: tCtx()('common.home'), href: '/' }, { label: tCtx()('nav.timeline') }]} />
           <h1>{t('tl.title')}</h1>
           <p class="overview-intro">
             En kronologisk oversikt over de viktigste hendelsene i Bibelen og verdenshistorien, fra
@@ -860,7 +861,7 @@ r.get('/statistikk', async (c) => {
     >
       <div class="overview-main">
         <div class="container">
-          <Breadcrumbs items={[{ label: 'Hjem', href: '/' }, { label: 'Statistikk' }]} />
+          <Breadcrumbs items={[{ label: tCtx()('common.home'), href: '/' }, { label: tCtx()('nav.statistics') }]} />
           <h1>{t('st.title')}</h1>
 
           <section class="overview-section">

@@ -29,6 +29,7 @@ import {
 import { getBookInfoById, bookName } from '../../lib/books-data.ts';
 import { toUrlSlug } from '../../lib/url-utils.ts';
 import { layoutProps, tFor, lhref, currentIntlTag, tEnum, type Translator } from '../../lib/i18n.ts';
+import { tCtx } from '../../lib/i18n.ts';
 
 const r = new Hono<AppEnv>();
 
@@ -76,7 +77,7 @@ r.get('/temaer', async (c) => {
     <Layout {...layoutProps(c)} title={`${t('themes.title')} — FLOGVIT.bible`} description={t('themes.meta')} styles={['study.css']} scripts={['card-filter.js']}>
       <div class="study-main">
         <div class="container">
-          <Breadcrumbs items={[{ label: 'Hjem', href: '/' }, { label: 'Temaer' }]} />
+          <Breadcrumbs items={[{ label: tCtx()('common.home'), href: '/' }, { label: tCtx()('nav.themes') }]} />
           <h1>{t('themes.title')}</h1>
           <div class="study-search-container">
             <input type="text" class="study-search-input" data-card-search placeholder={t('themes.searchPh')} aria-label="Søk etter tema" autocomplete="off" />
@@ -115,7 +116,7 @@ r.get('/temaer/:tema', async (c) => {
     <Layout {...layoutProps(c)} title={`${title} — FLOGVIT.bible`} description={json?.introduction?.slice(0, 155) || `Tematisk bibelstudie: ${title}`} styles={['study.css']} scripts={['tagging.js']}>
       <div class="study-main">
         <div class="reading-container">
-          <Breadcrumbs items={[{ label: 'Hjem', href: '/' }, { label: 'Temaer', href: '/temaer' }, { label: title }]} />
+          <Breadcrumbs items={[{ label: tCtx()('common.home'), href: '/' }, { label: tCtx()('nav.themes'), href: '/temaer' }, { label: title }]} />
           <h1>{title}</h1>
           <div class="study-tagging"><ItemTagging itemType="theme" itemId={tema} /></div>
 
@@ -180,7 +181,7 @@ r.get('/historier', async (c) => {
     <Layout {...layoutProps(c)} title={`${t('stories.title')} — FLOGVIT.bible`} description={t('stories.meta')} styles={['study.css']} scripts={['card-filter.js']}>
       <div class="study-main">
         <div class="container">
-          <Breadcrumbs items={[{ label: 'Hjem', href: '/' }, { label: 'Bibelhistorier' }]} />
+          <Breadcrumbs items={[{ label: tCtx()('common.home'), href: '/' }, { label: tCtx()('nav.stories') }]} />
           <h1>{t('stories.title')}</h1>
           <div class="study-search-container">
             <input type="text" class="study-search-input" data-card-search placeholder={t('stories.searchPh')} aria-label="Søk etter historie" autocomplete="off" />
@@ -227,7 +228,7 @@ r.get('/historier/:slug', async (c) => {
     <Layout {...layoutProps(c)} title={`${data.title} — FLOGVIT.bible`} description={data.description?.slice(0, 155)} styles={['study.css']} scripts={['tagging.js']}>
       <div class="study-main">
         <div class="reading-container">
-          <Breadcrumbs items={[{ label: 'Hjem', href: '/' }, { label: 'Bibelhistorier', href: '/historier' }, { label: data.title }]} />
+          <Breadcrumbs items={[{ label: tCtx()('common.home'), href: '/' }, { label: tCtx()('nav.stories'), href: '/historier' }, { label: data.title }]} />
           <span class="study-card-cat">{storyCat(t, data.category)}</span>
           <h1>{data.title}</h1>
           {data.description && (
@@ -289,7 +290,7 @@ r.get('/tall', async (c) => {
     <Layout {...layoutProps(c)} title={`${t('nav.numbers')} — FLOGVIT.bible`} description={t('numbers.meta')} styles={['study.css']} scripts={['card-filter.js']}>
       <div class="study-main">
         <div class="container">
-          <Breadcrumbs items={[{ label: 'Hjem', href: '/' }, { label: 'Tall' }]} />
+          <Breadcrumbs items={[{ label: tCtx()('common.home'), href: '/' }, { label: tCtx()('nav.numbers') }]} />
           <h1>{t('numbers.title')}</h1>
           <div class="study-search-container">
             <input type="text" class="study-search-input" data-card-search placeholder={t('numbers.searchPh')} aria-label="Søk" autocomplete="off" />
@@ -338,7 +339,7 @@ r.get('/tall/:number', async (c) => {
     <Layout {...layoutProps(c)} title={`Tallet ${data.number}: ${data.meaning} — FLOGVIT.bible`} description={data.description.slice(0, 155)} styles={['study.css']} scripts={['tagging.js']}>
       <div class="study-main">
         <div class="reading-container">
-          <Breadcrumbs items={[{ label: 'Hjem', href: '/' }, { label: 'Tall', href: '/tall' }, { label: `Tallet ${data.number}` }]} />
+          <Breadcrumbs items={[{ label: tCtx()('common.home'), href: '/' }, { label: tCtx()('nav.numbers'), href: '/tall' }, { label: `Tallet ${data.number}` }]} />
           <div class="study-number-header">
             <span class="study-big-number">{data.number}</span>
             <h1>{data.meaning}</h1>
@@ -426,7 +427,7 @@ r.get('/dager', async (c) => {
     <Layout {...layoutProps(c)} title={`${t('days.title')} — FLOGVIT.bible`} description={t('days.meta')} styles={['study.css']} scripts={['card-filter.js']}>
       <div class="study-main">
         <div class="container">
-          <Breadcrumbs items={[{ label: 'Hjem', href: '/' }, { label: 'Dager' }]} />
+          <Breadcrumbs items={[{ label: tCtx()('common.home'), href: '/' }, { label: tCtx()('nav.days') }]} />
           <h1>{t('days.title')}</h1>
           <nav class="study-view-tabs" aria-label="Visning">
             <a href={lhref('/dager')} class={`study-view-tab ${thematic ? '' : 'is-active'}`} aria-current={thematic ? undefined : 'true'}>{t('days.chronological')}</a>
@@ -491,7 +492,7 @@ r.get('/dager/:dayId', async (c) => {
     <Layout {...layoutProps(c)} title={`${data.name} — FLOGVIT.bible`} description={data.description.slice(0, 155)} styles={['study.css']} scripts={['tagging.js']}>
       <div class="study-main">
         <div class="reading-container">
-          <Breadcrumbs items={[{ label: 'Hjem', href: '/' }, { label: 'Dager', href: '/dager' }, { label: data.name }]} />
+          <Breadcrumbs items={[{ label: tCtx()('common.home'), href: '/' }, { label: tCtx()('nav.days'), href: '/dager' }, { label: data.name }]} />
           <header class="study-day-header">
             <h1>{data.name}</h1>
             <div class="study-day-meta">

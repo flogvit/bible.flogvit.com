@@ -19,6 +19,7 @@ import {
 } from '../../lib/bible.ts';
 import { bookNameById } from '../../lib/books-data.ts';
 import { layoutProps, tFor, lhref, tEnum, type Translator } from '../../lib/i18n.ts';
+import { tCtx } from '../../lib/i18n.ts';
 
 const r = new Hono<AppEnv>();
 
@@ -199,8 +200,8 @@ r.get('/personer/:personId', async (c) => {
         <div class="reading-container">
           <Breadcrumbs
             items={[
-              { label: 'Hjem', href: '/' },
-              { label: 'Personer', href: '/personer' },
+              { label: tCtx()('common.home'), href: '/' },
+              { label: tCtx()('nav.persons'), href: '/personer' },
               { label: person.name },
             ]}
           />

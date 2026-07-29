@@ -19,7 +19,8 @@ import { getUserItems, getUserSingleton, getReadingProgress } from '../../lib/us
 import { summarizeProgress, fullHeat, stalestBooks } from '../../lib/reading-map.ts';
 import { getBibleEditions } from '../../lib/bible.ts';
 import { getAvailableMappings } from '../../lib/verse-mapper.ts';
-import { layoutProps, makeT, tFor, type Locale, lhref } from '../../lib/i18n.ts';
+import { layoutProps, makeT, tFor, type Locale, type MessageKey, lhref } from '../../lib/i18n.ts';
+import { tCtx } from '../../lib/i18n.ts';
 
 const r = new Hono<AppEnv>();
 
@@ -46,7 +47,7 @@ function UserPage(props: {
     >
       <div class="user-main">
         <div class={props.wide ? 'container' : 'reading-container'}>
-          <Breadcrumbs items={[{ label: 'Hjem', href: '/' }, { label: props.crumb }]} />
+          <Breadcrumbs items={[{ label: tCtx()('common.home'), href: '/' }, { label: props.crumb }]} />
           <h1>{props.heading}</h1>
           {props.intro && <p class="user-intro">{props.intro}</p>}
           <div data-user-page={props.page}>{props.children}</div>
@@ -90,7 +91,7 @@ r.get('/favoritter', async (c) => {
     ).filter((x): x is NonNullable<typeof x> => x !== null);
   }
   return c.html(
-    <UserPage {...layoutProps(c)} title={t('nav.favorites')} crumb={t('nav.favorites')} heading={t('u.favVerses')} page="favorites" intro="Dine merkede vers. Husking er en del av FLOGVIT.plus.">
+    <UserPage {...layoutProps(c)} title={t('nav.favorites')} crumb={t('nav.favorites')} heading={t('u.favVerses')} page="favorites" intro={t('u.favIntro')}>
       <div class="user-list" data-list>
         {cards.map((card) => (
           <a class="user-card" href={lhref(card.href)}>
@@ -99,7 +100,7 @@ r.get('/favoritter', async (c) => {
           </a>
         ))}
       </div>
-      <p class="user-empty" data-empty hidden={cards.length > 0}>Du har ingen favoritter ennå. Klikk hjertet på et vers for å legge det til.</p>
+      <p class="user-empty" data-empty hidden={cards.length > 0}>{t('u.favEmpty')}</p>
     </UserPage>,
   );
 });
@@ -284,7 +285,7 @@ r.get('/leseplan', async (c) => {
     <Layout {...layoutProps(c)} title={`${t('home.readingPlans')} — FLOGVIT.bible`} description="Ulike planer for systematisk bibellesing." styles={['user.css']} scripts={['user.js']}>
       <div class="user-main">
         <div class="reading-container">
-          <Breadcrumbs items={[{ label: 'Hjem', href: '/' }, { label: 'Leseplan' }]} />
+          <Breadcrumbs items={[{ label: tCtx()('common.home'), href: '/' }, { label: tCtx()('nav.readingPlan') }]} />
           <h1>{t('home.readingPlans')}</h1>
           <p class="user-intro">
             Velg en plan for systematisk bibellesing. Fremdrift og rekke lagres i nettleseren og
@@ -302,7 +303,7 @@ r.get('/leseplan', async (c) => {
                   </div>
                   <div class="plan-actions">
                     <button type="button" class="user-btn plan-activate" data-plan={p.id}>
-                      {activePlan === p.id ? 'Aktiv plan' : 'Velg denne'}
+                      {activePlan === p.id ? t('u.activePlan') : t('u.choosePlanThis')}
                     </button>
                     <span class="plan-active-badge" hidden={activePlan !== p.id}>{t('u.active')}</span>
                   </div>
@@ -348,7 +349,7 @@ function DevotionalEditor(props: { slug?: string; locale: Locale; path: string }
     <Layout locale={props.locale} path={props.path} title={`${t('u.editManuscript')} — FLOGVIT.bible`} description="Skriv andakt, preken eller bibeltime." styles={['user.css']} scripts={['user.js']}>
       <div class="user-main">
         <div class="container">
-          <Breadcrumbs items={[{ label: 'Hjem', href: '/' }, { label: 'Manuskripter', href: '/manuskripter' }, { label: props.slug ? 'Rediger' : 'Nytt' }]} />
+          <Breadcrumbs items={[{ label: tCtx()('common.home'), href: '/' }, { label: tCtx()('nav.manuscripts'), href: '/manuskripter' }, { label: props.slug ? 'Rediger' : 'Nytt' }]} />
           <h1 class="sr-only">{props.slug ? 'Rediger manuskript' : 'Nytt manuskript'}</h1>
           <div data-user-page="devotional-editor" data-slug={props.slug || ''}>
             <div class="editor-head">
@@ -380,7 +381,7 @@ r.get('/manuskripter/:slug', (c) => {
     <Layout {...layoutProps(c)} title={`${t('nav.manuscripts')} — FLOGVIT.bible`} description="Manuskript." styles={['user.css']} scripts={['user.js']}>
       <div class="user-main">
         <div class="reading-container">
-          <Breadcrumbs items={[{ label: 'Hjem', href: '/' }, { label: 'Manuskripter', href: '/manuskripter' }, { label: '…' }]} />
+          <Breadcrumbs items={[{ label: tCtx()('common.home'), href: '/' }, { label: tCtx()('nav.manuscripts'), href: '/manuskripter' }, { label: '…' }]} />
           <div data-user-page="devotional-view" data-slug={c.req.param('slug')}>
             <article class="devotional-article" data-article></article>
             <p class="user-empty" data-empty hidden>{t('u.manuscriptNotFound')}</p>
@@ -392,45 +393,35 @@ r.get('/manuskripter/:slug', (c) => {
 });
 
 // ---------- /innstillinger ----------
-const TOGGLES: { key: string; label: string }[] = [
-  { key: 'showBookSummary', label: 'Vis boksammendrag' },
-  { key: 'showChapterSummary', label: 'Vis kapittelsammendrag' },
-  { key: 'showChapterContext', label: 'Vis historisk kontekst' },
-  { key: 'showChapterInsights', label: 'Vis kapittelinnsikter' },
-  { key: 'showImportantWords', label: 'Vis viktige ord i sidepanelet' },
-  { key: 'showVerseDetails', label: 'Åpne versdetaljer ved klikk på vers' },
-  { key: 'showWord4Word', label: 'Vis ord-for-ord (grunntekst)' },
-  { key: 'showOriginalText', label: 'Vis grunntekst under vers' },
-  { key: 'showTimeline', label: 'Vis tidslinje i sidepanel' },
-  { key: 'showParallels', label: 'Vis parallelle tekster' },
-  { key: 'showDailyVerse', label: 'Vis dagens vers på forsiden' },
-  { key: 'showTodaysDay', label: 'Vis dagens helligdag på forsiden' },
-  { key: 'showReadingTexts', label: 'Vis dagens lesetekst på forsiden' },
-  { key: 'showVerseFootnotes', label: 'Vis fotnoter' },
-  { key: 'copyVerseNumbers', label: 'Ta med versnummer ved kopiering' },
-  { key: 'showContinueReading', label: 'Vis «fortsett lesing» på forsiden' },
-];
+const TOGGLE_KEYS = [
+  'showBookSummary', 'showChapterSummary', 'showChapterContext', 'showChapterInsights',
+  'showImportantWords', 'showVerseDetails', 'showWord4Word', 'showOriginalText',
+  'showTimeline', 'showParallels', 'showDailyVerse', 'showTodaysDay', 'showReadingTexts',
+  'showVerseFootnotes', 'copyVerseNumbers', 'showContinueReading',
+] as const;
 
 // Søkeresultat-typer (GitHub #2) — samme nøkler som gamle appen
 // (bible-settings.searchResultTypes.*, default på).
-const SEARCH_TYPE_TOGGLES: { key: string; label: string }[] = [
-  { key: 'stories', label: 'Bibelhistorier' },
-  { key: 'themes', label: 'Temaer' },
-  { key: 'persons', label: 'Personer' },
-  { key: 'prophecies', label: 'Profetier' },
-  { key: 'timeline', label: 'Tidslinje' },
-  { key: 'parallels', label: 'Evangelieparalleller' },
-  { key: 'plans', label: 'Leseplaner' },
-  { key: 'words', label: 'Viktige ord' },
-  { key: 'numberSymbolism', label: 'Tall' },
-  { key: 'days', label: 'Dager' },
+// Etikettene gjenbruker nav-nøklene der de finnes — samme ord i menyen og i
+// innstillingene skal ikke oversettes to steder.
+const SEARCH_TYPE_TOGGLES: { key: string; label: MessageKey }[] = [
+  { key: 'stories', label: 'nav.stories' },
+  { key: 'themes', label: 'nav.themes' },
+  { key: 'persons', label: 'nav.persons' },
+  { key: 'prophecies', label: 'nav.prophecies' },
+  { key: 'timeline', label: 'nav.timeline' },
+  { key: 'parallels', label: 'nav.parallels' },
+  { key: 'plans', label: 'set.type.plans' },
+  { key: 'words', label: 'set.type.words' },
+  { key: 'numberSymbolism', label: 'nav.numbers' },
+  { key: 'days', label: 'nav.days' },
 ];
 r.get('/innstillinger', (c) => {
   const t = tFor(c);
   const user = c.var.user;
   const mappings = getAvailableMappings();
   return c.html(
-    <UserPage {...layoutProps(c)} title={t('chrome.settings')} crumb={t('chrome.settings')} heading={t('chrome.settings')} page="settings" intro="Lagres i nettleseren; innlogget synker de mot kontoen din.">
+    <UserPage {...layoutProps(c)} title={t('chrome.settings')} crumb={t('chrome.settings')} heading={t('chrome.settings')} page="settings" intro={t('set.intro')}>
       <form data-settings-form class="settings-form">
         <fieldset class="settings-group">
           <legend>{t('settings.appearance')}</legend>
@@ -561,20 +552,22 @@ r.get('/innstillinger', (c) => {
               <option value="panel">{t('u.panelMode')}</option>
             </select>
           </label>
-          {TOGGLES.map((t) => (
+          {/* Løkkevariabelen het `t` og skygget oversetteren — derfor kunne
+              etikettene aldri ha vært annet enn hardkodet her (#22). */}
+          {TOGGLE_KEYS.map((key) => (
             <label class="settings-toggle">
-              <input type="checkbox" data-setting={t.key} />
-              <span>{t.label}</span>
+              <input type="checkbox" data-setting={key} />
+              <span>{t(`set.${key}`)}</span>
             </label>
           ))}
         </fieldset>
         <fieldset class="settings-group">
           <legend>{t('u.searchResults')}</legend>
-          <p class="user-note">Velg hvilke resultattyper som vises på søkesiden i tillegg til bibelteksten.</p>
-          {SEARCH_TYPE_TOGGLES.map((t) => (
+          <p class="user-note">{t('set.searchTypesHelp')}</p>
+          {SEARCH_TYPE_TOGGLES.map((type) => (
             <label class="settings-toggle">
-              <input type="checkbox" data-setting={`searchResultTypes.${t.key}`} />
-              <span>{t.label}</span>
+              <input type="checkbox" data-setting={`searchResultTypes.${type.key}`} />
+              <span>{t(type.label)}</span>
             </label>
           ))}
         </fieldset>
@@ -674,7 +667,7 @@ r.get('/oversettelser', async (c) => {
       crumb="Oversettelser"
       heading="Oversettelser"
       page="translations"
-      intro="Innebygde oversettelser og dine egne opplastede bibler."
+      intro={t('tr.intro')}
       styles={['translations.css']}
       scripts={['translations.js']}
     >
@@ -696,7 +689,7 @@ r.get('/oversettelser', async (c) => {
       <section class="trans-section">
         <h2>{t('u.yourTranslations')}</h2>
         <div class="user-list" data-trans-list></div>
-        <p class="user-empty" data-trans-empty hidden>Du har ikke lastet opp egne oversettelser ennå.</p>
+        <p class="user-empty" data-trans-empty hidden>{t('tr.noneUploaded')}</p>
       </section>
 
       <section class="trans-section" data-trans-upload>

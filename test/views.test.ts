@@ -5,6 +5,7 @@
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { Hono } from 'hono';
+import { contextStorage } from 'hono/context-storage';
 import { initBooks } from '../src/lib/bible.ts';
 import { closeSql } from '../src/lib/db.ts';
 import { Footnotes } from '../src/views/footnotes.tsx';
@@ -51,7 +52,13 @@ app.get('/verse-ref-list', async (c) =>
   c.html(await VerseRefList({ refs: [{ bookId: 1, chapter: 1, verses: [1, 2] }] })),
 );
 
+app.use('*', contextStorage());
 app.get('/tagging', (c) => c.html(ItemTagging({ itemType: 'person', itemId: 'moses' })));
+// Samme komponent under en locale — den henter oversetteren fra konteksten.
+app.get('/nb/tagging', (c) => {
+  c.set('locale' as never, 'nb' as never);
+  return c.html(ItemTagging({ itemType: 'person', itemId: 'moses' }));
+});
 
 beforeAll(async () => {
   await initBooks();
@@ -153,6 +160,12 @@ describe('ItemTagging', () => {
     expect(html).toContain('data-item-id="moses"');
     expect(html).toContain('class="item-tagging"');
     expect(html).toContain('<noscript>');
+    // Uten locale i konteksten faller komponenten til basespråket (#22).
+    expect(html).toContain('Topics require JavaScript.');
+  });
+
+  test('teksten følger locale — den er ikke hardkodet', async () => {
+    const html = await (await app.request('/nb/tagging')).text();
     expect(html).toContain('Emner krever JavaScript.');
   });
 });

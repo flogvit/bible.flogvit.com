@@ -31,6 +31,7 @@ import { DEFAULT_CONTENT_LANGUAGE } from '../../lib/lang.ts';
 import { booksData, getBookInfoById, bookName, bookNameById, bookNameByShort, type BookInfo } from '../../lib/books-data.ts';
 import { toUrlSlug } from '../../lib/url-utils.ts';
 import { layoutProps, tFor, type Translator, lhref } from '../../lib/i18n.ts';
+import { tCtx } from '../../lib/i18n.ts';
 
 const r = new Hono<AppEnv>();
 
@@ -131,7 +132,7 @@ r.get('/', async (c) => {
 
   return c.html(
     <Layout {...layoutProps(c)}
-      title="FLOGVIT.bible — Bibelen på nett"
+      title={`FLOGVIT.bible — ${t('home.metaTitle')}`}
       description="Les, studér og søk i Bibelen med grunntekst, kryssreferanser, tidslinje, temaer og personer."
       styles={['home.css']}
       scripts={['home.js']}
@@ -293,7 +294,8 @@ function trunc(text: string | null | undefined, max = 100): string | undefined {
 }
 
 /** Én resultatseksjon; skjules per brukerinnstilling av search.js (data-search-type). */
-function ExtraSection({ title, typeKey, cards, moreLabel }: { title: string; typeKey: string; cards: ExtraCard[]; moreLabel: string }) {
+function ExtraSection({ title, typeKey, cards }: { title: string; typeKey: string; cards: ExtraCard[] }) {
+  const t = tCtx();
   if (cards.length === 0) return null;
   const Card = ({ card }: { card: ExtraCard }) => (
     <a href={lhref(card.href)} class="search-extra-card">
@@ -315,7 +317,7 @@ function ExtraSection({ title, typeKey, cards, moreLabel }: { title: string; typ
       </div>
       {cards.length > EXTRA_MAX && (
         <details class="search-extra-more">
-          <summary>Vis alle {cards.length} {moreLabel}</summary>
+          <summary>{t('search.more')} ({cards.length})</summary>
           <div class="search-extra-cards">
             {cards.slice(EXTRA_MAX).map((card) => (
               <Card card={card} />
@@ -340,46 +342,47 @@ async function loadExtraResults(query: string) {
     searchNumberSymbolism(query),
     searchDays(query),
   ]);
-  const sections: { title: string; typeKey: string; moreLabel: string; cards: ExtraCard[] }[] = [
+  const t = tCtx();
+  const sections: { title: string; typeKey: string; cards: ExtraCard[] }[] = [
     {
-      title: 'Bibelhistorier', typeKey: 'stories', moreLabel: 'historier',
+      title: t('nav.stories'), typeKey: 'stories',
       cards: stories.map((s) => ({ href: `/historier/${s.slug}`, title: s.title, desc: trunc(s.description) })),
     },
     {
-      title: 'Temaer', typeKey: 'themes', moreLabel: 'temaer',
+      title: t('nav.themes'), typeKey: 'themes',
       cards: themes.map((t) => ({ href: `/temaer/${encodeURIComponent(t.name)}`, title: t.name })),
     },
     {
-      title: 'Personer', typeKey: 'persons', moreLabel: 'personer',
-      cards: persons.map((p) => ({ href: `/personer/${p.id}`, title: p.name, badge: 'Person', meta: p.title || undefined, desc: trunc(p.summary) })),
+      title: t('nav.persons'), typeKey: 'persons',
+      cards: persons.map((p) => ({ href: `/personer/${p.id}`, title: p.name, badge: t('badge.person'), meta: p.title || undefined, desc: trunc(p.summary) })),
     },
     {
-      title: 'Profetier', typeKey: 'prophecies', moreLabel: 'profetier',
-      cards: prophecies.map((p) => ({ href: '/profetier', title: p.title, badge: 'Profeti', meta: `${p.category_name} · ${p.prophecy_ref}`, desc: trunc(p.explanation) })),
+      title: t('nav.prophecies'), typeKey: 'prophecies',
+      cards: prophecies.map((p) => ({ href: '/profetier', title: p.title, badge: t('badge.prophecy'), meta: `${p.category_name} · ${p.prophecy_ref}`, desc: trunc(p.explanation) })),
     },
     {
-      title: 'Tidslinje', typeKey: 'timeline', moreLabel: 'hendelser',
-      cards: timeline.map((e) => ({ href: '/tidslinje', title: e.title, badge: 'Tidslinje', meta: e.year_display || undefined, desc: trunc(e.description) })),
+      title: t('nav.timeline'), typeKey: 'timeline',
+      cards: timeline.map((e) => ({ href: '/tidslinje', title: e.title, badge: t('badge.timeline'), meta: e.year_display || undefined, desc: trunc(e.description) })),
     },
     {
-      title: 'Evangelieparalleller', typeKey: 'parallels', moreLabel: 'paralleller',
-      cards: parallels.map((p) => ({ href: '/paralleller', title: p.title, badge: 'Parallell', meta: p.section_name })),
+      title: t('nav.parallels'), typeKey: 'parallels',
+      cards: parallels.map((p) => ({ href: '/paralleller', title: p.title, badge: t('badge.parallel'), meta: p.section_name })),
     },
     {
-      title: 'Leseplaner', typeKey: 'plans', moreLabel: 'leseplaner',
-      cards: plans.map((p) => ({ href: '/leseplan', title: p.name, badge: 'Leseplan', meta: p.category ? `${p.category} · ${p.days} dager` : undefined, desc: trunc(p.description) })),
+      title: t('set.type.plans'), typeKey: 'plans',
+      cards: plans.map((p) => ({ href: '/leseplan', title: p.name, badge: t('badge.readingPlan'), meta: p.category ? `${p.category} · ${p.days} dager` : undefined, desc: trunc(p.description) })),
     },
     {
-      title: 'Viktige ord', typeKey: 'words', moreLabel: 'viktige ord',
-      cards: words.map((w) => ({ href: `/${toUrlSlug(w.book_short_name)}/${w.chapter}`, title: w.word, badge: 'Viktig ord', meta: `${bookNameByShort(w.book_short_name)} ${w.chapter}`, desc: trunc(w.explanation) })),
+      title: t('set.type.words'), typeKey: 'words',
+      cards: words.map((w) => ({ href: `/${toUrlSlug(w.book_short_name)}/${w.chapter}`, title: w.word, badge: t('badge.keyWord'), meta: `${bookNameByShort(w.book_short_name)} ${w.chapter}`, desc: trunc(w.explanation) })),
     },
     {
-      title: 'Tall', typeKey: 'numberSymbolism', moreLabel: 'tall',
-      cards: numbers.map((n) => ({ href: `/tall/${n.number}`, title: `Tallet ${n.number}`, badge: 'Tall', meta: n.meaning, desc: trunc(n.description) })),
+      title: t('nav.numbers'), typeKey: 'numberSymbolism',
+      cards: numbers.map((n) => ({ href: `/tall/${n.number}`, title: t('num.theNumber', { n: n.number }), badge: t('badge.number'), meta: n.meaning, desc: trunc(n.description) })),
     },
     {
-      title: 'Dager', typeKey: 'days', moreLabel: 'dager',
-      cards: days.map((d) => ({ href: `/dager/${d.id}`, title: d.name, badge: 'Dag', desc: trunc(d.description) })),
+      title: t('nav.days'), typeKey: 'days',
+      cards: days.map((d) => ({ href: `/dager/${d.id}`, title: d.name, badge: t('badge.day'), desc: trunc(d.description) })),
     },
   ];
   return sections.filter((s) => s.cards.length > 0);
@@ -398,14 +401,14 @@ r.get('/sok', async (c) => {
 
   return c.html(
     <Layout {...layoutProps(c)}
-      title={query ? `Søk: ${query} — FLOGVIT.bible` : 'Søk — FLOGVIT.bible'}
-      description="Søk i bibelteksten."
+      title={query ? `${t('search.title')}: ${query} — FLOGVIT.bible` : `${t('search.title')} — FLOGVIT.bible`}
+      description={t('search.meta')}
       styles={['search.css']}
       scripts={['search.js']}
     >
       <div class="search-main">
         <div class="reading-container">
-          <Breadcrumbs items={[{ label: 'Hjem', href: '/' }, { label: 'Søk' }]} />
+          <Breadcrumbs items={[{ label: tCtx()('common.home'), href: '/' }, { label: tCtx()('search.title') }]} />
           <h1>{t('search.inBible')}</h1>
 
           <form class="search-form" action="/sok" method="get" role="search">
@@ -413,21 +416,21 @@ r.get('/sok', async (c) => {
               type="search"
               name="q"
               value={query}
-              placeholder="Søk etter ord eller uttrykk…"
-              aria-label="Søk i bibelteksten"
+              placeholder={t('search.placeholder')}
+              aria-label={t('search.inBible')}
               class="search-input"
             />
-            <button type="submit" class="search-submit">Søk</button>
+            <button type="submit" class="search-submit">{t('search.title')}</button>
           </form>
           <p class="search-hint">
-            Søker du etter et bestemt vers? Skriv f.eks. «Joh 3,16» i hurtigsøket (⌘K). For
-            grunntekst, se <a href={lhref('/sok/original')}>søk i originalspråk</a>.
+            {t('search.hintHead')} «Joh 3,16» {t('search.hintTail')}{' '}
+            <a href={lhref('/sok/original')}>{t('search.inOriginal').toLowerCase()}</a>.
           </p>
 
           {extra.length > 0 && (
             <div class="search-extra">
               {extra.map((s) => (
-                <ExtraSection title={s.title} typeKey={s.typeKey} cards={s.cards} moreLabel={s.moreLabel} />
+                <ExtraSection title={s.title} typeKey={s.typeKey} cards={s.cards} />
               ))}
             </div>
           )}
@@ -435,7 +438,7 @@ r.get('/sok', async (c) => {
           {query.length >= 2 && res && (
             <>
               <p class="search-count">
-                {res.total === 0 ? `Ingen treff på «${query}».` : `${res.total} treff på «${query}».`}
+                {res.total === 0 ? t('search.noHits', { q: query }) : t('search.hits', { n: res.total, q: query })}
               </p>
               <div class="search-results">
                 {res.results.map((v) => (
@@ -450,12 +453,12 @@ r.get('/sok', async (c) => {
               <div class="search-pager">
                 {side > 1 && (
                   <a href={lhref(`/sok?q=${encodeURIComponent(query)}&side=${side - 1}`)} class="search-page-link">
-                    ← Forrige
+                    ← {t('rd.prevShort')}
                   </a>
                 )}
                 {res.hasMore && (
                   <a href={lhref(`/sok?q=${encodeURIComponent(query)}&side=${side + 1}`)} class="search-page-link">
-                    Vis flere →
+                    {t('search.showMore')} →
                   </a>
                 )}
               </div>
@@ -480,7 +483,7 @@ r.get('/sok/original', async (c) => {
 
   return c.html(
     <Layout {...layoutProps(c)}
-      title={query ? `Grunntekstsøk: ${query} — FLOGVIT.bible` : 'Søk i originalspråk — FLOGVIT.bible'}
+      title={query ? `${t('search.originalTitle')}: ${query} — FLOGVIT.bible` : `${t('search.inOriginal')} — FLOGVIT.bible`}
       description="Søk i den hebraiske og greske grunnteksten."
       styles={['search.css']}
     >
@@ -488,7 +491,7 @@ r.get('/sok/original', async (c) => {
         <div class="reading-container">
           <Breadcrumbs
             items={[
-              { label: 'Hjem', href: '/' },
+              { label: tCtx()('common.home'), href: '/' },
               { label: 'Søk', href: '/sok' },
               { label: 'Originalspråk' },
             ]}
@@ -504,7 +507,7 @@ r.get('/sok/original', async (c) => {
               aria-label="Søk i grunnteksten"
               class="search-input"
             />
-            <button type="submit" class="search-submit">Søk</button>
+            <button type="submit" class="search-submit">{t('search.title')}</button>
           </form>
 
           {query.length >= 1 && res && (
@@ -534,12 +537,12 @@ r.get('/sok/original', async (c) => {
               <div class="search-pager">
                 {side > 1 && (
                   <a href={lhref(`/sok/original?q=${encodeURIComponent(query)}&side=${side - 1}`)} class="search-page-link">
-                    ← Forrige
+                    ← {t('rd.prevShort')}
                   </a>
                 )}
                 {res.hasMore && (
                   <a href={lhref(`/sok/original?q=${encodeURIComponent(query)}&side=${side + 1}`)} class="search-page-link">
-                    Vis flere →
+                    {t('search.showMore')} →
                   </a>
                 )}
               </div>

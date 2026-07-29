@@ -1,3 +1,4 @@
+import { tCtx } from '../lib/i18n.ts';
 // ItemTagging-skall — port av bibel/src/components/ItemTagging.tsx.
 // Selve tagge-UI-et er klientside (localStorage) og bygges av øya
 // public/js/tagging.js, som leser data-item-type/data-item-id herfra og
@@ -31,7 +32,7 @@ export function ItemTagging({ itemType, itemId, compact = false, className }: It
     <div class={classes} data-item-type={itemType} data-item-id={itemId}>
       {/* Tom tilstand uten JS: emner er en lokal (localStorage) funksjon. */}
       <noscript>
-        <span class="item-tagging-empty">Emner krever JavaScript.</span>
+        <span class="item-tagging-empty">{tCtx()('tag.needsJs')}</span>
       </noscript>
     </div>
   );

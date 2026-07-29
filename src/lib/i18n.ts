@@ -224,6 +224,21 @@ export function layoutProps(c: { get: (k: 'locale') => unknown; req: { path: str
 }
 
 /** Oversetteren for gjeldende request. */
+/**
+ * Oversetteren for forespørselen vi står i, uten å tre `c` gjennom hvert
+ * komponentkall — samme contextStorage-kilde som `lhref()`. Dype
+ * presentasjonskomponenter (`views/`) har ingen annen grunn til å kjenne
+ * konteksten, og uten dette endte teksten deres som hardkodede strenger (#22).
+ */
+export function tCtx(): Translator {
+  try {
+    const locale = getContext<{ Variables: { locale?: Locale } }>().var.locale;
+    return makeT(isLocale(locale) ? locale : DEFAULT_LOCALE);
+  } catch {
+    return makeT(DEFAULT_LOCALE);
+  }
+}
+
 export function tFor(c: { get: (k: 'locale') => unknown }): Translator {
   const raw = c.get('locale');
   return makeT(isLocale(raw as string) ? (raw as Locale) : DEFAULT_LOCALE);

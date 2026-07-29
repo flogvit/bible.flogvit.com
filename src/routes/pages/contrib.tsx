@@ -17,6 +17,7 @@ import { layoutProps, tFor, href, type Locale, type Translator } from '../../lib
 import { getBookInfoBySlug } from '../../lib/books-data.ts';
 import { MAPPING_META, resolveMappingId } from '../../lib/verse-mapper.ts';
 import { listSubmissionsForUser, type ContribRow } from '../../lib/contrib.ts';
+import { tCtx } from '../../lib/i18n.ts';
 
 const r = new Hono<AppEnv>();
 
@@ -40,7 +41,7 @@ function ContribShell(props: {
     >
       <div class="user-main">
         <div class="reading-container">
-          <Breadcrumbs items={[{ label: 'Hjem', href: '/' }, { label: props.crumb }]} />
+          <Breadcrumbs items={[{ label: tCtx()('common.home'), href: '/' }, { label: props.crumb }]} />
           <h1>{props.heading}</h1>
           {props.intro && <p class="user-intro">{props.intro}</p>}
           <div data-user-page={props.page}>{props.children}</div>
