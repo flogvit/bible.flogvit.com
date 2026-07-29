@@ -17,6 +17,8 @@ COPY src ./src
 # kode som forventer en ny kolonne tar ned siden (skjedde 2026-07-26).
 COPY scripts ./scripts
 COPY public ./public
+# Endringsloggen rendres av /changes ved kjoretid.
+COPY RELEASE.md ./
 ENV NODE_ENV=production
 ENV PORT=8080
 EXPOSE 8080

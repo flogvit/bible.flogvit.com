@@ -70,6 +70,7 @@ const PAGES: { path: string; name: string }[] = [
   { path: '/bidra', name: 'bidra' },
   { path: '/sok/original?q=chesed', name: 'søk i grunnteksten' },
   { path: '/tilgjengelighet', name: 'tilgjengelighet' },
+  { path: '/changes', name: 'endringslogg' },
   { path: '/finnes-ikke', name: '404-siden' },
 ];
 

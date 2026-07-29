@@ -1,0 +1,61 @@
+/* /changes — endringsloggen. Datoen er ankeret, så den bærer kolonnen til
+   venstre på bred skjerm og faller over innholdet på smal. */
+
+.changes-lang-note {
+  margin: 0 0 28px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.changes-entry {
+  padding-top: 24px;
+  border-top: 1px solid var(--border);
+}
+.changes-entry + .changes-entry { margin-top: 32px; }
+
+.changes-entry-head { margin-bottom: 18px; }
+.changes-date {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--gold-text);
+  margin-bottom: 4px;
+}
+.changes-entry-head h2 {
+  font-family: var(--font-serif);
+  font-size: 24px;
+  line-height: 1.25;
+  margin: 0;
+}
+
+.changes-section { margin-bottom: 20px; }
+.changes-section h3 {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  font-family: var(--font-mono);
+  margin-bottom: 8px;
+}
+.changes-section ul {
+  margin: 0;
+  padding-left: 18px;
+  list-style: disc;
+}
+.changes-section li {
+  margin-bottom: 6px;
+  line-height: 1.6;
+  color: var(--ink-2);
+  max-width: 68ch;
+}
+
+@media (min-width: 900px) {
+  .changes-entry {
+    display: grid;
+    grid-template-columns: 200px 1fr;
+    gap: 0 32px;
+  }
+  .changes-entry-head { grid-column: 1; margin-bottom: 0; }
+  .changes-entry > .changes-section { grid-column: 2; }
+  .changes-entry-head h2 { font-size: 20px; }
+}

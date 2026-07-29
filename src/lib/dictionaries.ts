@@ -945,6 +945,12 @@ const en = {
   "rd.layoutModesAria": "View mode",
   "rd.panelTabsAria": "Panel tabs",
   "rd.passagesTitle": "Bible passages",
+  "ch.title": "What’s new",
+  "ch.intro": "What has actually reached readers, newest first. We deploy continuously, so the date is the anchor — there are no version numbers.",
+  "ch.meta": "Release notes for FLOGVIT.bible — what changed, and when.",
+  "ch.empty": "No release notes yet.",
+  "ch.englishOnly": "The release notes are written in English.",
+  "foot.changes": "What’s new",
 };
 
 type Dict = Record<keyof typeof en, string>;
@@ -1888,6 +1894,12 @@ const nb: Dict = {
   "rd.layoutModesAria": "Visningsmodus",
   "rd.panelTabsAria": "Panelfaner",
   "rd.passagesTitle": "Bibelpassasjer",
+  "ch.title": "Hva er nytt",
+  "ch.intro": "Hva som faktisk har nådd leserne, nyeste først. Vi ruller ut fortløpende, så datoen er ankeret — det finnes ingen versjonsnumre.",
+  "ch.meta": "Endringslogg for FLOGVIT.bible — hva som er endret, og når.",
+  "ch.empty": "Ingen endringslogg ennå.",
+  "ch.englishOnly": "Endringsloggen er skrevet på engelsk.",
+  "foot.changes": "Hva er nytt",
 };
 
 const nn: Dict = {
@@ -2829,6 +2841,12 @@ const nn: Dict = {
   "rd.layoutModesAria": "Visingsmodus",
   "rd.panelTabsAria": "Panelfaner",
   "rd.passagesTitle": "Bibelpassasjar",
+  "ch.title": "Kva er nytt",
+  "ch.intro": "Kva som faktisk har nådd lesarane, nyaste først. Vi rullar ut fortløpande, så datoen er ankeret — det finst ingen versjonsnummer.",
+  "ch.meta": "Endringslogg for FLOGVIT.bible — kva som er endra, og når.",
+  "ch.empty": "Ingen endringslogg enno.",
+  "ch.englishOnly": "Endringsloggen er skriven på engelsk.",
+  "foot.changes": "Kva er nytt",
 };
 
 const sv: Dict = {
@@ -3770,6 +3788,12 @@ const sv: Dict = {
   "rd.layoutModesAria": "Visningsläge",
   "rd.panelTabsAria": "Panelflikar",
   "rd.passagesTitle": "Bibelavsnitt",
+  "ch.title": "Vad är nytt",
+  "ch.intro": "Vad som faktiskt har nått läsarna, nyast först. Vi rullar ut löpande, så datumet är ankaret — det finns inga versionsnummer.",
+  "ch.meta": "Ändringslogg för FLOGVIT.bible — vad som ändrats, och när.",
+  "ch.empty": "Ingen ändringslogg än.",
+  "ch.englishOnly": "Ändringsloggen är skriven på engelska.",
+  "foot.changes": "Vad är nytt",
 };
 
 const fr: Dict = {
@@ -4711,6 +4735,12 @@ const fr: Dict = {
   "rd.layoutModesAria": "Mode d’affichage",
   "rd.panelTabsAria": "Onglets du panneau",
   "rd.passagesTitle": "Passages bibliques",
+  "ch.title": "Nouveautés",
+  "ch.intro": "Ce qui est réellement arrivé jusqu’aux lecteurs, du plus récent au plus ancien. Nous déployons en continu : la date fait référence, il n’y a pas de numéro de version.",
+  "ch.meta": "Notes de version de FLOGVIT.bible — ce qui a changé, et quand.",
+  "ch.empty": "Pas encore de notes de version.",
+  "ch.englishOnly": "Les notes de version sont rédigées en anglais.",
+  "foot.changes": "Nouveautés",
 };
 
 const es: Dict = {
@@ -5652,6 +5682,12 @@ const es: Dict = {
   "rd.layoutModesAria": "Modo de vista",
   "rd.panelTabsAria": "Pestañas del panel",
   "rd.passagesTitle": "Pasajes bíblicos",
+  "ch.title": "Novedades",
+  "ch.intro": "Lo que realmente ha llegado a los lectores, lo más reciente primero. Publicamos de forma continua, así que la fecha es la referencia: no hay números de versión.",
+  "ch.meta": "Notas de versión de FLOGVIT.bible: qué ha cambiado y cuándo.",
+  "ch.empty": "Todavía no hay notas de versión.",
+  "ch.englishOnly": "Las notas de versión están escritas en inglés.",
+  "foot.changes": "Novedades",
 };
 
 const fi: Dict = {
@@ -6593,6 +6629,12 @@ const fi: Dict = {
   "rd.layoutModesAria": "Näyttötila",
   "rd.panelTabsAria": "Paneelin välilehdet",
   "rd.passagesTitle": "Raamatunkohdat",
+  "ch.title": "Mitä uutta",
+  "ch.intro": "Mikä on todella päätynyt lukijoille, uusin ensin. Julkaisemme jatkuvasti, joten päivämäärä on ankkuri — versionumeroita ei ole.",
+  "ch.meta": "FLOGVIT.biblen muutosloki — mikä muuttui ja milloin.",
+  "ch.empty": "Ei vielä muutoslokia.",
+  "ch.englishOnly": "Muutosloki on kirjoitettu englanniksi.",
+  "foot.changes": "Mitä uutta",
 };
 
 const de: Dict = {
@@ -7534,6 +7576,12 @@ const de: Dict = {
   "rd.layoutModesAria": "Ansichtsmodus",
   "rd.panelTabsAria": "Panel-Tabs",
   "rd.passagesTitle": "Bibelstellen",
+  "ch.title": "Was ist neu",
+  "ch.intro": "Was die Leser tatsächlich erreicht hat, das Neueste zuerst. Wir veröffentlichen fortlaufend, deshalb ist das Datum der Anker — Versionsnummern gibt es nicht.",
+  "ch.meta": "Änderungsprotokoll für FLOGVIT.bible — was sich geändert hat, und wann.",
+  "ch.empty": "Noch kein Änderungsprotokoll.",
+  "ch.englishOnly": "Das Änderungsprotokoll ist auf Englisch verfasst.",
+  "foot.changes": "Was ist neu",
 };
 
 export const DICTIONARIES = { en, nb, nn, sv, fr, es, fi, de };

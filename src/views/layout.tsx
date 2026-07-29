@@ -369,6 +369,7 @@ function Footer({ t, u }: { t: Translator; u: (p: string) => string }) {
           <a href="https://flogvit.com/konto/">{t('foot.account')}</a>
           <a href={lhref('/offline')}>{t('foot.offline')}</a>
           <a href={lhref('/tilgjengelighet')}>{t('foot.a11y')}</a>
+          <a href={lhref('/changes')}>{t('foot.changes')}</a>
         </nav>
 
         {/* Fast legal-rad (portal/FOOTER.md): FLOGVIT.bible · Vilkår · Personvern ·
