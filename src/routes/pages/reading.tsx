@@ -1793,16 +1793,16 @@ r.get('/:book/:chapter', async (c) => {
                 ]}
               />
               <span class="chapter-meta-actions">
-                <span class="layout-modes" role="group" aria-label="Visningsmodus" data-layout-modes>
-                  <button type="button" class="layout-mode-btn" data-mode="normal" aria-pressed="true" title="Normal visning (N)">
+                <span class="layout-modes" role="group" aria-label={tCtx()('rd.layoutModesAria')} data-layout-modes>
+                  <button type="button" class="layout-mode-btn" data-mode="normal" aria-pressed="true" title={`${tCtx()('kbd.normalView')} (N)`}>
                     <span aria-hidden="true">☰</span>
                     <span class="sr-only">Normal</span>
                   </button>
-                  <button type="button" class="layout-mode-btn" data-mode="reading" aria-pressed="false" title="Lesemodus (R)">
+                  <button type="button" class="layout-mode-btn" data-mode="reading" aria-pressed="false" title={`${tCtx()('kbd.readingMode')} (R)`}>
                     <span aria-hidden="true">📖</span>
                     <span class="sr-only">{t('u.readingMode')}</span>
                   </button>
-                  <button type="button" class="layout-mode-btn" data-mode="panel" aria-pressed="false" title="Panelmodus (P)">
+                  <button type="button" class="layout-mode-btn" data-mode="panel" aria-pressed="false" title={`${tCtx()('kbd.panelMode')} (P)`}>
                     <span aria-hidden="true">▥</span>
                     <span class="sr-only">{t('u.panelMode')}</span>
                   </button>
@@ -1930,7 +1930,7 @@ r.get('/:book/:chapter', async (c) => {
               data-sidebar-resize
               title={t('rd.resizeHint')}
             ></div>
-            <div class="panel-tabbar" role="tablist" aria-label="Panelfaner">
+            <div class="panel-tabbar" role="tablist" aria-label={tCtx()('rd.panelTabsAria')}>
               <button type="button" class="panel-tab is-active" data-panel-tab="1">
                 {t('rd.study')}
               </button>
@@ -2056,7 +2056,7 @@ r.get('/tekst', async (c) => {
 
   return c.html(
     <Layout {...layoutProps(c)}
-      title="Bibelpassasjer — FLOGVIT.bible"
+      title={`${t('rd.passagesTitle')} — FLOGVIT.bible`}
       description={t('rd.passagesMeta')}
       canonical={SITE + lhref('/tekst')}
       styles={['reading.css']}

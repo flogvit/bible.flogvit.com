@@ -344,7 +344,7 @@ r.get('/manuskripter', async (c) => {
 function DevotionalEditor(props: { slug?: string; locale: Locale; path: string }) {
   const t = makeT(props.locale);
   return (
-    <Layout locale={props.locale} path={props.path} title={`${t('u.editManuscript')} — FLOGVIT.bible`} description="Skriv andakt, preken eller bibeltime." styles={['user.css']} scripts={['user.js']}>
+    <Layout locale={props.locale} path={props.path} title={`${t('u.editManuscript')} — FLOGVIT.bible`} description={t('u.manuscriptMeta')} styles={['user.css']} scripts={['user.js']}>
       <div class="user-main">
         <div class="container">
           <Breadcrumbs items={[{ label: tCtx()('common.home'), href: '/' }, { label: tCtx()('nav.manuscripts'), href: '/manuskripter' }, { label: props.slug ? 'Rediger' : 'Nytt' }]} />
@@ -376,7 +376,7 @@ r.get('/manuskripter/:slug/rediger', (c) => c.html(<DevotionalEditor {...layoutP
 r.get('/manuskripter/:slug', (c) => {
   const t = tFor(c);
   return c.html(
-    <Layout {...layoutProps(c)} title={`${t('nav.manuscripts')} — FLOGVIT.bible`} description="Manuskript." styles={['user.css']} scripts={['user.js']}>
+    <Layout {...layoutProps(c)} title={`${t('nav.manuscripts')} — FLOGVIT.bible`} description={t('u.manuscriptOne')} styles={['user.css']} scripts={['user.js']}>
       <div class="user-main">
         <div class="reading-container">
           <Breadcrumbs items={[{ label: tCtx()('common.home'), href: '/' }, { label: tCtx()('nav.manuscripts'), href: '/manuskripter' }, { label: '…' }]} />
@@ -727,7 +727,7 @@ r.get('/oversettelser', async (c) => {
           </label>
           <label class="settings-row">
             <span>{t('u.name')}</span>
-            <input type="text" class="user-input" data-trans-name placeholder="F.eks. Bibelen 2024" />
+            <input type="text" class="user-input" data-trans-name placeholder={t('u.transNamePh')} />
           </label>
           <div class="trans-file-row">
             <label class="user-btn-ghost settings-import-label">
@@ -736,7 +736,7 @@ r.get('/oversettelser', async (c) => {
             </label>
             <span class="user-note" data-trans-filename></span>
           </div>
-          <textarea class="user-input trans-textarea" data-trans-text rows={6} placeholder="…eller lim inn teksten her"></textarea>
+          <textarea class="user-input trans-textarea" data-trans-text rows={6} placeholder={t('u.transPastePh')}></textarea>
           <div class="offline-actions">
             <button type="button" class="user-btn" data-trans-parse>{t('u.analyseText')}</button>
             <button type="button" class="user-btn" data-trans-import hidden>{t('u.import')}</button>

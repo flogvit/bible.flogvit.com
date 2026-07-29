@@ -937,6 +937,14 @@ const en = {
   "u.noTopics": "You have no topics yet. Tag content with the «Topics» button on verse and content pages.",
   "u.listsIntro": "Collect verses in named lists for manuscripts, Bible studies and research.",
   "u.offlineNote": "The download fetches all 1189 chapters per selected translation (with the original text, word-for-word and cross-references) plus timeline, prophecies, people and reading plans. Expect a few minutes and a couple of hundred MB of storage.",
+  "so.originalPh": "Type a Hebrew or Greek word…",
+  "u.manuscriptMeta": "Write a devotional, sermon or Bible study.",
+  "u.manuscriptOne": "Manuscript.",
+  "u.transNamePh": "e.g. The Bible 2024",
+  "u.transPastePh": "…or paste the text here",
+  "rd.layoutModesAria": "View mode",
+  "rd.panelTabsAria": "Panel tabs",
+  "rd.passagesTitle": "Bible passages",
 };
 
 type Dict = Record<keyof typeof en, string>;
@@ -1872,6 +1880,14 @@ const nb: Dict = {
   "u.noTopics": "Du har ingen emner ennå. Tag innhold med «Emner»-knappen på vers- og innholdssider.",
   "u.listsIntro": "Samle vers i navngitte lister for manuskripter, bibeltimer og studier.",
   "u.offlineNote": "Nedlastingen henter alle 1189 kapitler per valgt oversettelse (med grunntekst, ord-for-ord og kryssreferanser) pluss tidslinje, profetier, personer og leseplaner. Regn med noen minutter og et par hundre MB lagringsplass.",
+  "so.originalPh": "Skriv et hebraisk eller gresk ord…",
+  "u.manuscriptMeta": "Skriv andakt, preken eller bibeltime.",
+  "u.manuscriptOne": "Manuskript.",
+  "u.transNamePh": "F.eks. Bibelen 2024",
+  "u.transPastePh": "…eller lim inn teksten her",
+  "rd.layoutModesAria": "Visningsmodus",
+  "rd.panelTabsAria": "Panelfaner",
+  "rd.passagesTitle": "Bibelpassasjer",
 };
 
 const nn: Dict = {
@@ -2805,6 +2821,14 @@ const nn: Dict = {
   "u.noTopics": "Du har ingen emne enno. Tagg innhald med «Emne»-knappen på vers- og innhaldssider.",
   "u.listsIntro": "Samle vers i namngjevne lister for manuskript, bibeltimar og studium.",
   "u.offlineNote": "Nedlastinga hentar alle 1189 kapittel per vald omsetjing (med grunntekst, ord-for-ord og kryssreferansar) pluss tidslinje, profetiar, personar og leseplanar. Rekn med nokre minutt og eit par hundre MB lagringsplass.",
+  "so.originalPh": "Skriv eit hebraisk eller gresk ord…",
+  "u.manuscriptMeta": "Skriv andakt, preike eller bibeltime.",
+  "u.manuscriptOne": "Manuskript.",
+  "u.transNamePh": "T.d. Bibelen 2024",
+  "u.transPastePh": "…eller lim inn teksten her",
+  "rd.layoutModesAria": "Visingsmodus",
+  "rd.panelTabsAria": "Panelfaner",
+  "rd.passagesTitle": "Bibelpassasjar",
 };
 
 const sv: Dict = {
@@ -3738,6 +3762,14 @@ const sv: Dict = {
   "u.noTopics": "Du har inga ämnen än. Märk innehåll med «Ämnen»-knappen på vers- och innehållssidor.",
   "u.listsIntro": "Samla verser i namngivna listor för manuskript, bibelstudier och forskning.",
   "u.offlineNote": "Nedladdningen hämtar alla 1189 kapitel per vald översättning (med grundtext, ord-för-ord och korshänvisningar) plus tidslinje, profetior, personer och läsplaner. Räkna med några minuter och ett par hundra MB lagringsutrymme.",
+  "so.originalPh": "Skriv ett hebreiskt eller grekiskt ord…",
+  "u.manuscriptMeta": "Skriv andakt, predikan eller bibelstudium.",
+  "u.manuscriptOne": "Manuskript.",
+  "u.transNamePh": "T.ex. Bibeln 2024",
+  "u.transPastePh": "…eller klistra in texten här",
+  "rd.layoutModesAria": "Visningsläge",
+  "rd.panelTabsAria": "Panelflikar",
+  "rd.passagesTitle": "Bibelavsnitt",
 };
 
 const fr: Dict = {
@@ -4671,6 +4703,14 @@ const fr: Dict = {
   "u.noTopics": "Vous n’avez pas encore de thèmes. Marquez du contenu avec le bouton « Thèmes » sur les pages de versets et de contenu.",
   "u.listsIntro": "Rassemblez des versets dans des listes nommées pour vos manuscrits, études bibliques et recherches.",
   "u.offlineNote": "Le téléchargement récupère les 1189 chapitres pour chaque traduction choisie (avec le texte original, le mot à mot et les références croisées), ainsi que la chronologie, les prophéties, les personnages et les plans de lecture. Comptez quelques minutes et quelques centaines de Mo de stockage.",
+  "so.originalPh": "Tapez un mot hébreu ou grec…",
+  "u.manuscriptMeta": "Rédigez une méditation, une prédication ou une étude biblique.",
+  "u.manuscriptOne": "Manuscrit.",
+  "u.transNamePh": "p. ex. La Bible 2024",
+  "u.transPastePh": "…ou collez le texte ici",
+  "rd.layoutModesAria": "Mode d’affichage",
+  "rd.panelTabsAria": "Onglets du panneau",
+  "rd.passagesTitle": "Passages bibliques",
 };
 
 const es: Dict = {
@@ -5604,6 +5644,14 @@ const es: Dict = {
   "u.noTopics": "Todavía no tienes temas. Etiqueta contenido con el botón «Temas» en las páginas de versículos y contenido.",
   "u.listsIntro": "Reúne versículos en listas con nombre para manuscritos, estudios bíblicos e investigación.",
   "u.offlineNote": "La descarga obtiene los 1189 capítulos de cada traducción elegida (con el texto original, palabra por palabra y referencias cruzadas), además de cronología, profecías, personajes y planes de lectura. Cuenta con unos minutos y un par de cientos de MB de almacenamiento.",
+  "so.originalPh": "Escribe una palabra hebrea o griega…",
+  "u.manuscriptMeta": "Escribe una devoción, un sermón o un estudio bíblico.",
+  "u.manuscriptOne": "Manuscrito.",
+  "u.transNamePh": "p. ej. La Biblia 2024",
+  "u.transPastePh": "…o pega el texto aquí",
+  "rd.layoutModesAria": "Modo de vista",
+  "rd.panelTabsAria": "Pestañas del panel",
+  "rd.passagesTitle": "Pasajes bíblicos",
 };
 
 const fi: Dict = {
@@ -6537,6 +6585,14 @@ const fi: Dict = {
   "u.noTopics": "Sinulla ei ole vielä aiheita. Merkitse sisältöä «Aiheet»-painikkeella jae- ja sisältösivuilla.",
   "u.listsIntro": "Kokoa jakeita nimettyihin listoihin käsikirjoituksia, raamattutunteja ja tutkimusta varten.",
   "u.offlineNote": "Lataus hakee kaikki 1189 lukua jokaisesta valitusta käännöksestä (alkutekstin, sana sanalta -tiedot ja ristiviitteet) sekä aikajanan, profetiat, henkilöt ja lukusuunnitelmat. Varaa muutama minuutti ja pari sataa megatavua tallennustilaa.",
+  "so.originalPh": "Kirjoita heprealainen tai kreikkalainen sana…",
+  "u.manuscriptMeta": "Kirjoita hartaus, saarna tai raamattutunti.",
+  "u.manuscriptOne": "Käsikirjoitus.",
+  "u.transNamePh": "esim. Raamattu 2024",
+  "u.transPastePh": "…tai liitä teksti tähän",
+  "rd.layoutModesAria": "Näyttötila",
+  "rd.panelTabsAria": "Paneelin välilehdet",
+  "rd.passagesTitle": "Raamatunkohdat",
 };
 
 const de: Dict = {
@@ -7470,6 +7526,14 @@ const de: Dict = {
   "u.noTopics": "Du hast noch keine Themen. Markiere Inhalte mit der «Themen»-Schaltfläche auf Vers- und Inhaltsseiten.",
   "u.listsIntro": "Sammle Verse in benannten Listen für Manuskripte, Bibelstunden und Studien.",
   "u.offlineNote": "Der Download holt alle 1189 Kapitel je gewählter Übersetzung (mit Urtext, Wort-für-Wort und Querverweisen) sowie Zeitleiste, Prophezeiungen, Personen und Lesepläne. Rechne mit einigen Minuten und ein paar hundert MB Speicherplatz.",
+  "so.originalPh": "Gib ein hebräisches oder griechisches Wort ein…",
+  "u.manuscriptMeta": "Schreibe eine Andacht, Predigt oder Bibelstunde.",
+  "u.manuscriptOne": "Manuskript.",
+  "u.transNamePh": "z. B. Die Bibel 2024",
+  "u.transPastePh": "…oder füge den Text hier ein",
+  "rd.layoutModesAria": "Ansichtsmodus",
+  "rd.panelTabsAria": "Panel-Tabs",
+  "rd.passagesTitle": "Bibelstellen",
 };
 
 export const DICTIONARIES = { en, nb, nn, sv, fr, es, fi, de };

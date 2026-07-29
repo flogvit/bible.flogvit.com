@@ -580,7 +580,7 @@ r.get('/sok/original', async (c) => {
               type="search"
               name="q"
               value={query}
-              placeholder="Skriv et hebraisk eller gresk ord…"
+              placeholder={t('so.originalPh')}
               aria-label={t('so.searchOriginalAria')}
               class="search-input"
             />
