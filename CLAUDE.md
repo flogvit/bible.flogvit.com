@@ -6,6 +6,20 @@ Full omskriving av bibel-appen: Bun + Hono + hono/jsx SSR + vanilla JS-øyer, Bu
 > Dette repoet inneholder APPEN, ikke hvordan FLOGVIT deployer den. Miljøspesifikke
 > skript (VM, registry, env-filer) bor i driftsrepoet vårt og er bevisst holdt utenfor.
 
+## Endringslogg — `RELEASE.md`
+
+`RELEASE.md` er en lesbar logg over hva som faktisk kom ut til brukerne, på
+**engelsk**, med fire kategorier: `New features`, `Polish`, `Bug fixes`,
+`Behind the scenes`. Nyeste post øverst, datert — ingen versjonsnummer.
+
+**Den skrives som en del av deploy, aldri etterpå.** Rangen er
+`git log $(git describe --tags --abbrev=0)..HEAD` — deploy-taggen er ankeret.
+Kuratér: les diffene og skriv hva brukeren *ser*, ikke commit-emnene. De fleste
+commitene i en runde hører hjemme i én ærlig linje under `Behind the scenes`.
+
+Hele sekvensen (rekkefølge, tagging, hva som skjer ved feilet deploy) står under
+«deploy <navn>» i driftsrepoets README.
+
 ## Oppsett
 - `bun install` — eneste runtime-dependency er `hono` + lokal `@free-bible/kvn`.
 - `kvn-package/` er gitignort og stages fra `../free-bible/kvn/` før bygg.
