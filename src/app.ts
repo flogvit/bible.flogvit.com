@@ -40,7 +40,7 @@ import version from './routes/api/version.ts';
 import wellknownVerses from './routes/api/wellknown-verses.ts';
 import word4word from './routes/api/word4word.ts';
 import { getCookie } from 'hono/cookie';
-import { LOCALES, href, layoutProps, negotiateLocale } from './lib/i18n.ts';
+import { LOCALES, href, layoutProps, negotiateLocale, apiLocale } from './lib/i18n.ts';
 import { seoRoutes } from './routes/seo.ts';
 
 export function createApp() {
@@ -62,6 +62,15 @@ export function createApp() {
   app.use('*', withSession);
   app.get('/logg-inn', (c) => c.redirect(ACCOUNT_URL, 302));
   app.get('/konto', (c) => c.redirect(ACCOUNT_URL, 302));
+
+  // /api/* er montert uprefikset og arver ingen locale fra ruta slik sidene
+  // gjør, så uten dette svarte hele API-et på gulvet uansett språk (#24).
+  // Getterne i bible.ts leser locale fra contextStorage, så det holder å sette
+  // den her — ingen av rutene trenger å ta imot språk selv.
+  app.use('/api/*', async (c, next) => {
+    c.set('locale', apiLocale(c.req, getCookie(c, 'fv-prefs')));
+    await next();
+  });
 
   // API — samme stier som Express-utgaven (api/server.ts).
   app.route('/api/chapter', chapter);

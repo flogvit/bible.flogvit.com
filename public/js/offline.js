@@ -17,7 +17,7 @@ import {
   getMeta,
   deleteDatabase,
 } from './offline-db.js';
-import { intlLocale } from './locale.js';
+import { intlLocale, langParam } from './locale.js';
 
 const $ = (sel) => document.querySelector(sel);
 const statusBox = $('[data-offline-status]');
@@ -94,7 +94,7 @@ async function renderContent() {
 let controller = null;
 
 async function fetchBooks() {
-  const res = await fetch('/api/books');
+  const res = await fetch(`/api/books?${langParam()}`);
   const data = await res.json();
   return (data.books || data).map((b) => ({
     id: b.id,
@@ -106,10 +106,10 @@ async function fetchBooks() {
 
 async function downloadSupportData(signal) {
   const [timeline, prophecies, persons, plans] = await Promise.all([
-    fetch('/api/timeline', { signal }).then((r) => r.json()),
-    fetch('/api/prophecies', { signal }).then((r) => r.json()),
-    fetch('/api/persons', { signal }).then((r) => r.json()),
-    fetch('/api/reading-plans', { signal }).then((r) => r.json()),
+    fetch(`/api/timeline?${langParam()}`, { signal }).then((r) => r.json()),
+    fetch(`/api/prophecies?${langParam()}`, { signal }).then((r) => r.json()),
+    fetch(`/api/persons?${langParam()}`, { signal }).then((r) => r.json()),
+    fetch(`/api/reading-plans?${langParam()}`, { signal }).then((r) => r.json()),
   ]);
   await putBlob('timeline', timeline);
   await putBlob('prophecies', prophecies);

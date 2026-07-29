@@ -91,6 +91,41 @@ export function negotiateLocale(cookie: string | undefined | null, accept: strin
   return localeFromPrefsCookie(cookie) ?? negotiateAcceptLanguage(accept) ?? DEFAULT_LOCALE;
 }
 
+/** Språkprefikset i en URL-sti, om det er der. `/en/1mos/1` → `en`. */
+export function localeFromPath(path: string | undefined | null): Locale | null {
+  const m = /^\/([a-z]{2})(?=\/|$)/.exec(path || '');
+  return m && isLocale(m[1]) ? m[1] : null;
+}
+
+/**
+ * Locale for et API-kall (#24). `/api/*` er montert uprefikset og får derfor
+ * ingen locale fra ruta slik sidene gjør, så uten dette svarte hele API-et på
+ * gulvet uansett hvilket språk leseren sto på — og alt studieinnhold som
+ * hentes etter sidevisningen ble feil språk.
+ *
+ * Rekkefølgen holder på regelen om at URL-en vinner over cookien: et
+ * eksplisitt `?lang=` først, så språkprefikset i siden som gjorde kallet
+ * (Referer er sidens URL, ikke brukerens preferanse), og først til slutt
+ * cookie/Accept-Language.
+ */
+export function apiLocale(req: {
+  query: (k: string) => string | undefined;
+  header: (k: string) => string | undefined;
+}, cookie: string | undefined | null): Locale {
+  const explicit = normalizeLocale(req.query('lang'));
+  if (explicit) return explicit;
+  const referer = req.header('referer');
+  if (referer) {
+    try {
+      const fromPage = localeFromPath(new URL(referer).pathname);
+      if (fromPage) return fromPage;
+    } catch {
+      // Ugyldig Referer — gå videre til forhandling.
+    }
+  }
+  return negotiateLocale(cookie, req.header('accept-language'));
+}
+
 /** Prefiks en sti med språkroten. Forsiden blir `/nb`, uten skråstrek til slutt. */
 export function href(locale: Locale, path: string): string {
   const rest = path === '/' ? '' : path.startsWith('/') ? path : `/${path}`;

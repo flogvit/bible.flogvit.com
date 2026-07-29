@@ -3,6 +3,8 @@
 // manuskripter og hele mobil-verktøylinja (kapittelvelger, hjelpemidler,
 // studium-overlegg). reading.js eier versdetaljer/layout/posisjon/kopiering.
 
+import { langParam } from './locale.js';
+
 const KEYS = {
   settings: 'bible-settings',
   blocks: 'bible-studium-blocks',
@@ -113,7 +115,7 @@ if (sidebar) {
         const mySeq = ++seq;
         let items = [];
         try {
-          const res = await fetch(`/api/reference?q=${encodeURIComponent(q)}`);
+          const res = await fetch(`/api/reference?q=${encodeURIComponent(q)}&${langParam()}`);
           const data = await res.json();
           if (data.success && data.reference) {
             items.push({ label: data.reference.formatted, href: data.reference.url, cls: 'st-lookup-ref' });
