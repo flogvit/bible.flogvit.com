@@ -13,6 +13,7 @@ const PENDING_KEY = 'bible-sync-pending';
 const SHADOW_KEY = 'bible-sync-shadow';
 
 import { mergeProgress } from './reading-progress.js';
+import { intlLocale } from './locale.js';
 
 // `merge` settes på typer der nyeste-vinner er feil: framdrift skal aldri
 // kunne slettes av en enhet som lå bakpå. Serveren bruker samme funksjon.
@@ -219,7 +220,7 @@ async function syncNow(full) {
     writeRaw(LAST_SYNC_KEY, result.syncedAt || Date.now());
     writeRaw(PENDING_KEY, []);
     updateShadow();
-    setStatus(`Synkronisert ${new Date(result.syncedAt || Date.now()).toLocaleTimeString('nb-NO', { hour: '2-digit', minute: '2-digit' })} — endringer lagres til kontoen din.`);
+    setStatus(`Synkronisert ${new Date(result.syncedAt || Date.now()).toLocaleTimeString(intlLocale(), { hour: '2-digit', minute: '2-digit' })} — endringer lagres til kontoen din.`);
   } catch {
     // nettverksfeil — stille, prøver igjen senere
   } finally {

@@ -13,6 +13,7 @@ import {
   getAllChapterKeys,
   getChapter,
 } from './offline-db.js';
+import { intlLocale } from './locale.js';
 
 const $ = (sel) => document.querySelector(sel);
 const listBox = $('[data-trans-list]');
@@ -45,7 +46,7 @@ async function renderList() {
     info.append(el('strong', '', bible.name));
     const totalVerses = Object.values(bible.verseCounts || {}).reduce((a, b) => a + b, 0);
     info.append(
-      el('span', 'user-note', ` ${totalVerses} vers · nummerering: ${bible.mappingId} · lastet opp ${new Date(bible.uploadedAt).toLocaleDateString('nb-NO')}`),
+      el('span', 'user-note', ` ${totalVerses} vers · nummerering: ${bible.mappingId} · lastet opp ${new Date(bible.uploadedAt).toLocaleDateString(intlLocale())}`),
     );
     const del = el('button', 'user-btn-ghost', 'Slett');
     del.type = 'button';

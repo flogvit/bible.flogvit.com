@@ -28,7 +28,7 @@ import {
 } from '../../lib/bible.ts';
 import { getBookInfoById } from '../../lib/books-data.ts';
 import { toUrlSlug } from '../../lib/url-utils.ts';
-import { layoutProps, tFor, lhref } from '../../lib/i18n.ts';
+import { layoutProps, tFor, lhref, currentIntlTag } from '../../lib/i18n.ts';
 
 const r = new Hono<AppEnv>();
 
@@ -381,7 +381,11 @@ function nextDayDate(dates: Record<string, string> | undefined): string | null {
 }
 
 function formatDayDate(iso: string): string {
-  return new Date(`${iso}T12:00:00`).toLocaleDateString('nb-NO', { day: 'numeric', month: 'long', year: 'numeric' });
+  return new Date(`${iso}T12:00:00`).toLocaleDateString(currentIntlTag(), {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  });
 }
 
 r.get('/dager', async (c) => {

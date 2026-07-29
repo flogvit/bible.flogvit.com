@@ -42,6 +42,21 @@ const INTL_TAG: Record<Locale, string> = {
 export const ogLocale = (l: Locale) => INTL_TAG[l].replace('-', '_');
 export const intlTag = (l: Locale) => INTL_TAG[l];
 
+/**
+ * BCP-47-taggen for forespørselens locale, hentet fra contextStorage — samme
+ * kilde som `lhref()`. Finnes fordi datoformatering skjer dypt nede i
+ * komponenter som ikke har noen annen grunn til å kjenne språket, og fordi
+ * alternativet (`toLocaleDateString('nb-NO')`) gir norske datoer på alle
+ * språk uten å feile noe sted (#25).
+ */
+export function currentIntlTag(): string {
+  try {
+    return INTL_TAG[getContext<{ Variables: { locale?: Locale } }>().var.locale ?? DEFAULT_LOCALE];
+  } catch {
+    return INTL_TAG[DEFAULT_LOCALE];
+  }
+}
+
 /** Makrospråket `no` er tvetydig og normaliseres til bokmål (I18N.md §2). */
 export function normalizeLocale(code: string | undefined | null): Locale | null {
   const c = (code || '').toLowerCase().split('-')[0]!;

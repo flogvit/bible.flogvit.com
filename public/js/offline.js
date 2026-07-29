@@ -17,6 +17,7 @@ import {
   getMeta,
   deleteDatabase,
 } from './offline-db.js';
+import { intlLocale } from './locale.js';
 
 const $ = (sel) => document.querySelector(sel);
 const statusBox = $('[data-offline-status]');
@@ -57,7 +58,7 @@ async function renderStatus() {
     .map(([name, ok]) => `${name} ${ok ? '✓' : '—'}`)
     .join(' · ');
   list.append(el('li', '', `Støttedata: ${supportText}`));
-  if (downloadedAt) list.append(el('li', '', `Sist nedlastet: ${new Date(downloadedAt).toLocaleString('nb-NO')}`));
+  if (downloadedAt) list.append(el('li', '', `Sist nedlastet: ${new Date(downloadedAt).toLocaleString(intlLocale())}`));
   if (syncVersion) list.append(el('li', '', `Innholdsversjon: ${syncVersion}`));
   if (navigator.storage?.estimate) {
     const est = await navigator.storage.estimate();

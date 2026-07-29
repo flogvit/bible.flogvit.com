@@ -14,6 +14,7 @@ import {
   recordOpen,
   emptyProgress,
 } from './reading-progress.js';
+import { intlLocale } from './locale.js';
 
 const KEYS = {
   favorites: 'bible-favorites',
@@ -242,7 +243,7 @@ if (rootPage) {
       .forEach((n) => {
         const card = el('div', 'note-item');
         card.appendChild(el('p', 'note-content', n.content));
-        const meta = el('div', 'note-meta', new Date(n.updatedAt).toLocaleDateString('nb-NO'));
+        const meta = el('div', 'note-meta', new Date(n.updatedAt).toLocaleDateString(intlLocale()));
         const del = el('button', 'note-delete', 'Slett');
         del.type = 'button';
         del.addEventListener('click', () => {
@@ -385,7 +386,7 @@ if (rootPage) {
     }
     // Sidens språk, ikke nettleserens: en norsk side skal ikke vise 7/28/2026.
     const when = entry.lastAt
-      ? new Date(entry.lastAt).toLocaleDateString(document.documentElement.lang || undefined)
+      ? new Date(entry.lastAt).toLocaleDateString(intlLocale())
       : null;
     const times = (entry.count ?? 0) > 1 ? ` · ${entry.count} ${btn.dataset.labelTimes || ''}`.trimEnd() : '';
     label.textContent = when
