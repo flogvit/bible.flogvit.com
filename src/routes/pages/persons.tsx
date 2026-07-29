@@ -143,7 +143,7 @@ r.get('/personer', async (c) => {
             ))}
           </div>
           <p class="persons-no-results" id="person-empty" hidden>
-            Ingen personer matcher søket.
+            {t('persons.noMatch')}
           </p>
         </div>
       </div>
@@ -250,7 +250,7 @@ r.get('/personer/:personId', async (c) => {
 
           {person.references && person.references.length > 0 && (
             <section class="person-references-section">
-              <h2>Nevnt i Bibelen ({person.references.length})</h2>
+              <h2>{t('persons.mentionedIn', { n: person.references.length })}</h2>
               <div class="person-ref-list">
                 {person.references.map((ref) => {
                   const book = getBookById(ref.bookId);

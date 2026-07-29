@@ -27,7 +27,7 @@ import type { BookInfo } from '../../lib/books-data.ts';
 import { toUrlSlug } from '../../lib/url-utils.ts';
 import { parseStandardRef, refSegmentToUrl } from '../../lib/standard-ref-parser.ts';
 import { parseVerseTemplate } from '../../lib/verse-template.ts';
-import { tCtx } from '../../lib/i18n.ts';
+import { tCtx, tEnum } from '../../lib/i18n.ts';
 import {
   getVerses,
   getVerse,
@@ -658,13 +658,14 @@ async function GospelColumn({
   bible: string;
   isCurrentGospel: boolean;
 }) {
+  const t = tCtx();
   if (!passage) {
     return (
       <div class={`gospel-column gospel-${gospel}`}>
         <div class="gospel-column-header">
           <span class="gospel-badge">{GOSPEL_NAMES[gospel]}</span>
         </div>
-        <div class="gospel-no-passage">Ikke i {GOSPEL_NAMES[gospel]}</div>
+        <div class="gospel-no-passage">{t('rd.notInGospel', { gospel: GOSPEL_NAMES[gospel] ?? gospel })}</div>
       </div>
     );
   }
@@ -721,7 +722,7 @@ function ChapterParallels({
       <summary class="parallels-header">
         <span class="parallels-title">{t('rd.parallels')}</span>
         <span class="parallels-subtitle">
-          {relevant.length} {relevant.length === 1 ? 'parallell' : 'paralleller'} i dette kapitlet
+          {t('rd.parallelsInChapter', { n: relevant.length })}
         </span>
       </summary>
       <div class="parallels-list">
@@ -1101,7 +1102,7 @@ function VerseDetailPanel({
               {v.footnotes!.map((fn) => (
                 <div class="vd-footnote">
                   {fn.source && (
-                    <span class="vd-footnote-source">{fn.source.charAt(0).toUpperCase() + fn.source.slice(1)}</span>
+                    <span class="vd-footnote-source">{tEnum(t, 'fn.', fn.source.toLowerCase())}</span>
                   )}
                   <p>{fn.text}</p>
                 </div>
@@ -1231,7 +1232,7 @@ function StudyPanel({
       </StudyBlock>
 
       <StudyBlock id="sammendrag" title={t('rd.summary')} count={summaryCount} defaultOpen>
-        {data.summary && <SummaryItem title={`Kapittel ${chapter}`} content={data.summary} kind="chapter" />}
+        {data.summary && <SummaryItem title={`${t('common.chapter')} ${chapter}`} content={data.summary} kind="chapter" />}
         {data.bookSummary && <SummaryItem title={`${t('rd.aboutBook')} ${bookName(book)}`} content={data.bookSummary} kind="book" />}
         {data.context && <SummaryItem title={t('rd.historicalContext')} content={data.context} kind="context" />}
         {!data.summary && !data.bookSummary && !data.context && (
@@ -1251,7 +1252,7 @@ function StudyPanel({
               ))}
             </div>
             <a href={lhref('/personer')} class="st-see-all">
-              Alle personer →
+              {t('st.allOf', { what: t('nav.persons').toLowerCase() })} →
             </a>
           </>
         ) : (
@@ -1312,7 +1313,7 @@ function StudyPanel({
           </div>
         )}
         <a href={lhref('/temaer')} class="st-see-all">
-          Alle temaer →
+          {t('st.allOf', { what: t('nav.themes').toLowerCase() })} →
         </a>
       </StudyBlock>
 
@@ -1330,7 +1331,7 @@ function StudyPanel({
           </ul>
         )}
         <a href={lhref('/profetier')} class="st-see-all">
-          Alle profetier →
+          {t('st.allOf', { what: t('nav.prophecies').toLowerCase() })} →
         </a>
       </StudyBlock>
 
@@ -1348,7 +1349,7 @@ function StudyPanel({
           </ul>
         )}
         <a href={lhref('/historier')} class="st-see-all">
-          Alle bibelhistorier →
+          {t('st.allOf', { what: t('nav.stories').toLowerCase() })} →
         </a>
       </StudyBlock>
 
@@ -1369,7 +1370,7 @@ function StudyPanel({
           </ul>
         )}
         <a href={lhref('/paralleller')} class="st-see-all">
-          Alle paralleller →
+          {t('st.allOf', { what: t('nav.parallels').toLowerCase() })} →
         </a>
       </StudyBlock>
 
@@ -1385,7 +1386,7 @@ function StudyPanel({
           </div>
         )}
         <a href={lhref('/tall')} class="st-see-all">
-          Alle tall →
+          {t('st.allOf', { what: t('nav.numbers').toLowerCase() })} →
         </a>
       </StudyBlock>
 
@@ -1403,7 +1404,7 @@ function StudyPanel({
           </ul>
         )}
         <a href={lhref('/lesetekster')} class="st-see-all">
-          Alle lesetekster →
+          {t('st.allOf', { what: t('nav.readingTexts').toLowerCase() })} →
         </a>
       </StudyBlock>
 
@@ -1631,7 +1632,7 @@ function MobileToolbar({
           </div>
           <div class="tools-section">
             <span class="tools-section-title">{t('rd.subtext')}</span>
-            <select class="tools-select" data-secondary-select aria-label="Undertekst">
+            <select class="tools-select" data-secondary-select aria-label={t('rd.secondaryText')} data-proper-names>
               <option value="" selected={!secondary}>
                 {t('common.none')}
               </option>
@@ -1649,7 +1650,7 @@ function MobileToolbar({
           {mappings.length > 0 && (
             <div class="tools-section">
               <span class="tools-section-title">{t('u.versification')}</span>
-              <select class="tools-select" data-mapping-select aria-label="Versnummerering">
+              <select class="tools-select" data-mapping-select aria-label={t('rd.versification')} data-proper-names>
                 {mappings.map((m) => (
                   <option value={m.id} selected={(mapping || 'osnb') === m.id}>
                     {m.displayName}
@@ -1674,7 +1675,7 @@ function MobileToolbar({
           </div>
           <div class="tools-section">
             <a href={lhref('/innstillinger')} class="tools-settings-link">
-              Alle innstillinger →
+              {t('u.allSettings')} →
             </a>
           </div>
         </div>

@@ -34,7 +34,7 @@ import {
 import { enrichWithVerseText, getReadingType } from '../../lib/reading-text-enrich.ts';
 import { toUrlSlug } from '../../lib/url-utils.ts';
 import { layoutProps, tFor, lhref } from '../../lib/i18n.ts';
-import { tCtx } from '../../lib/i18n.ts';
+import { tCtx, tEnum } from '../../lib/i18n.ts';
 
 const r = new Hono<AppEnv>();
 
@@ -55,35 +55,11 @@ function prophecyRefUrl(ref: ProphecyReference): string {
 // bible_editions, som importøren fyller for hver oversettelse vi henter tekst
 // for — en ny oversettelse gir altså info-side automatisk.
 
-const TESTAMENT_LABELS: Record<string, string> = {
-  both: 'Hele Bibelen', ot: 'Det gamle testamente', nt: 'Det nye testamente',
-};
-const PHILOSOPHY_LABELS: Record<string, string> = {
-  formal: 'Ordnær (formal equivalence)',
-  dynamic: 'Meningsnær (dynamisk)',
-  paraphrase: 'Parafrase',
-  optimal: 'Balansert',
-  source_text: 'Grunntekst',
-};
-const TRADITION_LABELS: Record<string, string> = {
-  nondenominational: 'Tverrkirkelig',
-  protestant: 'Protestantisk',
-  catholic: 'Katolsk',
-  orthodox: 'Ortodoks',
-  jewish: 'Jødisk',
-};
-const METHOD_LABELS: Record<string, string> = {
-  ai_assisted: 'KI-assistert',
-  single_translator: 'Én oversetter',
-  committee: 'Oversetterkomité',
-  revision: 'Revisjon',
-};
-const BASIS_LABELS: Record<string, string> = {
-  mt: 'Masoretisk tekst', sblgnt: 'SBLGNT', na28: 'Nestle-Aland 28', ubs5: 'UBS5',
-  tr: 'Textus Receptus', maj: 'Majoritetsteksten', lxx: 'Septuaginta', vg: 'Vulgata',
-};
-const label = (map: Record<string, string>, key: string | null | undefined) =>
-  key ? (map[key] ?? key) : null;
+// Enum-verdier fra meta.json → etikett i ordboka (#22). Nøklene er data og
+// like på alle språk; bare visningen oversettes. `label()` faller tilbake til
+// selve verdien for ukjente nøkler, som før.
+const label = (prefix: string, key: string | null | undefined) =>
+  key ? tEnum(tCtx(), prefix, key) : null;
 
 function EditionRow({ term, children }: { term: string; children?: unknown }) {
   return (
@@ -141,39 +117,39 @@ r.get('/oversettelser/:id', async (c) => {
           <section class="overview-section">
             <h2>{t('ed.about')}</h2>
             <dl class="edition-facts">
-              {edition.abbreviation ? <EditionRow term="Forkortelse">{edition.abbreviation}</EditionRow> : null}
-              <EditionRow term="Språk">
+              {edition.abbreviation ? <EditionRow term={t('ed.abbreviation')}>{edition.abbreviation}</EditionRow> : null}
+              <EditionRow term={t('ed.language')}>
                 {[edition.lang_iso639_1, edition.lang_iso639_3].filter(Boolean).join(' / ')}
                 {edition.script ? ` — skrift ${edition.script}` : ''}
                 {edition.direction === 'rtl' ? ' (høyre-til-venstre)' : ''}
               </EditionRow>
-              {label(PHILOSOPHY_LABELS, edition.philosophy)
-                ? <EditionRow term="Oversettelsessyn">{label(PHILOSOPHY_LABELS, edition.philosophy)}</EditionRow> : null}
-              {label(TRADITION_LABELS, edition.tradition)
-                ? <EditionRow term="Tradisjon">{label(TRADITION_LABELS, edition.tradition)}</EditionRow> : null}
-              {edition.body ? <EditionRow term="Utgiver / organ">{edition.body}</EditionRow> : null}
-              {meta.publisher ? <EditionRow term="Forlag">{meta.publisher}</EditionRow> : null}
+              {label('ed.philosophy.', edition.philosophy)
+                ? <EditionRow term={t('ed.philosophy')}>{label('ed.philosophy.', edition.philosophy)}</EditionRow> : null}
+              {label('ed.tradition.', edition.tradition)
+                ? <EditionRow term={t('ed.tradition')}>{label('ed.tradition.', edition.tradition)}</EditionRow> : null}
+              {edition.body ? <EditionRow term={t('ed.body')}>{edition.body}</EditionRow> : null}
+              {meta.publisher ? <EditionRow term={t('ed.imprint')}>{meta.publisher}</EditionRow> : null}
               {meta.translators?.length
                 ? <EditionRow term={meta.translators.length > 1 ? 'Oversettere' : 'Oversetter'}>{meta.translators.join(', ')}</EditionRow> : null}
               {edition.year_published
-                ? <EditionRow term="Utgitt">{edition.year_published}{meta.year?.revised ? `, revidert ${meta.year.revised}` : ''}</EditionRow> : null}
+                ? <EditionRow term={t('ed.published')}>{edition.year_published}{meta.year?.revised ? `, ${t('ed.revised', { year: meta.year.revised })}` : ''}</EditionRow> : null}
               {meta.work?.method?.length
-                ? <EditionRow term="Metode">{meta.work.method.map((m) => label(METHOD_LABELS, m)).join(', ')}</EditionRow> : null}
+                ? <EditionRow term={t('ed.method')}>{meta.work.method.map((m) => label('ed.method.', m)).join(', ')}</EditionRow> : null}
               {meta.work?.source_languages?.length
-                ? <EditionRow term="Oversatt fra">{meta.work.source_languages.join(', ')}</EditionRow> : null}
+                ? <EditionRow term={t('ed.translatedFrom')}>{meta.work.source_languages.join(', ')}</EditionRow> : null}
               {basis.length
-                ? <EditionRow term="Tekstgrunnlag">
-                    {basis.map((b) => `${b.testament}: ${label(BASIS_LABELS, b.module)}`).join(' · ')}
+                ? <EditionRow term={t('ed.textualBasis')}>
+                    {basis.map((b) => `${b.testament}: ${label('ed.basis.', b.module)}`).join(' · ')}
                   </EditionRow> : null}
               {meta.derived_from?.module
-                ? <EditionRow term="Bygger på">
+                ? <EditionRow term={t('ed.basedOn')}>
                     {known.has(meta.derived_from.module)
                       ? <a href={lhref(`/oversettelser/${meta.derived_from.module}`)}>{meta.derived_from.module}</a>
                       : meta.derived_from.module}
                     {meta.derived_from.relation === 'revision_of' ? ' (revisjon)' : ''}
                   </EditionRow> : null}
               {meta.links?.homepage
-                ? <EditionRow term="Hjemmeside">
+                ? <EditionRow term={t('ed.homepage')}>
                     <a href={meta.links.homepage} target="_blank" rel="noopener noreferrer">{meta.links.homepage}</a>
                   </EditionRow> : null}
             </dl>
@@ -183,14 +159,14 @@ r.get('/oversettelser/:id', async (c) => {
             <section class="overview-section">
               <h2>{t('ed.coverage')}</h2>
               <dl class="edition-facts">
-                <EditionRow term="Omfang">{label(TESTAMENT_LABELS, edition.testament)}</EditionRow>
-                <EditionRow term="Bøker">{edition.books}</EditionRow>
-                {edition.chapters ? <EditionRow term="Kapitler">{edition.chapters}</EditionRow> : null}
-                {edition.verses ? <EditionRow term="Vers">{edition.verses}</EditionRow> : null}
-                <EditionRow term="Deuterokanoniske bøker">
+                <EditionRow term={t('ed.scope')}>{label('ed.testament.', edition.testament)}</EditionRow>
+                <EditionRow term={t('ed.books')}>{edition.books}</EditionRow>
+                {edition.chapters ? <EditionRow term={t('ed.chapters')}>{edition.chapters}</EditionRow> : null}
+                {edition.verses ? <EditionRow term={t('ed.verses')}>{edition.verses}</EditionRow> : null}
+                <EditionRow term={t('ed.deutero')}>
                   {meta.coverage?.deuterocanonical ? 'Ja' : 'Nei'}
                 </EditionRow>
-                {meta.features?.strongs ? <EditionRow term="Strong-numre">Ja</EditionRow> : null}
+                {meta.features?.strongs ? <EditionRow term={t('ed.strongs')}>{t('common.yes')}</EditionRow> : null}
               </dl>
             </section>
           ) : null}
@@ -211,45 +187,38 @@ r.get('/oversettelser/:id', async (c) => {
             {license ? (
               <>
                 <dl class="edition-facts">
-                  <EditionRow term="Lisens">
+                  <EditionRow term={t('ed.licenseRow')}>
                     {license.license}
                     {license.spdx ? <span class="edition-spdx"> {license.spdx}</span> : null}
                   </EditionRow>
-                  <EditionRow term="Kreditering">
-                    {license.attribution_required ? 'Påkrevd' : 'Ikke påkrevd'}
+                  <EditionRow term={t('ed.attribution')}>
+                    {license.attribution_required ? t('ed.required') : t('ed.notRequired')}
                   </EditionRow>
-                  <EditionRow term="Kommersiell bruk">
-                    {license.noncommercial ? 'Ikke tillatt' : 'Tillatt'}
+                  <EditionRow term={t('ed.commercial')}>
+                    {license.noncommercial ? t('ed.notAllowed') : t('ed.allowed')}
                   </EditionRow>
                 </dl>
                 {license.attribution_required ? (
-                  <p class="edition-license-required">
-                    Denne teksten <strong>krever kreditering</strong>. Notisen under må følge
-                    teksten og alt som er avledet fra den.
-                  </p>
+                  <p class="edition-license-required" dangerouslySetInnerHTML={{ __html: t('ed.attributionRequired') }} />
                 ) : null}
                 {license.statement ? (
                   <blockquote class="edition-license-statement" lang="en">{license.statement}</blockquote>
                 ) : null}
               </>
             ) : (
-              <p class="edition-license-missing">
-                Lisensen for denne utgaven er <strong>ikke registrert</strong> i kildedataene
-                ennå. Det betyr ikke at teksten er fri — sjekk kilden før du gjenbruker den.
-              </p>
+              <p class="edition-license-missing" dangerouslySetInnerHTML={{ __html: t('ed.licenseMissing') }} />
             )}
 
             {attributionSources.length ? (
               <p class="edition-license-inherited">
-                Utgaven bygger på{' '}
+                {t('ed.buildsOn')}{' '}
                 {attributionSources.map((m, i) => (
                   <>
                     {i > 0 ? ', ' : ''}
                     <a href={lhref(`/oversettelser/${m}`)}>{m}</a>
                   </>
                 ))}
-                . Lisensvilkårene der — inkludert eventuelle krediteringskrav — gjelder også for
-                denne teksten.
+                . {t('ed.inheritedTerms')}
               </p>
             ) : null}
           </section>
@@ -315,18 +284,17 @@ r.get('/kjente-vers', async (c) => {
           <header>
             <h1>{t('kv.title')}</h1>
             <p class="overview-intro">
-              En samling av kjente og ofte siterte bibelvers. Klikk på et vers for å lese det i
-              kontekst.
+              {t('kv.intro')}
             </p>
           </header>
 
           <section class="overview-section">
-            <h2>Det nye testamente ({nt.length} vers)</h2>
+            <h2>{t('kv.newTestament', { n: nt.length })}</h2>
             <div class="famous-verse-list">{nt.map(card)}</div>
           </section>
 
           <section class="overview-section">
-            <h2>Det gamle testamente ({ot.length} vers)</h2>
+            <h2>{t('kv.oldTestament', { n: ot.length })}</h2>
             <div class="famous-verse-list">{ot.map(card)}</div>
           </section>
         </div>
@@ -376,8 +344,7 @@ r.get('/lesetekster', async (c) => {
           <Breadcrumbs items={[{ label: tCtx()('common.home'), href: '/' }, { label: tCtx()('nav.readingTexts') }]} />
           <h1>{t('nav.readingTexts')}</h1>
           <p class="overview-intro">
-            Lesetekster fra Den norske kirkes tekstrekkesystem. Hver søndag og helligdag har tre
-            lesetekster fra Det gamle testamente, brevlitteraturen og evangeliene.
+            {t('rt.intro')}
           </p>
 
           {upcoming.length === 0 ? (
@@ -529,8 +496,7 @@ r.get('/profetier', async (c) => {
           <Breadcrumbs items={[{ label: tCtx()('common.home'), href: '/' }, { label: tCtx()('nav.prophecies') }]} />
           <h1>{t('pr.title')}</h1>
           <p class="overview-intro">
-            En oversikt over profetier i Det gamle testamente og hvordan de ble oppfylt i Det nye
-            testamente. Klikk på en profeti for å se forklaringen og bibelversene.
+            {t('pr.intro')}
           </p>
 
           <div class="study-filter-buttons" data-card-catfilter>
@@ -647,9 +613,7 @@ r.get('/paralleller', async (c) => {
           <Breadcrumbs items={[{ label: tCtx()('common.home'), href: '/' }, { label: tCtx()('nav.parallels') }]} />
           <h1>{t('pa.title')}</h1>
           <p class="overview-intro">
-            Sammenlign parallelle tekster fra de fire evangeliene. Mange av Jesu ord og gjerninger
-            er gjengitt i flere evangelier, ofte med små forskjeller i ordlyd og vinkling. Klikk på
-            en parallell for å se hvilke evangelier den finnes i.
+            {t('pa.introFull')}
           </p>
 
           <div class="study-filter-buttons" data-card-catfilter>
@@ -699,7 +663,7 @@ r.get('/paralleller', async (c) => {
                               </div>
                             </>
                           ) : (
-                            <span class="parallel-no-passage">Ikke i {GOSPEL_NAMES[g]}</span>
+                            <span class="parallel-no-passage">{t('rd.notInGospel', { gospel: GOSPEL_NAMES[g] ?? g })}</span>
                           )}
                         </div>
                       );
@@ -745,8 +709,7 @@ r.get('/tidslinje', async (c) => {
           <Breadcrumbs items={[{ label: tCtx()('common.home'), href: '/' }, { label: tCtx()('nav.timeline') }]} />
           <h1>{t('tl.title')}</h1>
           <p class="overview-intro">
-            En kronologisk oversikt over de viktigste hendelsene i Bibelen og verdenshistorien, fra
-            skapelsen til den tidlige kirkens tid.
+            {t('tl.intro')}
           </p>
 
           {/* Periodefilter (GitHub #6) — uten JS vises alle periodene. */}
@@ -868,10 +831,10 @@ r.get('/statistikk', async (c) => {
           <section class="overview-section">
             <h2>{t('st.overview')}</h2>
             <div class="stat-grid">
-              {statCard(stats.totalBooks, 'Bøker')}
-              {statCard(stats.totalChapters, 'Kapitler')}
-              {statCard(stats.totalVerses, 'Vers')}
-              {statCard(stats.totalWords, 'Ord')}
+              {statCard(stats.totalBooks, t('st.books'))}
+              {statCard(stats.totalChapters, t('st.chapters'))}
+              {statCard(stats.totalVerses, t('st.verses'))}
+              {statCard(stats.totalWords, t('st.words'))}
             </div>
             {ot.length > 0 && nt.length > 0 && (
               <div class="stat-comparison">
@@ -880,14 +843,14 @@ r.get('/statistikk', async (c) => {
                   <div class="stat-comparison-row"><span>{t('st.books')}</span><span>{nf(stats.otBooks)}</span></div>
                   <div class="stat-comparison-row"><span>{t('st.chapters')}</span><span>{nf(stats.otChapters)}</span></div>
                   <div class="stat-comparison-row"><span>{t('st.verses')}</span><span>{nf(stats.otVerses)}</span></div>
-                  <div class="stat-comparison-row"><span>Ord</span><span>{nf(stats.otWords)}</span></div>
+                  <div class="stat-comparison-row"><span>{t('st.words')}</span><span>{nf(stats.otWords)}</span></div>
                 </div>
                 <div class="stat-comparison-card">
                   <h3>{t('st.nt')}</h3>
                   <div class="stat-comparison-row"><span>{t('st.books')}</span><span>{nf(stats.ntBooks)}</span></div>
                   <div class="stat-comparison-row"><span>{t('st.chapters')}</span><span>{nf(stats.ntChapters)}</span></div>
                   <div class="stat-comparison-row"><span>{t('st.verses')}</span><span>{nf(stats.ntVerses)}</span></div>
-                  <div class="stat-comparison-row"><span>Ord</span><span>{nf(stats.ntWords)}</span></div>
+                  <div class="stat-comparison-row"><span>{t('st.words')}</span><span>{nf(stats.ntWords)}</span></div>
                 </div>
               </div>
             )}
@@ -916,15 +879,15 @@ r.get('/statistikk', async (c) => {
 
           <section class="overview-section">
             <h2>{t('st.frequentWords')}</h2>
-            <div class="stat-word-tabs" role="group" aria-label="Ordkilde">
+            <div class="stat-word-tabs" role="group" aria-label={t('st.wordSource')}>
               <button type="button" class="stat-word-tab active" data-wordtab="translation" aria-pressed="true">
-                Oversettelse
+                {t('rd.rendering')}
               </button>
               <button type="button" class="stat-word-tab" data-wordtab="hebrew" aria-pressed="false">
-                Hebraisk
+                {t('lang.hebrew')}
               </button>
               <button type="button" class="stat-word-tab" data-wordtab="greek" aria-pressed="false">
-                Gresk
+                {t('lang.greek')}
               </button>
             </div>
             <ol class="stat-word-list" id="stat-words" data-bible={bible}>

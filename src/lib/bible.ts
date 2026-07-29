@@ -2679,6 +2679,19 @@ export async function searchReadingPlans(
   ) as Promise<ReadingPlanSearchResult[]>);
 }
 
+/**
+ * Alle leseplaner i språkrekkefølge. `/leseplan` gjorde denne spørringen rått
+ * og UTEN språkfilter, så den plukket en tilfeldig rad blant språkene — i
+ * praksis de norske. Nettopp den fellen CLAUDE.md advarer mot.
+ */
+export async function getAllReadingPlansList(lang = currentContentLanguage()): Promise<ReadingPlanSearchResult[]> {
+  const sql = getSql();
+  return await inLanguage(lang, (language) => sql`
+    SELECT id, name, description, category, days FROM reading_plans
+    WHERE language = ${language} ORDER BY days, seq
+  ` as Promise<ReadingPlanSearchResult[]>);
+}
+
 export interface ImportantWordSearchResult {
   word: string;
   explanation: string;
