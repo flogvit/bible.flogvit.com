@@ -61,6 +61,36 @@
     <priority>0.3</priority>
   </url>
   <url>
+    <loc>https://bible.flogvit.com/oversettelser</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://bible.flogvit.com/oversettelser/osnb</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+  </url>
+  <url>
+    <loc>https://bible.flogvit.com/oversettelser/osnn</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+  </url>
+  <url>
+    <loc>https://bible.flogvit.com/oversettelser/osen</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+  </url>
+  <url>
+    <loc>https://bible.flogvit.com/oversettelser/sblgnt</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+  </url>
+  <url>
+    <loc>https://bible.flogvit.com/oversettelser/tanach</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+  </url>
+  <url>
     <loc>https://bible.flogvit.com/1mos/1</loc>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>

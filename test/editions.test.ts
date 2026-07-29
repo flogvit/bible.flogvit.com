@@ -62,3 +62,48 @@ describe('/oversettelser/:id', () => {
     });
   }
 });
+
+// ── Innstillingene skal SPEILE bible_editions (#27, #28) ─────────────
+//
+// Velgerne var hardkodet til osnb/osnn, så OSEN dukket aldri opp — og
+// versnummeringen hadde ingen standardoppføring, så det ALFABETISK første
+// valget («aceh») sto som brukerens eget og ble skrevet inn i innstillingene
+// ved første lagring på siden. Begge feilene så helt normale ut i UI-et.
+
+describe('/innstillinger speiler bible_editions', () => {
+  const readable = editions.filter((e) => e.philosophy !== 'source_text');
+
+  test('hver lesbar utgave er valgbar som bibeloversettelse', async () => {
+    const html = await (await app.request(L('/innstillinger'))).text();
+    const select = html.slice(html.indexOf('data-setting="bible"'));
+    const options = select.slice(0, select.indexOf('</select>'));
+    const mangler = readable.filter((e) => !options.includes(`value="${e.id}"`)).map((e) => e.id);
+    expect(mangler).toEqual([]);
+  });
+
+  test('grunntekstene er IKKE hovedtekst — de velges som undertekst', async () => {
+    const html = await (await app.request(L('/innstillinger'))).text();
+    const select = html.slice(html.indexOf('data-setting="bible"'));
+    const options = select.slice(0, select.indexOf('</select>'));
+    for (const e of editions.filter((x) => x.philosophy === 'source_text')) {
+      expect({ id: e.id, iHovedvelger: options.includes(`value="${e.id}"`) })
+        .toEqual({ id: e.id, iHovedvelger: false });
+    }
+  });
+
+  test('versnummering har en TOM standardverdi først', async () => {
+    const html = await (await app.request(L('/innstillinger'))).text();
+    const select = html.slice(html.indexOf('data-setting="verseMapping"'));
+    const first = select.slice(select.indexOf('<option'), select.indexOf('</option>'));
+    expect(first).toContain('value=""');
+  });
+});
+
+describe('utgavesidene er indekserbare (#30)', () => {
+  test('sitemap har /oversettelser og én URL per importert utgave', async () => {
+    const xml = await Bun.file('public/sitemap.xml').text();
+    expect(xml).toContain('/oversettelser</loc>');
+    const mangler = editions.filter((e) => !xml.includes(`/oversettelser/${e.id}</loc>`)).map((e) => e.id);
+    expect(mangler).toEqual([]);
+  });
+});

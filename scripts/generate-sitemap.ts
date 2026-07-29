@@ -9,6 +9,7 @@
 import { booksData } from '../src/lib/books-data.ts';
 import { toUrlSlug } from '../src/lib/url-utils.ts';
 import { getBookInfoBySlug } from '../src/lib/books-data.ts';
+import { IMPORTED_BIBLES } from '../src/lib/editions.ts';
 
 const BASE_URL = 'https://bible.flogvit.com';
 
@@ -25,6 +26,11 @@ const staticUrls: [path: string, changefreq: string, priority: string][] = [
   ['/kjente-vers', 'monthly', '0.6'],
   ['/bidra', 'monthly', '0.4'],
   ['/tilgjengelighet', 'monthly', '0.3'],
+  // Utgavesidene (#30). De er ferdig oversatt til alle åtte språk med
+  // hreflang og canonical, og beskriver akkurat det en ny leser søker etter —
+  // men de sto ikke her, så de var usynlige for søkemotorene.
+  ['/oversettelser', 'monthly', '0.6'],
+  ...IMPORTED_BIBLES.map((id) => [`/oversettelser/${id}`, 'monthly', '0.5'] as [string, string, string]),
 ];
 
 let xml = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n`;
