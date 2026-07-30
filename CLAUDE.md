@@ -223,8 +223,45 @@ sesjon**. Lenken ER tilgangen (capability-URL), og det styrer alt:
 - **Å DELE er plus** (husking=plus, altså må teksten være lagret i skyen); **å
   LESE er gratis**. Samme akse som resten av appen.
 
-Del 2 i issuen (åpen katalog med review) er IKKE bygget — review-formen er ikke
-avgjort, og del 1 er bevisst uavhengig av den.
+## Åpen katalog for manuskripter (#15, del 2)
+
+`/manuskripter/katalog` er motstykket til den skjulte lenken: alt er listbart,
+offentlig og indekserbart. Det er nettopp derfor det er review — alt som er
+listbart, er verdt å spamme. Logikken bor i `lib/publications.ts`.
+
+**Review-modellen er manuell godkjenning av hver publisering.** Minst å bygge,
+og den kan VOKSE uten å rives: «betrodd konto etter N godkjente» er et spørsmål
+mot de samme radene, og etterhånds-moderering er rapportknappen som allerede står
+der. Kø og avgjørelse går over token-gatede endepunkter (`REVIEW_TOKEN`, uten
+env FINNES de ikke) og `scripts/publications-review.ts` — samme mønster som
+contrib, aldri direkte DB-tilgang og aldri engangscontainere på VM-en.
+
+- **Teksten fryses ved innsending** (`title`/`content` i tabellen). Reviewen
+  godkjenner en TEKST, ikke et løfte: leses manuskriptet live fra `sync_items`,
+  kan en godkjent forfatter bytte det ut med reklame etterpå, og godkjenningen
+  blir en vaskeritjeneste. Redigering endrer derfor ikke katalogen — ny
+  innsending gjør, og den går tilbake til `pending`.
+- **Sletting virker likevel.** Både lista og detaljen JOIN-er mot `sync_items` og
+  krever `deleted = 0`. Øyeblikksbildet er for integritet, ikke for å holde på
+  noe eieren har fjernet.
+- **Adressen er `slug` = tittel-slug + seks tilfeldige tegn**, og er
+  primærnøkkelen. Ingen auto_increment i en offentlig URL (#40), ingen bruker-id
+  å telle bakover fra, og adressen overlever at tittelen endres. Ny innsending
+  BEHOLDER slugen, så en delt lenke ikke dør av en retting.
+- **Rapporter skjuler ingenting av seg selv** — tallet er et signal til den som
+  reviewer. Auto-skjuling ved N rapporter ville vært et nedtakingsvåpen for hvem
+  som helst. Rapportering krever ingen konto: den som ser noe galt er sjelden
+  innlogget.
+- **HELE katalogen står utenfor mikrocachen** (`NEVER_CACHED`), ikke bare
+  detaljen. En tittel er også tekst noen kan ha reagert på, så «teksten er borte,
+  men overskriften står i en time» er ikke moderering. Prisen er liten: én
+  spørring mot en liten tabell, ikke 1189 kapittelsider.
+- **Ruterekkefølge:** `catalog.tsx` monteres FØR `user.tsx` i `pages.tsx`, ellers
+  sluker `/manuskripter/:slug` katalogen. `test/publications.test.ts` pinner det.
+- Bare LISTA ligger i sitemapen. Enkeltoppføringer kommer og går med review og
+  tilbaketrekking, og en sitemap full av adresser som forsvinner er verre enn
+  ingen (#42-lærdommen).
+- **Å PUBLISERE er plus** (teksten må være lagret i skyen), **å LESE er gratis**.
 
 ## Lastvern (anonyme sidevisninger)
 

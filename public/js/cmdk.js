@@ -26,6 +26,7 @@ const PAGES = [
   { key: 'nav.knownVerses', to: '/kjente-vers', group: 'nav.studies', k: 'K' },
   { key: 'nav.themes', to: '/temaer', group: 'nav.studies', k: 'C' },
   { key: 'nav.stories', to: '/historier', group: 'nav.studies', k: 'B' },
+  { key: 'pub.catalog', to: '/manuskripter/katalog', group: 'nav.studies' },
   { key: 'nav.prophecies', to: '/profetier', group: 'nav.studies', k: 'P' },
   { key: 'nav.parallels', to: '/paralleller', group: 'nav.studies', k: 'A' },
   { key: 'nav.persons', to: '/personer', group: 'nav.studies', k: 'O' },

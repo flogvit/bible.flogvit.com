@@ -588,6 +588,40 @@ const TABLES: string[] = [
     created_at BIGINT NOT NULL,
     UNIQUE KEY uq_devotional_shares_item (user_id, item_id)
   ) ENGINE=InnoDB ${CS}`,
+
+  // Åpen katalog for manuskripter (#15, del 2). BRUKERTABELL — aldri inn i
+  // import/deploy-data-listene.
+  //
+  // Review-modellen er MANUELL GODKJENNING av hver publisering. Med dagens
+  // volum er den minst å bygge, og den kan vokse til «betrodd konto etter N
+  // godkjente» uten at noe må rives — statusfeltet er allerede der.
+  //
+  // - `slug` er den offentlige adressen og primærnøkkel: lesbar tittel-slug +
+  //   seks tilfeldige tegn. Ingen auto_increment i en offentlig URL, og ingen
+  //   bruker-id — katalogen skal ikke kunne telles opp bakover til kontoer.
+  // - `title`/`content` er et ØYEBLIKKSBILDE tatt ved innsending. Katalogen
+  //   viser det som faktisk ble godkjent; leses teksten live, kan en godkjent
+  //   forfatter bytte den ut med hva som helst etterpå. Redigering endrer
+  //   derfor ikke katalogen — ny innsending gjør, og den går til `pending`.
+  // - UNIQUE (user_id, item_id): ett katalogoppslag per manuskript.
+  // - `reports` er et SIGNAL til den som reviewer, ikke en automatisk skjuling.
+  //   Auto-skjuling på antall rapporter ville vært et nedtakingsvåpen for hvem
+  //   som helst.
+  `CREATE TABLE IF NOT EXISTS devotional_publications (
+    slug VARCHAR(120) PRIMARY KEY,
+    user_id INT NOT NULL,
+    item_id VARCHAR(255) NOT NULL,
+    author_name VARCHAR(120) NULL,
+    title VARCHAR(255) NOT NULL,
+    content MEDIUMTEXT NOT NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'pending',
+    review_note TEXT NULL,
+    reports INT NOT NULL DEFAULT 0,
+    submitted_at BIGINT NOT NULL,
+    decided_at BIGINT NULL,
+    UNIQUE KEY uq_devotional_publications_item (user_id, item_id),
+    INDEX idx_devotional_publications_status (status, submitted_at)
+  ) ENGINE=InnoDB ${CS}`,
 ];
 
 // --- Migreringer ---------------------------------------------------------

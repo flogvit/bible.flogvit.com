@@ -154,7 +154,15 @@ function serveEntry(c: Context, entry: CacheEntry, xCache: 'hit' | 'stale'): Res
  * en time. «Trekk tilbake» må virke i samme øyeblikk, så siden rendres alltid.
  * Den er dessuten unik per token, så cachen ville ikke gitt treff uansett.
  */
-const NEVER_CACHED = [/^\/(?:[a-z]{2}\/)?delt\//];
+const NEVER_CACHED = [
+  /^\/(?:[a-z]{2}\/)?delt\//,
+  // Katalogen (#15, del 2): trekkes en oppføring — av forfatteren eller etter
+  // en rapport — skal den være borte med en gang, også fra LISTA. En tittel er
+  // tekst den som rapporterte kan ha reagert på, så «teksten er borte, men
+  // overskriften står i en time» er ikke moderering. Prisen er liten: lista er
+  // én spørring mot en tabell med hundre rader, ikke 1189 kapittelsider.
+  /^\/(?:[a-z]{2}\/)?manuskripter\/katalog(?:\/|$)/,
+];
 
 export async function withPageCache(c: Context, next: Next): Promise<Response | void> {
   const anonymous = !(c.req.header('cookie') ?? '').includes('fv-session=');

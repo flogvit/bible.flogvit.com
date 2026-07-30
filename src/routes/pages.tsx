@@ -10,6 +10,7 @@ import homeSearch from './pages/home-search.tsx';
 import persons from './pages/persons.tsx';
 import themes from './pages/themes.tsx';
 import overview from './pages/overview.tsx';
+import catalog from './pages/catalog.tsx';
 import user from './pages/user.tsx';
 import contrib from './pages/contrib.tsx';
 import misc from './pages/misc.tsx';
@@ -23,6 +24,9 @@ pages.route('/', homeSearch);
 pages.route('/', persons);
 pages.route('/', themes);
 pages.route('/', overview);
+// FØR user: /manuskripter/:slug i user.tsx ville ellers slukt
+// /manuskripter/katalog. test/publications.test.ts pinner rekkefølgen.
+pages.route('/', catalog);
 pages.route('/', user);
 pages.route('/', contrib);
 pages.route('/', changes);

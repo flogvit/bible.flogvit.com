@@ -26,6 +26,10 @@ export const STATIC_PATHS: readonly string[] = [
   '/leseplan',
   '/kjente-vers',
   '/bidra',
+  // Den åpne manuskriptkatalogen (#15, del 2). LISTA står her; de enkelte
+  // oppføringene gjør ikke — de kommer og går med review og tilbaketrekking,
+  // og en sitemap full av adresser som forsvinner er verre enn ingen.
+  '/manuskripter/katalog',
   '/tilgjengelighet',
   // Utgavesidene (#30). De er ferdig oversatt til alle åtte språk med hreflang
   // og canonical, og beskriver akkurat det en ny leser søker etter.

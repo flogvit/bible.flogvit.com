@@ -58,6 +58,7 @@ const PAGES: { path: string; name: string }[] = [
   { path: '/innstillinger', name: 'innstillinger' },
   { path: '/favoritter', name: 'favoritter' },
   { path: '/manuskripter', name: 'manuskripter' },
+  { path: '/manuskripter/katalog', name: 'manuskriptkatalogen (#15, del 2)' },
   { path: '/om', name: 'om' },
   { path: '/sok?q=gud', name: 'søk med treff' },
   // Brukersidene og detaljsidene manglet i matrisen, og der lå det norsk igjen

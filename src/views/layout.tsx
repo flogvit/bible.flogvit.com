@@ -34,6 +34,7 @@ const CHROME_ISLAND_KEYS = [
   'nav.verseLists', 'nav.readingPlan', 'nav.manuscripts', 'nav.knownVerses', 'nav.themes',
   'nav.stories', 'nav.prophecies', 'nav.parallels', 'nav.persons', 'nav.numbers',
   'nav.timeline', 'nav.readingTexts', 'nav.statistics', 'nav.translations',
+  'pub.catalog',
   'foot.home', 'foot.about', 'foot.a11y', 'foot.offline',
   'pwa.newVersion', 'pwa.updateNow', 'pwa.later', 'pwa.offline', 'pwa.backOnline',
   'ref.notFound',
@@ -67,6 +68,10 @@ const PAGE_ISLAND_KEYS: Record<string, readonly MessageKey[]> = {
     // Deling av manuskripter (#15). Glemmer du en nøkkel her, viser øya NØKKELEN.
     'u.share', 'u.shareHint', 'u.shareCreate', 'u.shareCopy', 'u.shareCopied',
     'u.shareNew', 'u.shareRevoke', 'u.shareRevoked', 'u.shareError',
+    // Åpen katalog (#15, del 2). Glemmer du en nøkkel her, viser øya NØKKELEN.
+    'pub.publish', 'pub.publishHint', 'pub.republish', 'pub.withdraw', 'pub.withdrawn',
+    'pub.viewInCatalog', 'pub.statusPending', 'pub.statusApproved', 'pub.statusRejected',
+    'pub.error',
   ],
   'offline.js': [
     'is.offlineDownload', 'is.downloadProgress', 'is.downloadSkipped', 'is.downloadingSupport',
@@ -83,6 +88,7 @@ const PAGE_ISLAND_KEYS: Record<string, readonly MessageKey[]> = {
     'is.uploadingToAccount', 'is.syncedToAccount', 'is.uploadFailedRetry',
   ],
   'statistics.js': ['common.loading', 'is.noWords'],
+  'publication.js': ['pub.reported', 'pub.reportFailed'],
   'person-filter.js': ['is.personCount'],
   'user-bibles.js': ['is.chapterMissingInOwn', 'is.showingOwn'],
 };
@@ -231,6 +237,7 @@ const navGroups = (t: Translator): { label: string; links: { href: string; label
       { href: '/kjente-vers', label: t('nav.knownVerses') },
       { href: '/temaer', label: t('nav.themes') },
       { href: '/historier', label: t('nav.stories') },
+      { href: '/manuskripter/katalog', label: t('pub.catalog') },
       { href: '/profetier', label: t('nav.prophecies') },
       { href: '/paralleller', label: t('nav.parallels') },
       { href: '/personer', label: t('nav.persons') },

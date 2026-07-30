@@ -446,6 +446,7 @@ if (root) {
       editLink.href = localeHref(`/manuskripter/${slug}/rediger`);
       article.appendChild(editLink);
       root.appendChild(shareBlock(dev));
+      root.appendChild(publishBlock(dev));
     }
   }
 }
@@ -555,6 +556,102 @@ function shareBlock(dev) {
   // nytt klikk sett ut som en ny lenke hver gang.
   api('GET', '/')
     .then(({ shares }) => shown((shares || []).find((x) => x.itemId === dev.id)?.token))
+    .catch(() => {});
+
+  return wrap;
+}
+
+// ---- åpen katalog (#15, del 2) ------------------------------------------
+//
+// Motstykket til delingsblokka over: her er alt listbart og offentlig, og
+// derfor reviewet. To ting UI-et må si tydelig, fordi de overrasker ellers:
+//
+//   1. Teksten som publiseres er et ØYEBLIKKSBILDE. Redigerer du manuskriptet
+//      etterpå, endres ikke katalogkopien — du må publisere på nytt, og da går
+//      den til ny vurdering. (Uten det kunne en godkjent tekst byttes ut.)
+//   2. «Trekk tilbake» virker med en gang, som for delingslenken.
+function publishBlock(dev) {
+  const wrap = el('section', 'share-block');
+  wrap.appendChild(el('h2', 'share-title', t('pub.publish')));
+  wrap.appendChild(el('p', 'user-note', t('pub.publishHint')));
+
+  const status = el('p', 'share-status');
+  const publishBtn = el('button', 'user-btn', t('pub.publish'));
+  publishBtn.type = 'button';
+  const republishBtn = el('button', 'user-btn-ghost', t('pub.republish'));
+  republishBtn.type = 'button';
+  const withdrawBtn = el('button', 'user-btn-ghost', t('pub.withdraw'));
+  withdrawBtn.type = 'button';
+  const link = el('a', 'user-btn-ghost', t('pub.viewInCatalog'));
+
+  const STATUS_LABEL = {
+    pending: 'pub.statusPending',
+    approved: 'pub.statusApproved',
+    rejected: 'pub.statusRejected',
+  };
+
+  const shown = (pub) => {
+    const has = !!pub;
+    publishBtn.hidden = has;
+    republishBtn.hidden = !has;
+    withdrawBtn.hidden = !has;
+    // Lenken gir bare mening når oppføringen faktisk er ute.
+    link.hidden = !pub || pub.status !== 'approved';
+    if (pub) {
+      link.href = localeHref(`/manuskripter/katalog/${pub.slug}`);
+      const label = t(STATUS_LABEL[pub.status] || 'pub.statusPending');
+      // Begrunnelsen fra reviewen er det eneste svaret forfatteren får på
+      // «hvorfor kom den ikke ut», så den skal stå her når den finnes.
+      status.textContent = pub.reviewNote ? `${label} — ${pub.reviewNote}` : label;
+    } else {
+      status.textContent = '';
+    }
+  };
+
+  const api = async (method, path) => {
+    const res = await fetch(`/api/publications${path}`, {
+      method,
+      headers: method === 'POST' ? { 'content-type': 'application/json' } : undefined,
+      body: method === 'POST' ? JSON.stringify({ itemId: dev.id }) : undefined,
+    });
+    if (!res.ok) throw new Error(String(res.status));
+    return res.json();
+  };
+
+  const submit = async () => {
+    if (!window.fvPlus?.gate(t('pub.publish'))) return;
+    try {
+      const { publication } = await api('POST', '/');
+      shown(publication);
+    } catch {
+      status.textContent = t('pub.error');
+    }
+  };
+
+  publishBtn.addEventListener('click', submit);
+  republishBtn.addEventListener('click', submit);
+
+  withdrawBtn.addEventListener('click', async () => {
+    try {
+      await api('DELETE', `/${encodeURIComponent(dev.id)}`);
+      shown(null);
+      status.textContent = t('pub.withdrawn');
+    } catch {
+      status.textContent = t('pub.error');
+    }
+  });
+
+  wrap.appendChild(publishBtn);
+  wrap.appendChild(republishBtn);
+  wrap.appendChild(withdrawBtn);
+  wrap.appendChild(link);
+  wrap.appendChild(status);
+  shown(null);
+
+  // Finnes oppføringen alt, skal statusen vises framfor «Publiser» — ellers
+  // ser hvert besøk ut som en ny publisering.
+  api('GET', '/')
+    .then(({ publications }) => shown((publications || []).find((x) => x.itemId === dev.id)))
     .catch(() => {});
 
   return wrap;
