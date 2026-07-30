@@ -14,6 +14,7 @@ import user from './pages/user.tsx';
 import contrib from './pages/contrib.tsx';
 import misc from './pages/misc.tsx';
 import changes from './pages/changes.tsx';
+import shared from './pages/shared.tsx';
 import reading from './pages/reading.tsx';
 
 const pages = new Hono<AppEnv>();
@@ -25,6 +26,7 @@ pages.route('/', overview);
 pages.route('/', user);
 pages.route('/', contrib);
 pages.route('/', changes);
+pages.route('/', shared);
 pages.route('/', misc);
 pages.route('/', reading);
 

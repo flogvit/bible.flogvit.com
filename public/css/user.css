@@ -135,3 +135,12 @@ a.user-card:hover { border-color: var(--gold); }
 .settings-sync { margin: 4px 0; color: var(--muted); font-size: 14px; }
 .settings-data-buttons { display: flex; flex-wrap: wrap; gap: 10px; margin: 4px 0 8px; }
 .settings-import-label { cursor: pointer; }
+
+/* Deling av manuskripter (#15, del 1). Lenken er tilgangen, så feltet skal
+   være lesbart i full bredde — en avkortet URL inviterer til halv kopiering. */
+.share-block { margin-top: 32px; padding-top: 20px; border-top: 1px solid var(--line); font-family: var(--font-ui); }
+.share-title { font-size: 18px; margin-bottom: 6px; }
+.share-row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin: 10px 0; }
+.share-link { flex: 1 1 320px; min-width: 0; font-family: var(--font-mono); font-size: 13px; }
+.share-status { margin: 6px 0 0; color: var(--muted); font-size: 14px; min-height: 20px; }
+.share-block .user-btn, .share-block .user-btn-ghost { margin-right: 8px; }

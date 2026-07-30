@@ -567,6 +567,27 @@ const TABLES: string[] = [
     INDEX idx_contrib_user (user_id, updated_at),
     INDEX idx_contrib_status (status, updated_at)
   ) ENGINE=InnoDB ${CS}`,
+
+  // Delingslenker for manuskripter (#15, del 1). BRUKERTABELL — aldri inn i
+  // import/deploy-data-listene.
+  //
+  // Lenken ER tilgangen: en capability-URL med et ugjettbart token, som leses
+  // UTEN innlogging. Derfor:
+  // - `token` er primærnøkkelen, så oppslaget er ett indeksert treff og det
+  //   ikke finnes noen annen vei inn.
+  // - UNIQUE på (user_id, item_id): ett levende token per manuskript. Å
+  //   regenerere er å erstatte, og det TREKKER TILBAKE det gamle — to gyldige
+  //   lenker til samme tekst ville gjort «trekk tilbake» til en løgn.
+  // - `item_id` er sync-item-id-en (`dev-<ts>`), ikke slugen: slugen er avledet
+  //   av tittelen, og en delt lenke skal ikke kunne dø av at noen endrer
+  //   overskriften.
+  `CREATE TABLE IF NOT EXISTS devotional_shares (
+    token VARCHAR(64) PRIMARY KEY,
+    user_id INT NOT NULL,
+    item_id VARCHAR(255) NOT NULL,
+    created_at BIGINT NOT NULL,
+    UNIQUE KEY uq_devotional_shares_item (user_id, item_id)
+  ) ENGINE=InnoDB ${CS}`,
 ];
 
 // --- Migreringer ---------------------------------------------------------

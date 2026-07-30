@@ -146,9 +146,24 @@ function serveEntry(c: Context, entry: CacheEntry, xCache: 'hit' | 'stale'): Res
   });
 }
 
+/**
+ * Stier som ALDRI caches, selv anonymt.
+ *
+ * `/delt/<token>` er en capability-URL til et manuskript (#15): en cachet kopi
+ * ville overlevd at eieren trakk tilbake lenken — med den nye TTL-en i opptil
+ * en time. «Trekk tilbake» må virke i samme øyeblikk, så siden rendres alltid.
+ * Den er dessuten unik per token, så cachen ville ikke gitt treff uansett.
+ */
+const NEVER_CACHED = [/^\/(?:[a-z]{2}\/)?delt\//];
+
 export async function withPageCache(c: Context, next: Next): Promise<Response | void> {
   const anonymous = !(c.req.header('cookie') ?? '').includes('fv-session=');
-  if (c.req.method !== 'GET' || !anonymous || c.req.path.startsWith('/api/')) {
+  if (
+    c.req.method !== 'GET' ||
+    !anonymous ||
+    c.req.path.startsWith('/api/') ||
+    NEVER_CACHED.some((re) => re.test(c.req.path))
+  ) {
     return next();
   }
 

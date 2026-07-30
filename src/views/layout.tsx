@@ -59,6 +59,9 @@ const PAGE_ISLAND_KEYS: Record<string, readonly MessageKey[]> = {
   'user.js': [
     'nav.verseLists', 'nav.manuscripts', 'is.readingMap', 'is.activeCantHide', 'is.importFailed',
     'is.storageUsed', 'is.storageUnavailable', 'is.untitled', 'is.taggedCount', 'is.verseCount',
+    // Deling av manuskripter (#15). Glemmer du en nøkkel her, viser øya NØKKELEN.
+    'u.share', 'u.shareHint', 'u.shareCreate', 'u.shareCopy', 'u.shareCopied',
+    'u.shareNew', 'u.shareRevoke', 'u.shareRevoked', 'u.shareError',
   ],
   'offline.js': [
     'is.offlineDownload', 'is.downloadProgress', 'is.downloadSkipped', 'is.downloadingSupport',

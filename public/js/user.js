@@ -445,8 +445,119 @@ if (root) {
       const editLink = el('a', 'user-btn-ghost', t('common.edit'));
       editLink.href = localeHref(`/manuskripter/${slug}/rediger`);
       article.appendChild(editLink);
+      root.appendChild(shareBlock(dev));
     }
   }
+}
+
+// ---- deling: skjult lenke (#15, del 1) ----------------------------------
+//
+// Lenken ER tilgangen, så UI-et må gjøre to ting tydelig: hvem som kan lese
+// (alle med lenken, uten konto), og at «trekk tilbake» virker med en gang.
+//
+// Tokenet lages på SERVEREN (crypto) og lagres i devotional_shares — ikke i
+// localStorage. En delt lenke må virke for en mottaker uten konto, altså kan
+// den ikke bo hos avsenderen.
+function shareBlock(dev) {
+  const wrap = el('section', 'share-block');
+  wrap.appendChild(el('h2', 'share-title', t('u.share')));
+  wrap.appendChild(el('p', 'user-note', t('u.shareHint')));
+
+  const status = el('p', 'share-status');
+  const linkRow = el('div', 'share-row');
+  const linkInput = document.createElement('input');
+  linkInput.type = 'text';
+  linkInput.readOnly = true;
+  linkInput.className = 'user-input share-link';
+  linkInput.setAttribute('aria-label', t('u.shareCopy'));
+
+  const createBtn = el('button', 'user-btn', t('u.shareCreate'));
+  createBtn.type = 'button';
+  const copyBtn = el('button', 'user-btn', t('u.shareCopy'));
+  copyBtn.type = 'button';
+  const newBtn = el('button', 'user-btn-ghost', t('u.shareNew'));
+  newBtn.type = 'button';
+  const revokeBtn = el('button', 'user-btn-ghost', t('u.shareRevoke'));
+  revokeBtn.type = 'button';
+
+  const shown = (token) => {
+    const has = !!token;
+    linkInput.value = has ? `${location.origin}${localeHref(`/delt/${token}`)}` : '';
+    linkRow.hidden = !has;
+    createBtn.hidden = has;
+    copyBtn.hidden = !has;
+    newBtn.hidden = !has;
+    revokeBtn.hidden = !has;
+  };
+
+  const api = async (method, path, body) => {
+    const res = await fetch(`/api/shares${path}`, {
+      method,
+      headers: body ? { 'content-type': 'application/json' } : undefined,
+      body: body ? JSON.stringify(body) : undefined,
+    });
+    if (!res.ok) throw new Error(String(res.status));
+    return res.json();
+  };
+
+  createBtn.addEventListener('click', async () => {
+    if (!window.fvPlus?.gate(t('u.share'))) return;
+    try {
+      const { share } = await api('POST', '/', { itemId: dev.id });
+      status.textContent = '';
+      shown(share?.token);
+    } catch {
+      status.textContent = t('u.shareError');
+    }
+  });
+
+  newBtn.addEventListener('click', async () => {
+    try {
+      const { share } = await api('POST', '/', { itemId: dev.id, regenerate: true });
+      status.textContent = '';
+      shown(share?.token);
+    } catch {
+      status.textContent = t('u.shareError');
+    }
+  });
+
+  revokeBtn.addEventListener('click', async () => {
+    try {
+      await api('DELETE', `/${encodeURIComponent(dev.id)}`);
+      shown(null);
+      status.textContent = t('u.shareRevoked');
+    } catch {
+      status.textContent = t('u.shareError');
+    }
+  });
+
+  copyBtn.addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText(linkInput.value);
+      status.textContent = t('u.shareCopied');
+    } catch {
+      // Utklippstavlen kan være avslått. Da er markering nest beste vei —
+      // lenken står synlig i feltet uansett.
+      linkInput.select();
+    }
+  });
+
+  linkRow.appendChild(linkInput);
+  linkRow.appendChild(copyBtn);
+  wrap.appendChild(createBtn);
+  wrap.appendChild(linkRow);
+  wrap.appendChild(newBtn);
+  wrap.appendChild(revokeBtn);
+  wrap.appendChild(status);
+  shown(null);
+
+  // Finnes lenken alt, skal den vises framfor «Lag lenke» — ellers ville et
+  // nytt klikk sett ut som en ny lenke hver gang.
+  api('GET', '/')
+    .then(({ shares }) => shown((shares || []).find((x) => x.itemId === dev.id)?.token))
+    .catch(() => {});
+
+  return wrap;
 }
 
 function slugify(s) {

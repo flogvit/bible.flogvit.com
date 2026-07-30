@@ -173,6 +173,33 @@ import). Nøkkelregler:
   «Litteratur» i versdetaljen (presise treff) og studium-blokka
   (kapittel-/bok-nivå).
 
+## Deling av manuskripter (GitHub #15, del 1)
+
+`/delt/<token>` viser ett manuskript til hvem som helst — **ingen konto, ingen
+sesjon**. Lenken ER tilgangen (capability-URL), og det styrer alt:
+
+- **Tokenet lages på serveren** (32 byte `crypto`, base64url) og bor i
+  `devotional_shares`. Ikke i localStorage: en delt lenke må virke for en
+  mottaker uten konto, altså kan den ikke bo hos avsenderen.
+- **Ett levende token per manuskript** (UNIQUE på `user_id, item_id`). «Del» er
+  idempotent; «Ny lenke» ERSTATTER og trekker dermed tilbake den gamle. To
+  gyldige lenker til samme tekst ville gjort «trekk tilbake» til en løgn.
+- **Nøkkelen er sync-item-id-en** (`dev-<ts>`), ikke slugen — slugen er avledet
+  av tittelen, og en delt lenke skal ikke dø av at noen endrer overskriften.
+- **Tilbaketrekking må virke UMIDDELBART.** Derfor står siden utenfor
+  mikrocachen (`NEVER_CACHED` i `page-cache.ts` — med en times TTL ville en
+  cachet kopi overlevd tilbaketrekkingen) og sendes med `private, no-store`.
+- **Ukjent, tilbaketrukket og slettet gir samme svar: 404.** Et eget «trukket
+  tilbake» ville bekreftet at tokenet en gang var gyldig. Slettet manuskript =
+  `sync_items.deleted = 1`, og det filteret er en del av tilgangskontrollen.
+- **`noindex`**, og ikke i sitemapen (`sitemap-paths.ts` lister bare faste
+  sider).
+- **Å DELE er plus** (husking=plus, altså må teksten være lagret i skyen); **å
+  LESE er gratis**. Samme akse som resten av appen.
+
+Del 2 i issuen (åpen katalog med review) er IKKE bygget — review-formen er ikke
+avgjort, og del 1 er bevisst uavhengig av den.
+
 ## Lastvern (anonyme sidevisninger)
 
 `src/lib/page-cache.ts` er både mikrocache OG lastavvisning (#4, #14): anonyme
