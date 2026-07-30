@@ -3050,6 +3050,22 @@ export async function getReadingTextsByDate(
   return result;
 }
 
+/**
+ * Innholdsspråkene lesedagen finnes på — grunnlaget for hreflang-klyngen (#45).
+ *
+ * `reading_texts` er norsk-spesifikt innhold og ligger bare på `nb`, så en
+ * generisk klynge over alle åtte språk annonserte sju 404-er per dato. Her
+ * spørres det som ER i basen, slik at et importert språk slår gjennom uten
+ * kodeendring — samme prinsipp som `contentLanguages()` i importøren.
+ */
+export async function getReadingTextLanguages(date: string): Promise<string[]> {
+  const sql = getSql();
+  const rows = await sql`
+    SELECT DISTINCT language FROM reading_texts WHERE date = ${date}
+  ` as { language: string }[];
+  return rows.map((r) => r.language);
+}
+
 export async function getTodaysReadingTexts(lang = currentContentLanguage()): Promise<ReadingTextWithSlots[]> {
   const today = new Date().toISOString().substring(0, 10);
   return getReadingTextsByDate(today, lang);

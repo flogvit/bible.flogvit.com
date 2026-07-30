@@ -17,6 +17,7 @@ import {
   getAllReadingTexts,
   getReadingTextById,
   getReadingTextsByDate,
+  getReadingTextLanguages,
   getProphecies,
   getProphecyCategories,
   getGospelParallels,
@@ -36,7 +37,7 @@ import { enrichWithVerseText, readingTypeKey } from '../../lib/reading-text-enri
 import { toUrlSlug } from '../../lib/url-utils.ts';
 import { layoutProps, tFor, lhref, currentIntlTag, langName, scriptName } from '../../lib/i18n.ts';
 import { tCtx, tEnum } from '../../lib/i18n.ts';
-import { pickLocalisedText } from '../../lib/lang.ts';
+import { pickLocalisedText, localesWithContent } from '../../lib/lang.ts';
 
 const r = new Hono<AppEnv>();
 
@@ -449,8 +450,13 @@ r.get('/lesetekster/:date{[0-9]{4}-[0-9]{2}-[0-9]{2}}', async (c) => {
 
   const names = texts.map((x) => x.name).join(' · ');
 
+  // Hreflang skal bare oppgi språkene dagen FINNES på (#45). Lesetekstene er
+  // norsk-spesifikke, så klyngen blir nb + nn — de øvrige seks er 404.
+  const locales = localesWithContent(await getReadingTextLanguages(date));
+
   return c.html(
     <Layout {...layoutProps(c)}
+      locales={locales}
       title={`${names} — ${t('nav.readingTexts')} — FLOGVIT.bible`}
       description={t('rt.detailMeta', { name: names })}
       styles={['overview.css']}

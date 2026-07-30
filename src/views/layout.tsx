@@ -96,16 +96,27 @@ function islandKeysFor(scripts: readonly string[]): MessageKey[] {
 const SITE = 'https://bible.flogvit.com';
 
 /**
- * Full hreflang-klynge (I18N.md §3): de åtte URL-ene er samme side på ulike
- * språk, ikke duplikater. x-default peker på basespråket.
+ * Hreflang-klyngen (I18N.md §3): URL-ene er samme side på ulike språk, ikke
+ * duplikater.
+ *
+ * `locales` er språkene siden FAKTISK finnes på — normalt alle åtte, men
+ * språk-scopet innhold som bare finnes på norsk (`reading_texts`) svarer 404 på
+ * resten (#45). Klyngen skal aldri annonsere en adresse som ikke svarer 200: en
+ * crawler trenger ingen lenke når `<link rel="alternate">` sier at siden finnes.
+ *
+ * Derfor følger `x-default` med: den er adressen Google velger når ingen
+ * språkvariant passer, så den må ligge INNENFOR settet. Pekte den på engelsk for
+ * en norsk-bare side, sendte vi hver uplasserbar leser til en 404.
  */
-function HrefLang({ path }: { path: string }) {
+function HrefLang({ path, locales }: { path: string; locales?: readonly Locale[] }) {
+  const available = locales?.length ? locales : LOCALES;
+  const fallback = available.includes(DEFAULT_LOCALE) ? DEFAULT_LOCALE : available[0]!;
   return (
     <>
-      {LOCALES.map((l) => (
+      {available.map((l) => (
         <link rel="alternate" hreflang={l} href={SITE + href(l, path)} />
       ))}
-      <link rel="alternate" hreflang="x-default" href={SITE + href(DEFAULT_LOCALE, path)} />
+      <link rel="alternate" hreflang="x-default" href={SITE + href(fallback, path)} />
     </>
   );
 }
@@ -409,6 +420,13 @@ export interface LayoutProps {
   locale: Locale;
   /** Sti UTEN språkprefiks — grunnlaget for hreflang-klyngen. */
   path: string;
+  /**
+   * Locale-ene siden faktisk FINNES på. Utelatt = alle åtte, som er sant for
+   * alt annet enn sider bygget på innhold som mangler språk (#45). Bruk
+   * `localesWithContent()` (lib/lang.ts) framfor å skrive lista i en rute —
+   * den utleder settet av samme fallback-kjede som spørringen.
+   */
+  locales?: readonly Locale[];
   title: string;
   description?: string;
   children?: Child;
@@ -452,7 +470,7 @@ export function Layout(props: LayoutProps) {
           <meta name="author" content="FLOGVIT" />
           <meta property="og:locale" content={ogLocale(props.locale)} />
           <link rel="canonical" href={props.canonical ?? SITE + href(props.locale, props.path)} />
-          <HrefLang path={props.path} />
+          <HrefLang path={props.path} locales={props.locales} />
           <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
           <link rel="icon" href="/favicon.ico" sizes="any" />
           <link rel="apple-touch-icon" href="/apple-touch-icon.png" />

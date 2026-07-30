@@ -5,8 +5,10 @@ import {
   contentLanguageChain,
   isLanguageCode,
   localeToContentLanguage,
+  localesWithContent,
   normalizeContentLanguage,
 } from '../src/lib/lang.ts';
+import { LOCALES } from '../src/lib/i18n.ts';
 
 // Språkdimensjonen for innhold: locale (URL) vs innholdsspråk (free-bible-katalog
 // og language-kolonnen), og fallback-kjeden der engelsk er gulvet (#26).
@@ -60,6 +62,36 @@ describe('contentLanguageChain', () => {
 
   test('ugyldig språk gir bare gulvet', () => {
     expect(contentLanguageChain('tøys!')).toEqual(['en']);
+  });
+});
+
+// Hvilke av de åtte adressene som faktisk svarer 200 (#45). Utledet av
+// fallback-kjeden, ikke av en liste noen må vedlikeholde.
+describe('localesWithContent', () => {
+  test('norsk-bare innhold gir nb + nn — nynorsk arver bokmål', () => {
+    expect(localesWithContent(['nb'])).toEqual(['nb', 'nn']);
+  });
+
+  test('engelsk er gulvet i hver kjede, så en engelsk rad dekker alle åtte', () => {
+    expect(localesWithContent(['en'])).toEqual([...LOCALES]);
+  });
+
+  test('et språk uten naboer dekker bare seg selv', () => {
+    expect(localesWithContent(['de'])).toEqual(['de']);
+  });
+
+  test('flere språk union-es, i LOCALES-rekkefølge', () => {
+    expect(localesWithContent(['de', 'nb'])).toEqual(['nb', 'nn', 'de']);
+  });
+
+  test('tomt innhold gir ingen locales — kalleren skal ikke annonsere noe', () => {
+    expect(localesWithContent([])).toEqual([]);
+  });
+
+  test('ugyldig språkkode teller som gulvet, ikke som seg selv', () => {
+    // normalizeContentLanguage sender søppel til `en`, og da er ALLE dekket —
+    // det er den samme regelen spørringen følger, så klyngen kan ikke sprike.
+    expect(localesWithContent(['tøys!'])).toEqual([...LOCALES]);
   });
 });
 

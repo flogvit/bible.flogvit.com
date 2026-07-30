@@ -16,7 +16,7 @@
 
 import { beforeAll, describe, expect, test } from 'bun:test';
 import { createApp } from '../src/app.ts';
-import { initBooks } from '../src/lib/bible.ts';
+import { getAllReadingTexts, initBooks } from '../src/lib/bible.ts';
 import { DEFAULT_LOCALE, LOCALES, missingKeys } from '../src/lib/i18n.ts';
 import { DICTIONARIES } from '../src/lib/dictionaries.ts';
 
@@ -458,5 +458,69 @@ describe('sidekontrakt', () => {
   test('basespråket er x-default i hreflang-klyngen', async () => {
     const { html } = await fetchPage('de', '/1mos/1');
     expect(html).toContain(`hreflang="x-default" href="${SITE}/${DEFAULT_LOCALE}/1mos/1"`);
+  });
+
+  // ── Hreflang annonserer ALDRI en adresse som ikke finnes (GitHub #45) ──
+  //
+  // Klyngen ble generert generisk fra STIEN, uavhengig av om innholdet fantes i
+  // språket. `reading_texts` er norsk-spesifikt og ligger bare på `nb`, så hver
+  // lesedag annonserte sju 404-er — og `x-default`, adressen Google velger når
+  // ingen språkvariant passer, pekte på en av dem. Feilloggen i prod gikk fra
+  // ~50 rader i timen til 1542, hvorav 1228 var nettopp disse.
+  //
+  // Vakta sjekker det som faktisk er invarianten: hver annonserte URL svarer
+  // 200. Derfor fanger den også neste innholdsslag som mangler et språk, uten at
+  // noen må huske denne saken.
+  describe('hreflang peker bare på sider som svarer 200', () => {
+    /** Klyngen som HTML-en faktisk annonserer: hreflang → sti uten domenet. */
+    function cluster(html: string): { lang: string; path: string }[] {
+      return [...html.matchAll(/hreflang="([^"]+)" href="([^"]+)"/g)].map((m) => ({
+        lang: m[1]!,
+        path: m[2]!.replace(SITE, ''),
+      }));
+    }
+
+    async function expectAllAlive(locale: string, path: string) {
+      const { html } = await fetchPage(locale, path);
+      const døde: string[] = [];
+      for (const alt of cluster(html)) {
+        const res = await app.request(alt.path);
+        if (res.status !== 200) døde.push(`${alt.lang} → ${alt.path} (${res.status})`);
+      }
+      expect({ side: path, døde }).toEqual({ side: path, døde: [] });
+    }
+
+    test('kapittelsiden — alle åtte finnes', async () => {
+      await expectAllAlive('de', '/1mos/1');
+    });
+
+    test('lesetekst-oversikten — 200 på alle åtte, også der lista er tom', async () => {
+      await expectAllAlive('de', '/lesetekster');
+    });
+
+    test('lesedagen oppgir BARE nb + nn, og x-default peker dit', async () => {
+      // Datoen hentes fra basen framfor å hardkodes: settet importeres på nytt
+      // ved hver innholdsoppdatering, og en tom base skal gi rødt, ikke grønt.
+      const texts = await getAllReadingTexts('nb');
+      expect(texts.length).toBeGreaterThan(0);
+      const date = texts[0]!.date;
+
+      const { res, html } = await fetchPage('nb', `/lesetekster/${date}`);
+      expect(res.status).toBe(200);
+
+      const klynge = cluster(html);
+      expect(klynge.map((a) => a.lang)).toEqual(['nb', 'nn', 'x-default']);
+      // x-default må ligge INNENFOR settet — engelsk er 404 for denne siden.
+      expect(klynge.find((a) => a.lang === 'x-default')!.path).toBe(`/nb/lesetekster/${date}`);
+
+      await expectAllAlive('nb', `/lesetekster/${date}`);
+
+      // Og de seks andre er fortsatt 404 — klyngen ble smalere fordi sidene
+      // MANGLER, ikke fordi noen begynte å svare på dem.
+      for (const locale of ['en', 'de', 'sv', 'fr', 'es', 'fi']) {
+        const dead = await app.request(`/${locale}/lesetekster/${date}`);
+        expect({ locale, status: dead.status }).toEqual({ locale, status: 404 });
+      }
+    });
   });
 });

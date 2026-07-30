@@ -129,6 +129,32 @@ unik-nøkkelen**, så flere språk kan ligge side om side. Kontrakten bor i
   treffer bare nye baser, så skjemaendringer på eksisterende tabeller MÅ uttrykkes
   der. Kjør `bun scripts/init-db.ts` for å løfte en base.
 
+### En side som ikke finnes på et språk skal ikke annonseres der (#45)
+
+Hreflang-klyngen ble generert generisk fra STIEN, uavhengig av om innholdet
+fantes i språket. `reading_texts` ligger bare på `nb` — med vilje, se over — så
+hver norsk lesedag annonserte alle åtte språk, og **sju av dem var 404**.
+Feilloggen gikk fra ~50 rader i timen til 1542, hvorav 1228 var nettopp disse
+(168 datoer × 7 språk = 1176). Vi *lenket* dem ikke i navigasjonen, men en
+crawler trenger ingen lenke når `<link rel="alternate">` sier at siden finnes.
+
+- **`Layout` tar `locales`** — språkene siden faktisk finnes på. Utelatt = alle
+  åtte, som er sant for alt annet.
+- **Lista utledes, ikke vedlikeholdes:** `localesWithContent()` (`lang.ts`)
+  krysser innholdsspråkene i basen mot `contentLanguageChain()`, altså samme
+  regel spørringen følger. `['nb']` → `nb` + `nn` (nabospråk før basespråket).
+  Et nytt importert språk slår gjennom uten kodeendring.
+- **`x-default` må ligge INNENFOR settet.** Det er adressen Google velger når
+  ingen språkvariant passer; pekte den på engelsk for en norsk-bare side, sendte
+  vi hver uplasserbar leser til en 404.
+- Vakta i `page-contract.test.ts` sjekker invarianten, ikke tilfellet: **hver
+  annonserte URL svarer 200.** Den fanger dermed neste innholdsslag som mangler
+  et språk. Detaljsiden kan ikke ligge i `PAGES` — den 404-er under `/de/`, som
+  er hele poenget — så den har sin egen oppføring.
+- Ikke gjort, bevisst: `/en/lesetekster/<dato>` 302-er IKKE til `/nb/…`, og
+  `/lesetekster`-OVERSIKTEN oppgir fortsatt alle åtte (den svarer 200 overalt,
+  bare med tom liste). Begge er produktbeslutninger, ikke SEO-feil.
+
 ### Bibel-ID-er: `osnb`/`osnn` (omdøpt fra `osnb2`/`osnn1` 2026-07-26)
 
 free-bible omdøpte de to norske grunntekstene. ID-en er ikke bare en streng i

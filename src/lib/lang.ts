@@ -27,6 +27,7 @@
 // disk, og et språk vi ikke har innhold for faller bare gjennom kjeden.
 
 import { getContext } from 'hono/context-storage';
+import { LOCALES, type Locale } from './i18n.ts';
 
 /**
  * Innholdsspråket alt annet faller tilbake til, og terminalt i kjeden.
@@ -133,6 +134,28 @@ export function contentLanguageChain(requested: string | null | undefined): stri
     if (candidate === DEFAULT_CONTENT_LANGUAGE) break;
   }
   return result;
+}
+
+/**
+ * UI-locale-ene som faktisk får innhold når innholdet bare finnes i
+ * `languages` — altså hvilke av de åtte adressene som svarer 200 (GitHub #45).
+ *
+ * Utledet av SAMME fallback-kjede som spørringen bruker, ikke av en egen liste:
+ * finnes en lesetekst bare på `nb`, får `nn` den likevel (nabospråk før
+ * basespråket), mens `de`/`en`/`sv`/… ender tomme og siden 404-er. Svaret blir
+ * dermed `['nb', 'nn']` uten at noen har ført det opp noe sted.
+ *
+ * Finnes fordi hreflang-klyngen ble generert generisk fra STIEN: hver norsk
+ * lesetekst-side annonserte alle åtte språk, og sju av dem var 404. Vi lenket
+ * dem ikke i navigasjonen, men en crawler trenger ingen lenke når
+ * `<link rel="alternate">` sier at siden finnes — 1228 av 1542 feillinjer på én
+ * time var nettopp disse.
+ *
+ * Rekkefølgen følger `LOCALES` slik at klyngen er stabil mellom render.
+ */
+export function localesWithContent(languages: readonly string[]): Locale[] {
+  const have = new Set(languages.map((l) => normalizeContentLanguage(l)));
+  return LOCALES.filter((locale) => contentLanguageChain(locale).some((c) => have.has(c)));
 }
 
 /**
