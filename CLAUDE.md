@@ -444,6 +444,12 @@ gjennom kontrakten helt til mutasjonstesting avslørte det. Derfor ligger `/1mos
 **Verifiser nye vakter ved å gjeninnføre feilen de skal fange.** En test som ikke blir
 rød av mutasjonen er verdiløs. Alle fire vaktene her er sjekket slik.
 
+**En DB-test må hente poolen PER KALL, aldri på modulnivå.** `const sql =
+getSql()` øverst i en testfil tar vare på instansen som fantes ved import;
+`closeSql()` i en HELT ANNEN testfil nuller den ut, og den første fila feiler da
+med «Connection closed» — i to filer som ikke har med saken å gjøre. Bruk
+`getSql()` inne i hver test/hook, og la de filene som allerede lukker, lukke.
+
 **Grense:** happy-dom lar seg ikke patche der `plus.js` overstyrer
 `localStorage.setItem`, så den stille skrivesperren for gratisbrukere må verifiseres i
 en ekte nettleser. Den brukersynlige porten (klikk registrerer ingenting) er dekket.
