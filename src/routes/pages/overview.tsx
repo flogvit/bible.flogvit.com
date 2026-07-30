@@ -81,22 +81,22 @@ r.get('/oversettelser/:id', async (c) => {
   const { meta, license } = edition;
   const name = edition.name_native;
   const basis = [
-    ...(meta.textual_basis?.ot ?? []).map((b) => ({ testament: 'ed.otShort' as const, module: b })),
-    ...(meta.textual_basis?.nt ?? []).map((b) => ({ testament: 'ed.ntShort' as const, module: b })),
+    ...(meta.textual_basis?.ot ?? []).map((b) => ({ testament: 'ed.otShort' as const, translation: b })),
+    ...(meta.textual_basis?.nt ?? []).map((b) => ({ testament: 'ed.ntShort' as const, translation: b })),
   ];
 
   // Krediteringskravet forplanter seg til oversettelser som bygger på kilden, så
   // vi lenker til kildeutgavene som HAR info-side hos oss.
-  // Navn per id, ikke bare id-ene: lenketeksten var modul-id-en («sblgnt»)
-  // framfor utgavens navn (#38).
+  // Navn per id, ikke bare id-ene: lenketeksten var oversettelses-id-en
+  // («sblgnt») framfor utgavens navn (#38).
   const knownNames = new Map((await getBibleEditions()).map((e) => [e.id, e.name_native] as const));
   const known = new Set(knownNames.keys());
   const editionLabel = (id: string) => knownNames.get(id) ?? id;
-  const sourceModules = [
-    ...basis.map((b) => b.module),
-    ...(meta.derived_from?.module ? [meta.derived_from.module] : []),
+  const sourceTranslations = [
+    ...basis.map((b) => b.translation),
+    ...(meta.derived_from?.translation ? [meta.derived_from.translation] : []),
   ].filter((m, i, arr) => arr.indexOf(m) === i);
-  const attributionSources = sourceModules.filter((m) => known.has(m) && m !== edition.id);
+  const attributionSources = sourceTranslations.filter((m) => known.has(m) && m !== edition.id);
 
   // «Karakter»-punktene er utsagn om utgaven, men de leses av den som er på
   // siden — de hører til leserens språk, ikke utgavens (free-bible#23).
@@ -158,15 +158,15 @@ r.get('/oversettelser/:id', async (c) => {
                   </EditionRow> : null}
               {basis.length
                 ? <EditionRow term={t('ed.textualBasis')}>
-                    {basis.map((b) => `${t(b.testament)}: ${label('ed.basis.', b.module)}`).join(' · ')}
+                    {basis.map((b) => `${t(b.testament)}: ${label('ed.basis.', b.translation)}`).join(' · ')}
                   </EditionRow> : null}
-              {meta.derived_from?.module
+              {meta.derived_from?.translation
                 ? <EditionRow term={t('ed.basedOn')}>
-                    {known.has(meta.derived_from.module)
-                      ? <a href={lhref(`/oversettelser/${meta.derived_from.module}`)}>
-                          {editionLabel(meta.derived_from.module)}
+                    {known.has(meta.derived_from.translation)
+                      ? <a href={lhref(`/oversettelser/${meta.derived_from.translation}`)}>
+                          {editionLabel(meta.derived_from.translation)}
                         </a>
-                      : editionLabel(meta.derived_from.module)}
+                      : editionLabel(meta.derived_from.translation)}
                     {meta.derived_from.relation === 'revision_of' ? ` (${t('ed.revision')})` : ''}
                   </EditionRow> : null}
               {meta.links?.homepage

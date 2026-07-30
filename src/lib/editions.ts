@@ -1,7 +1,7 @@
 // Hvilke bibeloversettelser vi henter TEKST for.
 //
 // Dette er en bevisst, kort liste — ikke alt som ligger i free-bibles
-// `bibles_raw` (82 moduler, de fleste med lisenser vi ikke kan publisere
+// `bibles_raw` (83 oversettelser, de fleste med lisenser vi ikke kan publisere
 // under). Lista styrer importen av både verstekst og `bible_editions`, så en
 // ny oversettelse i free-bible er usynlig for appen til den står her.
 //

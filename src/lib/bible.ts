@@ -2393,7 +2393,7 @@ export interface BibleEdition {
 
 /** Full meta.json for en utgave — felter varierer, så alt er valgfritt. */
 export interface BibleEditionMeta {
-  module?: string;
+  translation?: string;
   name?: { native?: string; en?: string };
   abbreviation?: string;
   language?: { iso639_1?: string; iso639_3?: string; script?: string; direction?: string };
@@ -2405,7 +2405,7 @@ export interface BibleEditionMeta {
   philosophy?: string;
   tradition?: string;
   textual_basis?: { ot?: string[]; nt?: string[] };
-  derived_from?: { module?: string; relation?: string };
+  derived_from?: { translation?: string; relation?: string };
   editions?: unknown[];
   work?: {
     method?: string[];

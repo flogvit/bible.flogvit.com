@@ -421,11 +421,13 @@ for (const bible of BIBLES) {
   await importVerses(bible);
 }
 
-// Importer oversettelses-metadata (meta.json + license.json per modul)
+// Importer oversettelses-metadata (meta.json + license.json per oversettelse)
 console.log('Importerer oversettelses-metadata...');
 
+// `translation`-nøkkelen i fila leses ikke: id-en er KATALOGNAVNET (`bible`),
+// slik free-bibles skjema også slår fast. Et felt kunne vært uenig med
+// katalogen uten at noe merket det.
 interface RawBibleMeta {
-  module?: string;
   name?: { native?: string; en?: string };
   abbreviation?: string;
   language?: { iso639_1?: string; iso639_3?: string; script?: string; direction?: string };
@@ -448,7 +450,7 @@ for (const bible of BIBLES) {
     continue;
   }
 
-  // license.json finnes bare for moduler der lisensen er kartlagt eksternt —
+  // license.json finnes bare for oversettelser der lisensen er kartlagt eksternt —
   // egne tekster (osnb/osnn) og grunntekstene har den ikke.
   const licensePath = path.join(GENERATE_PATH, 'bibles_raw', bible, 'license.json');
   const metaContent = fs.readFileSync(metaPath, 'utf-8');

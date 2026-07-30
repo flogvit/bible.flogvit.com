@@ -354,8 +354,8 @@ const TABLES: string[] = [
     INDEX idx_gospel_parallel_passages_parallel (parallel_id, language)
   ) ENGINE=InnoDB ${CS}`,
 
-  // Metadata om selve OVERSETTELSEN (free-bible: bibles_raw/<modul>/meta.json +
-  // license.json). `id` er modul-id-en, altså samme verdi som `verses.bible` —
+  // Metadata om selve OVERSETTELSEN (free-bible: bibles_raw/<oversettelse>/meta.json +
+  // license.json). `id` er oversettelses-id-en, altså samme verdi som `verses.bible` —
   // raden finnes bare for oversettelser vi faktisk importerer tekst for.
   //
   // Ingen language-kolonne: dette er metadata OM et språk, ikke innhold PÅ et
@@ -364,7 +364,7 @@ const TABLES: string[] = [
   // Kolonnene som er trukket ut er de vi lister/sorterer/filtrerer på; resten av
   // feltene leses fra JSON-blobbene på detaljsiden. Samme mønster som
   // themes/persons/stories (utdrag + full `content`), fordi meta.json har svært
-  // varierende felter: bare module/name/language/coverage/features/provenance
+  // varierende felter: bare translation/name/language/coverage/features/provenance
   // finnes i alle 82, mens f.eks. year/translators/publisher/place er valgfrie.
   `CREATE TABLE IF NOT EXISTS bible_editions (
     id VARCHAR(50) PRIMARY KEY,
