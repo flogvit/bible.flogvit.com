@@ -3,6 +3,29 @@
 What actually reached readers, newest first. Dates, not version numbers — we
 deploy continuously.
 
+## 2026-07-30 — Sixty-six people can be found again, and Luke gets its cross-references
+
+**Bug fixes**
+
+- Sixty-six people had addresses built from a name with its Norwegian letters
+  dropped rather than transliterated, so Ahab's son lived at `akabs-snn` and
+  Phoebe at `fbe`. The addresses are now spelled properly, and every old one
+  redirects to its new home — nothing that has been linked or bookmarked is
+  lost. The redirects went out earlier today; the pages they point to arrive
+  with this update.
+
+**Polish**
+
+- Cross-references for Luke and the first chapter of John now exist in English.
+  Until now an English reader saw an empty panel where a Norwegian reader saw
+  the links across the gospels.
+
+**Behind the scenes**
+
+- Translation metadata now uses the same word for a translation that the source
+  project uses, instead of a packaging term inherited from another Bible
+  format.
+
 ## 2026-07-30 — Publish a manuscript for everyone, and see how far a reading plan already is
 
 **New features**
