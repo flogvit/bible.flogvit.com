@@ -82,12 +82,18 @@ vaskeritjeneste for hva som helst.
 En ny avgjørelse nullstiller rapport-telleren: den gjaldt teksten du nettopp så
 på.
 
-## Det som ikke finnes ennå
+## Hvordan du får vite at noen venter
 
-**Ingenting varsler deg om at noen venter.** Køen er ren pull, og en kø ingen får
-beskjed om, er en kø ingen tømmer. Riktig sted for en teller er `dashboard/`
-(tavle) — ikke vakt-varslene, som med vilje har terskelen «varsle bare når noe
-hos oss er eksponert». En rutinekø der ville gjort kanalen verdiløs.
+**Tavla teller køen** (`dashboard/`): «venter på deg» på forsiden, og et funn på
+`/helse` med antall, alder og en peker hit. Tallet kommer fra prod i samme
+ssh-runde som resten av prod-panelet, og oppdateres av `bun run sync`.
 
-Inntil da: kjør kommandoen over med jevne mellomrom. Én innsending som blir
-liggende i to uker er verre for forfatteren enn et avslag.
+Alvoret følger ALDEREN, ikke antallet — én innsending som har ligget i to uker er
+verre for den som sendte den inn enn ti fra i går. Etter 14 døgn går funnet fra
+notis til advarsel.
+
+Vakt-varslene brukes bevisst IKKE: de har terskelen «varsle bare når noe hos oss
+er eksponert», og en rutinekø der ville gjort kanalen verdiløs.
+
+Rapporterte manuskripter som fortsatt står ute telles for seg, som sin egen kø —
+de er allerede publisert, så de haster på en annen måte enn de som venter.
