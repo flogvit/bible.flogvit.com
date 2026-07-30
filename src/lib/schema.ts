@@ -32,6 +32,8 @@
 
 import type { SQL } from 'bun';
 import { DEFAULT_CONTENT_LANGUAGE } from './lang.ts';
+import { pruneDanglingRefs, pruneReportIsEmpty, formatPruneReport } from './verse-refs.ts';
+import { booksData } from './books-data.ts';
 
 const CS = 'CHARACTER SET utf8mb4 COLLATE utf8mb4_danish_ci';
 
@@ -39,7 +41,10 @@ const CS = 'CHARACTER SET utf8mb4 COLLATE utf8mb4_danish_ci';
  *  språknøytralt innhold beholder sin verdi uten migrering av data. */
 const LANG = `language VARCHAR(10) NOT NULL DEFAULT '${DEFAULT_CONTENT_LANGUAGE}'`;
 
-const TABLES: string[] = [
+// Eksportert fordi vaktene leser DDL-en: `verse-integrity.test.ts` finner
+// tabellene som HAR en versadresse her, og feiler hvis en av dem mangler i
+// sveipen (#46). Skjemaet skal ikke kunne vokse fra vakta i stillhet.
+export const TABLES: string[] = [
   // --- bibelinnhold (derivert, regenereres av import-pipelinen) ---
   `CREATE TABLE IF NOT EXISTS books (
     id INT PRIMARY KEY,
@@ -872,6 +877,26 @@ async function dedupeReadingTexts(sql: SQL): Promise<void> {
   await sql.unsafe(`DELETE t FROM reading_texts t ${keep}`).simple();
 }
 
+/**
+ * Holder `books.chapters` lik `books-data.ts` (#46, bifunnet).
+ *
+ * Kapittelantallet fantes i to hardkodede lister som var uenige om Joel — 3 i
+ * importens egen liste, 4 i `books-data.ts` — og de leses fra hver sin kant:
+ * sitemapen og kapittelruta går på `books-data.ts`, mens `reference-parser.ts`
+ * går på TABELLEN og derfor avviste «Joel 4:1» med «Joel har 3 kapitler».
+ *
+ * Importen skriver riktig verdi nå, men den kjøres bare ved
+ * innholdsoppdatering. Dette kallet ligger derfor i migreringene, som går ved
+ * hver deploy — ellers ville prod ligget med feil tall til noen huska å
+ * importere.
+ */
+async function syncBookChapters(sql: SQL): Promise<void> {
+  if (!(await tableExists(sql, 'books'))) return;
+  for (const book of booksData) {
+    await sql`UPDATE books SET chapters = ${book.chapters} WHERE id = ${book.id} AND chapters <> ${book.chapters}`;
+  }
+}
+
 /** Kjører alle skjemaendringer som CREATE-ene ikke kan uttrykke. Idempotent. */
 async function runMigrations(sql: SQL): Promise<void> {
   // Dupliserte lesedager MÅ vike før uq_reading_texts kan legges på (#40).
@@ -916,6 +941,14 @@ async function runMigrations(sql: SQL): Promise<void> {
   }
 
   await renameBibleIds(sql);
+  await syncBookChapters(sql);
+
+  // Døde versadresser ryddes her, altså ved HVER deploy (#46). Det er ikke en
+  // engangsmigrering: så lenge generatoren i free-bible kan skrive en adresse
+  // som ikke finnes, er dette en stående invariant, og det er dette kallet som
+  // gjør at feil data ikke blir liggende i prod til neste innholdsimport.
+  const pruned = await pruneDanglingRefs(sql);
+  if (!pruneReportIsEmpty(pruned)) console.log(formatPruneReport(pruned));
 }
 
 /** Oppretter alle tabeller og kjører migreringene (idempotent). */

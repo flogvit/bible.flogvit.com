@@ -23,6 +23,7 @@ import {
 import { DEFAULT_CONTENT_LANGUAGE, isLanguageCode } from '../src/lib/lang.ts';
 import { booksData } from '../src/lib/books-data.ts';
 import { getChapterVerseCount } from '../src/lib/verse-counts.ts';
+import { pruneDanglingRefs, pruneReportIsEmpty, formatPruneReport } from '../src/lib/verse-refs.ts';
 import { parseRefMarkup } from '@free-bible/kvn/ref';
 import { BOOK_IDS } from '@free-bible/kvn/types';
 import { UkvnMapper, loadUkvnMapping, ukvnEncode, ukvnDecode, resolveMappingId } from '@free-bible/kvn';
@@ -267,83 +268,100 @@ if (isFullImport) {
   }
 }
 
-// Bokliste
+// Bokliste. KAPITTELANTALLET STÅR IKKE HER — det bor i `books-data.ts` og
+// hentes derfra under (#46).
+//
+// Denne lista hadde sitt eget `chapters`, og de to var uenige om Joel: 3 her,
+// 4 i `books-data.ts`. Ingenting så ødelagt ut, for de to leses fra hver sin
+// kant — sitemapen og kapittelruta går på `books-data.ts` (og `/nb/joel/4`
+// svarer 200), mens `reference-parser.ts` går på `books`-TABELLEN og avviste
+// «Joel 4:1» med «Joel har 3 kapitler». En bidragsyter på /bidra fikk altså
+// nei på en referanse siden serverte.
+//
+// Den norske versifiseringen følger hebraisk (Joel 4 kapitler, Malaki 3), og
+// det er `verses` enig i. `verse-integrity.test.ts` holder de tre sannhetene —
+// `books-data.ts`, `books.chapters` og `verses` — låst til hverandre.
 const books = [
-  { id: 1, name: 'Genesis', name_no: '1. Mosebok', short_name: '1Mos', testament: 'OT', chapters: 50 },
-  { id: 2, name: 'Exodus', name_no: '2. Mosebok', short_name: '2Mos', testament: 'OT', chapters: 40 },
-  { id: 3, name: 'Leviticus', name_no: '3. Mosebok', short_name: '3Mos', testament: 'OT', chapters: 27 },
-  { id: 4, name: 'Numbers', name_no: '4. Mosebok', short_name: '4Mos', testament: 'OT', chapters: 36 },
-  { id: 5, name: 'Deuteronomy', name_no: '5. Mosebok', short_name: '5Mos', testament: 'OT', chapters: 34 },
-  { id: 6, name: 'Joshua', name_no: 'Josva', short_name: 'Jos', testament: 'OT', chapters: 24 },
-  { id: 7, name: 'Judges', name_no: 'Dommerne', short_name: 'Dom', testament: 'OT', chapters: 21 },
-  { id: 8, name: 'Ruth', name_no: 'Rut', short_name: 'Rut', testament: 'OT', chapters: 4 },
-  { id: 9, name: '1 Samuel', name_no: '1. Samuel', short_name: '1Sam', testament: 'OT', chapters: 31 },
-  { id: 10, name: '2 Samuel', name_no: '2. Samuel', short_name: '2Sam', testament: 'OT', chapters: 24 },
-  { id: 11, name: '1 Kings', name_no: '1. Kongebok', short_name: '1Kong', testament: 'OT', chapters: 22 },
-  { id: 12, name: '2 Kings', name_no: '2. Kongebok', short_name: '2Kong', testament: 'OT', chapters: 25 },
-  { id: 13, name: '1 Chronicles', name_no: '1. Krønikebok', short_name: '1Krøn', testament: 'OT', chapters: 29 },
-  { id: 14, name: '2 Chronicles', name_no: '2. Krønikebok', short_name: '2Krøn', testament: 'OT', chapters: 36 },
-  { id: 15, name: 'Ezra', name_no: 'Esra', short_name: 'Esr', testament: 'OT', chapters: 10 },
-  { id: 16, name: 'Nehemiah', name_no: 'Nehemja', short_name: 'Neh', testament: 'OT', chapters: 13 },
-  { id: 17, name: 'Esther', name_no: 'Ester', short_name: 'Est', testament: 'OT', chapters: 10 },
-  { id: 18, name: 'Job', name_no: 'Job', short_name: 'Job', testament: 'OT', chapters: 42 },
-  { id: 19, name: 'Psalms', name_no: 'Salmene', short_name: 'Sal', testament: 'OT', chapters: 150 },
-  { id: 20, name: 'Proverbs', name_no: 'Ordspråkene', short_name: 'Ord', testament: 'OT', chapters: 31 },
-  { id: 21, name: 'Ecclesiastes', name_no: 'Forkynneren', short_name: 'Fork', testament: 'OT', chapters: 12 },
-  { id: 22, name: 'Song of Solomon', name_no: 'Høysangen', short_name: 'Høy', testament: 'OT', chapters: 8 },
-  { id: 23, name: 'Isaiah', name_no: 'Jesaja', short_name: 'Jes', testament: 'OT', chapters: 66 },
-  { id: 24, name: 'Jeremiah', name_no: 'Jeremia', short_name: 'Jer', testament: 'OT', chapters: 52 },
-  { id: 25, name: 'Lamentations', name_no: 'Klagesangene', short_name: 'Klag', testament: 'OT', chapters: 5 },
-  { id: 26, name: 'Ezekiel', name_no: 'Esekiel', short_name: 'Esek', testament: 'OT', chapters: 48 },
-  { id: 27, name: 'Daniel', name_no: 'Daniel', short_name: 'Dan', testament: 'OT', chapters: 12 },
-  { id: 28, name: 'Hosea', name_no: 'Hosea', short_name: 'Hos', testament: 'OT', chapters: 14 },
-  { id: 29, name: 'Joel', name_no: 'Joel', short_name: 'Joel', testament: 'OT', chapters: 3 },
-  { id: 30, name: 'Amos', name_no: 'Amos', short_name: 'Amos', testament: 'OT', chapters: 9 },
-  { id: 31, name: 'Obadiah', name_no: 'Obadja', short_name: 'Ob', testament: 'OT', chapters: 1 },
-  { id: 32, name: 'Jonah', name_no: 'Jona', short_name: 'Jona', testament: 'OT', chapters: 4 },
-  { id: 33, name: 'Micah', name_no: 'Mika', short_name: 'Mika', testament: 'OT', chapters: 7 },
-  { id: 34, name: 'Nahum', name_no: 'Nahum', short_name: 'Nah', testament: 'OT', chapters: 3 },
-  { id: 35, name: 'Habakkuk', name_no: 'Habakkuk', short_name: 'Hab', testament: 'OT', chapters: 3 },
-  { id: 36, name: 'Zephaniah', name_no: 'Sefanja', short_name: 'Sef', testament: 'OT', chapters: 3 },
-  { id: 37, name: 'Haggai', name_no: 'Haggai', short_name: 'Hag', testament: 'OT', chapters: 2 },
-  { id: 38, name: 'Zechariah', name_no: 'Sakarja', short_name: 'Sak', testament: 'OT', chapters: 14 },
-  { id: 39, name: 'Malachi', name_no: 'Malaki', short_name: 'Mal', testament: 'OT', chapters: 3 },
-  { id: 40, name: 'Matthew', name_no: 'Matteus', short_name: 'Matt', testament: 'NT', chapters: 28 },
-  { id: 41, name: 'Mark', name_no: 'Markus', short_name: 'Mark', testament: 'NT', chapters: 16 },
-  { id: 42, name: 'Luke', name_no: 'Lukas', short_name: 'Luk', testament: 'NT', chapters: 24 },
-  { id: 43, name: 'John', name_no: 'Johannes', short_name: 'Joh', testament: 'NT', chapters: 21 },
-  { id: 44, name: 'Acts', name_no: 'Apostlenes gjerninger', short_name: 'Apg', testament: 'NT', chapters: 28 },
-  { id: 45, name: 'Romans', name_no: 'Romerne', short_name: 'Rom', testament: 'NT', chapters: 16 },
-  { id: 46, name: '1 Corinthians', name_no: '1. Korinter', short_name: '1Kor', testament: 'NT', chapters: 16 },
-  { id: 47, name: '2 Corinthians', name_no: '2. Korinter', short_name: '2Kor', testament: 'NT', chapters: 13 },
-  { id: 48, name: 'Galatians', name_no: 'Galaterne', short_name: 'Gal', testament: 'NT', chapters: 6 },
-  { id: 49, name: 'Ephesians', name_no: 'Efeserne', short_name: 'Ef', testament: 'NT', chapters: 6 },
-  { id: 50, name: 'Philippians', name_no: 'Filipperne', short_name: 'Fil', testament: 'NT', chapters: 4 },
-  { id: 51, name: 'Colossians', name_no: 'Kolosserne', short_name: 'Kol', testament: 'NT', chapters: 4 },
-  { id: 52, name: '1 Thessalonians', name_no: '1. Tessaloniker', short_name: '1Tess', testament: 'NT', chapters: 5 },
-  { id: 53, name: '2 Thessalonians', name_no: '2. Tessaloniker', short_name: '2Tess', testament: 'NT', chapters: 3 },
-  { id: 54, name: '1 Timothy', name_no: '1. Timoteus', short_name: '1Tim', testament: 'NT', chapters: 6 },
-  { id: 55, name: '2 Timothy', name_no: '2. Timoteus', short_name: '2Tim', testament: 'NT', chapters: 4 },
-  { id: 56, name: 'Titus', name_no: 'Titus', short_name: 'Tit', testament: 'NT', chapters: 3 },
-  { id: 57, name: 'Philemon', name_no: 'Filemon', short_name: 'Filem', testament: 'NT', chapters: 1 },
-  { id: 58, name: 'Hebrews', name_no: 'Hebreerne', short_name: 'Hebr', testament: 'NT', chapters: 13 },
-  { id: 59, name: 'James', name_no: 'Jakob', short_name: 'Jak', testament: 'NT', chapters: 5 },
-  { id: 60, name: '1 Peter', name_no: '1. Peter', short_name: '1Pet', testament: 'NT', chapters: 5 },
-  { id: 61, name: '2 Peter', name_no: '2. Peter', short_name: '2Pet', testament: 'NT', chapters: 3 },
-  { id: 62, name: '1 John', name_no: '1. Johannes', short_name: '1Joh', testament: 'NT', chapters: 5 },
-  { id: 63, name: '2 John', name_no: '2. Johannes', short_name: '2Joh', testament: 'NT', chapters: 1 },
-  { id: 64, name: '3 John', name_no: '3. Johannes', short_name: '3Joh', testament: 'NT', chapters: 1 },
-  { id: 65, name: 'Jude', name_no: 'Judas', short_name: 'Jud', testament: 'NT', chapters: 1 },
-  { id: 66, name: 'Revelation', name_no: 'Åpenbaringen', short_name: 'Åp', testament: 'NT', chapters: 22 },
+  { id: 1, name: 'Genesis', name_no: '1. Mosebok', short_name: '1Mos', testament: 'OT' },
+  { id: 2, name: 'Exodus', name_no: '2. Mosebok', short_name: '2Mos', testament: 'OT' },
+  { id: 3, name: 'Leviticus', name_no: '3. Mosebok', short_name: '3Mos', testament: 'OT' },
+  { id: 4, name: 'Numbers', name_no: '4. Mosebok', short_name: '4Mos', testament: 'OT' },
+  { id: 5, name: 'Deuteronomy', name_no: '5. Mosebok', short_name: '5Mos', testament: 'OT' },
+  { id: 6, name: 'Joshua', name_no: 'Josva', short_name: 'Jos', testament: 'OT' },
+  { id: 7, name: 'Judges', name_no: 'Dommerne', short_name: 'Dom', testament: 'OT' },
+  { id: 8, name: 'Ruth', name_no: 'Rut', short_name: 'Rut', testament: 'OT' },
+  { id: 9, name: '1 Samuel', name_no: '1. Samuel', short_name: '1Sam', testament: 'OT' },
+  { id: 10, name: '2 Samuel', name_no: '2. Samuel', short_name: '2Sam', testament: 'OT' },
+  { id: 11, name: '1 Kings', name_no: '1. Kongebok', short_name: '1Kong', testament: 'OT' },
+  { id: 12, name: '2 Kings', name_no: '2. Kongebok', short_name: '2Kong', testament: 'OT' },
+  { id: 13, name: '1 Chronicles', name_no: '1. Krønikebok', short_name: '1Krøn', testament: 'OT' },
+  { id: 14, name: '2 Chronicles', name_no: '2. Krønikebok', short_name: '2Krøn', testament: 'OT' },
+  { id: 15, name: 'Ezra', name_no: 'Esra', short_name: 'Esr', testament: 'OT' },
+  { id: 16, name: 'Nehemiah', name_no: 'Nehemja', short_name: 'Neh', testament: 'OT' },
+  { id: 17, name: 'Esther', name_no: 'Ester', short_name: 'Est', testament: 'OT' },
+  { id: 18, name: 'Job', name_no: 'Job', short_name: 'Job', testament: 'OT' },
+  { id: 19, name: 'Psalms', name_no: 'Salmene', short_name: 'Sal', testament: 'OT' },
+  { id: 20, name: 'Proverbs', name_no: 'Ordspråkene', short_name: 'Ord', testament: 'OT' },
+  { id: 21, name: 'Ecclesiastes', name_no: 'Forkynneren', short_name: 'Fork', testament: 'OT' },
+  { id: 22, name: 'Song of Solomon', name_no: 'Høysangen', short_name: 'Høy', testament: 'OT' },
+  { id: 23, name: 'Isaiah', name_no: 'Jesaja', short_name: 'Jes', testament: 'OT' },
+  { id: 24, name: 'Jeremiah', name_no: 'Jeremia', short_name: 'Jer', testament: 'OT' },
+  { id: 25, name: 'Lamentations', name_no: 'Klagesangene', short_name: 'Klag', testament: 'OT' },
+  { id: 26, name: 'Ezekiel', name_no: 'Esekiel', short_name: 'Esek', testament: 'OT' },
+  { id: 27, name: 'Daniel', name_no: 'Daniel', short_name: 'Dan', testament: 'OT' },
+  { id: 28, name: 'Hosea', name_no: 'Hosea', short_name: 'Hos', testament: 'OT' },
+  { id: 29, name: 'Joel', name_no: 'Joel', short_name: 'Joel', testament: 'OT' },
+  { id: 30, name: 'Amos', name_no: 'Amos', short_name: 'Amos', testament: 'OT' },
+  { id: 31, name: 'Obadiah', name_no: 'Obadja', short_name: 'Ob', testament: 'OT' },
+  { id: 32, name: 'Jonah', name_no: 'Jona', short_name: 'Jona', testament: 'OT' },
+  { id: 33, name: 'Micah', name_no: 'Mika', short_name: 'Mika', testament: 'OT' },
+  { id: 34, name: 'Nahum', name_no: 'Nahum', short_name: 'Nah', testament: 'OT' },
+  { id: 35, name: 'Habakkuk', name_no: 'Habakkuk', short_name: 'Hab', testament: 'OT' },
+  { id: 36, name: 'Zephaniah', name_no: 'Sefanja', short_name: 'Sef', testament: 'OT' },
+  { id: 37, name: 'Haggai', name_no: 'Haggai', short_name: 'Hag', testament: 'OT' },
+  { id: 38, name: 'Zechariah', name_no: 'Sakarja', short_name: 'Sak', testament: 'OT' },
+  { id: 39, name: 'Malachi', name_no: 'Malaki', short_name: 'Mal', testament: 'OT' },
+  { id: 40, name: 'Matthew', name_no: 'Matteus', short_name: 'Matt', testament: 'NT' },
+  { id: 41, name: 'Mark', name_no: 'Markus', short_name: 'Mark', testament: 'NT' },
+  { id: 42, name: 'Luke', name_no: 'Lukas', short_name: 'Luk', testament: 'NT' },
+  { id: 43, name: 'John', name_no: 'Johannes', short_name: 'Joh', testament: 'NT' },
+  { id: 44, name: 'Acts', name_no: 'Apostlenes gjerninger', short_name: 'Apg', testament: 'NT' },
+  { id: 45, name: 'Romans', name_no: 'Romerne', short_name: 'Rom', testament: 'NT' },
+  { id: 46, name: '1 Corinthians', name_no: '1. Korinter', short_name: '1Kor', testament: 'NT' },
+  { id: 47, name: '2 Corinthians', name_no: '2. Korinter', short_name: '2Kor', testament: 'NT' },
+  { id: 48, name: 'Galatians', name_no: 'Galaterne', short_name: 'Gal', testament: 'NT' },
+  { id: 49, name: 'Ephesians', name_no: 'Efeserne', short_name: 'Ef', testament: 'NT' },
+  { id: 50, name: 'Philippians', name_no: 'Filipperne', short_name: 'Fil', testament: 'NT' },
+  { id: 51, name: 'Colossians', name_no: 'Kolosserne', short_name: 'Kol', testament: 'NT' },
+  { id: 52, name: '1 Thessalonians', name_no: '1. Tessaloniker', short_name: '1Tess', testament: 'NT' },
+  { id: 53, name: '2 Thessalonians', name_no: '2. Tessaloniker', short_name: '2Tess', testament: 'NT' },
+  { id: 54, name: '1 Timothy', name_no: '1. Timoteus', short_name: '1Tim', testament: 'NT' },
+  { id: 55, name: '2 Timothy', name_no: '2. Timoteus', short_name: '2Tim', testament: 'NT' },
+  { id: 56, name: 'Titus', name_no: 'Titus', short_name: 'Tit', testament: 'NT' },
+  { id: 57, name: 'Philemon', name_no: 'Filemon', short_name: 'Filem', testament: 'NT' },
+  { id: 58, name: 'Hebrews', name_no: 'Hebreerne', short_name: 'Hebr', testament: 'NT' },
+  { id: 59, name: 'James', name_no: 'Jakob', short_name: 'Jak', testament: 'NT' },
+  { id: 60, name: '1 Peter', name_no: '1. Peter', short_name: '1Pet', testament: 'NT' },
+  { id: 61, name: '2 Peter', name_no: '2. Peter', short_name: '2Pet', testament: 'NT' },
+  { id: 62, name: '1 John', name_no: '1. Johannes', short_name: '1Joh', testament: 'NT' },
+  { id: 63, name: '2 John', name_no: '2. Johannes', short_name: '2Joh', testament: 'NT' },
+  { id: 64, name: '3 John', name_no: '3. Johannes', short_name: '3Joh', testament: 'NT' },
+  { id: 65, name: 'Jude', name_no: 'Judas', short_name: 'Jud', testament: 'NT' },
+  { id: 66, name: 'Revelation', name_no: 'Åpenbaringen', short_name: 'Åp', testament: 'NT' },
 ];
 
 // Importer bøker
 console.log('Importerer bøker...');
 await sql.begin(async (tx) => {
   for (const book of books) {
+    const chapters = booksData.find((b) => b.id === book.id)?.chapters;
+    if (chapters == null) {
+      console.error(`Bok ${book.id} (${book.short_name}) mangler i books-data.ts — kapittelantall er ukjent.`);
+      process.exit(1);
+    }
     await tx`
       REPLACE INTO books (id, name, name_no, short_name, testament, chapters)
-      VALUES (${book.id}, ${book.name}, ${book.name_no}, ${book.short_name}, ${book.testament}, ${book.chapters})
+      VALUES (${book.id}, ${book.name}, ${book.name_no}, ${book.short_name}, ${book.testament}, ${chapters})
     `;
   }
 });
@@ -2162,13 +2180,36 @@ if (fs.existsSync(leseteksterPath)) {
 
 // (Indekser opprettes av ensureSchema — ingen egen indeks-seksjon i MySQL.)
 
+// PORTEN (#46): ingen versadresse som ikke finnes får bli liggende.
+//
+// Den står HER, etter alle innholdsslagene, framfor som femten håndplasserte
+// sjekker inne i hver insert-løkke. Den forrige runden lærte at et innholdsslag
+// til er en insert-løkke til, og en port man må huske å legge inn er en port
+// som blir glemt. Ett kall over `VERSE_REF_TABLES` dekker alle, også de som
+// kommer senere.
+//
+// Rapporteres ALLTID når den finner noe: en import som stille kaster rader ser
+// ut som en import uten problemer, og da er generatorfeilen (free-bible#26)
+// usynlig for den som kjører den.
+const pruned = await pruneDanglingRefs(sql);
+if (pruned.skipped) {
+  console.log('\nAdvarsel: ingen osnb-vers i basen — versadresser ble ikke validert.');
+} else if (!pruneReportIsEmpty(pruned)) {
+  console.log(`\n${formatPruneReport(pruned)}`);
+  console.log('Kilden skriver adresser som ikke finnes — se flogvit/free-bible#26.');
+}
+
 // Check if any content was updated
 const totalUpdated = Object.values(stats).reduce((sum, s) => sum + s.updated, 0);
 const totalUnchanged = Object.values(stats).reduce((sum, s) => sum + s.unchanged, 0);
 const totalDeleted = Object.values(deleted).reduce((sum, n) => sum + n, 0);
 
-// Only increment sync version if something changed
-if (totalUpdated > 0 || totalDeleted > 0 || isFullImport) {
+// Only increment sync version if something changed.
+//
+// Ryddingen TELLER som en endring: fjerner den en referanse-chip, er den siden
+// en annen enn den mikrocachen ligger med, og uten et versjonsløft ville den
+// døde lenka blitt servert i inntil en time til (PAGE_CACHE_TTL_MS).
+if (totalUpdated > 0 || totalDeleted > 0 || !pruneReportIsEmpty(pruned) || isFullImport) {
   await sql.begin(async (tx) => {
     const newSyncVersion = await incrementSyncVersion(tx);
 

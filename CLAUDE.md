@@ -63,6 +63,63 @@ Kun import-eide innholdstabeller røres — aldri brukertabeller. Kilden resolve
 > Hvordan FLOGVIT ruller dette ut til sin egen prod er miljøspesifikt og bor i
 > driftsrepoet, ikke her.
 
+### Importert innhold får ikke peke på et vers som ikke finnes (#46)
+
+Kryssreferansene lenket til kapitler som ikke eksisterer: `Sal 119:36` sto som
+`Ordsp 119:36`, og siden `reading.tsx` bygger BÅDE lenka og etiketten av samme
+rad, så leseren «Ordsp 119:36» og fikk 404 på `/nn/ord/119`. 560 rader pekte
+forbi siste kapittel, 182 unike døde mål lenket fra 136 kapittelsider — og med
+språk-fallbacken serveres de under alle åtte prefiksene, altså ~1400 døde
+URL-er en crawler når fra vanlige lesesider. GPTBot ga 400 404-er på én time.
+
+Appen er uskyldig. Rotårsaken er generatoren i free-bible, som skriver
+modellens svar uten å sjekke måladressen (flogvit/free-bible#26). Her ligger
+porten som gjør at det ikke når prod uansett.
+
+- **`src/lib/verse-refs.ts` eier lista og regelen.** `VERSE_REF_TABLES` og
+  `CHAPTER_REF_TABLES` er ett sted, brukt både av ryddingen og av vakta.
+- **Sannheten er `verses` med `bible = 'osnb'`** — den kanoniske
+  versifiseringen `/nb/<bok>/<kapittel>` serveres fra, ikke leserens valgte
+  utgave.
+- **Start slettes, slutt klippes.** Finnes ikke STARTVERSET, peker raden på
+  ingenting og slettes. Et SLUTTVERS som stikker forbi kapittelslutten
+  («Sal 11:1-10» der Salme 11 har 7 vers) klippes i stedet til siste vers: det
+  er en slurvete hale på en ellers riktig referanse, og å slette raden ville
+  kastet innhold vi har.
+- **Ett etter-pass, ikke femten porter.** Femten insert-løkker i
+  `import-bible.ts` adresserer vers. Femten håndplasserte sjekker er femten
+  steder å glemme neste gang. `pruneDanglingRefs()` kjører i stedet fra to
+  steder: `ensureSchema()` (altså **hver deploy** — det er dette som rydder
+  prod uten å vente på neste innholdsimport) og slutten av importen.
+- **Ryddingen teller som en endring** og løfter sync-versjonen. Uten det ville
+  mikrocachen servert den døde lenka i inntil en time til.
+- **Importen rapporterer alltid det den kaster.** En import som stille dropper
+  rader ser ut som en import uten problemer, og da er generatorfeilen usynlig
+  for den som kjører den.
+- **Vakta er `test/verse-integrity.test.ts`, og den har to halvdeler.** DATA:
+  ingen rad peker utenfor `verses`. FORM: hver tabell i skjemaet som HAR en
+  versadresse står i lista — lest ut av DDL-en i `TABLES`, ikke ført opp for
+  hånd, så skjemaet ikke kan vokse fra vakta i stillhet. Unntak må ha en
+  begrunnelse i `UNCHECKED_TABLES`. Alle fire vaktene er mutasjonstestet.
+
+### Kapittelantall har ÉN sannhet: `books-data.ts` (#46, bifunn)
+
+Kapittelantallet lå i to hardkodede lister som var uenige om Joel — 3 i
+importens egen bokliste, 4 i `books-data.ts` — og de leses fra hver sin kant:
+`sitemap-paths.ts` og kapittelruta går på `books-data.ts` (så `/nb/joel/4`
+svarer 200 og ligger i sitemapen), mens `reference-parser.ts` går på
+`books`-TABELLEN og avviste «Joel 4:1» med «Joel har 3 kapitler». En
+bidragsyter på `/bidra` fikk altså nei på en referanse siden serverte.
+
+Den norske versifiseringen følger hebraisk (Joel 4 kapitler, Malaki 3), og
+`verses` er enig. Importens liste bærer derfor ikke lenger `chapters` —
+`books-data.ts` er kilden, og `syncBookChapters()` i `runMigrations()` holder
+`books.chapters` i takt ved hver deploy (importen kjøres bare ved
+innholdsoppdatering, så den alene ville latt prod ligge med feil tall).
+`verse-integrity.test.ts` låser de tre — `books-data.ts`, `books.chapters` og
+`verses` — til hverandre, og sjekker at det genererte `verse-counts.ts` ikke
+har drevet fra basen.
+
 ### En offentlig URL skal ALDRI bære en auto_increment-id (#40)
 
 Importen sletter og setter inn på nytt, og MySQL fortsetter tellingen der den
