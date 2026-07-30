@@ -30,16 +30,14 @@ import { parseVerseTemplate } from '../../lib/verse-template.ts';
 import { tCtx, tEnum } from '../../lib/i18n.ts';
 import {
   getVerses,
-  getVerse,
   getOriginalVerses,
-  getOriginalVerse,
   getOriginalLanguage,
   getBookSummary,
   getChapterSummary,
   getChapterContext,
   getChapterInsight,
-  getOriginalWord4Word,
-  getReferences,
+  getOriginalWord4WordByVerse,
+  getReferencesByVerse,
   getImportantWords,
   getTimelineEventsForChapter,
   getPropheciesForChapter,
@@ -238,23 +236,43 @@ async function loadChapterData(
   const readingTexts = readingTextsRaw.map((rt) => ({ id: rt.id, name: rt.name, date: rt.date }));
 
   // Per-vers data: grunntekst, undertekst, ord-for-ord, referanser, profetier.
+  //
+  // Hentes PER KAPITTEL, ikke per vers (#19). Løkka gjorde fire spørringer per
+  // vers — 704 rundturer på Sal 119. Lokalt mot DBngin målte det 8–33 ms og var
+  // altså ikke flaskehalsen, men mot en managed database over nett er latensen
+  // en annen, og da er antallet rundturer selve kostnaden.
+  //
+  // Nøkkelen er OSNB-kapittelet, ikke det viste: med en KVN-mapping kan ett
+  // visningskapittel spenne over to osnb-kapitler (og gjør det i Salmene). Vi
+  // batcher derfor per distinkt osnb-kapittel — normalt ett, av og til to.
   const wantSecondary = !!secondary && secondary !== 'original' && secondary !== bible;
+  const osnbChapters = [...new Set(base.map((b) => b.osnbChapter))];
+  const perChapter = new Map(
+    await Promise.all(
+      osnbChapters.map(async (ch) => {
+        const [original, sec, word4word, references] = await Promise.all([
+          getOriginalVerses(bookId, ch),
+          wantSecondary ? getVerses(bookId, ch, secondary) : Promise.resolve([]),
+          getOriginalWord4WordByVerse(bookId, ch, lang),
+          getReferencesByVerse(bookId, ch, lang),
+        ]);
+        const text = (rows: Verse[]) => new Map(rows.map((v) => [v.verse, v.text] as const));
+        return [ch, { original: text(original), secondary: text(sec), word4word, references }] as const;
+      }),
+    ),
+  );
+
   const verses: DisplayVerse[] = [];
   for (const b of base) {
-    const [orig, sec, w4w, refs] = await Promise.all([
-      getOriginalVerse(bookId, b.osnbChapter, b.osnbVerse),
-      wantSecondary ? getVerse(bookId, b.osnbChapter, b.osnbVerse, secondary) : Promise.resolve(undefined),
-      getOriginalWord4Word(bookId, b.osnbChapter, b.osnbVerse, lang),
-      getReferences(bookId, b.osnbChapter, b.osnbVerse, lang),
-    ]);
+    const ch = perChapter.get(b.osnbChapter)!;
     verses.push({
       verse: b.verse,
       osnbChapter: b.osnbChapter,
       osnbVerse: b.osnbVerse,
-      originalText: orig?.text ?? null,
-      secondaryText: sec?.text ?? null,
-      word4word: w4w,
-      references: refs,
+      originalText: ch.original.get(b.osnbVerse) ?? null,
+      secondaryText: ch.secondary.get(b.osnbVerse) ?? null,
+      word4word: ch.word4word.get(b.osnbVerse) ?? [],
+      references: ch.references.get(b.osnbVerse) ?? [],
       prophecies: chapterProphecies.filter((p) => versesInProphecy(p, bookId, b.osnbChapter, b.osnbVerse)),
       works: preciseWorks.filter((w) => {
         const k = encodeKvn(bookId, b.osnbChapter, b.osnbVerse);

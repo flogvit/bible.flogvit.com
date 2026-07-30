@@ -281,6 +281,74 @@ export async function getOriginalWord4Word(bookId: number, chapter: number, vers
   return getWord4Word(bookId, chapter, verse, bible);
 }
 
+/** Grupperer rader per vers, med radrekkefølgen fra spørringen bevart. */
+function groupByVerse<T>(rows: T[], verseOf: (row: T) => number): Map<number, T[]> {
+  const out = new Map<number, T[]>();
+  for (const row of rows) {
+    const verse = verseOf(row);
+    const list = out.get(verse);
+    if (list) list.push(row);
+    else out.set(verse, [row]);
+  }
+  return out;
+}
+
+/**
+ * Ord-for-ord for HELE kapittelet, gruppert per vers.
+ *
+ * Kapittelrenderen gjorde fire spørringer PER VERS (#19) — 704 rundturer på
+ * Sal 119. Lokalt mot DBngin er det 8–33 ms og altså ikke flaskehalsen, men mot
+ * en managed database over nett er latensen en annen, og da er rundturene selve
+ * kostnaden. Én spørring per kapittel gir samme data.
+ */
+export async function getOriginalWord4WordByVerse(
+  bookId: number,
+  chapter: number,
+  lang = 'nb',
+): Promise<Map<number, Word4Word[]>> {
+  const sql = getSql();
+  // Samme sammensetning som getOriginalWord4Word: grunnteksten bærer språket i
+  // bibel-id-en (tanach-nb, sblgnt-nn), så her er det ingen fallback-kjede.
+  const original = bookId <= 39 ? 'tanach' : 'sblgnt';
+  const bible = `${original}-${lang}`;
+  const rows = await sql`
+    SELECT verse, word_index, word, original, pronunciation, explanation FROM word4word
+    WHERE book_id = ${bookId} AND chapter = ${chapter} AND bible = ${bible}
+    ORDER BY verse, word_index
+  ` as (Word4Word & { verse: number })[];
+  // Nøkkelkolonnen strippes igjen: radene skal være ORDRETT som fra
+  // getWord4Word, ellers er «samme data, færre spørringer» ikke sant lenger.
+  const grouped = groupByVerse(rows, (r) => r.verse);
+  return new Map([...grouped].map(([v, list]) => [v, list.map(({ verse, ...w }) => w)]));
+}
+
+/**
+ * Kryssreferansene for HELE kapittelet, gruppert per fra-vers (#19).
+ *
+ * Merk at fallbacken dermed gjelder per KAPITTEL og ikke per vers. Det er en
+ * forbedring, ikke bare en konsekvens: per vers kunne ett vers uten norske
+ * referanser falle til de ENGELSKE mens resten av kapittelet sto på norsk, altså
+ * blandet språk i samme liste.
+ */
+export async function getReferencesByVerse(
+  bookId: number,
+  chapter: number,
+  lang = currentContentLanguage(),
+): Promise<Map<number, Reference[]>> {
+  const sql = getSql();
+  // `r.*` med vilje: per-vers-varianten under gjør det samme, og radene går rått
+  // ut av /api/references og /api/chapter. En smalere kolonneliste her ville
+  // gjort de to kildene ulike — og endret et API-svar på kjøpet.
+  const rows = await inLanguage(lang, (language) => sql`
+    SELECT r.*, b.short_name as book_short_name
+    FROM references_ r
+    JOIN books b ON r.to_book_id = b.id
+    WHERE r.from_book_id = ${bookId} AND r.from_chapter = ${chapter} AND r.language = ${language}
+    ORDER BY r.from_verse
+  ` as Promise<(Reference & { from_verse: number })[]>);
+  return groupByVerse(rows, (r) => r.from_verse);
+}
+
 export async function getReferences(
   bookId: number,
   chapter: number,

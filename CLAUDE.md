@@ -264,10 +264,20 @@ kall. Kapittelrender: **~350 ms → ~47 ms**.
 - **Ett unntak, med vilje:** listebyggingen i `getAvailableMappings()` bruker den
   ucachede loaderen, fordi den bare trenger navn og antall oppføringer. Gjennom
   fil-cachen ville alle 1158 blitt liggende (93 MB heap, 409 MB RSS målt).
-- Per-vers-løkka i `loadChapterData` gjør fire spørringer per vers. Målt til
-  8–33 ms lokalt, altså IKKE flaskehalsen — men den er 500+ rundturer på Sal 119,
-  og mot en managed database over nett er latensen en annen. Se dit hvis prod
-  fortsatt er treg etter dette.
+- **Per-vers-dataene hentes PER KAPITTEL** (grunntekst, undertekst, ord-for-ord,
+  kryssreferanser). Løkka i `loadChapterData` gjorde fire spørringer per vers —
+  704 rundturer på Sal 119. Lokalt målte de 8–33 ms og var altså ikke
+  flaskehalsen, men mot en managed database over nett er latensen en annen, og
+  da er antallet rundturer selve kostnaden. Bruk `getReferencesByVerse()` /
+  `getOriginalWord4WordByVerse()`; per-vers-getterne lever videre for API-ene.
+  - Nøkkelen er **osnb-kapittelet**, ikke det viste: med en KVN-mapping kan ett
+    visningskapittel spenne over to osnb-kapitler (amharic2000, Sal 51 → 51+52),
+    så batchingen går per distinkt osnb-kapittel.
+  - Bivirkning som er en forbedring: referanse-fallbacken gjelder nå per
+    kapittel, ikke per vers. Før kunne ett vers uten norske referanser falle til
+    de ENGELSKE mens resten av kapittelet sto på norsk.
+  - `test/chapter-batching.test.ts` holder de to formene like rad for rad, og
+    har en strukturell vakt mot at et per-vers-kall sniker seg inn i løkka igjen.
 
 ## Lesesporing (GitHub #16)
 
