@@ -5,6 +5,7 @@
 
 import { Hono } from 'hono';
 import type { AppEnv } from '../../lib/session.ts';
+import { PERSON_ID_ALIASES } from '../../lib/person-id-aliases.ts';
 import { Layout } from '../../views/layout.tsx';
 import { Breadcrumbs } from '../../views/breadcrumbs.tsx';
 import { InlineRefs } from '../../views/inline-refs.tsx';
@@ -154,7 +155,15 @@ r.get('/personer', async (c) => {
 /** /personer/:personId — detalj. Familie/relaterte slås opp server-side. */
 r.get('/personer/:personId', async (c) => {
   const t = tFor(c);
-  const person = await getPersonData(c.req.param('personId'));
+  const requested = c.req.param('personId');
+
+  // Rettede id-er 301-er til den nye adressen (free-bible#25). Oppslaget kommer
+  // FØRST: en gammel id finnes ikke i basen lenger, så uten dette ville den
+  // falt til notFound() og bokmerket vært dødt.
+  const alias = PERSON_ID_ALIASES[requested];
+  if (alias) return c.redirect(lhref(`/personer/${alias}`), 301);
+
+  const person = await getPersonData(requested);
   if (!person) return c.notFound();
 
   async function lookup(
