@@ -63,6 +63,29 @@ Kun import-eide innholdstabeller røres — aldri brukertabeller. Kilden resolve
 > Hvordan FLOGVIT ruller dette ut til sin egen prod er miljøspesifikt og bor i
 > driftsrepoet, ikke her.
 
+### En offentlig URL skal ALDRI bære en auto_increment-id (#40)
+
+Importen sletter og setter inn på nytt, og MySQL fortsetter tellingen der den
+slapp. `/lesetekster/<id>` flyttet derfor HELE settet ved hver
+innholdsoppdatering: bokmerker, delte lenker og indekserte adresser døde i takt
+med innholdet (103 distinkte døde ID-er på én time i loggen, i et sammenhengende
+område en crawler gikk gjennom).
+
+- **Lesedagen adresseres av datoen** — `/lesetekster/2026-12-25`. Flere
+  lesetekster kan dele en dato (Julenatt og Juledag); siden viser dem alle, og
+  lista har ett kort per dato.
+- Gamle numeriske adresser 301-er til datoen så lenge raden finnes. Bare DENNE
+  generasjonen kan løses opp — en gjetning ville sendt leseren til en tilfeldig
+  annen lesedag.
+- **`uq_reading_texts` (dato, navn, serie, språk)** er den naturlige nøkkelen.
+  Kildefilene dekker KIRKEÅR og overlapper med kalenderåret (`2025-2026.json`
+  går ut 2026, `2026-2027.json` starter i november 2026), så 18 lesedager lå
+  doble i basen og ble vist som doble kort. Importen dedupliserer på samme
+  nøkkel med SENERE fil som vinner, og `dedupeReadingTexts()` i `schema.ts`
+  rydder eksisterende baser før nøkkelen legges på.
+- Legger du til en ny detaljside for importert innhold: adresser den med noe
+  kilden eier (dato, slug), aldri med rad-id-en.
+
 ## Språkdimensjon (innhold)
 
 Alt derivert innhold ligger i basen med en **`language`-kolonne som er del av

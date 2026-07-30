@@ -1396,7 +1396,7 @@ function StudyPanel({
           <ul class="st-ms-list">
             {data.readingTexts.map((rt) => (
               <li class="st-ms-item">
-                <a href={lhref(`/lesetekster/${rt.id}`)} class="st-ms-title">
+                <a href={lhref(`/lesetekster/${rt.date}`)} class="st-ms-title">
                   {rt.name}
                 </a>
                 {rt.date && <span class="st-ms-type">{rt.date}</span>}

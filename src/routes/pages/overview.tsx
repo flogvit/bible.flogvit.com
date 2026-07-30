@@ -16,6 +16,7 @@ import {
   getAllWellKnownVerses,
   getAllReadingTexts,
   getReadingTextById,
+  getReadingTextsByDate,
   getProphecies,
   getProphecyCategories,
   getGospelParallels,
@@ -358,11 +359,20 @@ r.get('/lesetekster', async (c) => {
   const today = new Date().toISOString().slice(0, 10);
   const upcoming = texts.filter((t) => t.date >= today);
 
-  const groups = new Map<string, typeof texts>();
+  // Ett kort per DATO, ikke per rad: URL-en er datoen (#40), og flere
+  // lesetekster kan dele en dag (Julenatt og Juledag). Uten grupperingen ville
+  // to kort pekt på samme side.
+  const days = new Map<string, typeof texts>();
   for (const t of upcoming) {
-    const key = t.date.slice(0, 7);
+    if (!days.has(t.date)) days.set(t.date, []);
+    days.get(t.date)!.push(t);
+  }
+
+  const groups = new Map<string, [date: string, texts: typeof texts][]>();
+  for (const [date, dayTexts] of days) {
+    const key = date.slice(0, 7);
     if (!groups.has(key)) groups.set(key, []);
-    groups.get(key)!.push(t);
+    groups.get(key)!.push([date, dayTexts]);
   }
 
   return c.html(
@@ -386,13 +396,13 @@ r.get('/lesetekster', async (c) => {
               <section class="overview-section">
                 <h2>{formatMonth(key)}</h2>
                 <div class="reading-text-list">
-                  {group.map((t) => (
-                    <a href={lhref(`/lesetekster/${t.id}`)} class="reading-text-card">
+                  {group.map(([date, dayTexts]) => (
+                    <a href={lhref(`/lesetekster/${date}`)} class="reading-text-card">
                       <span class="reading-text-name">
-                        {t.name}
-                        {t.series && <span class="reading-text-series">{t.series}</span>}
+                        {dayTexts.map((x) => x.name).join(' · ')}
+                        {dayTexts[0]!.series && <span class="reading-text-series">{dayTexts[0]!.series}</span>}
                       </span>
-                      <span class="reading-text-date">{formatDate(t.date)}</span>
+                      <span class="reading-text-date">{formatDate(date)}</span>
                     </a>
                   ))}
                 </div>
@@ -410,22 +420,39 @@ function formatFullDate(date: string): string {
   return fmtDate(date, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 }
 
-r.get('/lesetekster/:id', async (c) => {
+/**
+ * Lesedagen — `/lesetekster/<dato>` (#40).
+ *
+ * URL-en var `/lesetekster/<auto_increment-id>`, og importen sletter og setter
+ * inn `reading_texts` på nytt. MySQL fortsetter tellingen der den slapp, så
+ * HVERT innholdsdeploy flyttet hele settet: bokmerker, delte lenker og
+ * indekserte adresser døde i takt med innholdsoppdateringene. I loggen ba
+ * crawlere om 103 distinkte døde ID-er på én time, i et sammenhengende område
+ * fra en tidligere generasjon.
+ *
+ * Datoen er den naturlige nøkkelen og kan ikke renummereres. Flere lesetekster
+ * kan dele en dato (Julenatt og Juledag), og siden viser dem da alle — det er
+ * dagens tekster.
+ */
+r.get('/lesetekster/:date{[0-9]{4}-[0-9]{2}-[0-9]{2}}', async (c) => {
   const t = tFor(c);
-  const id = parseInt(c.req.param('id'), 10);
-  if (isNaN(id)) return c.notFound();
-  const text = await getReadingTextById(id);
-  if (!text) return c.notFound();
+  const date = c.req.param('date');
+  const texts = await getReadingTextsByDate(date);
+  if (texts.length === 0) return c.notFound();
 
   // Prefs (bibel/mapping) er klient-side i dag; osnb er standard server-side.
   const bible = normalizeBibleId(c.req.query('bible')) || (await defaultBibleForLanguage());
   const mapping = normalizeBibleId(c.req.query('mapping')) || 'osnb';
-  const enriched = await enrichWithVerseText(text, bible, mapping);
+  // Sekvensielt: hver enrich er mange små spørringer, og DB-poolen er liten (#19).
+  const enriched: Awaited<ReturnType<typeof enrichWithVerseText>>[] = [];
+  for (const text of texts) enriched.push(await enrichWithVerseText(text, bible, mapping));
+
+  const names = texts.map((x) => x.name).join(' · ');
 
   return c.html(
     <Layout {...layoutProps(c)}
-      title={`${text.name} — ${t('nav.readingTexts')} — FLOGVIT.bible`}
-      description={t('rt.detailMeta', { name: text.name })}
+      title={`${names} — ${t('nav.readingTexts')} — FLOGVIT.bible`}
+      description={t('rt.detailMeta', { name: names })}
       styles={['overview.css']}
     >
       <div class="overview-main">
@@ -434,71 +461,89 @@ r.get('/lesetekster/:id', async (c) => {
             items={[
               { label: tCtx()('common.home'), href: '/' },
               { label: tCtx()('nav.readingTexts'), href: '/lesetekster' },
-              { label: text.name },
+              { label: formatFullDate(date) },
             ]}
           />
-          <h1>{text.name}</h1>
-          <div class="reading-text-detail-meta">
-            <span class="reading-text-date">{formatFullDate(text.date)}</span>
-            {text.series && (
-              <span class="reading-text-series">{t('home.lectionarySeries', { series: text.series })}</span>
-            )}
-          </div>
+          <h1>{formatFullDate(date)}</h1>
 
-          {enriched.slots.map((slot) => {
-            const hasAlternatives = slot.options.length > 1;
-            return (
-              <section class="reading-text-slot">
-                {slot.options.map((option, optIdx) => (
-                  <div class={hasAlternatives ? 'reading-text-option reading-text-alt' : 'reading-text-option'}>
-                    {optIdx > 0 && (
-                      <div class="reading-text-or">
-                        <span>{t('rt.or')}</span>
-                      </div>
-                    )}
-                    {option.parts.map((part) => {
-                      const type =
-                        part.ranges.length > 0 ? t(readingTypeKey(part.ranges[0]!.book_id)) : '';
-                      const verses = enriched.verses[part.display_ref] || [];
-                      return (
-                        <div class="reading-text-part">
-                          {type && <div class="reading-text-type">{type}</div>}
-                          <h2>{part.title || part.refs.join('; ')}</h2>
-                          <p class="reading-text-ref-line">{part.refs.join('; ')}</p>
-                          {verses.length > 0 ? (
-                            <div class="reading-text-verses">
-                              {verses.map((v, vi) => {
-                                const prev = vi > 0 ? verses[vi - 1]!.chapter : v.chapter;
-                                const showChapter = vi === 0 || v.chapter !== prev;
-                                return (
-                                  <span>
-                                    <sup class="reading-text-vnum">
-                                      {showChapter ? `${v.chapter}:` : ''}
-                                      {v.verse}
-                                      {v.part || ''}
-                                    </sup>
-                                    {v.text}{' '}
-                                  </span>
-                                );
-                              })}
+          {enriched.map((text) => (
+            <article class="reading-text-detail">
+              <h2>{text.name}</h2>
+              <div class="reading-text-detail-meta">
+                {text.series && (
+                  <span class="reading-text-series">{t('home.lectionarySeries', { series: text.series })}</span>
+                )}
+              </div>
+
+              {text.slots.map((slot) => {
+                const hasAlternatives = slot.options.length > 1;
+                return (
+                  <section class="reading-text-slot">
+                    {slot.options.map((option, optIdx) => (
+                      <div class={hasAlternatives ? 'reading-text-option reading-text-alt' : 'reading-text-option'}>
+                        {optIdx > 0 && (
+                          <div class="reading-text-or">
+                            <span>{t('rt.or')}</span>
+                          </div>
+                        )}
+                        {option.parts.map((part) => {
+                          const type =
+                            part.ranges.length > 0 ? t(readingTypeKey(part.ranges[0]!.book_id)) : '';
+                          const verses = text.verses[part.display_ref] || [];
+                          return (
+                            <div class="reading-text-part">
+                              {type && <div class="reading-text-type">{type}</div>}
+                              <h3>{part.title || part.refs.join('; ')}</h3>
+                              <p class="reading-text-ref-line">{part.refs.join('; ')}</p>
+                              {verses.length > 0 ? (
+                                <div class="reading-text-verses">
+                                  {verses.map((v, vi) => {
+                                    const prev = vi > 0 ? verses[vi - 1]!.chapter : v.chapter;
+                                    const showChapter = vi === 0 || v.chapter !== prev;
+                                    return (
+                                      <span>
+                                        <sup class="reading-text-vnum">
+                                          {showChapter ? `${v.chapter}:` : ''}
+                                          {v.verse}
+                                          {v.part || ''}
+                                        </sup>
+                                        {v.text}{' '}
+                                      </span>
+                                    );
+                                  })}
+                                </div>
+                              ) : (
+                                <p class="reading-text-missing">{t('rt.verseUnavailable')}</p>
+                              )}
                             </div>
-                          ) : (
-                            <p class="reading-text-missing">{t('rt.verseUnavailable')}</p>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                ))}
-              </section>
-            );
-          })}
+                          );
+                        })}
+                      </div>
+                    ))}
+                  </section>
+                );
+              })}
+            </article>
+          ))}
 
           <a href={lhref('/lesetekster')} class="reading-text-back">{t('rt.backToAll')}</a>
         </div>
       </div>
     </Layout>,
   );
+});
+
+/**
+ * Gamle ID-adresser: 301 til den stabile URL-en så lenge raden finnes.
+ *
+ * Rekkevidden er begrenset med vilje — bare DENNE generasjonen av ID-er kan
+ * løses opp. Alt som ble indeksert før en tidligere import er borte for godt,
+ * og en gjetning ville sendt leseren til en tilfeldig annen lesedag.
+ */
+r.get('/lesetekster/:id{[0-9]+}', async (c) => {
+  const text = await getReadingTextById(parseInt(c.req.param('id'), 10));
+  if (!text) return c.notFound();
+  return c.redirect(lhref(`/lesetekster/${text.date}`), 301);
 });
 
 // ---------- /profetier ----------

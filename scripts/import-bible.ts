@@ -1996,7 +1996,10 @@ function toOsmain(bookId: number, chapter: number, verse: number, mappingId: str
 
 const leseteksterPath = path.join(GENERATE_PATH, 'dnk_lesetekster');
 if (fs.existsSync(leseteksterPath)) {
-  const jsonFiles = fs.readdirSync(leseteksterPath).filter((f) => f.endsWith('.json'));
+  // Sortert: kildefilene overlapper ved kirkeårsskiftet, og ved lik naturlig
+  // nøkkel skal den SENERE fila vinne (#40). Uten sortering var det tilfeldig
+  // hvilken versjon som ble stående.
+  const jsonFiles = fs.readdirSync(leseteksterPath).filter((f) => f.endsWith('.json')).sort();
 
   // Check if any files changed
   const allContent = jsonFiles.map((f) => fs.readFileSync(path.join(leseteksterPath, f), 'utf-8'));
@@ -2100,43 +2103,48 @@ if (fs.existsSync(leseteksterPath)) {
         }
       }
 
+      // Naturlig nøkkel (dato + navn + serie) → lesedag. Kildefilene dekker
+      // KIRKEÅR og overlapper derfor med kalenderåret: 2025-2026.json går ut
+      // 2026, mens 2026-2027.json starter i november 2026. De 18 dagene i
+      // snittet ble tidligere satt inn to ganger og vist som doble kort (#40).
+      // Senere fil vinner — der er dataene rettet.
+      type ReadingEntry = {
+        name: string;
+        date: string;
+        series: string;
+        slots: Array<{ options: Array<{ parts: Array<{ refs: string[]; title: string }> }> }>;
+      };
+      const byNaturalKey = new Map<string, ReadingEntry>();
       for (let fileIdx = 0; fileIdx < jsonFiles.length; fileIdx++) {
-        const content = allContent[fileIdx]!;
         try {
-          const entries = JSON.parse(content) as Array<{
-            name: string;
-            date: string;
-            series: string;
-            slots: Array<{
-              options: Array<{
-                parts: Array<{ refs: string[]; title: string }>;
-              }>;
-            }>;
-          }>;
-
-          for (const entry of entries) {
-            await tx`INSERT INTO reading_texts (date, name, series) VALUES (${entry.date}, ${entry.name}, ${entry.series || null})`;
-            const idRows = (await tx`SELECT LAST_INSERT_ID() AS id`) as { id: number | bigint }[];
-            const readingTextId = Number(idRows[0]!.id);
-            totalTexts++;
-
-            for (let slotIdx = 0; slotIdx < entry.slots.length; slotIdx++) {
-              const slot = entry.slots[slotIdx]!;
-              for (let optionIdx = 0; optionIdx < slot.options.length; optionIdx++) {
-                const option = slot.options[optionIdx]!;
-                for (let partIdx = 0; partIdx < option.parts.length; partIdx++) {
-                  const part = option.parts[partIdx]!;
-                  for (let refIdx = 0; refIdx < part.refs.length; refIdx++) {
-                    const refMarkup = part.refs[refIdx]!;
-                    const sortBase = (slotIdx * 10000) + (optionIdx * 1000) + (partIdx * 100) + (refIdx * 10);
-                    totalRefs += await insertOneRef(readingTextId, slotIdx, optionIdx, partIdx, refMarkup, part.title, sortBase);
-                  }
-                }
-              }
-            }
+          for (const entry of JSON.parse(allContent[fileIdx]!) as ReadingEntry[]) {
+            byNaturalKey.set(`${entry.date}|${entry.name}|${entry.series || ''}`, entry);
           }
         } catch (e) {
           console.error(`Ugyldig JSON i ${jsonFiles[fileIdx]}:`, e);
+        }
+      }
+      const entries = [...byNaturalKey.values()].sort((a, b) => a.date.localeCompare(b.date));
+
+      for (const entry of entries) {
+        await tx`INSERT INTO reading_texts (date, name, series) VALUES (${entry.date}, ${entry.name}, ${entry.series || null})`;
+        const idRows = (await tx`SELECT LAST_INSERT_ID() AS id`) as { id: number | bigint }[];
+        const readingTextId = Number(idRows[0]!.id);
+        totalTexts++;
+
+        for (let slotIdx = 0; slotIdx < entry.slots.length; slotIdx++) {
+          const slot = entry.slots[slotIdx]!;
+          for (let optionIdx = 0; optionIdx < slot.options.length; optionIdx++) {
+            const option = slot.options[optionIdx]!;
+            for (let partIdx = 0; partIdx < option.parts.length; partIdx++) {
+              const part = option.parts[partIdx]!;
+              for (let refIdx = 0; refIdx < part.refs.length; refIdx++) {
+                const refMarkup = part.refs[refIdx]!;
+                const sortBase = (slotIdx * 10000) + (optionIdx * 1000) + (partIdx * 100) + (refIdx * 10);
+                totalRefs += await insertOneRef(readingTextId, slotIdx, optionIdx, partIdx, refMarkup, part.title, sortBase);
+              }
+            }
+          }
         }
       }
 

@@ -415,12 +415,17 @@ const TABLES: string[] = [
     UNIQUE KEY uq_number_symbolism (number, language)
   ) ENGINE=InnoDB ${CS}`,
 
+  // uq_reading_texts er den NATURLIGE nøkkelen (#40). Kildefilene overlapper ved
+  // kirkeårsskiftet — 2025-2026.json går ut året 2026 og 2026-2027.json starter
+  // i november 2026 — så 18 lesedager fantes to ganger i basen og dukket opp
+  // som doble kort. Nøkkelen gjør den klassen umulig.
   `CREATE TABLE IF NOT EXISTS reading_texts (
     id INT AUTO_INCREMENT PRIMARY KEY,
     date VARCHAR(10) NOT NULL,
     name VARCHAR(255) NOT NULL,
     series VARCHAR(255),
     ${LANG},
+    UNIQUE KEY uq_reading_texts (date, name, series, language),
     INDEX idx_reading_texts_date (date, language)
   ) ENGINE=InnoDB ${CS}`,
 
@@ -652,7 +657,13 @@ const LANGUAGE_MIGRATIONS: {
   { table: 'gospel_parallel_passages', keys: [{ name: 'idx_gospel_parallel_passages_parallel', columns: ['parallel_id', 'language'], kind: 'index' }] },
   { table: 'days', keys: [{ name: 'PRIMARY', columns: ['id', 'language'], kind: 'primary' }] },
   { table: 'number_symbolism', keys: [{ name: 'uq_number_symbolism', columns: ['number', 'language'], kind: 'unique' }], dropLegacy: ['number'] },
-  { table: 'reading_texts', keys: [{ name: 'idx_reading_texts_date', columns: ['date', 'language'], kind: 'index' }] },
+  {
+    table: 'reading_texts',
+    keys: [
+      { name: 'uq_reading_texts', columns: ['date', 'name', 'series', 'language'], kind: 'unique' },
+      { name: 'idx_reading_texts_date', columns: ['date', 'language'], kind: 'index' },
+    ],
+  },
   {
     table: 'stories',
     keys: [
@@ -773,8 +784,44 @@ async function indexColumns(sql: SQL, table: string, index: string): Promise<str
   return rows.map((r) => r.col.toLowerCase());
 }
 
+/**
+ * Fjerner dupliserte lesedager, så `uq_reading_texts` kan legges på (#40).
+ *
+ * Kildefilene i free-bible overlapper ved kirkeårsskiftet: `2025-2026.json` går
+ * ut kalenderåret 2026, mens `2026-2027.json` starter i november 2026. De 18
+ * lesedagene i snittet ble importert to ganger og vist som doble kort.
+ *
+ * HØYESTE id vinner, som i importen: den kommer fra den SENERE kildefila, og
+ * der er dataene rettet (de to som skilte seg hadde en versreferanse liggende
+ * igjen inne i tittelen i den eldre fila).
+ *
+ * `series` kan være NULL, så sammenligningen må være null-sikker (`<=>`) —
+ * `=` gir NULL og ville latt duplikatene stå igjen uten å feile.
+ */
+async function dedupeReadingTexts(sql: SQL): Promise<void> {
+  if (!(await tableExists(sql, 'reading_texts'))) return;
+  if (!(await columnExists(sql, 'reading_texts', 'language'))) return;
+  // Finnes nøkkelen alt, kan det ikke ligge duplikater der.
+  if ((await indexColumns(sql, 'reading_texts', 'uq_reading_texts')).length > 0) return;
+
+  const keep = `
+    JOIN (
+      SELECT date, name, series, language, MAX(id) AS keep_id
+      FROM reading_texts GROUP BY date, name, series, language
+    ) k ON k.date = t.date AND k.name = t.name AND k.series <=> t.series
+       AND k.language = t.language AND t.id <> k.keep_id`;
+
+  // Barna først: reading_text_refs har ingen FK, så en foreldreløs rad ville
+  // blitt liggende og dukket opp i kapittel-oppslagene (JOIN på id-en).
+  await sql.unsafe(`DELETE r FROM reading_text_refs r JOIN reading_texts t ON r.reading_text_id = t.id ${keep}`).simple();
+  await sql.unsafe(`DELETE t FROM reading_texts t ${keep}`).simple();
+}
+
 /** Kjører alle skjemaendringer som CREATE-ene ikke kan uttrykke. Idempotent. */
 async function runMigrations(sql: SQL): Promise<void> {
+  // Dupliserte lesedager MÅ vike før uq_reading_texts kan legges på (#40).
+  await dedupeReadingTexts(sql);
+
   for (const { table, keys, dropLegacy } of LANGUAGE_MIGRATIONS) {
     if (!(await tableExists(sql, table))) continue;
 

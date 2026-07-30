@@ -260,7 +260,7 @@ r.get('/', async (c) => {
                   {text.series ? ` · ${t('home.lectionarySeries', { series: text.series })}` : ''}
                 </div>
                 <h3>
-                  <a href={lhref(`/lesetekster/${text.id}`)}>{text.name}</a>
+                  <a href={lhref(`/lesetekster/${text.date}`)}>{text.name}</a>
                 </h3>
                 {/* Selve lesningene: uten dem er kortet bare et navn, og
                     leseren må innom detaljsiden for å se hva dagen har (#36). */}
