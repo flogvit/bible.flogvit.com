@@ -359,9 +359,36 @@ gjelder:
 
 **Tekst som skal oversettes, skal gjennom ordboka.** Trenger en komponent
 oversetteren uten å ha `c`, bruk `tCtx()`; for nøkler som settes sammen av
-enum-verdier i dataene (`era.exodus`, `fn.tekstkritisk`), bruk `tEnum()` — den
-holder på typesikkerheten, som er det som gjør en glemt oversettelse til en
-byggefeil.
+enum-verdier i dataene (`era.exodus`, `fn.tekstkritisk`, `plan.cat.tematisk`,
+`rd.vsev.minor`), bruk `tEnum()` — den holder på typesikkerheten, som er det som
+gjør en glemt oversettelse til en byggefeil.
+
+### Ordlista fanger bare det noen har tenkt på — derfor fire vakter
+
+Sveipen var én ordliste, og «Mørk», «Tittel», «støttes» og «søkesiden» sto igjen
+på engelske sider i månedsvis fordi ingen hadde lagt inn ordene (#43). Sveipen er
+derfor fire uavhengige invarianter, i økende styrke:
+
+1. **Ordlista** (`NORWEGIAN_ONLY`) — funksjonsord. Billig, men bare det noen har
+   ført opp.
+2. **æ/ø/å i synlig tekst.** STRUKTURELT: engelsk bruker dem ikke. `NORDIC_PROPER`
+   er unntakslista og skal være nesten tom — hver oppføring er en påstand om at
+   ordet er et egennavn (`bokmål` er navnet på en skriftstandard, også på engelsk).
+3. **Ordboksverdien selv.** Er teksten ordrett den NORSKE verdien for en nøkkel,
+   og noe annet på engelsk, er den norske verdien — uten at noe ord trenger å
+   stå i en liste. Dette fant «Liten»/«Stor», «Oppfylt:», «Bok», «Visning»,
+   «Offline-tilgang» og rå enum-verdier som `tematisk` og `skapelsen`.
+4. **Tekstbærende ATTRIBUTTER** (`aria-label`, `placeholder`, `title`, `alt`) og
+   **metadata** (`<title>`, `<meta description>`). En skjermleserbruker og en
+   søkeresultat-linje ser tekst som forsvinner når taggene strippes.
+
+**Boknavn er den vanligste feilen.** `name_no`/`short_name` er NØKLER. `/statistikk`
+viste `book.name_no`, profetireferansene bygde «Åp 12:1-5» av den norske
+forkortelsen, og evangelieparallellene hadde en hardkodet `GOSPEL_NAMES`-tabell.
+Bruk `bookName()`/`bookAbbr()`/`bookNameById()` — og merk at
+`bookNameByShort()`/`bookAbbrByShort()` går gjennom ALIAS-tabellen: kildene staver
+ikke nøkkelen likt («Høy» mot bokas «Høys»), og et direkte oppslag falt stille
+tilbake til den norske nøkkelen.
 
 **Boknavn:** `name_no`/`short_name` i `books-data.ts` er NØKLER (URL-sluger,
 begge referanseparserne, `data-ref`, brukernes lagrede referanser) og skal ikke

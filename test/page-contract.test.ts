@@ -72,6 +72,11 @@ const PAGES: { path: string; name: string }[] = [
   // aldri rendres på en tom søkeside, og der lå det hardkodet norsk igjen.
   { path: '/sok/original?q=%D0%B0%D0%BB', name: 'søk i grunnteksten (uten treff)' },
   { path: '/sok/original?q=%D7%91%D7%A8%D7%90', name: 'søk i grunnteksten (med treff)' },
+  // Editoren og redigeringsvisningen manglet, og der lå det hardkodet norsk
+  // (#43). En side som ikke står her, står utenfor ALLE invariantene.
+  { path: '/tekst', name: 'bibelpassasjer (/tekst, tom tilstand)' },
+  { path: '/manuskripter/ny', name: 'manuskript-editor (ny)' },
+  { path: '/manuskripter/et-manuskript/rediger', name: 'manuskript-editor (rediger)' },
   { path: '/tilgjengelighet', name: 'tilgjengelighet' },
   { path: '/changes', name: 'endringslogg' },
   { path: '/finnes-ikke', name: '404-siden' },
@@ -307,6 +312,18 @@ describe('sidekontrakt', () => {
    *   bibeloversettelser og versnummereringer). «Bibelen Guds Ord» er tittelen
    *   på en faktisk utgave og skal ikke oversettes.
    */
+  /**
+   * Metadata er tekst leseren SER — i fanen, i søkeresultatet, i en delt
+   * lenke — men den står utenfor `<main>` og var derfor usynlig for sveipen
+   * under. En hardkodet «Tematisk bibelstudie: …» i en description er samme
+   * defekt som en hardkodet overskrift (#43).
+   */
+  function metaText(html: string): string {
+    const title = /<title>([^<]*)<\/title>/.exec(html)?.[1] ?? '';
+    const desc = /<meta name="description" content="([^"]*)"/.exec(html)?.[1] ?? '';
+    return `${title}\n${desc}`;
+  }
+
   function visibleText(html: string): string {
     return html
       .replace(/<script[\s\S]*?<\/script>/gi, ' ')
@@ -317,12 +334,115 @@ describe('sidekontrakt', () => {
       .replace(/&[a-z]+;|&#\d+;/gi, ' ');
   }
 
+  // Ordlista over kan bare fange ord noen HAR TENKT PÅ. «Mørk», «støttes» og
+  // «søkesiden» sto der i månedsvis fordi ingen la dem inn.
+  //
+  // æ/ø/å er derimot STRUKTURELT: engelsk bruker dem ikke, så en slik bokstav i
+  // synlig tekst på /en/ er alltid norsk som ikke gikk gjennom ordboka. Vakta
+  // trenger ingen vedlikeholdt liste, og den fanger ord vi ikke har sett ennå.
+  //
+  // Unntakene er de samme som for ordlista, uttrykt i HTML-en der de gjelder:
+  // `lang="nb"`/`lang="nn"` (sitert norsk) og `data-proper-names` (egennavn fra
+  // dataene — utgavenavn som «OSNB (bokmål)»).
+  /**
+   * Ord som beholder æ/ø/å på ALLE språk. Lista skal være nesten tom — hver
+   * oppføring er en påstand om at ordet er et EGENNAVN, ikke en oversettelse
+   * noen har glemt.
+   *
+   * `bokmål` er navnet på en norsk skriftstandard og skrives slik også på
+   * engelsk («Norwegian Bokmål»); det står i utgavenavnene OSNB/OSNN, som er
+   * titler på faktiske bibelutgaver.
+   */
+  const NORDIC_PROPER = ['bokmål'];
+
+  describe('ingen æ/ø/å i synlig tekst under /en/', () => {
+    for (const page of PAGES) {
+      test(page.name, async () => {
+        const { html } = await fetchPage('en', page.path);
+        const ord = new Set<string>();
+        for (const line of `${visibleText(html)}\n${metaText(html)}`.split('\n')) {
+          for (const w of line.trim().split(/[^\p{L}]+/u)) {
+            if (/[æøåÆØÅ]/.test(w) && !NORDIC_PROPER.includes(w.toLowerCase())) ord.add(w);
+          }
+        }
+        expect({ side: page.path, norske: [...ord].slice(0, 6) }).toEqual({ side: page.path, norske: [] });
+      });
+    }
+  });
+
+  /**
+   * Strengene som ER den norske oversettelsen.
+   *
+   * Dette er den sterkeste av vaktene her, og den trenger ingen ordliste: en
+   * tekst som står ORDRETT som i den norske ordboka, og som er noe ANNET på
+   * engelsk, er den norske verdien — altså en streng som aldri gikk gjennom
+   * `t()`. «Tittel» har verken æ/ø/å eller noe ord en liste ville hatt, men den
+   * er `u.titleLabel` på norsk og «Title» på engelsk, og dermed avslørt.
+   *
+   * Nøkler der de to språkene har SAMME verdi («Pause», «System») utelates —
+   * der finnes det ingen forskjell å oppdage, og de er ikke feil.
+   */
+  const NB_ONLY_VALUES = new Map<string, string>();
+  for (const [key, nbVal] of Object.entries(DICTIONARIES.nb)) {
+    const enVal = (DICTIONARIES.en as Record<string, string>)[key];
+    const nb = String(nbVal).trim();
+    if (!enVal || String(enVal).trim() === nb) continue;
+    if (nb.length < 3 || nb.includes('{')) continue; // plassholdere fylles ulikt
+    NB_ONLY_VALUES.set(nb.toLowerCase(), key);
+  }
+
+  // Tekstbærende ATTRIBUTTER: `aria-label="Tittel"` er tekst en skjermleser
+  // leser opp, men den forsvinner når taggene strippes — derfor sto «Søk»,
+  // «Tittel», «Innhold» og «Tema» igjen på engelske sider. Samme lærdom som
+  // island-strings-vakta: sjekk HVOR strengen havner, ikke bare brødteksten.
+  describe('ingen norsk i aria-label/placeholder/title under /en/', () => {
+    const ATTR_RE = /(?:aria-label|placeholder|title|alt)="([^"]+)"/g;
+    for (const page of PAGES) {
+      test(page.name, async () => {
+        const { html } = await fetchPage('en', page.path);
+        const funn: string[] = [];
+        for (const m of html.matchAll(ATTR_RE)) {
+          const v = m[1]!;
+          const nordic = v.split(/[^\p{L}]+/u).filter((w) => /[æøåÆØÅ]/.test(w));
+          if (nordic.some((w) => !NORDIC_PROPER.includes(w.toLowerCase()))) funn.push(v);
+          else if (NB_ONLY_VALUES.has(v.trim().toLowerCase())) funn.push(v);
+          else if (NORWEGIAN_RE.test(v)) funn.push(v);
+          NORWEGIAN_RE.lastIndex = 0;
+        }
+        expect({ side: page.path, attributter: [...new Set(funn)].slice(0, 6) }).toEqual({
+          side: page.path,
+          attributter: [],
+        });
+      });
+    }
+  });
+
+  // Samme sjekk på SYNLIG tekst: en etikett som står ordrett som i den norske
+  // ordboka er den norske verdien, uansett om ordet finnes i noen liste.
+  describe('ingen norsk ordboksverdi som synlig tekst under /en/', () => {
+    for (const page of PAGES) {
+      test(page.name, async () => {
+        const { html } = await fetchPage('en', page.path);
+        const funn: string[] = [];
+        for (const line of `${visibleText(html)}\n${metaText(html)}`.split('\n')) {
+          const txt = line.trim();
+          const key = NB_ONLY_VALUES.get(txt.toLowerCase());
+          if (key) funn.push(`${txt} (${key})`);
+        }
+        expect({ side: page.path, norske: [...new Set(funn)].slice(0, 6) }).toEqual({
+          side: page.path,
+          norske: [],
+        });
+      });
+    }
+  });
+
   describe('ingen norsk tekst under /en/', () => {
     for (const page of PAGES) {
       test(page.name, async () => {
         const { html } = await fetchPage('en', page.path);
         const funn: string[] = [];
-        for (const line of visibleText(html).split('\n')) {
+        for (const line of `${visibleText(html)}\n${metaText(html)}`.split('\n')) {
           const text = line.trim();
           // Gulvet var 4 tegn og slapp dermed «Søk» (3) gjennom i brødsmulestien
           // på /sok/original — ordet STO i lista, men linja ble aldri sjekket.

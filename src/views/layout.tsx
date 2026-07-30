@@ -55,7 +55,12 @@ const CHROME_ISLAND_KEYS = [
  * de fleste sidene aldri bruker.
  */
 const PAGE_ISLAND_KEYS: Record<string, readonly MessageKey[]> = {
-  'reading.js': ['is.favOn', 'is.favOff', 'is.delete', 'nav.favorites', 'nav.notes', 'is.readTracking'],
+  'reading.js': [
+    'is.favOn', 'is.favOff', 'is.delete', 'nav.favorites', 'nav.notes', 'is.readTracking',
+    // Fallbacker når en data-label mangler. De MÅ ligge her, ellers viser øya
+    // nøkkelen — som er meningen, men bare hvis nøkkelen faktisk er en glipp.
+    'rd.markRead', 'rd.read', 'rd.lastRead',
+  ],
   'user.js': [
     'nav.verseLists', 'nav.manuscripts', 'is.readingMap', 'is.activeCantHide', 'is.importFailed',
     'is.storageUsed', 'is.storageUnavailable', 'is.untitled', 'is.taggedCount', 'is.verseCount',
@@ -168,7 +173,7 @@ function FlogvitMenu({ t }: { t: Translator }) {
               return (
                 <span class="fvmenu-item soon">
                   {wm}
-                  <span class="fvmenu-chip">snart</span>
+                  <span class="fvmenu-chip">{t('chrome.soon')}</span>
                 </span>
               );
             }

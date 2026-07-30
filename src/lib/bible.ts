@@ -10,7 +10,7 @@ import {
   contentLanguageChain,
   currentContentLanguage,
 } from './lang.ts';
-import { bookAbbrByShort } from './books-data.ts';
+import { bookAbbrByShort, bookNameByShort } from './books-data.ts';
 
 // Re-export toUrlSlug for convenience (server-side usage)
 export { toUrlSlug } from './url-utils.ts';
@@ -1451,7 +1451,8 @@ export async function getProphecies(lang = currentContentLanguage()): Promise<Pr
       const verseRange = ref.verse_start === ref.verse_end
         ? `${ref.verse_start}`
         : `${ref.verse_start}-${ref.verse_end}`;
-      return `${ref.book_short_name} ${ref.chapter}:${verseRange}`;
+      // Forkortelsen i raden er den NORSKE nøkkelen — oversett for visning (#20).
+      return `${bookAbbrByShort(ref.book_short_name, lang)} ${ref.chapter}:${verseRange}`;
     };
 
     const prophecyRef: ProphecyReference = {
@@ -1511,7 +1512,7 @@ export async function getProphecyById(id: string, lang = currentContentLanguage(
     const verseRange = ref.verse_start === ref.verse_end
       ? `${ref.verse_start}`
       : `${ref.verse_start}-${ref.verse_end}`;
-    return `${ref.book_short_name} ${ref.chapter}:${verseRange}`;
+    return `${bookAbbrByShort(ref.book_short_name, lang)} ${ref.chapter}:${verseRange}`;
   };
 
   const prophecyRef: ProphecyReference = {
@@ -2143,7 +2144,10 @@ export async function getBookStatistics(bookId: number, bible = 'osnb'): Promise
 
   return {
     bookId: book.id,
-    bookName: book.name_no,
+    // Navnet slik det VISES; name_no er NØKKELEN (CLAUDE.md, «Boknavn»). Slår
+    // opp via forkortelsen, som er nøkkelen radene bærer — `book` her er
+    // DB-raden (testament er en løs string), ikke den statiske BookInfo-en.
+    bookName: bookNameByShort(book.short_name),
     shortName: book.short_name,
     testament: book.testament,
     chapters: book.chapters,

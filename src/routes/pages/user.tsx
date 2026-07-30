@@ -19,7 +19,7 @@ import { getUserItems, getUserSingleton, getReadingProgress } from '../../lib/us
 import { summarizeProgress, fullHeat, stalestBooks } from '../../lib/reading-map.ts';
 import { getBibleEditions, getAllReadingPlansList, type BibleEdition } from '../../lib/bible.ts';
 import { getAvailableMappings } from '../../lib/verse-mapper.ts';
-import { layoutProps, makeT, tFor, type Locale, type MessageKey, lhref } from '../../lib/i18n.ts';
+import { layoutProps, makeT, tFor, tEnum, type Locale, type MessageKey, lhref } from '../../lib/i18n.ts';
 import { tCtx } from '../../lib/i18n.ts';
 
 const r = new Hono<AppEnv>();
@@ -296,7 +296,10 @@ r.get('/leseplan', async (c) => {
                   {p.description && <p class="plan-desc">{p.description}</p>}
                   <div class="plan-meta">
                     <span class="plan-days">{t('u.planDays', { n: p.days })}</span>
-                    {p.category && <span class="plan-cat">{p.category}</span>}
+                    {/* Kategorien er en ENUM-verdi i dataene (kort/middels/lang/
+                        intensiv/tematisk), ikke visningstekst — tEnum holder
+                        typesikkerheten, så en glemt oversettelse blir byggefeil. */}
+                    {p.category && <span class="plan-cat">{tEnum(t, 'plan.cat.', p.category)}</span>}
                   </div>
                   <div class="plan-actions">
                     <button type="button" class="user-btn plan-activate" data-plan={p.id}
@@ -330,7 +333,7 @@ r.get('/manuskripter', async (c) => {
       <div class="user-list" data-list>
         {devs.map((d) => (
           <a class="user-card" href={lhref(`/manuskripter/${d.slug}`)}>
-            <span class="user-card-title">{d.title || '(uten tittel)'}</span>
+            <span class="user-card-title">{d.title || t('is.untitled')}</span>
             <span class="user-card-meta">{d.type || ''}</span>
           </a>
         ))}
@@ -347,22 +350,21 @@ function DevotionalEditor(props: { slug?: string; locale: Locale; path: string }
     <Layout locale={props.locale} path={props.path} title={`${t('u.editManuscript')} — FLOGVIT.bible`} description={t('u.manuscriptMeta')} styles={['user.css']} scripts={['user.js']}>
       <div class="user-main">
         <div class="container">
-          <Breadcrumbs items={[{ label: tCtx()('common.home'), href: '/' }, { label: tCtx()('nav.manuscripts'), href: '/manuskripter' }, { label: props.slug ? 'Rediger' : 'Nytt' }]} />
-          <h1 class="sr-only">{props.slug ? 'Rediger manuskript' : 'Nytt manuskript'}</h1>
+          <Breadcrumbs items={[{ label: tCtx()('common.home'), href: '/' }, { label: tCtx()('nav.manuscripts'), href: '/manuskripter' }, { label: props.slug ? t('common.edit') : t('common.new') }]} />
+          <h1 class="sr-only">{props.slug ? t('u.editManuscript') : t('u.newManuscript')}</h1>
           <div data-user-page="devotional-editor" data-slug={props.slug || ''}>
             <div class="editor-head">
-              <input type="text" data-editor-title placeholder={t('u.titlePh')} class="user-input editor-title" aria-label="Tittel" />
+              <input type="text" data-editor-title placeholder={t('u.titlePh')} class="user-input editor-title" aria-label={t('u.titleLabel')} />
               <div class="editor-actions">
                 <button type="button" class="user-btn" data-editor-save>{t('common.save')}</button>
                 <a href={lhref('/manuskripter')} class="user-btn-ghost">{t('common.cancel')}</a>
               </div>
             </div>
             <p class="editor-hint">
-              Bruk <code>[ref:Joh 3,16]</code> for versreferanser. Markdown støttes (overskrifter,
-              <b>fet</b>, <i>kursiv</i>, lister).
+              {t('u.editorHintRefs')} <code>[ref:Joh 3,16]</code>. {t('u.editorHintMd')}
             </p>
             <div class="editor-split">
-              <textarea data-editor-content class="editor-textarea" placeholder={t('u.writeHerePh')} aria-label="Innhold"></textarea>
+              <textarea data-editor-content class="editor-textarea" placeholder={t('u.writeHerePh')} aria-label={t('u.contentLabel')}></textarea>
               <div class="editor-preview" data-editor-preview aria-live="polite"></div>
             </div>
           </div>
@@ -441,16 +443,16 @@ r.get('/innstillinger', async (c) => {
               og persisterer til cookie + konto — samme #fv-theme som før,
               flyttet hit fra FLOGVIT-menyen. */}
           <label class="settings-row">
-            <span>Tema</span>
-            <span class="fvmenu-seg" id="fv-theme" role="group" aria-label="Tema">
+            <span>{t('u.theme')}</span>
+            <span class="fvmenu-seg" id="fv-theme" role="group" aria-label={t('u.theme')}>
               <button type="button" class="fvmenu-segBtn" data-theme="system" aria-pressed="false">
-                System
+                {t('u.themeSystem')}
               </button>
               <button type="button" class="fvmenu-segBtn" data-theme="light" aria-pressed="false">
-                Lys
+                {t('u.themeLight')}
               </button>
               <button type="button" class="fvmenu-segBtn" data-theme="dark" aria-pressed="false">
-                Mørk
+                {t('u.themeDark')}
               </button>
             </span>
           </label>
@@ -461,17 +463,17 @@ r.get('/innstillinger', async (c) => {
             user.plus ? (
               <>
                 <p class="settings-account">
-                  Innlogget som <strong>{user.displayName || user.email}</strong> (FLOGVIT.plus).{' '}
+                  {t('u.loggedInAs', { name: user.displayName || user.email })} (FLOGVIT.plus).{' '}
                   <a href={ACCOUNT_URL}>{t('u.manageAccount')}</a>
                 </p>
                 <p class="settings-sync" data-sync-status>
-                  Synkronisering er på — favoritter, notater og innstillinger lagres til kontoen din.
+                  {t('u.syncOn')}
                 </p>
               </>
             ) : (
               <>
                 <p class="settings-account">
-                  Innlogget som <strong>{user.displayName || user.email}</strong>.{' '}
+                  {t('u.loggedInAs', { name: user.displayName || user.email })}.{' '}
                   <a href={ACCOUNT_URL}>{t('u.manageAccount')}</a>
                 </p>
                 <p class="settings-sync">
@@ -596,7 +598,7 @@ r.get('/innstillinger', async (c) => {
           <legend>{t('u.yourData')}</legend>
           <div class="settings-data-buttons">
             <button type="button" class="user-btn" data-export-data>
-              Eksporter alt (JSON)
+              {t('u.exportAll')}
             </button>
             <label class="user-btn-ghost settings-import-label">
               {t('u.importFromFile')}
@@ -604,8 +606,7 @@ r.get('/innstillinger', async (c) => {
             </label>
           </div>
           <p class="user-note" data-data-status>
-            Eksporten inneholder favoritter, notater, emner, verslister, manuskripter, leseplan og
-            innstillinger.
+            {t('u.exportContains')}
           </p>
         </fieldset>
       </form>
@@ -620,7 +621,7 @@ r.get('/offline', (c) => {
     <UserPage {...layoutProps(c)}
       title="Offline"
       crumb="Offline"
-      heading="Offline-tilgang"
+      heading={t('about.offline')}
       page="offline"
       intro={t('u.offlineIntro')}
       styles={['offline.css']}
@@ -637,14 +638,14 @@ r.get('/offline', (c) => {
         <h2>{t('u.download')}</h2>
         <div class="offline-download" data-offline-download>
           <label class="settings-toggle">
-            <input type="checkbox" data-dl-bible="osnb" checked /> <span>OSNB (bokmål)</span>
+            <input type="checkbox" data-dl-bible="osnb" checked /> <span data-proper-names>OSNB (bokmål)</span>
           </label>
           <label class="settings-toggle">
-            <input type="checkbox" data-dl-bible="osnn" /> <span>OSNN (nynorsk)</span>
+            <input type="checkbox" data-dl-bible="osnn" /> <span data-proper-names>OSNN (nynorsk)</span>
           </label>
           <div class="offline-actions">
             <button type="button" class="user-btn" data-dl-start>{t('u.downloadOffline')}</button>
-            <button type="button" class="user-btn-ghost" data-dl-pause hidden>Pause</button>
+            <button type="button" class="user-btn-ghost" data-dl-pause hidden>{t('u.pause')}</button>
           </div>
           <div class="offline-progress" data-dl-progress hidden>
             <div class="offline-progress-bar"><div class="offline-progress-fill" data-dl-fill></div></div>

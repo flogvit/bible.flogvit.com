@@ -22,7 +22,7 @@ import { InlineRefs } from '../../views/inline-refs.tsx';
 import { Markdown } from '../../views/markdown.tsx';
 import { ItemTagging } from '../../views/item-tagging.tsx';
 import { VerseView } from '../../views/verse-display.tsx';
-import { booksData, getBookInfoBySlug, getBookInfoById, bookName, bookAbbr, bookAbbrById } from '../../lib/books-data.ts';
+import { booksData, getBookInfoBySlug, getBookInfoById, bookName, bookNameById, bookAbbr, bookAbbrById } from '../../lib/books-data.ts';
 import type { BookInfo } from '../../lib/books-data.ts';
 import { toUrlSlug } from '../../lib/url-utils.ts';
 import { parseStandardRef, refSegmentToUrl } from '../../lib/standard-ref-parser.ts';
@@ -600,9 +600,9 @@ function CreationContent({ t, insight }: { t: Translator; insight: any }) {
         </div>
         <div class="ins-day-content">
           <h4 class="ins-day-title">{t('rd.rest')}</h4>
-          <p class="ins-day-description">
-            Gud fullførte sitt verk og hvilte. Han velsignet og helliget den sjuende dagen.
-          </p>
+          {/* De øvrige dagene har beskrivelsen fra dataene; dag 7 står i koden
+              og er derfor UI-tekst som må gjennom ordboka. */}
+          <p class="ins-day-description">{t('rd.day7Description')}</p>
         </div>
       </div>
     </div>
@@ -630,12 +630,13 @@ function FaithHeroesContent({ insight }: { insight: any }) {
 
 type Gospel = 'matthew' | 'mark' | 'luke' | 'john';
 const GOSPELS: Gospel[] = ['matthew', 'mark', 'luke', 'john'];
-const GOSPEL_NAMES: Record<Gospel, string> = {
-  matthew: 'Matteus',
-  mark: 'Markus',
-  luke: 'Lukas',
-  john: 'Johannes',
-};
+/**
+ * Evangelienavnene ER boknavn (40–43). De sto som en hardkodet norsk tabell, så
+ * badgene og kolonnene i evangelieparallellene het «Matteus» på alle åtte
+ * språk — samme klasse som #20: navnet skal komme fra bokdataene.
+ */
+const GOSPEL_BOOK_ID: Record<Gospel, number> = { matthew: 40, mark: 41, luke: 42, john: 43 };
+const gospelName = (g: Gospel) => bookNameById(GOSPEL_BOOK_ID[g]);
 const GOSPEL_COLORS: Record<Gospel, string> = {
   matthew: 'blue',
   mark: 'green',
@@ -664,9 +665,9 @@ async function GospelColumn({
     return (
       <div class={`gospel-column gospel-${gospel}`}>
         <div class="gospel-column-header">
-          <span class="gospel-badge">{GOSPEL_NAMES[gospel]}</span>
+          <span class="gospel-badge">{gospelName(gospel)}</span>
         </div>
-        <div class="gospel-no-passage">{t('rd.notInGospel', { gospel: GOSPEL_NAMES[gospel] ?? gospel })}</div>
+        <div class="gospel-no-passage">{t('rd.notInGospel', { gospel: gospelName(gospel) ?? gospel })}</div>
       </div>
     );
   }
@@ -676,7 +677,7 @@ async function GospelColumn({
     <div class={`gospel-column gospel-${gospel} ${isCurrentGospel ? 'is-current' : ''}`}>
       <div class="gospel-column-header">
         <span class="gospel-badge">
-          {GOSPEL_NAMES[gospel]}
+          {gospelName(gospel)}
           {isCurrentGospel && <span class="gospel-current-label">(du leser)</span>}
         </span>
         {!isCurrentGospel && (
@@ -737,9 +738,9 @@ function ChapterParallels({
                   {gospelsIn.map((g) => (
                     <span
                       class={`parallel-badge parallel-${GOSPEL_COLORS[g]} ${g === currentGospel ? 'is-current' : ''}`}
-                      title={GOSPEL_NAMES[g]}
+                      title={gospelName(g)}
                     >
-                      {GOSPEL_NAMES[g].charAt(0)}
+                      {gospelName(g).charAt(0)}
                     </span>
                   ))}
                 </span>
@@ -943,7 +944,7 @@ function VerseDetailPanel({
                 <span class="w4w-pron-inline" data-w4w-out-pron></span>
                 <p data-w4w-out-expl></p>
                 <a class="search-original-button" data-w4w-search href={lhref('/sok/original')}>
-                  Søk alle forekomster
+                  {t('rd.searchAllOccurrences')}
                 </a>
               </div>
             </>
@@ -1070,19 +1071,15 @@ function VerseDetailPanel({
                     <input type="radio" name={`version-${key}`} value={String(index)} data-version-radio />
                     <span class="version-text">
                       <span class="version-header">
-                        <span class="version-title">Alternativ {index + 1}</span>
+                        <span class="version-title">{t('rd.alternative', { n: index + 1 })}</span>
                         {version.type && (
                           <span class={`version-badge badge-${version.type}`}>
-                            {version.type === 'suggestion' && 'Forslag'}
-                            {version.type === 'theological' && 'Teologisk'}
-                            {version.type === 'grammar' && 'Grammatikk'}
+                            {tEnum(t, 'rd.vtype.', version.type)}
                           </span>
                         )}
                         {version.severity && (
                           <span class={`version-severity severity-${version.severity}`}>
-                            {version.severity === 'critical' && 'Kritisk'}
-                            {version.severity === 'major' && 'Viktig'}
-                            {version.severity === 'minor' && 'Liten'}
+                            {tEnum(t, 'rd.vsev.', version.severity)}
                           </span>
                         )}
                       </span>
@@ -1226,7 +1223,7 @@ function StudyPanel({
           <div data-lookup-results></div>
           <noscript>
             <p class="st-empty">
-              Oppslag krever JavaScript — bruk <a href={lhref('/sok')}>søkesiden</a>.
+              {t('rd.lookupNeedsJs')} <a href={lhref('/sok')}>{t('rd.toSearchPage')}</a>.
             </p>
           </noscript>
         </div>
@@ -1298,7 +1295,7 @@ function StudyPanel({
           </ol>
         )}
         <a href={lhref('/tidslinje')} class="st-see-all">
-          Se hele tidslinjen →
+          {t('rd.seeWholeTimeline')} →
         </a>
       </StudyBlock>
 
@@ -1344,7 +1341,7 @@ function StudyPanel({
                 <a href={lhref(`/historier/${s.slug}`)} class="st-prop-title">
                   {s.title}
                 </a>
-                {s.category && <span class="st-prop-cat">{s.category}</span>}
+                {s.category && <span class="st-prop-cat">{tEnum(t, 'story.cat.', s.category)}</span>}
               </li>
             ))}
           </ul>
@@ -1358,7 +1355,7 @@ function StudyPanel({
         {data.parallels.length > 0 && (
           <ul class="st-prop-list">
             {data.parallels.map((p) => {
-              const gospels = GOSPELS.filter((g) => p.passages?.[g]).map((g) => GOSPEL_NAMES[g]);
+              const gospels = GOSPELS.filter((g) => p.passages?.[g]).map((g) => gospelName(g));
               return (
                 <li class="st-prop-item">
                   <a href={lhref('/paralleller')} class="st-prop-title">
@@ -1443,7 +1440,7 @@ function PanelTimeline({ t, events, bookId, chapter }: { t: Translator; events: 
       <div class="panel-timeline">
         <p class="st-empty">{t('rd.noTimelineEvents')}</p>
         <a href={lhref('/tidslinje')} class="st-see-all">
-          Se hele tidslinjen →
+          {t('rd.seeWholeTimeline')} →
         </a>
       </div>
     );
@@ -1483,7 +1480,7 @@ function PanelTimeline({ t, events, bookId, chapter }: { t: Translator; events: 
         </div>
       ))}
       <a href={lhref('/tidslinje')} class="st-see-all">
-        Se hele tidslinjen →
+        {t('rd.seeWholeTimeline')} →
       </a>
     </div>
   );
@@ -1621,13 +1618,13 @@ function MobileToolbar({
                 href={lhref(`/${bookSlug}/${chapter}${buildQuery('osnb', mapping, secondary, defaultBible)}`)}
                 class={`tools-bible-button ${bible === 'osnb' ? 'is-active' : ''}`}
               >
-                OSNB (bokmål)
+                <span data-proper-names>OSNB (bokmål)</span>
               </a>
               <a
                 href={lhref(`/${bookSlug}/${chapter}${buildQuery('osnn', mapping, secondary, defaultBible)}`)}
                 class={`tools-bible-button ${bible === 'osnn' ? 'is-active' : ''}`}
               >
-                OSNN (nynorsk)
+                <span data-proper-names>OSNN (nynorsk)</span>
               </a>
             </div>
           </div>
@@ -1664,13 +1661,13 @@ function MobileToolbar({
             <span class="tools-section-title">{t('u.fontSize')}</span>
             <div class="tools-font-sizes">
               <button type="button" class="tools-font-button" data-font-size="small">
-                Liten
+                {t('u.small')}
               </button>
               <button type="button" class="tools-font-button" data-font-size="medium">
-                Medium
+                {t('u.medium')}
               </button>
               <button type="button" class="tools-font-button" data-font-size="large">
-                Stor
+                {t('u.large')}
               </button>
             </div>
           </div>
@@ -1955,7 +1952,7 @@ r.get('/:book/:chapter', async (c) => {
                 {data.parallels.length > 0 ? (
                   <ul class="st-prop-list">
                     {data.parallels.map((p) => {
-                      const gospels = GOSPELS.filter((g) => p.passages?.[g]).map((g) => GOSPEL_NAMES[g]);
+                      const gospels = GOSPELS.filter((g) => p.passages?.[g]).map((g) => gospelName(g));
                       return (
                         <li class="st-prop-item">
                           <a href={lhref('/paralleller')} class="st-prop-title">
@@ -2064,7 +2061,7 @@ r.get('/tekst', async (c) => {
     >
       <div class="text-page">
         <div class="reading-container">
-          <Breadcrumbs items={[{ label: tCtx()('common.home'), href: '/' }, { label: 'Bibelpassasjer' }]} />
+          <Breadcrumbs items={[{ label: tCtx()('common.home'), href: '/' }, { label: tCtx()('rd.passagesCrumb') }]} />
 
           <h1>{t('rd.passages')}</h1>
 
@@ -2072,22 +2069,24 @@ r.get('/tekst', async (c) => {
             <div class="text-empty">
               <h2>{t('rd.noPassages')}</h2>
               <p>
-                Bruk URL-parametere for å vise bibelpassasjer.
+                {t('rd.passagesUsage')}
                 <br />
-                Format: <code>/tekst?refs=1mo-4-1-16,1mo-3-1-24</code>
+                {t('rd.passagesFormat')} <code>/tekst?refs=1mo-4-1-16,1mo-3-1-24</code>
               </p>
               <p>
-                Referanseformat: <code>bok-kapittel-versstart-versslutt</code>
+                {t('rd.passagesRefFormat')} <code>{t('rd.passagesRefPattern')}</code>
               </p>
+              {/* Boknavnene i eksemplene kommer fra bokdataene. Kodene i <code>
+                  er NØKLER (en del av URL-formatet) og skal stå som de er. */}
               <ul>
                 <li>
-                  <code>1mo-1-1-5</code> = 1. Mosebok 1:1-5
+                  <code>1mo-1-1-5</code> = {bookNameById(1)} 1:1-5
                 </li>
                 <li>
-                  <code>joh-3-16</code> = Johannes 3:16 (enkeltvers)
+                  <code>joh-3-16</code> = {bookNameById(43)} 3:16 ({t('rd.passagesExSingle')})
                 </li>
                 <li>
-                  <code>mat-5-1-12,luk-6-20-26</code> = Flere passasjer
+                  <code>mat-5-1-12,luk-6-20-26</code> = {t('rd.passagesExMultiple')}
                 </li>
               </ul>
             </div>

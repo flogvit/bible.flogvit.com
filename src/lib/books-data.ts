@@ -211,13 +211,19 @@ export function bookAbbrById(id: number, lang = currentContentLanguage()): strin
  * Navn/forkortelse fra den norske forkortelsen, som er den nøkkelen SQL-radene
  * bærer med seg (`book_short_name`). Finnes for at et visningssted skal slippe
  * å ha bok-id-en for hånden bare for å oversette navnet.
+ *
+ * Går gjennom `getBookInfoBySlug`, altså ALIAS-tabellen: kildene staver ikke
+ * nøkkelen likt («Høy» mot bokas «Høys»), og et direkte oppslag i booksBySlug
+ * falt da stille tilbake til den norske nøkkelen — «Høy 1:1» sto igjen på
+ * /en/tidslinje og /en/statistikk. URL-siden slo alt opp med alias; nå gjør
+ * visningen det samme, så nøkkel og navn ikke kan sprike.
  */
 export function bookNameByShort(short: string | null | undefined, lang = currentContentLanguage()): string {
-  const book = short ? booksBySlug.get(short.toLowerCase()) : undefined;
+  const book = short ? getBookInfoBySlug(short) : undefined;
   return book ? bookName(book, lang) : (short ?? '');
 }
 
 export function bookAbbrByShort(short: string | null | undefined, lang = currentContentLanguage()): string {
-  const book = short ? booksBySlug.get(short.toLowerCase()) : undefined;
+  const book = short ? getBookInfoBySlug(short) : undefined;
   return book ? bookAbbr(book, lang) : (short ?? '');
 }

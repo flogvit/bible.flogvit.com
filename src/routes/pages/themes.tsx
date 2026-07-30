@@ -60,7 +60,7 @@ r.get('/temaer', async (c) => {
       return {
         id: t.name,
         title: themeTitle(t),
-        introduction: parsed.introduction || 'Tematisk bibelstudie',
+        introduction: parsed.introduction || tCtx()('themes.studyFallback'),
         search: parts.join(' ').toLowerCase(),
       };
     } catch {
@@ -114,7 +114,7 @@ r.get('/temaer/:tema', async (c) => {
   const title = json?.title || tema.charAt(0).toUpperCase() + tema.slice(1);
 
   return c.html(
-    <Layout {...layoutProps(c)} title={`${title} — FLOGVIT.bible`} description={json?.introduction?.slice(0, 155) || `Tematisk bibelstudie: ${title}`} styles={['study.css']} scripts={['tagging.js']}>
+    <Layout {...layoutProps(c)} title={`${title} — FLOGVIT.bible`} description={json?.introduction?.slice(0, 155) || `${t('themes.studyFallback')}: ${title}`} styles={['study.css']} scripts={['tagging.js']}>
       <div class="study-main">
         <div class="reading-container">
           <Breadcrumbs items={[{ label: tCtx()('common.home'), href: '/' }, { label: tCtx()('nav.themes'), href: '/temaer' }, { label: title }]} />
@@ -294,7 +294,7 @@ r.get('/tall', async (c) => {
           <Breadcrumbs items={[{ label: tCtx()('common.home'), href: '/' }, { label: tCtx()('nav.numbers') }]} />
           <h1>{t('numbers.title')}</h1>
           <div class="study-search-container">
-            <input type="text" class="study-search-input" data-card-search placeholder={t('numbers.searchPh')} aria-label="Søk" autocomplete="off" />
+            <input type="text" class="study-search-input" data-card-search placeholder={t('numbers.searchPh')} aria-label={t('search.title')} autocomplete="off" />
           </div>
           <div class="study-grid study-grid-numbers" data-card-list>
             {items.map((n) => (
@@ -430,12 +430,12 @@ r.get('/dager', async (c) => {
         <div class="container">
           <Breadcrumbs items={[{ label: tCtx()('common.home'), href: '/' }, { label: tCtx()('nav.days') }]} />
           <h1>{t('days.title')}</h1>
-          <nav class="study-view-tabs" aria-label="Visning">
+          <nav class="study-view-tabs" aria-label={t('days.view')}>
             <a href={lhref('/dager')} class={`study-view-tab ${thematic ? '' : 'is-active'}`} aria-current={thematic ? undefined : 'true'}>{t('days.chronological')}</a>
             <a href={lhref('/dager?visning=tematisk')} class={`study-view-tab ${thematic ? 'is-active' : ''}`} aria-current={thematic ? 'true' : undefined}>{t('days.thematic')}</a>
           </nav>
           <div class="study-search-container">
-            <input type="text" class="study-search-input" data-card-search placeholder={t('days.searchPh')} aria-label="Søk" autocomplete="off" />
+            <input type="text" class="study-search-input" data-card-search placeholder={t('days.searchPh')} aria-label={t('search.title')} autocomplete="off" />
           </div>
           <div data-card-list>
             {groups.map((g) => (

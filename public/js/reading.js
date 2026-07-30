@@ -391,13 +391,16 @@ if (rootPage) {
       ? new Date(entry.lastAt).toLocaleDateString(intlLocale())
       : null;
     const times = (entry.count ?? 0) > 1 ? ` · ${entry.count} ${btn.dataset.labelTimes || ''}`.trimEnd() : '';
+    // Fallbacken går gjennom ordboka, ikke til norsk: en manglende
+    // data-label skal vises som en MISS (nøkkelen), ikke som norsk tekst på en
+    // engelsk side — samme regel som `makeT` på serveren.
     label.textContent = when
-      ? `${btn.dataset.labelLastRead || 'Sist lest'} ${when}${times}`
-      : `${btn.dataset.labelRead || 'Lest'}${times}`;
+      ? `${btn.dataset.labelLastRead || t('rd.lastRead')} ${when}${times}`
+      : `${btn.dataset.labelRead || t('rd.read')}${times}`;
   }
 
   function markChapterRead(at) {
-    if (!window.fvPlus?.gate('Lesesporing')) return;
+    if (!window.fvPlus?.gate(t('is.readTracking'))) return;
     saveProgress(recordRead(progressEntry(), at === undefined ? Date.now() : at));
   }
 
@@ -420,13 +423,14 @@ if (rootPage) {
 
   // Vers-markering: samme mønster som favoritt-knappen i versdetaljene.
   function paintVerseRead(btn, on) {
-    btn.textContent = on ? `● ${btn.dataset.labelRead || 'Lest'}` : `○ ${btn.dataset.labelRead || 'Lest'}`;
+    const read = btn.dataset.labelRead || t('rd.read');
+    btn.textContent = on ? `● ${read}` : `○ ${read}`;
     btn.classList.toggle('is-active', on);
   }
 
   function markVersesRead(nums) {
     if (!nums.length) return;
-    if (!window.fvPlus?.gate('Lesesporing')) return;
+    if (!window.fvPlus?.gate(t('is.readTracking'))) return;
     const entry = progressEntry();
     const merged = versesToRanges([...rangesToVerses(entry.verses), ...nums]);
     const total = parseInt(document.body.dataset.totalVerses || '0', 10);

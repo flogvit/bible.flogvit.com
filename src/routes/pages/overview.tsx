@@ -596,7 +596,7 @@ r.get('/profetier', async (c) => {
                     <span class="prophecy-arrow" aria-hidden="true">→</span>
                     <span class="prophecy-ref">
                       <span class="prophecy-ref-label">
-                        {p.category_id === 'endtimes' ? 'NT-referanse:' : 'Oppfylt:'}
+                        {p.category_id === 'endtimes' ? t('pr.ntReference') : t('pr.fulfilled')}
                       </span>{' '}
                       {p.fulfillments.map((f, i) => (
                         <>
@@ -932,10 +932,10 @@ r.get('/statistikk', async (c) => {
               <table class="stat-table">
                 <thead>
                   <tr>
-                    <th>Bok</th>
+                    <th>{t('st.book')}</th>
                     <th class="num">{t('st.chapters')}</th>
                     <th class="num">{t('st.verses')}</th>
-                    <th class="num">Ord</th>
+                    <th class="num">{t('st.words')}</th>
                     <th class="num">{t('u.originalText')}</th>
                   </tr>
                 </thead>
