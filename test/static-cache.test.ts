@@ -49,7 +49,12 @@ describe('statiske filer', () => {
 
   it('rører ikke HTML-sidene, som har sin egen mikrocache', async () => {
     const res = await app.request('/nb');
-    expect(res.headers.get('cache-control')).toContain('max-age=300');
+    // Mikrocachens signatur, ikke et tall: TTL-en er env-styrt (#19), så en
+    // hardkodet max-age gjorde denne testen rød av en ren konfigendring.
+    // `stale-while-revalidate` settes bare av page-cache, og staticCache ville
+    // dessuten satt en ETag.
+    expect(res.headers.get('cache-control')).toContain('stale-while-revalidate');
+    expect(res.headers.get('etag')).toBeNull();
   });
 });
 

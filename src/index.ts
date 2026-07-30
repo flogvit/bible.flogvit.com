@@ -3,11 +3,24 @@
 
 import { createApp } from './app.ts';
 import { initBooks } from './lib/bible.ts';
+import { getSql } from './lib/db.ts';
+import { setContentVersionReader } from './lib/page-cache.ts';
 
 // Bok-metadata (66 rader, statisk innhold) caches i minnet så parserne kan
 // være synkrone. Feiler DB-en ved boot, logges det og API-et svarer 500 til
 // DB-en er oppe — appen skal fortsatt boote.
 await initBooks().catch((err) => console.error('initBooks feilet (DB nede?):', err));
+
+// Mikrocachen holder anonyme sider i en time (#19). Uten dette ville en
+// innholdsimport ikke vist seg før TTL-en løp ut, så cachen spør db_meta om
+// sync-versjonen med jevne mellomrom og tømmer seg selv når den endres.
+// Registreres HER, ikke i createApp(): cachen skal kunne testes uten database.
+setContentVersionReader(async () => {
+  const rows = (await getSql()`
+    SELECT value FROM db_meta WHERE \`key\` = 'sync_version'
+  `) as { value: string }[];
+  return rows[0]?.value;
+});
 
 const app = createApp();
 const port = Number(process.env.PORT || 8080);

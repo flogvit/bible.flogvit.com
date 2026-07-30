@@ -1,6 +1,11 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
 import { Hono } from 'hono';
-import { clearPageCache, configurePageCache, withPageCache } from '../src/lib/page-cache.ts';
+import {
+  clearPageCache,
+  configurePageCache,
+  setContentVersionReader,
+  withPageCache,
+} from '../src/lib/page-cache.ts';
 
 // Mikrocachen (GitHub #4): anonyme GET-HTML-sider caches og får Cache-Control;
 // innloggede forespørsler og /api/* går alltid gjennom.
@@ -64,6 +69,75 @@ describe('withPageCache', () => {
     expect(getRenders()).toBe(2);
     const hit = await app.request('/side?a=1');
     expect(hit.headers.get('x-cache')).toBe('hit');
+  });
+
+  test('Cache-Control følger TTL-en, ikke en fast verdi', async () => {
+    configurePageCache({ ttlMs: 60 * 60 * 1000 });
+    const { app } = buildApp();
+    const res = await app.request('/side');
+    expect(res.headers.get('cache-control')).toContain('max-age=3600');
+    configurePageCache({});
+  });
+});
+
+// Innholdsversjon (#19): TTL-en er en time, så en import må tømme cachen framfor
+// at leseren venter den ut. Hele poenget med den lange TTL-en er at crawlernes
+// gjentak blir gratis — uten invalidering ville prisen vært en time gammelt
+// innhold etter hvert innholdsdeploy.
+describe('invalidering på innholdsversjon', () => {
+  beforeEach(() => {
+    clearPageCache();
+    configurePageCache({ versionCheckMs: 0 });
+  });
+
+  test('ny sync-versjon tømmer cachen ved neste forespørsel', async () => {
+    let version = '7';
+    setContentVersionReader(async () => version);
+    const { app, getRenders } = buildApp();
+
+    await app.request('/side');
+    expect((await app.request('/side')).headers.get('x-cache')).toBe('hit');
+
+    version = '8'; // import kjørt
+    const after = await app.request('/side');
+    expect(after.headers.get('x-cache')).toBeNull();
+    expect(getRenders()).toBe(2);
+    setContentVersionReader(null);
+  });
+
+  test('uendret versjon rører ikke cachen', async () => {
+    setContentVersionReader(async () => '7');
+    const { app, getRenders } = buildApp();
+    await app.request('/side');
+    await app.request('/side');
+    expect(getRenders()).toBe(1);
+    setContentVersionReader(null);
+  });
+
+  test('DB nede beholder cachen — den er det eneste som kan svare', async () => {
+    setContentVersionReader(async () => {
+      throw new Error('DB nede');
+    });
+    const { app, getRenders } = buildApp();
+    await app.request('/side');
+    expect((await app.request('/side')).headers.get('x-cache')).toBe('hit');
+    expect(getRenders()).toBe(1);
+    setContentVersionReader(null);
+  });
+
+  test('versjonen slås opp høyst én gang per intervall', async () => {
+    let reads = 0;
+    configurePageCache({ versionCheckMs: 60 * 1000 });
+    setContentVersionReader(async () => {
+      reads++;
+      return '7';
+    });
+    const { app } = buildApp();
+    await app.request('/side?a=1');
+    await app.request('/side?a=2');
+    await app.request('/side?a=3');
+    expect(reads).toBe(1);
+    setContentVersionReader(null);
   });
 });
 

@@ -176,11 +176,45 @@ import). Nøkkelregler:
 ## Lastvern (anonyme sidevisninger)
 
 `src/lib/page-cache.ts` er både mikrocache OG lastavvisning (#4, #14): anonyme
-GET-HTML-sider caches 5 min, og render over semafor-taket får utløpt
-cache-innhold (stale) eller 503 + `Retry-After: 30` etter kort kø. Innloggede
-går alltid utenom. Env: `RENDER_MAX_CONCURRENT` (24), `RENDER_QUEUE_WAIT_MS`
-(3000) og `DB_POOL_MAX` (default 5 — sett den etter hva databasen din tåler; en for
-liten pool var nettopp det som ga 502 under samtidighet).
+GET-HTML-sider caches, og render over semafor-taket får utløpt cache-innhold
+(stale) eller 503 + `Retry-After: 30` etter kort kø. Innloggede går alltid
+utenom. Env: `RENDER_MAX_CONCURRENT` (6), `RENDER_QUEUE_WAIT_MS` (3000),
+`PAGE_CACHE_TTL_MS` (1 time), `PAGE_CACHE_VERSION_CHECK_MS` (30 s) og
+`DB_POOL_MAX` (default 5 — sett den etter hva databasen din tåler; en for liten
+pool var nettopp det som ga 502 under samtidighet).
+
+**Taket beskytter RESPONSTIDEN, ikke bare mot kollaps (#19).** 24 samtidige
+render på én delt vCPU betyr at hver enkelt tar 24× så lang tid: natt til
+2026-07-29 svarte vanlige kapittelsider på 8–29 sekunder mens semaforen «holdt».
+Riktig utfall under overlast er raske 503-er til noen få, ikke 20-sekunders svar
+til alle. Standarden er derfor lav og skal MÅLES, ikke gjettes oppover.
+
+**TTL-en er en time, med invalidering på innholdsversjon.** Innholdet endres bare
+ved import, og en crawler går gjennom samme URL flere ganger i timen (5289
+forespørsler over 1068 unike stier i hendelsen). Cachen leser `db_meta.sync_version`
+med jevne mellomrom gjennom en INJISERT leser (`setContentVersionReader`, satt i
+`index.ts`, ikke i `createApp()` — cachen skal kunne testes uten DB) og tømmer seg
+selv når versjonen endres. Feiler spørringen, BEHOLDES cachen: den er det eneste
+som fortsatt kan svare.
+
+### Kapasitet: profilér før du skrur på tak (#19)
+
+En CPU-profil av kapittelrenderen (`bun --cpu-prof --cpu-prof-md`) viste at **85 %
+av tiden gikk til `readFileSync` + `JSON.parse`** — ikke til SSR og ikke til
+databasen. `getAvailableMappings()` (verktøylinja på hver kapittelside,
+`/innstillinger`) leste ALLE 1158 KVN-mappingfilene, ~109 MB JSON, ved hvert
+kall. Kapittelrender: **~350 ms → ~47 ms**.
+
+- Mapping-filene går nå gjennom `mappingFile()` i `verse-mapper.ts`, som cacher
+  per id. **Kall aldri `loadUkvnMapping` direkte** — `test/verse-mapper-cache.test.ts`
+  har en strukturell vakt mot nettopp det.
+- **Ett unntak, med vilje:** listebyggingen i `getAvailableMappings()` bruker den
+  ucachede loaderen, fordi den bare trenger navn og antall oppføringer. Gjennom
+  fil-cachen ville alle 1158 blitt liggende (93 MB heap, 409 MB RSS målt).
+- Per-vers-løkka i `loadChapterData` gjør fire spørringer per vers. Målt til
+  8–33 ms lokalt, altså IKKE flaskehalsen — men den er 500+ rundturer på Sal 119,
+  og mot en managed database over nett er latensen en annen. Se dit hvis prod
+  fortsatt er treg etter dette.
 
 ## Lesesporing (GitHub #16)
 

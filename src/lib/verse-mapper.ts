@@ -41,16 +41,35 @@ interface MappingInfo {
 const mappingFiles = new Map<string, UkvnMappingFile>();
 const mappers = new Map<string, UkvnMapper>();
 const crossMappers = new Map<string, CrossMapper>();
+/** Ferdig bygget MappingData per id — verseMap-en skannes over ALLE oppføringer. */
+const mappingData = new Map<
+  string,
+  { id: string; name: string; bookNames: Record<string, number>; verseMap: Record<string, string> }
+>();
+
+/**
+ * Mapping-fila for en id, lest ÉN gang per prosess.
+ *
+ * `loadUkvnMapping` leser fila med readFileSync og JSON.parser den, og filene
+ * er store. Kall den ALDRI direkte herfra: `getAvailableMappings()` gjorde det
+ * for hver mapping ved hvert kall, og den kalles fra kapittelsiden (verktøy-
+ * linja) og /innstillinger. En CPU-profil av kapittelrenderen viste at 85 % av
+ * tiden gikk til readFileSync + JSON.parse i nettopp den løkka — ~300 ms av
+ * ~350 ms per sidevisning, uavhengig av hvor mange vers kapittelet har (#19).
+ */
+function mappingFile(id: string): UkvnMappingFile {
+  let file = mappingFiles.get(id);
+  if (!file) {
+    file = loadUkvnMapping(id);
+    mappingFiles.set(id, file);
+  }
+  return file;
+}
 
 function getMapper(mappingId: string): UkvnMapper {
   let mapper = mappers.get(mappingId);
   if (!mapper) {
-    let file = mappingFiles.get(mappingId);
-    if (!file) {
-      file = loadUkvnMapping(mappingId);
-      mappingFiles.set(mappingId, file);
-    }
-    mapper = new UkvnMapper(file);
+    mapper = new UkvnMapper(mappingFile(mappingId));
     mappers.set(mappingId, mapper);
   }
   return mapper;
@@ -70,17 +89,23 @@ function getCrossMapper(mappingId: string): CrossMapper {
 
 /** Rå UkvnMappingFile for en mapping-id (serveres til frontend). */
 export function getKvnMappingRaw(mappingId: string): UkvnMappingFile {
-  let file = mappingFiles.get(mappingId);
-  if (!file) {
-    file = loadUkvnMapping(mappingId);
-    mappingFiles.set(mappingId, file);
-  }
-  return file;
+  return mappingFile(mappingId);
 }
 
-/** Tilgjengelige KVN-mappings. */
+/**
+ * Tilgjengelige KVN-mappings. Bygges ÉN gang per prosess — listen er statisk
+ * (vendorede filer), og den rendres i verktøylinja på hver kapittelside.
+ *
+ * Merk `loadUkvnMapping` framfor `mappingFile()` her, med vilje: det er 1158
+ * mappinger på til sammen ~109 MB JSON, og vi trenger bare navnet og antall
+ * oppføringer. Gjennom fil-cachen ville alle 1158 blitt liggende i minnet
+ * (~93 MB heap, 409 MB RSS målt); slik lever de bare til listen er bygget, og
+ * bare mappingene noen faktisk BRUKER beholdes (getMapper).
+ */
+let availableMappings: MappingInfo[] | null = null;
+
 export function getAvailableMappings(): MappingInfo[] {
-  return listUkvnMappings().map((id) => {
+  return (availableMappings ??= listUkvnMappings().map((id) => {
     const file = loadUkvnMapping(id);
     const meta = MAPPING_META[id];
     return {
@@ -90,7 +115,7 @@ export function getAvailableMappings(): MappingInfo[] {
       displayName: meta?.displayName || file.name || id,
       entryCount: file.map.length,
     };
-  });
+  }));
 }
 
 /**
@@ -103,13 +128,15 @@ export function getKvnMappingData(
 ): { id: string; name: string; bookNames: Record<string, number>; verseMap: Record<string, string> } | null {
   const resolved = resolveMappingId(mappingId);
   if (!resolved) return null;
+  const cached = mappingData.get(resolved);
+  if (cached) return cached;
 
-  const file = loadUkvnMapping(resolved);
+  const file = mappingFile(resolved);
   const meta = MAPPING_META[resolved];
   const cross = getCrossMapper(resolved);
   const verseMap: Record<string, string> = {};
 
-  const osnbFile = loadUkvnMapping('osnb');
+  const osnbFile = mappingFile('osnb');
   const allEntries = [...osnbFile.map, ...file.map];
   for (const entry of allEntries) {
     const decoded = ukvnDecode(entry.kvnFrom);
@@ -126,12 +153,14 @@ export function getKvnMappingData(
     }
   }
 
-  return {
+  const data = {
     id: resolved,
     name: meta?.displayName || file.name || resolved,
     bookNames: file.bookNames,
     verseMap,
   };
+  mappingData.set(resolved, data);
+  return data;
 }
 
 /**
