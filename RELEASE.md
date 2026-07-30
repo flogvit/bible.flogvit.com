@@ -25,6 +25,11 @@ deploy continuously.
 
 **Polish**
 
+- The front page cards are warm rather than white, the two top columns line up
+  again, and the book view switch is a proper segmented control — the front page
+  reads as one composition instead of loose boxes.
+- Today's lectionary card carries a gold edge, so it reads as the day's reading
+  rather than another card.
 - The hero card no longer has a large empty gap in the middle: it ends where its
   content ends, and the decorative glow from the old design is back.
 - The sixteen cards under "Explore" have their icons back.
@@ -41,6 +46,11 @@ deploy continuously.
 
 **Bug fixes**
 
+- Style sheets and scripts were served without any caching information at all,
+  while pages were cached for five minutes. After a release you could therefore
+  get the new page with the old design — half a layout, with gaps where things
+  had moved. They now carry a validator, so the browser asks before reusing what
+  it has.
 - The whole interface was Norwegian on all eight languages wherever the page
   builds itself in the browser: the command palette, the keyboard shortcut help,
   the offline download, the update banner, the favourite button, topic tagging

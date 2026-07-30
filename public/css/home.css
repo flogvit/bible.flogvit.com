@@ -4,33 +4,34 @@
 .home-wrap { padding: 32px 0 64px; display: flex; flex-direction: column; gap: 44px; }
 
 /* hero */
-.home-hero { display: grid; grid-template-columns: 1.4fr 1fr; gap: 20px; align-items: start; }
+/* Kolonnene skal være LIKE HØYE. Første forsøk på å fjerne tomrommet i hero
+   gjorde kortet like høyt som innholdet, og da ble hero og sidekolonnen ujevne
+   (217 px mot 426 px). Den gamle appen strekker begge og lar gløden bære
+   flaten — det er den som gjør at rommet leser som komposisjon, ikke som hull. */
+.home-hero { display: grid; grid-template-columns: 1.4fr 1fr; gap: 20px; align-items: stretch; }
 .home-continue {
   position: relative;
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  justify-content: space-between;
   gap: 24px;
-  padding: 28px;
-  background: var(--surface);
+  padding: 32px;
+  background: var(--paper-2);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-sm);
 }
-/* Hero-kortet ble strukket til sidekolonnens høyde og `space-between` skjøv
-   knappene til bunnen — et ~200 px tomrom midt på forsiden (#37). Kortet slutter
-   nå der innholdet slutter, og gløden fra det gamle designet er tilbake som den
-   eneste dekorasjonen. */
 .home-continue::after {
   content: '';
   position: absolute;
-  top: -70px;
-  right: -70px;
-  width: 260px;
-  height: 260px;
+  top: -110px;
+  right: -90px;
+  width: 380px;
+  height: 380px;
   border-radius: 50%;
-  background: radial-gradient(circle, var(--gold-bg) 0%, transparent 70%);
-  opacity: 0.7;
+  background: radial-gradient(circle, var(--gold-soft) 0%, transparent 70%);
+  opacity: 0.85;
   pointer-events: none;
 }
 .home-continue > * { position: relative; }
@@ -73,7 +74,7 @@
 .home-side { display: flex; flex-direction: column; gap: 16px; }
 .home-card {
   padding: 18px 20px;
-  background: var(--surface);
+  background: var(--paper-2);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   box-shadow: var(--shadow-sm);
@@ -89,7 +90,7 @@
   position: absolute;
   inset: auto 0 0 0;
   height: 3em;
-  background: linear-gradient(to bottom, transparent, var(--surface));
+  background: linear-gradient(to bottom, transparent, var(--paper-2));
   pointer-events: none;
 }
 .home-vod-more {
@@ -161,10 +162,11 @@
 /* dagens lesetekst */
 .home-lesetekster { display: flex; flex-direction: column; gap: 12px; }
 .home-todays-reading {
-  padding: 16px 20px;
+  padding: 16px 22px;
   background: var(--paper-2);
   border-radius: var(--radius);
   border: 1px solid var(--border);
+  border-left: 4px solid var(--gold);
 }
 .home-todays-eyebrow {
   font-size: 12px;
@@ -207,18 +209,26 @@
 
 /* bøker — rammeløst typografisk rutenett. Én ramme per bok ga 66 bokser som
    druknet gruppeoverskriftene og gjorde forsiden dobbelt så lang (#37). */
-.home-book-views { display: flex; gap: 4px; margin-left: auto; }
+.home-book-views {
+  display: flex;
+  gap: 2px;
+  margin-left: auto;
+  padding: 4px;
+  background: var(--paper-2);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+}
 .home-book-view {
-  padding: 4px 12px;
+  padding: 5px 14px;
   font-size: 13px;
   background: none;
-  border: 1px solid transparent;
-  border-radius: var(--radius-sm);
+  border: none;
+  border-radius: 999px;
   color: var(--muted);
   cursor: pointer;
 }
 .home-book-view:hover { color: var(--ink); }
-.home-book-view.is-on { background: var(--surface); border-color: var(--border); color: var(--ink); }
+.home-book-view.is-on { background: var(--surface); color: var(--ink); box-shadow: var(--shadow-sm); }
 .home-book-group { margin-bottom: 24px; }
 .home-book-group-label {
   font-size: 12px;

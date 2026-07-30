@@ -5,6 +5,7 @@
 
 import { Hono } from 'hono';
 import { serveStatic } from 'hono/bun';
+import { staticCache } from './lib/static-cache.ts';
 import { contextStorage } from 'hono/context-storage';
 import type { AppEnv } from './lib/session.ts';
 import { ACCOUNT_URL, withSession } from './lib/session.ts';
@@ -108,6 +109,10 @@ export function createApp() {
 
   // Statiske filer (styles.css, /js/*) — registrert etter /api/* så API vinner,
   // og faller gjennom til siderutene når ingen fil matcher.
+  //
+  // staticCache FØRST: serveStatic sender ingen cache-headere i det hele tatt,
+  // så etter en deploy satt leseren igjen med gammel CSS til ny HTML.
+  app.use('/*', staticCache(['/css/', '/js/']));
   app.use('/*', serveStatic({ root: './public' }));
 
   // Én montering per språk (I18N.md §2). Locale settes av monteringen, ikke av
