@@ -3,6 +3,26 @@
 What actually reached readers, newest first. Dates, not version numbers — we
 deploy continuously.
 
+## 2026-07-30 — The front page holds together, and a release no longer leaves you with half a design
+
+**Polish**
+
+- The cards at the top of the front page are warm rather than white, and the two
+  columns are the same height again, so the page reads as one composition rather
+  than loose boxes.
+- The book list switch is a proper segmented control instead of three loose
+  buttons.
+- Today's lectionary reading carries a gold edge, so it reads as the reading for
+  the day rather than as another card.
+
+**Bug fixes**
+
+- Style sheets and scripts were served without any caching information at all,
+  while pages were cached for five minutes. After a release you could therefore
+  be shown the new page with the old design — half a layout, with gaps where
+  things had moved, until you happened to force a reload. They now carry a
+  validator, so the browser checks before reusing what it already has.
+
 ## 2026-07-29 — The front page grows up, and the interface finally speaks your language everywhere
 
 **New features**
@@ -25,13 +45,8 @@ deploy continuously.
 
 **Polish**
 
-- The front page cards are warm rather than white, the two top columns line up
-  again, and the book view switch is a proper segmented control — the front page
-  reads as one composition instead of loose boxes.
-- Today's lectionary card carries a gold edge, so it reads as the day's reading
-  rather than another card.
-- The hero card no longer has a large empty gap in the middle: it ends where its
-  content ends, and the decorative glow from the old design is back.
+- The hero card no longer has a large empty gap in the middle, and the decorative
+  glow from the old design is back.
 - The sixteen cards under "Explore" have their icons back.
 - The book grid is a typographic grid again rather than 66 bordered boxes, which
   makes the front page considerably shorter and the group headings readable.
@@ -46,11 +61,6 @@ deploy continuously.
 
 **Bug fixes**
 
-- Style sheets and scripts were served without any caching information at all,
-  while pages were cached for five minutes. After a release you could therefore
-  get the new page with the old design — half a layout, with gaps where things
-  had moved. They now carry a validator, so the browser asks before reusing what
-  it has.
 - The whole interface was Norwegian on all eight languages wherever the page
   builds itself in the browser: the command palette, the keyboard shortcut help,
   the offline download, the update banner, the favourite button, topic tagging
