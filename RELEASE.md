@@ -3,6 +3,68 @@
 What actually reached readers, newest first. Dates, not version numbers — we
 deploy continuously.
 
+## 2026-07-30 — Share a manuscript with a link, and chapter pages open seven times faster
+
+**New features**
+
+- You can share one of your own manuscripts with a hidden link. Anyone who has
+  the link can read it — no account, no sign-in — and Bible references in the
+  text stay clickable. "New link" replaces the old one, which revokes it on the
+  spot; a revoked or deleted text is simply not there for anyone still holding
+  the old address. Sharing is part of FLOGVIT.plus; reading a shared text is
+  free.
+- Today's lectionary reading now has a permanent address of its own, by date
+  rather than by a number that changed under it.
+
+**Polish**
+
+- Chapter pages open about seven times faster. Genesis 1 went from roughly
+  350 ms to 47 ms, and the settings page from the same to near-instant.
+- The list of readings no longer shows eighteen days twice.
+
+**Bug fixes**
+
+- Search results listed topics by their internal name — "guds-hellighet" where
+  the topic pages said "Guds hellighet".
+- Person pages whose name contains a Norwegian letter had mangled addresses:
+  Ahab's son was
+  at `akabs-snn` and Phoebe at `fbe`. Sixty-six addresses are corrected, and
+  every old one redirects, so existing links and bookmarks still land right.
+- The address of a lectionary reading died every time the content was updated —
+  in one hour, 103 different reading days answered "not found" to readers and
+  search engines that had reached them before. Old addresses now redirect to the
+  date.
+- Every chapter of Revelation, 1 and 2 Chronicles and Song of Songs was a dead
+  link in all eight sitemaps — 760 addresses in total — because the Norwegian
+  letters in their addresses were encoded twice on the way out.
+- More Norwegian on pages that are not Norwegian: the manuscript editor was
+  Norwegian throughout in all eight languages, and so were the theme setting,
+  the sync and export text, the offline option, text size in the toolbar, the
+  verse badges, two column headings in the statistics table and the "coming
+  soon" label in the FLOGVIT menu. Book names came out Norwegian in statistics,
+  in prophecy references, in the gospel parallels and on the timeline. Searching
+  the original languages served Norwegian verses alongside the Hebrew and Greek
+  no matter which language you were reading in.
+
+**Behind the scenes**
+
+- The speed-up came from measuring rather than guessing: a CPU profile showed
+  that 85% of the time spent building a chapter page went to re-reading 109 MB
+  of verse-mapping files on every single request. With the real cost gone, the
+  overload protection was retuned to match the machine — fast "try again" answers
+  to a few readers are better than twenty-second pages for everyone — and the
+  page cache now holds for an hour and empties itself when new content is
+  imported.
+- Search result pages are out of the search index. Someone had been feeding them
+  Chinese spam with a phone number, aiming to have our pages carry their
+  advertising.
+- Norwegian text leaking onto other languages is now caught structurally instead
+  of by a list of words someone remembered to add: Norwegian-only letters
+  anywhere in visible text, text that matches the Norwegian dictionary value
+  word for word,
+  and text hidden in attributes screen readers and search results read out. All
+  three were verified by reintroducing the bugs they are meant to catch.
+
 ## 2026-07-30 — The front page holds together, and a release no longer leaves you with half a design
 
 **Polish**
