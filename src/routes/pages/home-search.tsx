@@ -28,6 +28,7 @@ import {
   type VerseRange,
   normalizeBibleId,
   defaultBibleForLanguage,
+  themeTitle,
 } from '../../lib/bible.ts';
 import { readingTypeKey } from '../../lib/reading-text-enrich.ts';
 import {
@@ -427,7 +428,7 @@ async function loadExtraResults(query: string) {
     },
     {
       title: t('nav.themes'), typeKey: 'themes',
-      cards: themes.map((t) => ({ href: `/temaer/${encodeURIComponent(t.name)}`, title: t.name })),
+      cards: themes.map((th) => ({ href: `/temaer/${encodeURIComponent(th.name)}`, title: themeTitle(th) })),
     },
     {
       title: t('nav.persons'), typeKey: 'persons',

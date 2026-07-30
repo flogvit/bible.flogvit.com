@@ -25,6 +25,7 @@ import {
   type NumberSymbolismData,
   type DayData,
   type DayReference,
+  themeTitle,
 } from '../../lib/bible.ts';
 import { getBookInfoById, bookName } from '../../lib/books-data.ts';
 import { toUrlSlug } from '../../lib/url-utils.ts';
@@ -58,7 +59,7 @@ r.get('/temaer', async (c) => {
       for (const s of parsed.sections || []) parts.push(s.title, s.description ?? '');
       return {
         id: t.name,
-        title: parsed.title || t.name,
+        title: themeTitle(t),
         introduction: parsed.introduction || 'Tematisk bibelstudie',
         search: parts.join(' ').toLowerCase(),
       };
@@ -66,7 +67,7 @@ r.get('/temaer', async (c) => {
       const lines = t.content.split('\n').filter((l) => l.trim());
       return {
         id: t.name,
-        title: t.name.charAt(0).toUpperCase() + t.name.slice(1),
+        title: themeTitle(t),
         introduction: lines[0]?.split(':')[0] || '',
         search: t.content.toLowerCase(),
       };

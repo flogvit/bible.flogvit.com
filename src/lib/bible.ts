@@ -473,6 +473,27 @@ export interface ThemeData {
   sections: ThemeSection[];
 }
 
+/**
+ * Tittelen på et tema. `themes.name` ER slugen — tittelen bor i JSON-en i
+ * `content`, og tabellen har ingen egen tittelkolonne.
+ *
+ * Finnes fordi søkeresultatene viste «guds-hellighet» der /temaer viste «Guds
+ * hellighet» (#44): den ene siden parset `content`, den andre leste `name`
+ * direkte. Utledningen hører derfor ett sted, ikke i hver rendring.
+ *
+ * Eldre temaer er ren tekst og ikke JSON, så fallbacken er slugen med stor
+ * forbokstav — samme som /temaer alltid har gjort for den grenen.
+ */
+export function themeTitle(row: Pick<Theme, 'name' | 'content'>): string {
+  try {
+    const parsed = JSON.parse(row.content) as ThemeData;
+    if (parsed.title) return parsed.title;
+  } catch {
+    // Ren tekst, ikke JSON. Faller gjennom til slugen.
+  }
+  return row.name.charAt(0).toUpperCase() + row.name.slice(1);
+}
+
 export async function getAllThemes(lang = currentContentLanguage()): Promise<Theme[]> {
   const sql = getSql();
   return await inLanguage(lang, (language) => sql`
