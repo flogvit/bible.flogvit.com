@@ -229,6 +229,10 @@ sesjon**. Lenken ER tilgangen (capability-URL), og det styrer alt:
 offentlig og indekserbart. Det er nettopp derfor det er review — alt som er
 listbart, er verdt å spamme. Logikken bor i `lib/publications.ts`.
 
+**Runbook: `REVIEW.md`** — kommandoene, hva du faktisk vurderer, og hva hver
+avgjørelse gjør med katalogen og med forfatteren. Under her står bare hvorfor
+modellen ser slik ut.
+
 **Review-modellen er manuell godkjenning av hver publisering.** Minst å bygge,
 og den kan VOKSE uten å rives: «betrodd konto etter N godkjente» er et spørsmål
 mot de samme radene, og etterhånds-moderering er rapportknappen som allerede står
