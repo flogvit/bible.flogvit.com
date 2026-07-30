@@ -112,7 +112,7 @@ export function createApp() {
   //
   // staticCache FØRST: serveStatic sender ingen cache-headere i det hele tatt,
   // så etter en deploy satt leseren igjen med gammel CSS til ny HTML.
-  app.use('/*', staticCache(['/css/', '/js/']));
+  app.use('/*', staticCache(['/css/', '/js/', '/styles.css']));
   app.use('/*', serveStatic({ root: './public' }));
 
   // Én montering per språk (I18N.md §2). Locale settes av monteringen, ikke av

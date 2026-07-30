@@ -20,8 +20,8 @@ deploy continuously.
 - Style sheets and scripts were served without any caching information at all,
   while pages were cached for five minutes. After a release you could therefore
   be shown the new page with the old design — half a layout, with gaps where
-  things had moved, until you happened to force a reload. They now carry a
-  validator, so the browser checks before reusing what it already has.
+  things had moved, until you happened to force a reload. Their addresses now
+  change whenever their content does, so a release reaches you immediately.
 
 ## 2026-07-29 — The front page grows up, and the interface finally speaks your language everywhere
 

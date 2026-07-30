@@ -80,7 +80,8 @@ const UNPREFIXED_OK = [
   /^\/css\//,
   /^\/api\//,
   /^\/\.well-known\//,
-  /^\/[^/]+\.(css|js|svg|png|ico|json|xml|txt|webmanifest)$/,
+  // Rot-filer, med eller uten cache-buster (`/styles.css?v=<hash>`).
+  /^\/[^/?]+\.(css|js|svg|png|ico|json|xml|txt|webmanifest)(\?|$)/,
 ];
 
 const localeRe = new RegExp(`^/(${LOCALES.join('|')})(/|$)`);

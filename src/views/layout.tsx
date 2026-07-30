@@ -16,6 +16,7 @@ import type { AppEnv } from '../lib/session.ts';
 import { ACCOUNT_URL } from '../lib/session.ts';
 import { DEFAULT_LOCALE, LOCALES, href, makeT, ogLocale, type Locale, type Translator, lhref } from '../lib/i18n.ts';
 import { tCtx, islandStrings, type MessageKey } from '../lib/i18n.ts';
+import { assetUrl } from '../lib/static-cache.ts';
 
 /**
  * Strenger klient-øyene som lastes på HVER side trenger: plus-CTA-en (plus.js),
@@ -438,11 +439,11 @@ export function Layout(props: LayoutProps) {
           <link rel="preconnect" href="https://fonts.googleapis.com" />
           <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="" />
           <link rel="stylesheet" href={GOOGLE_FONTS} />
-          <link rel="stylesheet" href="/styles.css" />
-          <link rel="stylesheet" href="/css/shortcuts.css" />
-          <link rel="stylesheet" href="/css/cmdk.css" />
+          <link rel="stylesheet" href={assetUrl('/styles.css')} />
+          <link rel="stylesheet" href={assetUrl('/css/shortcuts.css')} />
+          <link rel="stylesheet" href={assetUrl('/css/cmdk.css')} />
           {(props.styles ?? []).map((s) => (
-            <link rel="stylesheet" href={`/css/${s}`} />
+            <link rel="stylesheet" href={assetUrl(`/css/${s}`)} />
           ))}
         </head>
         {/* Strenger øyer som finnes på HVER side trenger (plus-CTA-en). Uten
@@ -457,14 +458,14 @@ export function Layout(props: LayoutProps) {
             {props.children}
           </main>
           <Footer t={t} u={u} />
-          <script type="module" src="/js/chrome.js" />
-          <script type="module" src="/js/shortcuts.js" />
-          <script type="module" src="/js/plus.js" />
-          <script type="module" src="/js/sync.js" />
-          <script type="module" src="/js/cmdk.js" />
-          <script type="module" src="/js/pwa.js" />
+          <script type="module" src={assetUrl('/js/chrome.js')} />
+          <script type="module" src={assetUrl('/js/shortcuts.js')} />
+          <script type="module" src={assetUrl('/js/plus.js')} />
+          <script type="module" src={assetUrl('/js/sync.js')} />
+          <script type="module" src={assetUrl('/js/cmdk.js')} />
+          <script type="module" src={assetUrl('/js/pwa.js')} />
           {(props.scripts ?? []).map((s) => (
-            <script type="module" src={`/js/${s}`} />
+            <script type="module" src={assetUrl(`/js/${s}`)} />
           ))}
         </body>
       </html>

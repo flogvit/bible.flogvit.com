@@ -52,3 +52,29 @@ describe('statiske filer', () => {
     expect(res.headers.get('cache-control')).toContain('max-age=300');
   });
 });
+
+describe('cache-busting', () => {
+  it('layout peker på versjonerte URL-er', async () => {
+    const html = await (await app.request('/nb')).text();
+    const assets = [...html.matchAll(/(?:href|src)="(\/(?:css|js)\/[^"]+|\/styles\.css[^"]*)"/g)].map((m) => m[1]!);
+    expect(assets.length).toBeGreaterThan(5);
+    // Hver stil- og skriptfil layout skriver ut skal bære innholdshashen. Uten
+    // den blir en kopi som alt ligger i nettleseren liggende etter en deploy.
+    expect(assets.filter((a) => !/\?v=[0-9a-f]+$/.test(a))).toEqual([]);
+  });
+
+  it('versjonert URL caches hardt, uversjonert må revalideres', async () => {
+    const versioned = await app.request('/css/home.css?v=abc12345');
+    expect(versioned.headers.get('cache-control')).toContain('immutable');
+    const plain = await app.request('/css/home.css');
+    expect(plain.headers.get('cache-control')).toBe('public, no-cache');
+  });
+
+  it('hashen følger innholdet, ikke filnavnet', async () => {
+    const html = await (await app.request('/nb')).text();
+    const hash = (name: string) =>
+      html.match(new RegExp(`${name.replace('.', '\\.')}\\?v=([0-9a-f]+)`))?.[1];
+    expect(hash('home.css')).toBeDefined();
+    expect(hash('home.css')).not.toBe(hash('styles.css'));
+  });
+});
