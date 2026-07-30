@@ -71,8 +71,8 @@ const forLang = (lang: string) => `  [${lang}]`;
 const args = process.argv.slice(2);
 const isFullImport = args.includes('--full');
 
-// Lista bor i src/lib/editions.ts — sitemap-generatoren trenger den også,
-// og den har ingen database å slå den opp i.
+// Lista bor i src/lib/editions.ts — sitemap-stiene trenger den også,
+// og de bygges uten database.
 const BIBLES: readonly string[] = IMPORTED_BIBLES;
 
 // Statistics tracking

@@ -7,8 +7,8 @@
 //
 // Den bor i `src/lib/` framfor i importskriptet fordi to steder trenger den og
 // bare det ene har database: importøren fyller `bible_editions`, mens
-// sitemap-generatoren må kjenne de samme utgavene UTEN å slå opp i basen
-// (scriptet er DB-fritt med vilje). To lister ville drevet fra hverandre, og
+// `lib/sitemap-paths.ts` må kjenne de samme utgavene UTEN å slå opp i basen
+// (sitemapen bygges uten DB). To lister ville drevet fra hverandre, og
 // symptomet ville vært stille — en utgave med infoside som ikke er indeksert.
 
 export const IMPORTED_BIBLES = ['osnb', 'osnn', 'osen', 'sblgnt', 'tanach'] as const;

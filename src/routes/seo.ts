@@ -6,10 +6,15 @@
 // Den gamle public/sitemap.xml listet 1 200 UPREFIKSEDE URL-er. Etter
 // omleggingen til /<lang>/ ville hver eneste av dem svart 302 — en sitemap full
 // av redirects er verre enn ingen sitemap, fordi den bruker opp crawl-budsjettet
-// på omdirigeringer. Stiene leses derfor derfra én gang og skrives ut på nytt,
-// prefikset og med full hreflang-klynge per URL.
+// på omdirigeringer. Stiene bygges derfor her, prefikset og med full
+// hreflang-klynge per URL.
+//
+// Stiene kommer fra lib/sitemap-paths.ts som RÅ tekst. Fram til #42 tok de en
+// runde gjennom den genererte public/sitemap.xml og ble dermed kodet to ganger
+// — les kommentaren der før du endrer noe på kodingen.
 import { Hono } from 'hono';
 import { DEFAULT_LOCALE, LOCALES, href, type Locale } from '../lib/i18n.ts';
+import { sitemapPaths } from '../lib/sitemap-paths.ts';
 
 export const seoRoutes = new Hono();
 
@@ -18,23 +23,9 @@ const SITE = 'https://bible.flogvit.com';
 const xmlEsc = (s: string) =>
   s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!));
 
-/** Prefiksløse stier, lest fra den gamle statiske sitemap-en. */
+/** Prefiksløse, udekodede stier. Bygges én gang — booksData er statisk. */
 let cachedPaths: string[] | null = null;
-
-async function sitemapPaths(): Promise<string[]> {
-  if (cachedPaths) return cachedPaths;
-  try {
-    const xml = await Bun.file('./public/sitemap.xml').text();
-    const paths = [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)]
-      .map((m) => m[1]!.replace(SITE, '').trim())
-      .filter((p) => p.startsWith('/'))
-      .map((p) => (p !== '/' ? p.replace(/\/$/, '') : '/'));
-    cachedPaths = [...new Set(paths)];
-  } catch {
-    cachedPaths = ['/']; // fila mangler → fortsatt en gyldig sitemap
-  }
-  return cachedPaths;
-}
+const paths = () => (cachedPaths ??= [...new Set(sitemapPaths())]);
 
 seoRoutes.get('/robots.txt', (c) =>
   c.body(`User-agent: *\nAllow: /\n\nSitemap: ${SITE}/sitemap.xml\n`, 200, {
@@ -55,10 +46,9 @@ seoRoutes.get('/sitemap.xml', (c) =>
 // Én konkret rute per språk: ruteren matcher ikke en parameter etterfulgt av
 // «.xml» pålitelig, og en eksplisitt liste gir 404 på ukjente koder gratis.
 for (const locale of LOCALES) {
-  seoRoutes.get(`/sitemap-${locale}.xml`, async (c) => {
-    const paths = await sitemapPaths();
+  seoRoutes.get(`/sitemap-${locale}.xml`, (c) => {
     const loc = (l: Locale, p: string) => xmlEsc(SITE + encodeURI(href(l, p)));
-    const urls = paths
+    const urls = paths()
       .map((p) => {
         const alts = [
           ...LOCALES.map((l) => `    <xhtml:link rel="alternate" hreflang="${l}" href="${loc(l, p)}"/>`),

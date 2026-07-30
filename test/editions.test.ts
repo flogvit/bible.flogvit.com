@@ -100,10 +100,13 @@ describe('/innstillinger speiler bible_editions', () => {
 });
 
 describe('utgavesidene er indekserbare (#30)', () => {
+  // Sjekker sitemapen slik den SERVERES, ikke en generert fil på disk: etter
+  // #42 finnes ikke public/sitemap.xml lenger, og det er den utsendte XML-en
+  // crawleren faktisk får.
   test('sitemap har /oversettelser og én URL per importert utgave', async () => {
-    const xml = await Bun.file('public/sitemap.xml').text();
-    expect(xml).toContain('/oversettelser</loc>');
-    const mangler = editions.filter((e) => !xml.includes(`/oversettelser/${e.id}</loc>`)).map((e) => e.id);
+    const xml = await (await app.request('/sitemap-nb.xml')).text();
+    expect(xml).toContain('/nb/oversettelser</loc>');
+    const mangler = editions.filter((e) => !xml.includes(`/nb/oversettelser/${e.id}</loc>`)).map((e) => e.id);
     expect(mangler).toEqual([]);
   });
 });

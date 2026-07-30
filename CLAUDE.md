@@ -33,7 +33,6 @@ bun test               # tester
 bun run typecheck      # tsc --noEmit
 bun scripts/init-db.ts        # opprett skjema
 bun scripts/import-bible.ts   # importer innhold fra ../free-bible/generate/ (inkrementell, --full for alt)
-bun scripts/generate-sitemap.ts       # regenerer sitemap (statisk booksData, ingen DB)
 bun scripts/generate-verse-counts.ts  # regenerer src/lib/verse-counts.ts fra DB
 bun scripts/enrich-story-references.ts # berik historier i free-bible med evangelieparalleller
 ```

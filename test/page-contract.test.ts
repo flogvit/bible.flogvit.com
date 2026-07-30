@@ -213,6 +213,39 @@ describe('sidekontrakt', () => {
         expect({ locale, feil: wrong.slice(0, 3) }).toEqual({ locale, feil: [] });
       }
     });
+
+    // #42: stiene tok en runde gjennom en KODET representasjon (den genererte
+    // public/sitemap.xml) og ble dermed prosentkodet TO ganger. `%C3%B8` ble
+    // `%25C3%25B8`, som aldri blir `ø`, og alle 95 kapitlene i de fire bøkene
+    // med ø/å døde i alle åtte sitemaps — 760 URL-er.
+    //
+    // Den avgjørende detaljen for testen: `encodeURI` er idempotent for rene
+    // ASCII-stier, så 62 av 66 bøker overlevde uendret. En sjekk på /1mos/1
+    // kan ALDRI se dette. Bøkene med ø/å må være med eksplisitt.
+    test('ingen <loc> er dobbeltkodet, og ø/å-URL-ene svarer 200', async () => {
+      // Én sitemap er nok til å dekke alle åtte språkene: hver <url> bærer
+      // hreflang-alternativene for samtlige locales, så alle 8 prefiksene
+      // finnes her.
+      const xml = await (await app.request('/sitemap-nb.xml')).text();
+      const urls = [...xml.matchAll(/(?:<loc>|href=")([^<"]+)/g)].map((m) => m[1]!);
+      const doble = urls.filter((u) => /%25[0-9A-F]{2}/i.test(u));
+      expect(doble.slice(0, 3)).toEqual([]);
+      expect(new Set(urls.map((u) => u.replace(SITE, '').split('/')[1]))).toEqual(new Set(LOCALES));
+
+      const encoded = new Set(urls.filter((u) => u.includes('%')).map((u) => u.replace(SITE, '')));
+
+      // Minst de fire bøkene med ikke-ASCII slug: åp, 1krøn, 2krøn, høys.
+      expect(encoded.size).toBeGreaterThan(0);
+      for (const slug of ['%C3%A5p', '1kr%C3%B8n', '2kr%C3%B8n', 'h%C3%B8ys']) {
+        expect([...encoded].some((u) => u.includes(slug))).toBe(true);
+      }
+
+      // Og de svarer faktisk 200 — én per bok er nok, feilen er per slug.
+      for (const path of [`/nb/1kr%C3%B8n/1`, `/en/%C3%A5p/1`, `/nb/h%C3%B8ys/1`, `/en/2kr%C3%B8n/1`]) {
+        const res = await app.request(path);
+        expect({ path, status: res.status }).toEqual({ path, status: 200 });
+      }
+    });
   });
 
   // ── Ingen norsk tekst på en ikke-norsk side (GitHub #23) ───────────
