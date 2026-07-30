@@ -130,6 +130,18 @@ describe('sidekontrakt', () => {
         // 4. Canonical peker på DENNE siden på DETTE språket.
         const canonical = attrs(html, /rel="canonical" href="([^"]+)"/g)[0];
         expect(canonical?.startsWith(`${SITE}/de`)).toBe(true);
+
+        // 5. `noindex` KUN der URL-en bærer brukerens egen tekst (#41).
+        //
+        // Begge retninger er verdt å vakte: uten noindex er søkeresultatsiden
+        // en forgiftningsvektor (den reflekterer vilkårlig tekst inn i
+        // <title> og svarer 200), og med noindex på feil side har vi stille
+        // fjernet en ekte side fra indeksen.
+        const skalVæreNoindex = page.path.includes('?q=');
+        expect({ side: page.path, noindex: /name="robots" content="noindex,follow"/.test(html) }).toEqual({
+          side: page.path,
+          noindex: skalVæreNoindex,
+        });
       });
     }
   });

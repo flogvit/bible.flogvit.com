@@ -410,6 +410,19 @@ export interface LayoutProps {
   styles?: string[];
   /** Absolutt kanonisk URL for siden (SEO). */
   canonical?: string;
+  /**
+   * Hold siden ute av søkeindeksen (`noindex,follow`).
+   *
+   * Brukes på flater der URL-en bærer BRUKERENS tekst — søkeresultater (#41).
+   * En slik side reflekterte vilkårlig tekst inn i `<title>` og svarte 200, og
+   * det er nettopp mønsteret forgiftningssonder leter etter: de vil ha vår
+   * autoritet til å rangere sin egen reklame. Canonical peker query-løst, men
+   * canonical er et HINT — `noindex` er et direktiv.
+   *
+   * `follow` beholdes med vilje: lenkene ut til kapitler og vers skal fortsatt
+   * gi crawl-verdi.
+   */
+  noindex?: boolean;
 }
 
 /** Fullt HTML-dokument med familie-chromen. */
@@ -427,6 +440,7 @@ export function Layout(props: LayoutProps) {
           {raw(PREFS_READ_SNIPPET)}
           <title>{props.title}</title>
           <meta name="description" content={desc} />
+          {props.noindex && <meta name="robots" content="noindex,follow" />}
           <meta name="author" content="FLOGVIT" />
           <meta property="og:locale" content={ogLocale(props.locale)} />
           <link rel="canonical" href={props.canonical ?? SITE + href(props.locale, props.path)} />

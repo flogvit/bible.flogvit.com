@@ -480,6 +480,9 @@ r.get('/sok', async (c) => {
     <Layout {...layoutProps(c)}
       title={query ? `${t('search.title')}: ${query} — FLOGVIT.bible` : `${t('search.title')} — FLOGVIT.bible`}
       description={t('search.meta')}
+      // Med søketekst er URL-en angriperens, ikke vår (#41). Den tomme /sok er
+      // en ekte landingsside og står i sitemapen — den skal fortsatt indekseres.
+      noindex={query.length > 0}
       styles={['search.css']}
       scripts={['search.js']}
     >
@@ -562,6 +565,7 @@ r.get('/sok/original', async (c) => {
     <Layout {...layoutProps(c)}
       title={query ? `${t('search.originalTitle')}: ${query} — FLOGVIT.bible` : `${t('search.inOriginal')} — FLOGVIT.bible`}
       description={t('so.originalMeta')}
+      noindex={query.length > 0}
       styles={['search.css']}
     >
       <div class="search-main">
