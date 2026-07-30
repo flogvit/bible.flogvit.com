@@ -20,6 +20,27 @@
 }
 .map-stale li { padding: 2px 0; }
 
+/* Forslag: leseplaner sett som DEKNING (#16) — «du mangler 3». Står over
+   varmekartet fordi det er det handlingsrettede, mens kartet er oversikten. */
+.map-suggest { margin: 0 0 24px; }
+.map-suggest h2 {
+  margin: 0 0 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.map-suggest ul { margin: 0; padding: 0; list-style: none; }
+.map-suggest li {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 3px 0;
+  font-size: 0.9rem;
+}
+.map-suggest-missing { font-family: var(--font-mono); font-size: 0.8rem; color: var(--muted); }
+
 .map-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));

@@ -2,7 +2,7 @@
 // Rene funksjoner, testet uten DB — sidene mater dem med getReadingProgress().
 
 import { describe, expect, test } from 'bun:test';
-import { summarizeProgress, bookHeat, HEAT_LEVELS } from '../src/lib/reading-map.ts';
+import { summarizeProgress, bookHeat, HEAT_LEVELS, planCoverage, suggestedPlans } from '../src/lib/reading-map.ts';
 import type { ChapterProgress } from '../src/lib/user-data.ts';
 
 const p = (bookId: number, chapter: number, extra: Partial<ChapterProgress> = {}): ChapterProgress => ({
@@ -89,5 +89,75 @@ describe('bookHeat', () => {
 
   test('ukjent bok gir null', () => {
     expect(bookHeat([], 999)).toBeNull();
+  });
+});
+
+// ── Leseplan som DEKNING, ikke som rute (#16) ─────────────────────────
+//
+// «En leseplan blir bare et spørsmål mot kartet» — det er hele poenget med
+// issuen: fri lesing skal telle. Planene GJENBRUKES som kapittelsett framfor en
+// egen liste-datafil, fordi de allerede er kuratert og oversatt per språk.
+
+const plan = (id: string, chapters: [number, number][]) => ({
+  id,
+  name: id,
+  chapters: chapters.map(([bookId, chapter]) => ({ bookId, chapter })),
+});
+
+describe('planCoverage', () => {
+  const paulus = plan('paulus', [[45, 1], [45, 2], [46, 1]]);
+
+  test('teller kapitler fra kartet, uansett hvordan de ble lest', () => {
+    const c = planCoverage([p(45, 1), p(46, 1)], [paulus])[0]!;
+    expect({ total: c.total, read: c.read, missing: c.missing }).toEqual({ total: 3, read: 2, missing: 1 });
+  });
+
+  test('gjenlesing teller fortsatt som ETT kapittel', () => {
+    const c = planCoverage([p(45, 1), p(45, 1, { count: 9 })], [paulus])[0]!;
+    expect(c.read).toBe(1);
+  });
+
+  test('påbegynt kapittel (kun delvis lest) teller ikke', () => {
+    const c = planCoverage([p(45, 1, { count: 0, verses: '1-3' })], [paulus])[0]!;
+    expect({ read: c.read, missing: c.missing }).toEqual({ read: 0, missing: 3 });
+  });
+
+  test('lesing utenfor planen påvirker den ikke', () => {
+    const c = planCoverage([p(1, 1), p(19, 23)], [paulus])[0]!;
+    expect(c.read).toBe(0);
+  });
+});
+
+describe('suggestedPlans', () => {
+  const nesten = plan('nesten', [[45, 1], [45, 2]]);
+  const halv = plan('halv', [[46, 1], [46, 2], [46, 3], [46, 4]]);
+  const urørt = plan('urørt', [[47, 1], [47, 2]]);
+  const ferdig = plan('ferdig', [[48, 1]]);
+  const tom = plan('tom', []);
+  const progress = [p(45, 1), p(46, 1), p(46, 2), p(48, 1)];
+
+  test('nærmest først', () => {
+    expect(suggestedPlans(progress, [halv, nesten]).map((s) => s.id)).toEqual(['nesten', 'halv']);
+  });
+
+  test('upåbegynte holdes utenfor — forslaget er «nesten i mål», ikke katalogen', () => {
+    expect(suggestedPlans(progress, [urørt, nesten]).map((s) => s.id)).toEqual(['nesten']);
+  });
+
+  test('fullførte planer foreslås ikke', () => {
+    expect(suggestedPlans(progress, [ferdig]).map((s) => s.id)).toEqual([]);
+  });
+
+  test('en plan uten kapitler (ugyldig JSON i importen) faller ut', () => {
+    expect(suggestedPlans(progress, [tom]).map((s) => s.id)).toEqual([]);
+  });
+
+  test('lista er begrenset', () => {
+    const mange = Array.from({ length: 9 }, (_, i) => plan(`p${i}`, [[45, 1], [45, 2 + i]]));
+    expect(suggestedPlans([p(45, 1)], mange, 3)).toHaveLength(3);
+  });
+
+  test('uten framdrift foreslås ingenting', () => {
+    expect(suggestedPlans([], [nesten, halv])).toEqual([]);
   });
 });

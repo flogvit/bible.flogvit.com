@@ -16,8 +16,8 @@ import type { Child } from 'hono/jsx';
 import { getSql } from '../../lib/db.ts';
 import { bookNameByShort } from '../../lib/books-data.ts';
 import { getUserItems, getUserSingleton, getReadingProgress } from '../../lib/user-data.ts';
-import { summarizeProgress, fullHeat, stalestBooks } from '../../lib/reading-map.ts';
-import { getBibleEditions, getAllReadingPlansList, type BibleEdition } from '../../lib/bible.ts';
+import { summarizeProgress, fullHeat, stalestBooks, suggestedPlans, planCoverage } from '../../lib/reading-map.ts';
+import { getBibleEditions, getAllReadingPlansList, getReadingPlanChapterSets, type BibleEdition } from '../../lib/bible.ts';
 import { getAvailableMappings } from '../../lib/verse-mapper.ts';
 import { layoutProps, makeT, tFor, tEnum, type Locale, type MessageKey, lhref } from '../../lib/i18n.ts';
 import { tCtx } from '../../lib/i18n.ts';
@@ -192,6 +192,13 @@ r.get('/lesekart', async (c) => {
   const summary = summarizeProgress(progress);
   const heat = fullHeat(progress);
   const stale = stalestBooks(progress);
+  // Forslagene er et SPØRSMÅL MOT KARTET (#16): en leseplan er bare et
+  // kapittelsett, og «du mangler 3» faller ut av dekningen. Planene hentes bare
+  // når det finnes framdrift å måle dem mot — 680 kB plan-JSON er ingen grunn
+  // til å laste for en tom side.
+  const suggestions = progress.length > 0
+    ? suggestedPlans(progress, await getReadingPlanChapterSets())
+    : [];
   const fmt = (ms: number) => new Date(ms).toLocaleDateString(c.get('locale'));
 
   return c.html(
@@ -233,6 +240,22 @@ r.get('/lesekart', async (c) => {
           </div>
         )}
       </div>
+
+      {suggestions.length > 0 && (
+        <section class="map-suggest">
+          <h2>{t('map.suggestions')}</h2>
+          <ul>
+            {suggestions.map((s) => (
+              <li>
+                <a href={lhref('/leseplan')}>{s.name}</a>
+                <span class="map-suggest-missing">
+                  {s.missing === 1 ? t('map.missingOne') : t('map.missingChapters', { n: s.missing })}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       {stale.length > 0 && (
         <ul class="map-stale">
@@ -278,6 +301,16 @@ r.get('/leseplan', async (c) => {
   const plans = await getAllReadingPlansList();
   const user = c.var.user;
   const activePlan = user?.plus ? await getUserSingleton<string>(user.id, 'activePlan') : null;
+  // Planen leses mot LESEKARTET (#16): fri lesing utenfor planen har alltid
+  // vært det irriterende hullet, og dekningen svarer på det uten å røre planens
+  // eget dag-regnskap — «12 av 16 lest fra før» er en opplysning, ikke en
+  // avkryssing noen ikke har gjort.
+  const progress = user?.plus ? await getReadingProgress(user.id) : [];
+  const coverage = new Map(
+    progress.length > 0
+      ? planCoverage(progress, await getReadingPlanChapterSets()).map((p) => [p.id, p] as const)
+      : [],
+  );
 
   return c.html(
     <Layout {...layoutProps(c)} title={`${t('home.readingPlans')} — FLOGVIT.bible`} description={t('u.plansIntro')} styles={['user.css']} scripts={['user.js']}>
@@ -301,6 +334,14 @@ r.get('/leseplan', async (c) => {
                         typesikkerheten, så en glemt oversettelse blir byggefeil. */}
                     {p.category && <span class="plan-cat">{tEnum(t, 'plan.cat.', p.category)}</span>}
                   </div>
+                  {coverage.get(p.id)?.read ? (
+                    <p class="plan-covered">
+                      {t('plan.readOfTotal', {
+                        read: coverage.get(p.id)!.read,
+                        total: coverage.get(p.id)!.total,
+                      })}
+                    </p>
+                  ) : null}
                   <div class="plan-actions">
                     <button type="button" class="user-btn plan-activate" data-plan={p.id}
                       data-active-label={t('u.activePlan')} data-gate-label={t('nav.readingPlan')}>

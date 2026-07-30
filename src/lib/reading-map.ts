@@ -99,6 +99,59 @@ export function fullHeat(progress: ChapterProgress[]): BookHeat[] {
   return booksData.map((b) => bookHeat(progress, b.id)!).filter(Boolean);
 }
 
+/**
+ * En leseplan sett som DEKNING framfor rute (#16): hvor mye av kapittelsettet
+ * ligger allerede i kartet?
+ *
+ * Formen tas inn strukturelt (ikke importert fra `bible.ts`) så modulen forblir
+ * ren og testbar uten database.
+ */
+export interface PlanChapters {
+  id: string;
+  name: string;
+  chapters: { bookId: number; chapter: number }[];
+}
+
+export interface PlanCoverage extends PlanChapters {
+  total: number;
+  read: number;
+  missing: number;
+}
+
+/** Kapitler som er lest minst én gang, som `bookId-chapter`. */
+function readKeys(progress: ChapterProgress[]): Set<string> {
+  const keys = new Set<string>();
+  for (const p of progress) if (isRead(p)) keys.add(`${p.bookId}-${p.chapter}`);
+  return keys;
+}
+
+export function planCoverage(progress: ChapterProgress[], plans: PlanChapters[]): PlanCoverage[] {
+  const read = readKeys(progress);
+  return plans.map((plan) => {
+    const hits = plan.chapters.filter((c) => read.has(`${c.bookId}-${c.chapter}`)).length;
+    return { ...plan, total: plan.chapters.length, read: hits, missing: plan.chapters.length - hits };
+  });
+}
+
+/**
+ * «Paulus-brevene — du mangler 3»: planer som er PÅBEGYNT men ikke fullført,
+ * nærmest først.
+ *
+ * Upåbegynte planer holdes utenfor med vilje. De ville fylt lista med hele
+ * bibelen-planer for en bruker som ikke har lest noe, og forslaget er ment å si
+ * «du er nesten i mål», ikke «her er katalogen» — den står på /leseplan.
+ */
+export function suggestedPlans(
+  progress: ChapterProgress[],
+  plans: PlanChapters[],
+  limit = 5,
+): PlanCoverage[] {
+  return planCoverage(progress, plans)
+    .filter((p) => p.total > 0 && p.read > 0 && p.missing > 0)
+    .sort((a, b) => a.missing - b.missing || a.total - b.total || a.id.localeCompare(b.id))
+    .slice(0, limit);
+}
+
 /** Kapitler du ikke har vært innom på lengst tid — kun daterte. */
 export function stalestBooks(progress: ChapterProgress[], limit = 5): { name: string; lastAt: number }[] {
   const newestPerBook = new Map<number, number>();

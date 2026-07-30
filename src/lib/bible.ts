@@ -2881,6 +2881,56 @@ export async function getReadingPlanById(
   return { ...rest, readings };
 }
 
+export interface ReadingPlanChapters {
+  id: string;
+  name: string;
+  /** Unike kapitler planen dekker, uten dag-inndelingen. */
+  chapters: { bookId: number; chapter: number }[];
+}
+
+/**
+ * Kapittelsettet hver leseplan dekker — grunnlaget for «du mangler 3» på
+ * lesekartet (#16).
+ *
+ * Planene GJENBRUKES framfor en egen liste-datafil: de er allerede kuratert,
+ * navngitt og importert per språk, og bærer eksplisitte `{bookId, chapter}`.
+ * En parallell datafil ville duplisert kurateringen og lagt til enda en ting å
+ * oversette — og ville drevet fra planene over tid.
+ *
+ * Dag-inndelingen kastes med vilje: en plan er en RUTE gjennom kapitler, mens
+ * kartet spør om DEKNING. Rekkefølgen hører til planvisningen, ikke hit.
+ */
+export async function getReadingPlanChapterSets(
+  lang = currentContentLanguage(),
+): Promise<ReadingPlanChapters[]> {
+  const sql = getSql();
+  const rows = await inLanguage(lang, (language) => sql`
+    SELECT id, name, content FROM reading_plans WHERE language = ${language} ORDER BY days
+  ` as Promise<{ id: string; name: string; content: string }[]>);
+
+  return rows.map((row) => {
+    const chapters: { bookId: number; chapter: number }[] = [];
+    const seen = new Set<string>();
+    try {
+      const parsed = JSON.parse(row.content) as {
+        readings?: { chapters?: { bookId: number; chapter: number }[] }[];
+      };
+      for (const day of parsed.readings ?? []) {
+        for (const ch of day.chapters ?? []) {
+          const key = `${ch.bookId}-${ch.chapter}`;
+          if (seen.has(key)) continue;
+          seen.add(key);
+          chapters.push({ bookId: ch.bookId, chapter: ch.chapter });
+        }
+      }
+    } catch {
+      // Ugyldig JSON skal ikke ta ned lesekartet — planen teller da null kapitler
+      // og faller ut av forslagene av seg selv.
+    }
+    return { id: row.id, name: row.name, chapters };
+  });
+}
+
 export interface ImportantWordSearchResult {
   word: string;
   explanation: string;

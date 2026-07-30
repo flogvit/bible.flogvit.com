@@ -107,4 +107,40 @@ describe('/lesekart', () => {
     const html = await res.text();
     expect(html).toContain('data-stat-chapters="true">0<');
   });
+
+  // «En leseplan blir bare et spørsmål mot kartet» (#16): forslagene utledes av
+  // dekningen, og planene gjenbrukes som kapittelsett.
+  describe('forslag fra leseplanene', () => {
+    test('plus-bruker med framdrift får påbegynte planer, med antall som mangler', async () => {
+      const html = await (await app.request('/nb/lesekart', { headers: PLUS })).text();
+      expect(html).toContain('class="map-suggest"');
+      const missing = [...html.matchAll(/class="map-suggest-missing">([^<]+)</g)].map((m) => m[1]!);
+      expect(missing.length).toBeGreaterThan(0);
+      // Hvert forslag sier hvor mye som gjenstår, og aldri null — en fullført
+      // plan er ikke et forslag.
+      for (const label of missing) expect(label).toMatch(/du mangler (\d+ kapitler|1 kapittel)/);
+      expect(missing.some((l) => l.includes('mangler 0'))).toBe(false);
+    });
+
+    test('gratisbruker har ingen framdrift, og dermed ingen forslag', async () => {
+      const html = await (await app.request('/nb/lesekart', { headers: FREE })).text();
+      expect(html).not.toContain('class="map-suggest"');
+    });
+  });
+});
+
+// Motsatt vei av samme kobling: planen forteller hva du alt har lest, uten å
+// røre sitt eget dag-regnskap.
+describe('/leseplan viser dekning fra kartet', () => {
+  test('plus-bruker ser hvor mye av planen som er lest fra før', async () => {
+    const html = await (await app.request('/nb/leseplan', { headers: PLUS })).text();
+    const covered = [...html.matchAll(/class="plan-covered">([^<]+)</g)].map((m) => m[1]!);
+    expect(covered.length).toBeGreaterThan(0);
+    for (const label of covered) expect(label).toMatch(/^\d+ av \d+ kapitler er lest fra før$/);
+  });
+
+  test('gratisbruker ser ingen dekning — husking er plus', async () => {
+    const html = await (await app.request('/nb/leseplan', { headers: FREE })).text();
+    expect(html).not.toContain('class="plan-covered"');
+  });
 });

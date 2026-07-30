@@ -69,6 +69,9 @@ a.user-card:hover { border-color: var(--gold); }
 .plan-desc { color: var(--ink-2); font-size: 14px; margin-bottom: 10px; }
 .plan-meta { display: flex; gap: 10px; margin-bottom: 12px; }
 .plan-days, .plan-cat { font-family: var(--font-mono); font-size: 12px; color: var(--muted); }
+/* Dekning fra lesekartet (#16): en opplysning om hva du alt har lest, ikke en
+   avkryssing i planens eget dag-regnskap. */
+.plan-covered { font-size: 12px; color: var(--gold-text); margin: 0 0 10px; }
 .plan-actions { display: flex; align-items: center; gap: 10px; }
 .plan-active-badge {
   font-size: 12px;

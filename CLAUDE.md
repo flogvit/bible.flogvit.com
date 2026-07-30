@@ -307,6 +307,22 @@ historikk) og holdes utenfor tidslinje/ferskhet framfor å gjettes inn.
 - **Alt er pull.** Statistikken bor på en side brukeren oppsøker. Ingen varsler,
   ingen påminnelser. Gamification (streaks/merker/nivåer) er et bevisst
   NON-GOAL — vil man presses, velger man en leseplan.
+- **En leseplan er et SPØRSMÅL MOT KARTET.** `/lesekart` foreslår påbegynte
+  planer («Romerbrevet — du mangler 3») og `/leseplan` viser hvor mye av hver
+  plan som alt er lest. Begge går gjennom `planCoverage()`/`suggestedPlans()` i
+  `reading-map.ts`, som tar kapittelsettet inn STRUKTURELT — modulen er ren og
+  testes uten database.
+  - **Planene gjenbrukes som lister** (`getReadingPlanChapterSets()`), framfor en
+    egen kuratert datafil: `reading_plans.content` bærer allerede eksplisitte
+    `{bookId, chapter}`, er kuratert og importeres per språk. En parallell fil
+    ville duplisert kurateringen, lagt til enda en ting å oversette, og drevet
+    fra planene over tid. Dag-inndelingen kastes: planen er en RUTE, kartet
+    spør om DEKNING.
+  - **Dekningen endrer ikke planens eget dag-regnskap.** Den er en opplysning
+    («12 av 16 lest fra før»), ikke en avkryssing brukeren ikke har gjort —
+    fri lesing teller dermed uten at «hvor langt er jeg i planen» blir tvetydig.
+  - Upåbegynte planer foreslås ikke: forslaget skal si «du er nesten i mål»,
+    ikke gjengi katalogen — den står på `/leseplan`.
 
 ## Testene — tre nivåer og hva hvert av dem faktisk fanger
 
