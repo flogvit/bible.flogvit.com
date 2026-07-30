@@ -3,6 +3,50 @@
 What actually reached readers, newest first. Dates, not version numbers — we
 deploy continuously.
 
+## 2026-07-30 — Publish a manuscript for everyone, and see how far a reading plan already is
+
+**New features**
+
+- Manuscripts can now be published in an open catalogue, not only shared with a
+  hidden link. Anyone can read them; no account is needed. Every text is read by
+  a human before it appears, and what you publish is a copy taken at that moment
+  — editing your own draft afterwards leaves the published version untouched
+  until you publish it again. You can withdraw it at any time, and it is gone
+  immediately. Every entry has a "report" button that needs no account.
+  Publishing is part of FLOGVIT.plus; reading is free.
+- The reading map now suggests where you are close to finishing: "Romans — 3
+  chapters left". Reading plans are the source of those lists, so a plan is
+  simply a question asked of your map.
+- Each reading plan shows how much of it you have already read, whether or not
+  you read it as part of the plan. Reading outside a plan has never counted
+  before; now it does — without changing where you are in the plan itself.
+
+**Polish**
+
+- Chapter pages ask the database once per chapter instead of four times per
+  verse. Psalm 119 alone went from more than seven hundred round trips to four,
+  which is felt most where the connection between the site and its database is
+  slowest.
+
+**Bug fixes**
+
+- Search engines were told that every day's lectionary reading existed in all
+  eight languages. Only Norwegian does: 1176 announced addresses answered "not
+  found", and the address Google falls back to when no language fits pointed at
+  one of them. Pages now list only the languages they actually exist in.
+
+**Behind the scenes**
+
+- The language list in that fix is derived from the content itself rather than
+  written down anywhere, so a newly translated set of texts is announced without
+  a code change — and the test that guards it checks the real rule: every
+  address we announce must answer. Along with the catalogue and the reading-map
+  work, the suite grew from 463 to 517 tests.
+- Deploying now stops if the server is missing configuration a feature needs.
+  The review queue behind the catalogue is one of those: without its key the
+  endpoints do not exist at all, which is safe but silent — readers could submit
+  while nobody could approve.
+
 ## 2026-07-30 — Share a manuscript with a link, and chapter pages open seven times faster
 
 **New features**
