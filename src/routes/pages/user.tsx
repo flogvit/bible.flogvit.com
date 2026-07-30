@@ -475,15 +475,14 @@ r.get('/innstillinger', async (c) => {
                   <a href={ACCOUNT_URL}>{t('u.manageAccount')}</a>
                 </p>
                 <p class="settings-sync">
-                  Husking — lagring av favoritter, notater m.m., både i nettleseren og mellom
-                  enheter — er en del av <a href="https://flogvit.com/plus/">FLOGVIT.plus</a>.
+                  {t('u.rememberPlus')} <a href="https://flogvit.com/plus/">FLOGVIT.plus</a>.
                 </p>
               </>
             )
           ) : (
             <p class="settings-account">
               {t('u.notLoggedIn')}{' '}
-              <a href={ACCOUNT_URL}>FLOGVIT-konto</a> med{' '}
+              <a href={ACCOUNT_URL}>FLOGVIT-konto</a> {t('u.accountWith')}{' '}
               <a href="https://flogvit.com/plus/">FLOGVIT.plus</a>.
             </p>
           )}

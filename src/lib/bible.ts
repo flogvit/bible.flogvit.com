@@ -800,10 +800,22 @@ function normalizeGreek(text: string): string {
   return text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').normalize('NFC');
 }
 
-export async function searchOriginalWord(word: string, limit = 50, offset = 0): Promise<OriginalWordSearchResponse> {
+/**
+ * Søk i grunnteksten. `vernacularBible` er utgaven den LESBARE teksten hentes
+ * fra ved siden av grunnteksten — den lå hardkodet som `'osnb'`, så treffene på
+ * /en/sok/original kom med norsk vers-tekst (samme klasse som #26: en getter med
+ * fast språk gjør «glemte å sende lang» til et usynlig valg).
+ */
+export async function searchOriginalWord(
+  word: string,
+  limit = 50,
+  offset = 0,
+  vernacularBible?: string,
+): Promise<OriginalWordSearchResponse> {
   if (!word) return { results: [], total: 0, hasMore: false, word: '', language: 'greek', matchingWords: [] };
 
   const sql = getSql();
+  const vernacular = vernacularBible ?? (await defaultBibleForLanguage());
 
   // Determine language based on word characters
   const isHebrew = /[\u0590-\u05FF]/.test(word);
@@ -865,12 +877,12 @@ export async function searchOriginalWord(word: string, limit = 50, offset = 0): 
       v_orig.text as original_text
     FROM word4word w
     JOIN books b ON w.book_id = b.id
-    JOIN verses v_no ON w.book_id = v_no.book_id AND w.chapter = v_no.chapter AND w.verse = v_no.verse AND v_no.bible = 'osnb'
+    JOIN verses v_no ON w.book_id = v_no.book_id AND w.chapter = v_no.chapter AND w.verse = v_no.verse AND v_no.bible = ?
     JOIN verses v_orig ON w.book_id = v_orig.book_id AND w.chapter = v_orig.chapter AND w.verse = v_orig.verse AND v_orig.bible = ?
     WHERE w.word IN (${placeholders}) AND w.bible = ?
     ORDER BY w.book_id, w.chapter, w.verse
     LIMIT ? OFFSET ?
-  `, [versesBible, ...matchingWords, word4wordBible, limit, offset]) as Omit<OriginalWordSearchResult, 'norwegianWords'>[];
+  `, [vernacular, versesBible, ...matchingWords, word4wordBible, limit, offset]) as Omit<OriginalWordSearchResult, 'norwegianWords'>[];
 
   // For each result, find the Norwegian words and original words that match
   const results: OriginalWordSearchResult[] = [];

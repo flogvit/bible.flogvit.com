@@ -559,7 +559,10 @@ r.get('/sok/original', async (c) => {
   const side = Math.max(1, parseInt(c.req.query('side') || '1', 10) || 1);
   const offset = (side - 1) * PAGE_SIZE;
 
-  const res = query.length >= 1 ? await searchOriginalWord(query, PAGE_SIZE, offset) : null;
+  // Utgaven den lesbare teksten siteres fra — som på /sok: eksplisitt ?bible=
+  // vinner, ellers språkets egen default.
+  const bible = normalizeBibleId(c.req.query('bible')) || (await defaultBibleForLanguage());
+  const res = query.length >= 1 ? await searchOriginalWord(query, PAGE_SIZE, offset, bible) : null;
 
   return c.html(
     <Layout {...layoutProps(c)}
@@ -573,7 +576,7 @@ r.get('/sok/original', async (c) => {
           <Breadcrumbs
             items={[
               { label: tCtx()('common.home'), href: '/' },
-              { label: 'Søk', href: '/sok' },
+              { label: tCtx()('search.title'), href: '/sok' },
               { label: t('so.originalLangs') },
             ]}
           />
@@ -596,7 +599,10 @@ r.get('/sok/original', async (c) => {
               <p class="search-count">
                 {res.total === 0
                   ? t('so.noHits', { q: query })
-                  : `${res.total} treff (${res.language === 'hebrew' ? 'hebraisk' : 'gresk'}).`}
+                  : t('so.hitsIn', {
+                      n: res.total,
+                      lang: t(res.language === 'hebrew' ? 'lang.hebrew' : 'lang.greek'),
+                    })}
               </p>
               <div class="search-results">
                 {res.results.map((v) => (

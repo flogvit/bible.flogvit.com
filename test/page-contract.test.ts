@@ -68,7 +68,10 @@ const PAGES: { path: string; name: string }[] = [
   { path: '/lister', name: 'verslister' },
   { path: '/offline', name: 'offline' },
   { path: '/bidra', name: 'bidra' },
-  { path: '/sok/original?q=chesed', name: 'søk i grunnteksten' },
+  // Med TREFF, ikke uten: treffteksten («2 matches (Hebrew).») er egen kode som
+  // aldri rendres på en tom søkeside, og der lå det hardkodet norsk igjen.
+  { path: '/sok/original?q=%D0%B0%D0%BB', name: 'søk i grunnteksten (uten treff)' },
+  { path: '/sok/original?q=%D7%91%D7%A8%D7%90', name: 'søk i grunnteksten (med treff)' },
   { path: '/tilgjengelighet', name: 'tilgjengelighet' },
   { path: '/changes', name: 'endringslogg' },
   { path: '/finnes-ikke', name: '404-siden' },
@@ -288,6 +291,8 @@ describe('sidekontrakt', () => {
     'vers', 'kapittel', 'bibelen', 'oversettelse', 'oversettelser', 'oversetter',
     'oversettere', 'grunntekst', 'søk', 'lukk', 'velg', 'skriv', 'legg', 'hopp',
     'innhold', 'kategorier', 'kontekst', 'skrift', 'nei', 'gt',
+    // Treffteksten i grunntekstsøket sto hardkodet på norsk (#41-runden).
+    'treff', 'hebraisk', 'gresk',
   ];
   const NORWEGIAN_RE = new RegExp(
     `(?:^|[^\\p{L}])(${NORWEGIAN_ONLY.join('|')})(?![\\p{L}])`,
@@ -319,7 +324,9 @@ describe('sidekontrakt', () => {
         const funn: string[] = [];
         for (const line of visibleText(html).split('\n')) {
           const text = line.trim();
-          if (text.length < 4) continue;
+          // Gulvet var 4 tegn og slapp dermed «Søk» (3) gjennom i brødsmulestien
+          // på /sok/original — ordet STO i lista, men linja ble aldri sjekket.
+          if (text.length < 3) continue;
           if (NORWEGIAN_RE.test(text)) funn.push(text.slice(0, 90));
           NORWEGIAN_RE.lastIndex = 0;
         }
