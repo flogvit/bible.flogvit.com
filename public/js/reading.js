@@ -73,8 +73,14 @@ if (rootPage) {
     write(KEYS.settings, s);
   }
   applyMode(settings().layoutMode || 'normal');
+  // Knappene er av/på, ikke bare på: klikker du modusen du alt står i, går du
+  // tilbake til normal. Det er det `aria-pressed` allerede lover — og på mobil
+  // er det ENESTE veien ut, fordi ☰ og ▥ er skjult der (#51).
   document.querySelectorAll('[data-layout-modes] [data-mode]').forEach((btn) => {
-    btn.addEventListener('click', () => setMode(btn.dataset.mode));
+    btn.addEventListener('click', () => {
+      const mode = btn.dataset.mode;
+      setMode(btn.getAttribute('aria-pressed') === 'true' && mode !== 'normal' ? 'normal' : mode);
+    });
   });
   document.addEventListener('bibel:layout-mode', (e) => setMode(e.detail));
 

@@ -175,6 +175,66 @@ describe('reading.js — kapittel-ringen', () => {
   });
 });
 
+describe('reading.js — visningsmodus (#51)', () => {
+  const MODE_DOM = `
+    <div data-reading-root>
+      <span data-layout-modes>
+        <button data-mode="normal" aria-pressed="true">☰</button>
+        <button data-mode="reading" aria-pressed="false">📖</button>
+        <button data-mode="panel" aria-pressed="false">▥</button>
+      </span>
+      <section class="verses" data-verses></section>
+    </div>`;
+
+  const pressed = (mode: string) =>
+    document.querySelector(`[data-mode="${mode}"]`)!.getAttribute('aria-pressed');
+
+  test('lesemodus slår seg AV igjen ved nytt klikk', async () => {
+    // På mobil er ☰ og ▥ skjult, så 📖 er eneste vei ut. Uten av/på ville
+    // leseren stått fast i en modus som skjuler både skinne og bunnlinje.
+    setupDom(MODE_DOM);
+    withBodyData();
+    await loadIsland('reading');
+
+    const reading = document.querySelector('[data-mode="reading"]') as HTMLButtonElement;
+    const root = document.querySelector('[data-reading-root]')!;
+
+    reading.click();
+    expect(root.classList.contains('reading-mode')).toBe(true);
+    expect(pressed('reading')).toBe('true');
+
+    reading.click();
+    expect(root.classList.contains('reading-mode')).toBe(false);
+    expect(pressed('normal')).toBe('true');
+  });
+
+  test('☰ Normal er idempotent — den slår ikke om til noe annet', async () => {
+    setupDom(MODE_DOM);
+    withBodyData();
+    await loadIsland('reading');
+
+    const normal = document.querySelector('[data-mode="normal"]') as HTMLButtonElement;
+    normal.click();
+    normal.click();
+    const root = document.querySelector('[data-reading-root]')!;
+    expect(root.classList.contains('reading-mode')).toBe(false);
+    expect(root.classList.contains('panel-mode')).toBe(false);
+    expect(pressed('normal')).toBe('true');
+  });
+
+  test('valget huskes, og av/på lagrer normal tilbake', async () => {
+    setupDom(MODE_DOM);
+    withBodyData();
+    await loadIsland('reading');
+
+    const reading = document.querySelector('[data-mode="reading"]') as HTMLButtonElement;
+    reading.click();
+    expect(JSON.parse(localStorage.getItem('bible-settings')!).layoutMode).toBe('reading');
+    reading.click();
+    expect(JSON.parse(localStorage.getItem('bible-settings')!).layoutMode).toBe('normal');
+  });
+});
+
 describe('reading.js — vers- og utvalgsmarkering', () => {
   test('enkeltvers samles som intervaller', async () => {
     setupDom(CHAPTER_DOM(10));

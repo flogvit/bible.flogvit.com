@@ -1572,6 +1572,18 @@ a.ins-hero-name:hover {
   .chapter-content {
     padding: 24px 0 100px;
   }
+  /* Bare LESEMODUS overlever på mobil (#51). Under 768 px er `.chapter-layout`
+     allerede én kolonne uansett modus, så ▥ Panel endret ingenting i layouten —
+     den la bare på en fanerad, og bunnlinjas ▥ gjør det samme (`studium.js`
+     sender `bibel:layout-mode` = `panel`). ☰ Normal var bare «angre», og den
+     rollen har 📖 nå, som av/på-knapp.
+     Lesemodus beholder sin plass HER, ikke i bunnlinja: modusen skjuler
+     bunnlinja, så en bryter der måtte holdt seg selv synlig og dermed motarbeidet
+     hele poenget. `.chapter-meta` skjules ikke i lesemodus, så 📖 er veien ut. */
+  .layout-mode-btn[data-mode='normal'],
+  .layout-mode-btn[data-mode='panel'] {
+    display: none;
+  }
   .chapter-title {
     font-size: 32px;
   }

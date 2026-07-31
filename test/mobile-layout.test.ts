@@ -1,5 +1,8 @@
-// LAYOUT-VAKTEN — ingen side skal være bredere enn telefonen den vises på,
-// heller ikke når leseren har skrudd opp tekststørrelsen.
+// MOBIL-LAYOUT I EN EKTE NETTLESER — to kontrakter som begge handler om hva
+// telefonen faktisk viser, og som ingen av de andre testnivåene kan se.
+//
+//   1. Ingen side er bredere enn skjermen (#50), heller ikke med stor tekst.
+//   2. Chromen på mobil viser bare kontroller som betyr noe der (#51).
 //
 // Bakgrunn (#50): med tekstforstørrelse fra telefonens TILGJENGELIGHETS-
 // innstillinger (Android: «Tekstskalering», 133–150 %) ble ti av ti målte sider
@@ -161,4 +164,53 @@ describe('mobil-layout: ingen side er bredere enn skjermen (#50)', () => {
       60_000,
     );
   }
+});
+
+/**
+ * #51: på mobil er `.chapter-layout` én kolonne uansett modus, så ▥ Panel
+ * endret ingenting i layouten — den la bare på en fanerad, og bunnlinjas ▥ gjør
+ * allerede det samme. ☰ Normal var bare «angre». Begge er skjult under 768 px;
+ * 📖 Lesemodus står igjen som av/på-knapp, og den gjør noe reelt (skjuler
+ * sidepanel, skinne og bunnlinje).
+ *
+ * Vakta sjekker BEGGE kantene av brekkpunktet. Bare mobil-siden ville bestått
+ * like fint om noen skjulte knappene overalt — og da hadde desktop mistet tre
+ * layouter som faktisk er forskjellige der.
+ */
+describe('mobil-chrome: bare kontroller som betyr noe (#51)', () => {
+  const modeButtons = () => {
+    const seen: Record<string, boolean> = {};
+    for (const btn of document.querySelectorAll('[data-layout-modes] [data-mode]')) {
+      seen[(btn as HTMLElement).dataset.mode!] = getComputedStyle(btn).display !== 'none';
+    }
+    return seen;
+  };
+
+  test('☰ og ▥ er skjult på mobil, 📖 står igjen', async () => {
+    await page.navigate(`http://localhost:${server.port}${href(DEFAULT_LOCALE, '/1mos/1')}`);
+    for (const width of [320, 390, 768]) {
+      await page.setViewport({ width, height: 800 });
+      const vis = await page.evaluate(modeButtons);
+      expect([width, vis]).toEqual([width, { normal: false, reading: true, panel: false }]);
+    }
+  }, 60_000);
+
+  test('alle tre finnes fortsatt på desktop, der modusene ER forskjellige', async () => {
+    await page.navigate(`http://localhost:${server.port}${href(DEFAULT_LOCALE, '/1mos/1')}`);
+    await page.setViewport({ width: 1280, height: 900 });
+    expect(await page.evaluate(modeButtons)).toEqual({ normal: true, reading: true, panel: true });
+
+    // Og de gir faktisk tre ULIKE layouter der — ellers er knappene like
+    // meningsløse på desktop som de var på mobil.
+    const columns = await page.evaluate(() => {
+      const out: string[] = [];
+      for (const mode of ['normal', 'reading', 'panel']) {
+        (document.querySelector(`[data-layout-modes] [data-mode="${mode}"]`) as HTMLElement).click();
+        out.push(getComputedStyle(document.querySelector('.chapter-layout')!).gridTemplateColumns);
+      }
+      (document.querySelector('[data-layout-modes] [data-mode="normal"]') as HTMLElement).click();
+      return out;
+    });
+    expect(new Set(columns).size).toBe(3);
+  }, 60_000);
 });
