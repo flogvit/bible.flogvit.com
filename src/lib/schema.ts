@@ -33,6 +33,7 @@
 import type { SQL } from 'bun';
 import { DEFAULT_CONTENT_LANGUAGE } from './lang.ts';
 import { pruneDanglingRefs, pruneReportIsEmpty, formatPruneReport } from './verse-refs.ts';
+import { prunePersonRefs, personPruneReportIsEmpty, formatPersonPruneReport } from './person-refs.ts';
 import { booksData } from './books-data.ts';
 
 const CS = 'CHARACTER SET utf8mb4 COLLATE utf8mb4_danish_ci';
@@ -949,6 +950,13 @@ async function runMigrations(sql: SQL): Promise<void> {
   // gjør at feil data ikke blir liggende i prod til neste innholdsimport.
   const pruned = await pruneDanglingRefs(sql);
   if (!pruneReportIsEmpty(pruned)) console.log(formatPruneReport(pruned));
+
+  // Samme stående invariant, én akse over (#61): en adresse mot en PERSON som
+  // ikke finnes. Ættetavlen på `/matt/1` lenket «Tamar» til `/personer/tamar`,
+  // og API-ets eget svar annonserte id-er API-et selv 404-et. Også dette må
+  // ryddes ved hver deploy, ikke bare ved neste innholdsimport.
+  const persons = await prunePersonRefs(sql);
+  if (!personPruneReportIsEmpty(persons)) console.log(formatPersonPruneReport(persons));
 }
 
 /** Oppretter alle tabeller og kjører migreringene (idempotent). */

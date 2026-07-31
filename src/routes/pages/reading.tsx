@@ -454,10 +454,17 @@ function InsightContent({ t, insight }: { t: Translator; insight: any }) {
   }
 }
 
+/**
+ * Et navn i en ættetavle, personliste eller trosheltefortegnelse. Uten
+ * `personId` er det ren tekst — den formen finnes allerede i dataene («Peres»,
+ * «Hesron»), og den er også det ryddingen i `person-refs.ts` etterlater når
+ * adressen ikke finnes (#61). Da er det navnet som blir stående, ikke en lenke
+ * til 404.
+ */
 function PersonLink({ personId, name, className }: { personId?: string; name: string; className: string }) {
   if (personId) {
     return (
-      <a href={lhref(`/personer/${personId}`)} class={className} title={`Les mer om ${name}`}>
+      <a href={lhref(`/personer/${personId}`)} class={className} title={tCtx()('pe.readMoreAbout', { name })}>
         {name}
       </a>
     );
@@ -503,9 +510,7 @@ function GenealogyContent({ insight }: { insight: any }) {
                 {insight.footer.links.map((link: any, i: number) => (
                   <span>
                     {i > 0 && ', '}
-                    <a href={lhref(`/personer/${link.personId}`)} class="ins-footer-link">
-                      {link.text}
-                    </a>
+                    <PersonLink personId={link.personId} name={link.text} className="ins-footer-link" />
                   </span>
                 ))}
               </>

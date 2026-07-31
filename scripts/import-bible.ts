@@ -24,6 +24,7 @@ import { DEFAULT_CONTENT_LANGUAGE, isLanguageCode } from '../src/lib/lang.ts';
 import { booksData } from '../src/lib/books-data.ts';
 import { getChapterVerseCount } from '../src/lib/verse-counts.ts';
 import { pruneDanglingRefs, pruneReportIsEmpty, formatPruneReport } from '../src/lib/verse-refs.ts';
+import { prunePersonRefs, personPruneReportIsEmpty, formatPersonPruneReport } from '../src/lib/person-refs.ts';
 import { parseRefMarkup } from '@free-bible/kvn/ref';
 import { BOOK_IDS } from '@free-bible/kvn/types';
 import { UkvnMapper, loadUkvnMapping, ukvnEncode, ukvnDecode, resolveMappingId } from '@free-bible/kvn';
@@ -2237,6 +2238,20 @@ if (pruned.skipped) {
   console.log('Kilden skriver adresser som ikke finnes — se flogvit/free-bible#26.');
 }
 
+// SAMME PORT FOR PERSONADRESSER (#61). Kjøres ETTER personimporten over, så
+// sannheten den måler mot er personene denne runden faktisk la inn.
+//
+// Rapporteres alltid, av samme grunn: en id som `tamar` der personen heter
+// `tamar-juda` er en generatorfeil, og den er usynlig for den som kjører
+// importen hvis vi bare stryker den i stillhet.
+const personsPruned = await prunePersonRefs(sql);
+if (personsPruned.skipped) {
+  console.log('\nAdvarsel: ingen personer i basen — personadresser ble ikke validert.');
+} else if (!personPruneReportIsEmpty(personsPruned)) {
+  console.log(`\n${formatPersonPruneReport(personsPruned)}`);
+  console.log('Kilden lenker til personer som ikke finnes — meld det på flogvit/free-bible.');
+}
+
 // Check if any content was updated
 const totalUpdated = Object.values(stats).reduce((sum, s) => sum + s.updated, 0);
 const totalUnchanged = Object.values(stats).reduce((sum, s) => sum + s.unchanged, 0);
@@ -2247,7 +2262,13 @@ const totalDeleted = Object.values(deleted).reduce((sum, n) => sum + n, 0);
 // Ryddingen TELLER som en endring: fjerner den en referanse-chip, er den siden
 // en annen enn den mikrocachen ligger med, og uten et versjonsløft ville den
 // døde lenka blitt servert i inntil en time til (PAGE_CACHE_TTL_MS).
-if (totalUpdated > 0 || totalDeleted > 0 || !pruneReportIsEmpty(pruned) || isFullImport) {
+if (
+  totalUpdated > 0 ||
+  totalDeleted > 0 ||
+  !pruneReportIsEmpty(pruned) ||
+  !personPruneReportIsEmpty(personsPruned) ||
+  isFullImport
+) {
   await sql.begin(async (tx) => {
     const newSyncVersion = await incrementSyncVersion(tx);
 
