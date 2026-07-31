@@ -42,6 +42,9 @@ export const PAGES: { path: string; name: string }[] = [
   { path: '/lister', name: 'verslister' },
   { path: '/offline', name: 'offline' },
   { path: '/bidra', name: 'bidra' },
+  // Med opphav (#57): brødsmulene får et tredje ledd som ingen annen side
+  // rendrer, og rada er den lengste /bidra kan få på en smal skjerm.
+  { path: '/bidra?vers=1mos-1-3', name: 'bidra med vei tilbake til verset' },
   // Med TREFF, ikke uten: treffteksten («2 matches (Hebrew).») er egen kode som
   // aldri rendres på en tom søkeside, og der lå det hardkodet norsk igjen.
   { path: '/sok/original?q=%D0%B0%D0%BB', name: 'søk i grunnteksten (uten treff)' },
