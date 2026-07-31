@@ -3,6 +3,11 @@
 What actually reached readers, newest first. Dates, not version numbers — we
 deploy continuously.
 
+## 2026-07-31 — No visible changes this round; the content pipeline got safer
+
+**Behind the scenes**
+
+- Staging the shared `kvn` bible-data package is now a tested script with an explicit whitelist instead of a hand-typed command, so what ends up in a release is the same every time and nothing unintended can slip in with it.
 ## 2026-07-31 — No visible changes this round; contribution staging is now a scripted, tested step
 
 **Behind the scenes**
