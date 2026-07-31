@@ -52,7 +52,7 @@
 }
 .search-extra-cards {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(15rem, 100%), 1fr));
   gap: 10px;
 }
 .search-extra-card {

@@ -170,36 +170,43 @@ async function setContentHash(
  * Oppryddingen er SPRÅK-SCOPET: den sammenligner bare mot filene som finnes for
  * `language`. Uten det ville en import av ett språk slettet alle rader for de
  * andre språkene, siden nøklene deres ikke finnes i denne språkkatalogen.
+ *
+ * `keyColumns` kan være flere kolonner (f.eks. `book_id`, `chapter`); nøkkelen
+ * settes da sammen med bindestrek, akkurat som `content_key` skrives.
  */
 async function cleanupRemovedEntries(
   db: SQL,
   table: string,
-  keyColumn: string,
+  keyColumns: string | string[],
   diskKeys: Set<string>,
   contentType: string,
   label: string,
   language: string = DEFAULT_CONTENT_LANGUAGE,
 ): Promise<void> {
-  const rows = (await db.unsafe(`SELECT ${keyColumn} FROM ${table} WHERE language = ?`, [
-    language,
-  ])) as Record<string, string | number>[];
-  const toDelete: (string | number)[] = [];
+  const columns = Array.isArray(keyColumns) ? keyColumns : [keyColumns];
+  const rows = (await db.unsafe(
+    `SELECT DISTINCT ${columns.join(', ')} FROM ${table} WHERE language = ?`,
+    [language],
+  )) as Record<string, string | number>[];
+  const toDelete: { key: string; values: (string | number)[] }[] = [];
 
   for (const row of rows) {
-    const key = String(row[keyColumn]);
+    const values = columns.map((c) => row[c] as string | number);
+    const key = values.map(String).join('-');
     if (!diskKeys.has(key)) {
-      toDelete.push(row[keyColumn] as string | number);
+      toDelete.push({ key, values });
     }
   }
 
   if (toDelete.length > 0) {
-    for (const key of toDelete) {
-      await db.unsafe(`DELETE FROM ${table} WHERE ${keyColumn} = ? AND language = ?`, [key, language]);
+    const where = columns.map((c) => `${c} = ?`).join(' AND ');
+    for (const { key, values } of toDelete) {
+      await db.unsafe(`DELETE FROM ${table} WHERE ${where} AND language = ?`, [...values, language]);
       await db`
         DELETE FROM content_hashes
-        WHERE content_type = ${contentType} AND content_key = ${String(key)} AND language = ${language}
+        WHERE content_type = ${contentType} AND content_key = ${key} AND language = ${language}
       `;
-      hashCache.delete(hashKey(contentType, String(key), language));
+      hashCache.delete(hashKey(contentType, key, language));
     }
     deleted[label] = (deleted[label] ?? 0) + toDelete.length;
     console.log(`${forLang(language)} Slettet ${toDelete.length} ${label} som ikke lenger finnes på disk`);
@@ -863,14 +870,16 @@ for (const lang of contentLanguages('important_words')) {
   const importantWordsPath = path.join(GENERATE_PATH, 'important_words', lang);
   const before = stats.importantWords.updated;
   await sql.begin(async (tx) => {
-    const files = fs.readdirSync(importantWordsPath).filter((f) => f.endsWith('.txt'));
+    const files = fs.readdirSync(importantWordsPath).filter((f) => f.endsWith('.json'));
+    const keysOnDisk = new Set<string>();
 
     for (const file of files) {
-      const match = file.match(/^(\d+)-(\d+)\.txt$/);
+      const match = file.match(/^(\d+)-(\d+)\.json$/);
       if (!match) continue;
 
       const bookId = parseInt(match[1]!);
       const chapter = parseInt(match[2]!);
+      keysOnDisk.add(`${bookId}-${chapter}`);
 
       const filePath = path.join(importantWordsPath, file);
       const content = fs.readFileSync(filePath, 'utf-8');
@@ -882,26 +891,55 @@ for (const lang of contentLanguages('important_words')) {
         continue;
       }
 
+      let entries: unknown;
+      try {
+        entries = JSON.parse(content);
+      } catch (e) {
+        console.error(`  Ugyldig JSON i ${lang}/${file}: ${e}`);
+        continue;
+      }
+      if (!Array.isArray(entries)) {
+        console.error(`  ${lang}/${file}: forventet en liste, fikk ${typeof entries} — hoppet over`);
+        continue;
+      }
+
       await tx`
         DELETE FROM important_words
         WHERE book_id = ${bookId} AND chapter = ${chapter} AND language = ${lang}
       `;
-      for (const line of content.split('\n')) {
-        const colonIdx = line.indexOf(':');
-        if (colonIdx > 0) {
-          const word = line.substring(0, colonIdx).trim();
-          const explanation = line.substring(colonIdx + 1).trim();
-          if (word && explanation) {
-            await tx`
-              INSERT INTO important_words (book_id, chapter, word, explanation, language)
-              VALUES (${bookId}, ${chapter}, ${word}, ${explanation}, ${lang})
-            `;
-          }
+      let dropped = 0;
+      for (const entry of entries) {
+        const word = typeof entry?.word === 'string' ? entry.word.trim() : '';
+        const explanation = typeof entry?.explanation === 'string' ? entry.explanation.trim() : '';
+        if (!word || !explanation) {
+          dropped++;
+          continue;
         }
+        await tx`
+          INSERT INTO important_words (book_id, chapter, word, explanation, language)
+          VALUES (${bookId}, ${chapter}, ${word}, ${explanation}, ${lang})
+        `;
+      }
+      if (dropped > 0) {
+        console.error(`  ${lang}/${file}: ${dropped} oppføring(er) manglet word/explanation — kastet`);
       }
       await setContentHash(tx, 'important_words', contentKey, contentHash, lang);
       stats.importantWords.updated++;
     }
+
+    // Et kapittel som mister kildefila skal miste radene sine. free-bible
+    // sletter filer som inneholder et dårlig modellsvar (Salme 5 sto med
+    // «Dette kapittelet eksisterer ikke i Bibelen»); uten dette passet ble
+    // slettingen der aldri til en sletting her.
+    await cleanupRemovedEntries(
+      tx,
+      'important_words',
+      ['book_id', 'chapter'],
+      keysOnDisk,
+      'important_words',
+      'viktige ord-kapitler',
+      lang,
+    );
   });
   console.log(`${forLang(lang)} ${stats.importantWords.updated - before} oppdatert`);
 }
@@ -2244,7 +2282,7 @@ console.log(`Boksammendrag         ${String(stats.bookSummaries.updated).padStar
 console.log(`Bokkontekst           ${String(stats.bookContext.updated).padStart(9)}  ${String(stats.bookContext.unchanged).padStart(7)}  ${d('bokkontekst')}`);
 console.log(`Kapittelsammendrag    ${String(stats.chapterSummaries.updated).padStart(9)}  ${String(stats.chapterSummaries.unchanged).padStart(7)}  ${d('kapittelsammendrag')}`);
 console.log(`Kapittelkontekst      ${String(stats.chapterContext.updated).padStart(9)}  ${String(stats.chapterContext.unchanged).padStart(7)}  ${d('kapittelkontekst')}`);
-console.log(`Viktige ord           ${String(stats.importantWords.updated).padStart(9)}  ${String(stats.importantWords.unchanged).padStart(7)}  ${d('viktige ord')}`);
+console.log(`Viktige ord           ${String(stats.importantWords.updated).padStart(9)}  ${String(stats.importantWords.unchanged).padStart(7)}  ${d('viktige ord-kapitler')}`);
 console.log(`Vers-bønn             ${String(stats.versePrayers.updated).padStart(9)}  ${String(stats.versePrayers.unchanged).padStart(7)}  ${d('vers-bønn')}`);
 console.log(`Vers-andakt           ${String(stats.verseSermons.updated).padStart(9)}  ${String(stats.verseSermons.unchanged).padStart(7)}  ${d('vers-andakt')}`);
 console.log(`Temaer                ${String(stats.themes.updated).padStart(9)}  ${String(stats.themes.unchanged).padStart(7)}  ${d('temaer')}`);

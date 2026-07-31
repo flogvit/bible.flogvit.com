@@ -342,42 +342,50 @@ function Header({ t, u }: { t: Translator; u: (p: string) => string }) {
         {/* Tema bor på innstillinger-siden (portal/SETTINGS.md) — ikke som eget
             header-ikon (2026-07-22). */}
 
-        {/* Konto-chip: fast plass rett før tannhjulet (portal/SETTINGS.md). */}
-        <AccountChip t={t} />
+        {/* Kontroll-klyngen holdes sammen som ÉN flex-enhet (#50). Headeren
+            bryter til to rader når teksten er stor, og uten grupperingen falt
+            hamburgeren ned alene til venstre mens resten ble stående igjen —
+            det så ut som en løs knapp under «Logg inn». Nå bryter chip,
+            tannhjul og hamburger samlet, høyrestilt. Rekkefølgen innad er
+            fortsatt konto-chip → tannhjul (portal/SETTINGS.md). */}
+        <div class="header-controls">
+          {/* Konto-chip: fast plass rett før tannhjulet (portal/SETTINGS.md). */}
+          <AccountChip t={t} />
 
-        <a href={lhref('/innstillinger')} class="icon-btn" aria-label={t('chrome.settings')} title={t('chrome.settings')}>
-          <svg
-            width="18"
-            height="18"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            aria-hidden="true"
-          >
-            <circle cx="12" cy="12" r="3" />
-            <path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1A2 2 0 1 1 4.3 17l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1A2 2 0 1 1 7 4.3l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z" />
-          </svg>
-        </a>
+          <a href={lhref('/innstillinger')} class="icon-btn" aria-label={t('chrome.settings')} title={t('chrome.settings')}>
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              aria-hidden="true"
+            >
+              <circle cx="12" cy="12" r="3" />
+              <path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1A2 2 0 1 1 4.3 17l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1A2 2 0 1 1 7 4.3l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z" />
+            </svg>
+          </a>
 
-        {/* Mobilmeny: <details> så den virker uten JS. */}
-        <details class="mobile-menu">
-          <summary class="icon-btn mobile-menu-btn" aria-label={t('chrome.menu')}>
-            <span class="hamburger" aria-hidden="true" />
-          </summary>
-          <nav class="mobile-panel" aria-label={t('chrome.mainNavAria')}>
-            {navGroups(t).map((g) => (
-              <div class="mobile-group">
-                <span class="mobile-group-title">{g.label}</span>
-                {g.links.map((l) => (
-                  <a href={lhref(l.href)} class="mobile-link">
-                    {l.label}
-                  </a>
-                ))}
-              </div>
-            ))}
-          </nav>
-        </details>
+          {/* Mobilmeny: <details> så den virker uten JS. */}
+          <details class="mobile-menu">
+            <summary class="icon-btn mobile-menu-btn" aria-label={t('chrome.menu')}>
+              <span class="hamburger" aria-hidden="true" />
+            </summary>
+            <nav class="mobile-panel" aria-label={t('chrome.mainNavAria')}>
+              {navGroups(t).map((g) => (
+                <div class="mobile-group">
+                  <span class="mobile-group-title">{g.label}</span>
+                  {g.links.map((l) => (
+                    <a href={lhref(l.href)} class="mobile-link">
+                      {l.label}
+                    </a>
+                  ))}
+                </div>
+              ))}
+            </nav>
+          </details>
+        </div>
       </div>
     </header>
   );

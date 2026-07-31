@@ -74,32 +74,38 @@ r.get('/om', (c) => {
             <p>{t('about.kvnBody1')}</p>
             <p>{t('about.kvnExample')}</p>
             {/* Tekstkolonnen er sitert bibeltekst — egen språkakse, oversettes ikke her. */}
-            <table class="about-verse-table">
-              <thead>
-                <tr>
-                  <th>{t('about.kvnColA')}</th>
-                  <th>{t('about.kvnColB')}</th>
-                  <th>{t('about.kvnColText')}</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td>1 Mos 31,55</td>
-                  <td>1 Mos 32,1</td>
-                  <td lang="nb">Tidlig neste morgen kysset Laban...</td>
-                </tr>
-                <tr>
-                  <td>1 Mos 32,1</td>
-                  <td>1 Mos 32,2</td>
-                  <td lang="nb">Jakob fortsatte på sin vei...</td>
-                </tr>
-                <tr>
-                  <td>1 Mos 32,2</td>
-                  <td>1 Mos 32,3</td>
-                  <td lang="nb">Da Jakob så dem, sa han...</td>
-                </tr>
-              </tbody>
-            </table>
+            {/* Wrapperen gir tabellen sin EGEN sidelengs scroll (#50) — samme
+                mønster som .stat-table-wrap. En tabell med tre kolonner kan
+                ikke krympe under et visst punkt, og uten wrapperen er det HELE
+                siden som blir bred i stedet for tabellen. */}
+            <div class="about-verse-table-wrap">
+              <table class="about-verse-table">
+                <thead>
+                  <tr>
+                    <th>{t('about.kvnColA')}</th>
+                    <th>{t('about.kvnColB')}</th>
+                    <th>{t('about.kvnColText')}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>1 Mos 31,55</td>
+                    <td>1 Mos 32,1</td>
+                    <td lang="nb">Tidlig neste morgen kysset Laban...</td>
+                  </tr>
+                  <tr>
+                    <td>1 Mos 32,1</td>
+                    <td>1 Mos 32,2</td>
+                    <td lang="nb">Jakob fortsatte på sin vei...</td>
+                  </tr>
+                  <tr>
+                    <td>1 Mos 32,2</td>
+                    <td>1 Mos 32,3</td>
+                    <td lang="nb">Da Jakob så dem, sa han...</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
             <p>{t('about.kvnBody2')}</p>
             <p>
               {t('about.kvnBody3a')} <strong>KVN</strong> {t('about.kvnBody3b')}

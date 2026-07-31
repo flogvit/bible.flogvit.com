@@ -8,7 +8,7 @@
 /* kjente vers */
 .famous-verse-list {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(17.5rem, 100%), 1fr));
   gap: 14px;
 }
 .famous-verse-card {
@@ -63,8 +63,15 @@
   background: var(--surface);
   box-shadow: var(--shadow-sm);
 }
+/* Tittel + meta-etikett på samme rad: rada BRYTES framfor at etiketten presser
+   kortet ut av skjermen (#50).
+   `nowrap` beholdes bare der verdien er ATOMÆR — et årstall, en dato. En
+   kategori er en FRASE, og på engelsk er «The Resurrection and Exaltation of
+   the Messiah» 252 px alene: da hjelper det ikke at rada brytes, for etiketten
+   er bredere enn skjermen i seg selv. Norsk skjulte det, engelsk avslørte det. */
 .prophecy-summary {
   display: flex;
+  flex-wrap: wrap;
   align-items: baseline;
   justify-content: space-between;
   gap: 12px;
@@ -75,7 +82,7 @@
 .prophecy-summary::-webkit-details-marker { display: none; }
 .prophecy-summary:hover { background: var(--paper-2); }
 .prophecy-title { font-family: var(--font-serif); font-size: 17px; color: var(--ink); }
-.prophecy-cat { font-family: var(--font-mono); font-size: 12px; color: var(--muted); white-space: nowrap; }
+.prophecy-cat { font-family: var(--font-mono); font-size: 12px; color: var(--muted); }
 .prophecy-body { padding: 0 18px 18px; }
 .prophecy-refs { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 12px; }
 .prophecy-ref-label { font-size: 13px; color: var(--muted); }
@@ -100,6 +107,7 @@
 }
 .parallel-summary {
   display: flex;
+  flex-wrap: wrap;
   align-items: baseline;
   justify-content: space-between;
   gap: 12px;
@@ -110,7 +118,7 @@
 .parallel-summary::-webkit-details-marker { display: none; }
 .parallel-summary:hover { background: var(--paper-2); }
 .parallel-title { font-family: var(--font-serif); font-size: 17px; color: var(--ink); }
-.parallel-section { font-family: var(--font-mono); font-size: 12px; color: var(--muted); white-space: nowrap; }
+.parallel-section { font-family: var(--font-mono); font-size: 12px; color: var(--muted); }
 .parallel-body { padding: 0 18px 18px; }
 .parallel-notes { color: var(--ink-2); margin-bottom: 12px; }
 .parallel-columns {
@@ -168,7 +176,7 @@
   border: 1px solid var(--border);
   border-radius: var(--radius);
 }
-.timeline-event-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.timeline-event-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 12px; }
 .timeline-event-title { font-family: var(--font-serif); font-size: 16px; color: var(--ink); }
 .timeline-event-year { font-family: var(--font-mono); font-size: 12px; color: var(--gold-text); white-space: nowrap; }
 .timeline-event-desc { color: var(--ink-2); margin-top: 6px; line-height: 1.5; }
@@ -207,7 +215,7 @@
 .reading-text-back { display: inline-block; margin-top: 16px; color: var(--gold-text); font-size: 14px; }
 
 /* --- statistikk --- */
-.stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 14px; }
+.stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(7.5rem, 100%), 1fr)); gap: 14px; }
 .stat-card {
   text-align: center;
   padding: 18px;
@@ -244,7 +252,7 @@
 .stat-word-tab.active { background: var(--gold); border-color: var(--gold); color: var(--on-accent); }
 .stat-word-list {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(12.5rem, 100%), 1fr));
   gap: 4px 20px;
   list-style: decimal inside;
   padding: 0;

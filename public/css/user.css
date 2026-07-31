@@ -57,7 +57,7 @@ a.user-card:hover { border-color: var(--gold); }
 .user-card-text { font-family: var(--font-serif); color: var(--ink); margin: 6px 0 0; line-height: 1.6; }
 
 /* leseplan */
-.plan-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; }
+.plan-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(16.25rem, 100%), 1fr)); gap: 16px; }
 .plan-card {
   padding: 18px;
   background: var(--surface);

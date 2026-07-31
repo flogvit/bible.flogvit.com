@@ -209,8 +209,11 @@
 
 /* bøker — rammeløst typografisk rutenett. Én ramme per bok ga 66 bokser som
    druknet gruppeoverskriftene og gjorde forsiden dobbelt så lang (#37). */
+/* Segmentkontrollen BRYTER framfor å presse forsiden bred (#50): ved 150 %
+   tekst er «Chronological» alene bredere enn halve skjermen på 320 px. */
 .home-book-views {
   display: flex;
+  flex-wrap: wrap;
   gap: 2px;
   margin-left: auto;
   padding: 4px;
@@ -240,7 +243,7 @@
   margin-bottom: 10px;
   border-bottom: 1px solid var(--border);
 }
-.home-book-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 4px 16px; }
+.home-book-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(8.75rem, 100%), 1fr)); gap: 4px 16px; }
 .home-book {
   display: flex;
   flex-direction: column;
@@ -256,7 +259,7 @@
 .home-book.is-current .home-book-name { color: var(--gold-text); font-weight: 500; }
 
 /* utforsk */
-.home-discover-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
+.home-discover-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(13.75rem, 100%), 1fr)); gap: 12px; }
 .home-disc {
   display: block;
   padding: 16px 18px;

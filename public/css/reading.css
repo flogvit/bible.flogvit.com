@@ -1023,7 +1023,7 @@ html[data-font-size='large'] .verse-text {
 .ins-person-grid,
 .ins-heroes-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(13.75rem, 100%), 1fr));
   gap: 10px;
 }
 .ins-person-card,
@@ -1563,8 +1563,14 @@ a.ins-hero-name:hover {
   .chapter-toc {
     display: none;
   }
+  /* ÉN eier av sideinnrykket (#50). `.site-main` har allerede 20 px; la
+     `.chapter-content` legge på 18 px til, og lesekolonnen sto 38 px inn fra
+     hver kant — 76 av 390 px, altså en femtedel av skjermen, på nettopp den
+     sida der linjelengden betyr mest. Standarden er 16–20 px (Apple HIG 16 pt,
+     Material 3 16 dp for compact), og de 20 vi allerede har er innafor.
+     Det stakk seg opp fordi to containere hver eide sitt innrykk. */
   .chapter-content {
-    padding: 24px 18px 100px;
+    padding: 24px 0 100px;
   }
   .chapter-title {
     font-size: 32px;
@@ -1572,8 +1578,10 @@ a.ins-hero-name:hover {
   .chapter-rail {
     overflow-x: auto;
     flex-wrap: nowrap;
-    margin: 8px -18px 20px;
-    padding: 0 18px 4px;
+    /* Skinna blør ut til skjermkanten så den SER scrollbar ut, men brikkene
+       ligger på samme 20 px-linje som teksten. Tallene følger `.site-main`. */
+    margin: 8px -20px 20px;
+    padding: 0 20px 4px;
     scrollbar-width: none;
   }
   .chapter-rail::-webkit-scrollbar {

@@ -14,6 +14,37 @@
   display: none !important;
 }
 
+/* TEKSTFORSTØRRELSE (#50) — grid- og flex-barn har `min-width: auto`, altså
+   «aldri smalere enn innholdets min-content». Skrur leseren opp tekststørrelsen
+   i telefonens tilgjengelighetsinnstillinger, vokser min-content med teksten
+   mens sporet står stille i px — og sporet presses ut over skjermkanten. Det
+   skjedde selv der grid-en var kollapset helt riktig til én kolonne.
+   Null er riktig gulv. Komponenter som trenger et EKTE gulv setter det selv,
+   og da i `ch`/`em` eller bak `min()`, slik at gulvet følger teksten.
+   `<fieldset>` er tatt med her med vilje: den arver `min-width: min-content`
+   fra nettleserens EGEN standardstil, og gjorde /innstillinger 503 px bred på
+   en 390 px-skjerm uten at vi hadde skrevet en eneste regel.
+   Vakt: test/mobile-layout.test.ts. */
+*,
+*::before,
+*::after {
+  min-width: 0;
+}
+
+/* Et langt ord kan ikke krympes, bare BRYTES. En URL i brødteksten på /om
+   («github.com/flogvit/bible.flogvit.com») satte gulvet for hele siden ved
+   150 % tekst. Gjelder tekstbærende blokker, ikke chrome der en etikett skal
+   få stå i ett stykke. */
+p,
+li,
+dd,
+figcaption,
+blockquote,
+td,
+th {
+  overflow-wrap: break-word;
+}
+
 /* Skjermleser-tekst (global — brukes av lesesiden og editorene) */
 .sr-only {
   position: absolute;
@@ -343,6 +374,11 @@ a.fvmenu-item:hover { background: color-mix(in oklab, var(--ink) 6%, var(--surfa
   min-height: 3.25rem;
 }
 
+/* Kontroll-klyngen (konto-chip → tannhjul → hamburger) er ÉN flex-enhet, så
+   headeren bryter som en helhet framfor å slippe én knapp ned for seg selv
+   (#50). `margin-left: auto` holder den høyrestilt også på rad to. */
+.header-controls { display: flex; align-items: center; gap: 10px; margin-left: auto; }
+
 .cmdk-form { flex: 1; max-width: 440px; margin-left: auto; min-width: 0; display: flex; }
 .cmdk-trigger {
   flex: 1;
@@ -526,17 +562,34 @@ a.fvmenu-item:hover { background: color-mix(in oklab, var(--ink) 6%, var(--surfa
 .hamburger::after { bottom: -6px; }
 
 @media (max-width: 768px) {
-  .site-header-inner { padding: 8px 12px; gap: 6px; }
+  /* Chromen BRYTER framfor å presse siden bred (#50). Wordmark og konto-chip
+     er `nowrap` og `flex-shrink: 0` — helt riktig, en avkortet merkevare eller
+     et halvt kontonavn hjelper ingen — men da må rada få lov til å bli to når
+     teksten er stor. Ved 150 % på 320 px trenger de fire kontrollene 421 px,
+     og WCAG 1.4.10 sier nettopp at innhold skal FLYTE OM, ikke scrolles
+     sidelengs. */
+  .site-header-inner { padding: 8px 12px; gap: 6px; flex-wrap: wrap; }
+  .header-controls { gap: 6px; }
   .site-nav { display: none; }
   .cmdk-label, .cmdk-kbd { display: none; }
-  .cmdk-form { flex: 0; margin-left: auto; }
+  /* `flex: 0` ga skjemaet bredde NULL, mens søkeknappen inni beholdt sin egen
+     bredde og stakk ut til høyre for det. Det gikk upåaktet så lenge naboene
+     dyttet den innover; da kontrollene ble en egen klynge, sto den igjen ytterst
+     og hang 14 px utenfor skjermen. Skjemaet skal være så bredt som knappen. */
+  .cmdk-form { flex: 0 0 auto; margin-left: auto; }
   .mobile-menu { display: block; }
   .mobile-panel {
-    position: fixed;
-    top: 3.25rem;
+    /* Forankret til HEADEREN (som er sticky, altså posisjonert), ikke til
+       viewportet med en hardkodet `top: 3.25rem`. Den magiske verdien var
+       headerens høyde ved 100 % tekst — den stemmer ikke lenger i det øyeblikk
+       rada brytes, altså nøyaktig i tilfellet dette handler om. */
+    position: absolute;
+    top: 100%;
     left: 0;
     right: 0;
-    bottom: 0;
+    /* `dvh`, ikke `vh`: den gamle `bottom: 0` fulgte det FAKTISKE viewportet når
+       mobilnettleserens adresselinje gled inn og ut. `vh` gjør ikke det. */
+    max-height: calc(100dvh - 100%);
     background: var(--paper);
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;

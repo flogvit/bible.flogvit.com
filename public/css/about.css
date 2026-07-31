@@ -37,6 +37,10 @@
   box-shadow: var(--shadow-sm);
 }
 
+/* Tabellen scroller heller sidelengs enn å gjøre HELE siden bred (#50) —
+   samme mønster som .stat-table-wrap. */
+.about-verse-table-wrap { overflow-x: auto; }
+
 .about-verse-table {
   width: 100%;
   border-collapse: collapse;

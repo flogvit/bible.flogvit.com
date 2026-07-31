@@ -422,7 +422,7 @@ historikk) og holdes utenfor tidslinje/ferskhet framfor å gjettes inn.
   - Upåbegynte planer foreslås ikke: forslaget skal si «du er nesten i mål»,
     ikke gjengi katalogen — den står på `/leseplan`.
 
-## Testene — tre nivåer og hva hvert av dem faktisk fanger
+## Testene — fire nivåer og hva hvert av dem faktisk fanger
 
 Kjør `bun test` og `bun run typecheck` før du ruller ut. FLOGVITs eget deploy-skript
 gjør dette automatisk og avbryter ved rødt.
@@ -435,6 +435,14 @@ gjør dette automatisk og avbryter ved rødt.
 3. **Klient-øyene** — `islands.test.ts` (happy-dom). Dekker DOM-wiringen i
    `public/js/` som ellers bare kjører i nettleser. IntersectionObserver og plus-porten
    stubbes/lastes eksplisitt, så målingen kan drives deterministisk.
+4. **Layout i en EKTE nettleser** — `mobile-layout.test.ts`. De tre over kan ikke
+   se bredde: SSR-HTML har ingen layout, og happy-dom returnerer nuller fra
+   `getBoundingClientRect()`. Kjører hele `PAGES` i headless Chrome og krever at
+   ingen side er bredere enn skjermen. Krever Chrome installert (`CHROME_BIN`
+   overstyrer); den HOPPER IKKE stille over seg selv om den mangler.
+
+`PAGES` bor i `test/pages.ts` og deles av nivå 2 og 4 — én oppføring gir en ny
+side dekning under begge sveipene.
 
 **Velg sider etter KOMPONENT, ikke etter URL.** 1 Mos 1 har ingen personer, så
 studieblokka for personer rendres ikke der — en uprefikset lenke i den blokka slapp
@@ -442,7 +450,11 @@ gjennom kontrakten helt til mutasjonstesting avslørte det. Derfor ligger `/1mos
 (personer + profetier) og `/matt/1` (evangelieparalleller) også i matrisen.
 
 **Verifiser nye vakter ved å gjeninnføre feilen de skal fange.** En test som ikke blir
-rød av mutasjonen er verdiløs. Alle fire vaktene her er sjekket slik.
+rød av mutasjonen er verdiløs. Alle fire vaktene her er sjekket slik, og det
+gjelder også fiksene: da #50 ble rettet, ble hver enkelt CSS-endring satt
+tilbake for seg og vakta skulle bli rød. Én av dem ble det IKKE — en regel som
+skjulte det lukkede menypanelet — og den ble derfor fjernet framfor å bli
+stående som udokumentert pynt ingen test holder i live.
 
 **En DB-test må hente poolen PER KALL, aldri på modulnivå.** `const sql =
 getSql()` øverst i en testfil tar vare på instansen som fantes ved import;
@@ -453,6 +465,52 @@ med «Connection closed» — i to filer som ikke har med saken å gjøre. Bruk
 **Grense:** happy-dom lar seg ikke patche der `plus.js` overstyrer
 `localStorage.setItem`, så den stille skrivesperren for gratisbrukere må verifiseres i
 en ekte nettleser. Den brukersynlige porten (klikk registrerer ingenting) er dekket.
+
+## Ingen side skal være bredere enn skjermen (#50)
+
+Leseren skrur opp tekststørrelsen i TELEFONENS tilgjengelighetsinnstillinger
+(Android: «Tekstskalering», 133–150 %). Det er ikke sidezoom: sidezoom
+forstørrer alt proporsjonalt og går alltid bra, mens tekstskalering
+multipliserer BARE skriftstørrelsen. Bokser, `min-width`, `padding` og
+grid-spor står stille i px, og innholdet vokser ut av kassa. Ti av ti målte
+sider ble bredere enn skjermen, verst kapittelsiden med +26 %; `/innstillinger`
+var 503 px på en 390 px-skjerm allerede ved 100 %.
+
+- **`min-width: 0` på alt** (`styles.css`, helt øverst). Grid- og flex-barn har
+  `min-width: auto` — «aldri smalere enn min-content» — og det gulvet vokser med
+  teksten. Det er hovedmekanismen: den ene regelen tok lesesiden fra 493 til
+  404 px. `<fieldset>` er dekket av samme regel: den arver `min-width:
+  min-content` fra nettleserens EGEN standardstil, og det var hele forklaringen
+  på /innstillinger.
+- **Gulv i `rem`, aldri i px.** `minmax(min(7.5rem, 100%), 1fr)`, ikke
+  `minmax(120px, 1fr)`. `min(…, 100%)` hindrer at gulvet er bredere enn sporet;
+  `rem` gjør at gulvet FØLGER teksten, så rutenettet går til én kolonne når det
+  må. Alle tolv rutenettene i CSS-en er lagt om.
+- **`nowrap` bare på ATOMÆRE verdier** — et årstall, en dato. En kategori er en
+  frase: «The Resurrection and Exaltation of the Messiah» er 252 px alene, og da
+  hjelper ingen radbryting. Norsk skjulte dette; vakta kjører basespråket
+  engelsk og avslørte det.
+- **Rader med tittel + meta bryter** (`flex-wrap: wrap`), også chrome-headeren.
+  Wordmark og konto-chip SKAL være `nowrap` og `flex-shrink: 0` — en avkortet
+  merkevare hjelper ingen — så det er rada som må gi etter. WCAG 1.4.10 sier
+  nettopp at innhold skal flyte om framfor å scrolles sidelengs.
+- **Ingen magisk høyde.** Mobilpanelet lå på `position: fixed; top: 3.25rem`,
+  altså headerens høyde ved 100 % tekst. Det tallet er feil i samme øyeblikk
+  rada brytes — altså nøyaktig i tilfellet dette handler om. Panelet er nå
+  forankret til headeren med `position: absolute; top: 100%`.
+- **En tabell scroller SELV** framfor å gjøre siden bred: pakk den i en
+  `overflow-x: auto`-wrapper, slik `.stat-table-wrap` alltid har gjort.
+- **Lange ord brytes** (`overflow-wrap`) i brødtekst. En URL i en `<p>` på /om
+  satte gulvet for hele siden.
+
+**Vakta er `test/mobile-layout.test.ts`**, og den måler i ekte Chrome fordi
+bredde er en egenskap ved rendringen. Invarianten er én linje —
+`scrollWidth <= clientWidth` — sjekket for hver side i `PAGES` på 320 og 390 px,
+ved 100 % og 150 % tekst. 320 px dekker både iPhone SE og iOS' «Display Zoom»,
+som krymper det logiske viewportet i stedet for å skalere skrift.
+Feilmeldingen navngir det bredeste elementet OG lange tekstnoder, og hopper over
+alt som ligger i en egen scroll-boks — ellers peker vakta på det som skyves
+framfor på det som skyver.
 
 ## Lenker og lokale vakter
 
