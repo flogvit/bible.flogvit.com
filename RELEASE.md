@@ -3,6 +3,10 @@
 What actually reached readers, newest first. Dates, not version numbers — we
 deploy continuously.
 
+## 2026-07-31 — No visible changes this round; contribution staging is now a scripted, tested step
+
+**Behind the scenes**
+- Staging of contributed verse references now runs as a script with an explicit whitelist and its own tests, so what ends up on the site is reproducible rather than dependent on a command typed by hand.
 ## 2026-07-31 — Groundwork only: no visible changes this round
 
 **Behind the scenes**
