@@ -35,12 +35,14 @@ function ContribShell(props: {
   path: string;
   /** Teksten leseren kom fra, som et mellomledd i brødsmulene (#57). */
   origin?: Crumb;
+  /** Hold varianten ute av indeksen (#60). Se kallstedet. */
+  noindex?: boolean;
 }) {
   const crumbs: Crumb[] = [{ label: tCtx()('common.home'), href: '/' }];
   if (props.origin) crumbs.push(props.origin);
   crumbs.push({ label: props.crumb });
   return (
-    <Layout locale={props.locale} path={props.path}
+    <Layout locale={props.locale} path={props.path} noindex={props.noindex}
       title={`${props.title} — FLOGVIT.bible`}
       description={props.intro || props.heading}
       styles={['user.css', 'contrib.css']}
@@ -179,10 +181,19 @@ r.get('/bidra', (c) => {
   const from = originOf(c);
   const origin = originCrumb(from);
 
+  // `/bidra?vers=1mos-1-3` er ikke en ny side — det er /bidra åpnet fra et vers
+  // (#57). Med 31 167 vers og åtte språkprefikser er det 249 336 varianter av
+  // én adresse som allerede står i sitemapen, og de er alle uten verdi i et
+  // søkeresultat. Canonical peker query-løst av seg selv (Layout bruker
+  // `path`, som er uten query), men canonical er et hint — `noindex` er
+  // direktivet. Betingelsen er QUERYEN, ikke den enkelte parameteren: en ny
+  // måte å åpne siden på arver regelen uten at noen må huske den.
+  const noindex = Object.keys(c.req.query()).length > 0;
+
   if (!user) {
     return c.html(
       <ContribShell title={t('contrib.title')} crumb={t('contrib.title')} heading={t('contrib.heading')}
-        intro={t('contrib.intro')} page="contrib-form" locale={locale} path={path} origin={origin}>
+        intro={t('contrib.intro')} page="contrib-form" locale={locale} path={path} origin={origin} noindex={noindex}>
         <LoginCta t={t} locale={locale} />
       </ContribShell>,
     );
@@ -193,7 +204,7 @@ r.get('/bidra', (c) => {
 
   return c.html(
     <ContribShell title={t('contrib.title')} crumb={t('contrib.title')} heading={t('contrib.heading')}
-      intro={t('contrib.intro')} page="contrib-form" locale={locale} path={path} origin={origin}>
+      intro={t('contrib.intro')} page="contrib-form" locale={locale} path={path} origin={origin} noindex={noindex}>
       <form
         data-contrib-form
         data-msg-sent={t('contrib.sent')}

@@ -387,8 +387,11 @@ r.get('/manuskripter', async (c) => {
 // Editor (ny + rediger) — CodeMirror erstattet av textarea + markdown-preview i user.js.
 function DevotionalEditor(props: { slug?: string; locale: Locale; path: string }) {
   const t = makeT(props.locale);
+  // `noindex`: editoren er en TOM skriveflate bak innlogging — aldri svaret på
+  // et søk — og `/manuskripter/ny?vers=…` er dessuten én adresse per vers
+  // (#60). Ingen av dem har noe i en indeks å gjøre.
   return (
-    <Layout locale={props.locale} path={props.path} title={`${t('u.editManuscript')} — FLOGVIT.bible`} description={t('u.manuscriptMeta')} styles={['user.css']} scripts={['user.js']}>
+    <Layout locale={props.locale} path={props.path} noindex title={`${t('u.editManuscript')} — FLOGVIT.bible`} description={t('u.manuscriptMeta')} styles={['user.css']} scripts={['user.js']}>
       <div class="user-main">
         <div class="container">
           <Breadcrumbs items={[{ label: tCtx()('common.home'), href: '/' }, { label: tCtx()('nav.manuscripts'), href: '/manuskripter' }, { label: props.slug ? t('common.edit') : t('common.new') }]} />
