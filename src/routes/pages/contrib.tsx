@@ -11,10 +11,12 @@ import { Hono } from 'hono';
 import type { Context } from 'hono';
 import type { AppEnv } from '../../lib/session.ts';
 import { Layout } from '../../views/layout.tsx';
-import { Breadcrumbs } from '../../views/breadcrumbs.tsx';
+import { Breadcrumbs, type Crumb } from '../../views/breadcrumbs.tsx';
 import type { Child } from 'hono/jsx';
 import { layoutProps, tFor, href, type Locale, type Translator } from '../../lib/i18n.ts';
-import { getBookInfoBySlug } from '../../lib/books-data.ts';
+import { bookAbbr, bookName, getBookInfoBySlug, type BookInfo } from '../../lib/books-data.ts';
+import { getChapterVerseCount } from '../../lib/verse-counts.ts';
+import { toUrlSlug } from '../../lib/url-utils.ts';
 import { MAPPING_META, resolveMappingId } from '../../lib/verse-mapper.ts';
 import { listSubmissionsForUser, type ContribRow } from '../../lib/contrib.ts';
 import { tCtx } from '../../lib/i18n.ts';
@@ -31,7 +33,12 @@ function ContribShell(props: {
   children?: Child;
   locale: Locale;
   path: string;
+  /** Teksten leseren kom fra, som et mellomledd i brødsmulene (#57). */
+  origin?: Crumb;
 }) {
+  const crumbs: Crumb[] = [{ label: tCtx()('common.home'), href: '/' }];
+  if (props.origin) crumbs.push(props.origin);
+  crumbs.push({ label: props.crumb });
   return (
     <Layout locale={props.locale} path={props.path}
       title={`${props.title} — FLOGVIT.bible`}
@@ -41,7 +48,7 @@ function ContribShell(props: {
     >
       <div class="user-main">
         <div class="reading-container">
-          <Breadcrumbs items={[{ label: tCtx()('common.home'), href: '/' }, { label: props.crumb }]} />
+          <Breadcrumbs items={crumbs} />
           <h1>{props.heading}</h1>
           {props.intro && <p class="user-intro">{props.intro}</p>}
           <div data-user-page={props.page}>{props.children}</div>
@@ -90,58 +97,103 @@ function RefRow({ t, raw, kind }: { t: Translator; raw?: string; kind?: string }
   );
 }
 
-/** Prefill fra ?vers=slug-kap-vers / ?kap=slug-kap / ?bok=slug. */
-function prefillRef(c: Context<AppEnv>): { raw?: string; kind?: string } {
+/**
+ * Stedet siden ble åpnet fra: ?vers=slug-kap-vers, ?kap=slug-kap, ?bok=slug.
+ * Slugen kan selv inneholde bindestrek, så tallene telles fra HØYRE.
+ */
+interface Origin {
+  book: BookInfo;
+  chapter?: number;
+  verse?: number;
+}
+
+function parseOrigin(value: string, numbers: number): Origin | undefined {
+  const segments = value.split('-');
+  if (segments.length < numbers + 1) return undefined;
+  const book = getBookInfoBySlug(segments.slice(0, segments.length - numbers).join('-'));
+  if (!book) return undefined;
+  const tail = segments.slice(segments.length - numbers);
+  if (!tail.every((n) => /^\d+$/.test(n) && Number(n) >= 1)) return undefined;
+  return { book, chapter: Number(tail[0]), verse: numbers > 1 ? Number(tail[1]) : undefined };
+}
+
+function originOf(c: Context<AppEnv>): Origin | undefined {
   const vers = c.req.query('vers');
   const kap = c.req.query('kap');
   const bok = c.req.query('bok');
-  const parse = (value: string, parts: number): string | undefined => {
-    const segments = value.split('-');
-    if (segments.length < parts) return undefined;
-    const slug = segments.slice(0, segments.length - (parts - 1)).join('-');
-    const book = getBookInfoBySlug(slug);
-    if (!book) return undefined;
-    const numbers = segments.slice(-(parts - 1)).map((n) => parseInt(n, 10));
-    if (numbers.some((n) => !Number.isInteger(n) || n < 1)) return undefined;
-    if (parts === 3) return `${book.short_name} ${numbers[0]},${numbers[1]}`;
-    if (parts === 2) return `${book.short_name} ${numbers[0]}`;
-    return book.short_name;
-  };
   if (vers) {
-    const raw = parse(vers, 3);
-    if (raw) return { raw };
+    const origin = parseOrigin(vers, 2);
+    if (origin) return origin;
   }
   if (kap) {
-    const raw = parse(kap, 2);
-    if (raw) return { raw };
+    const origin = parseOrigin(kap, 1);
+    if (origin) return origin;
   }
   if (bok) {
     const book = getBookInfoBySlug(bok);
-    if (book) return { raw: book.short_name, kind: 'covers_passage' };
+    if (book) return { book };
   }
-  return {};
+  return undefined;
+}
+
+/** Prefill av referansefeltet. `short_name` er NØKKELEN parserne slår opp på. */
+function prefillRef(origin: Origin | undefined): { raw?: string; kind?: string } {
+  if (!origin) return {};
+  const { book, chapter, verse } = origin;
+  if (chapter === undefined) return { raw: book.short_name, kind: 'covers_passage' };
+  if (verse === undefined) return { raw: `${book.short_name} ${chapter}` };
+  return { raw: `${book.short_name} ${chapter},${verse}` };
+}
+
+/**
+ * Veien TILBAKE til teksten, som et brødsmuleledd (#57). Uten den er /bidra en
+ * blindvei: eneste vei ut av siden er forsiden, og leseren mister plassen sin.
+ *
+ * Parameteren kommer utenfra, så leddet rendres bare når adressen finnes
+ * (#46-regelen): et kapittel forbi bokas antall gir INGEN lenke framfor en død
+ * en, og et vers forbi kapittelslutten faller tilbake til kapittelet — siden
+ * finnes, det er bare ankeret som ikke gjør det.
+ *
+ * Prefillen over er med vilje ikke like streng: en referanse slik den står i et
+ * verk kan følge en annen versifisering, og den skal reviewen få se.
+ */
+function originCrumb(origin: Origin | undefined): Crumb | undefined {
+  if (!origin) return undefined;
+  const { book, chapter } = origin;
+  const slug = toUrlSlug(book.short_name);
+  if (chapter === undefined) return { label: bookName(book), href: `/${slug}/1` };
+  if (chapter > book.chapters) return undefined;
+  const verse = origin.verse !== undefined && origin.verse <= getChapterVerseCount(book.id, chapter)
+    ? origin.verse
+    : undefined;
+  if (verse === undefined) return { label: `${bookAbbr(book)} ${chapter}`, href: `/${slug}/${chapter}` };
+  return { label: `${bookAbbr(book)} ${chapter}:${verse}`, href: `/${slug}/${chapter}#v${verse}` };
 }
 
 r.get('/bidra', (c) => {
   const t = tFor(c);
   const { locale, path } = layoutProps(c);
   const user = c.var.user;
+  // Veien tilbake gjelder også den som ikke er logget inn — hun møter en
+  // login-vegg i tillegg til blindveien.
+  const from = originOf(c);
+  const origin = originCrumb(from);
 
   if (!user) {
     return c.html(
       <ContribShell title={t('contrib.title')} crumb={t('contrib.title')} heading={t('contrib.heading')}
-        intro={t('contrib.intro')} page="contrib-form" locale={locale} path={path}>
+        intro={t('contrib.intro')} page="contrib-form" locale={locale} path={path} origin={origin}>
         <LoginCta t={t} locale={locale} />
       </ContribShell>,
     );
   }
 
-  const prefill = prefillRef(c);
+  const prefill = prefillRef(from);
   const requestedContext = resolveMappingId(c.req.query('bible') ?? '') ?? 'osnb';
 
   return c.html(
     <ContribShell title={t('contrib.title')} crumb={t('contrib.title')} heading={t('contrib.heading')}
-      intro={t('contrib.intro')} page="contrib-form" locale={locale} path={path}>
+      intro={t('contrib.intro')} page="contrib-form" locale={locale} path={path} origin={origin}>
       <form
         data-contrib-form
         data-msg-sent={t('contrib.sent')}
