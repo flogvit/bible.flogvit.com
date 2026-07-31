@@ -649,6 +649,45 @@ a.fvmenu-item:hover { background: color-mix(in oklab, var(--ink) 6%, var(--surfa
   padding: 32px 20px 64px;
 }
 
+/* ÉN eier av TOPPINNRYKKET på mobil (#55) — samme oppgjør som #52 gjorde med
+   sideinnrykket, bare på den loddrette aksen. `.site-main` la 32 px på toppen,
+   og HVER sidecontainer la på sine egne 48 uten å vite om den. Sum: 80 px,
+   altså 9,5 % av en 390 px-skjerm brukt på ingenting før leseren i det hele
+   tatt hadde sett brødsmulestien — og brødsmulen er navigasjon, ikke innhold.
+   Sidetypene sprikte dessuten fra 62 til 80 px uten grunn.
+
+   Desktop røres ikke: der er de 78–80 px en bevisst luftig innledning, og et
+   1280 px vindu har råd til den.
+
+   Selektorene er kvalifisert med `.site-main` med vilje. Sidenes egne stilark
+   lastes ETTER denne fila (`layout.tsx`), så en uspesifisert `.user-main` ville
+   tapt på rekkefølge — og da hadde regelen sett riktig ut uten å virke.
+   Lista er ikke vakta: `mobile-layout.test.ts` måler hver side i `PAGES` og
+   feiler på enhver wrapper uten egen flate som legger på toppinnrykk her. En ny
+   sidecontainer blir altså tatt selv om ingen husker å føre den opp. */
+@media (max-width: 768px) {
+  .site-main .home-wrap,
+  .site-main .overview-main,
+  .site-main .study-main,
+  .site-main .persons-main,
+  .site-main .person-main,
+  .site-main .user-main,
+  .site-main .about-main,
+  .site-main .search-main,
+  .site-main .text-page,
+  .site-main .chapter-content,
+  .site-main .notfound-page {
+    padding-top: 0;
+  }
+}
+
+/* 404-sida — luftig og midtstilt tomtilstand. Sto som en inline `style` og var
+   dermed usynlig for regelen over (og uslåelig av den). */
+.notfound-page {
+  padding: 4rem 1rem;
+  text-align: center;
+}
+
 .site-footer { border-top: 1px solid var(--line); margin-top: 64px; }
 .site-footer-inner {
   max-width: var(--maxw);

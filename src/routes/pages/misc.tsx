@@ -418,7 +418,7 @@ export function NotFoundPage({ locale, path }: { locale: Locale; path: string })
   const t = makeT(locale);
   return (
     <Layout locale={locale} path={path} title={`${t('error.notFound')} — FLOGVIT.bible`}>
-      <div class="reading-container" style="text-align: center; padding: 4rem 1rem;">
+      <div class="reading-container notfound-page">
         <h1>404 – {t('error.notFound')}</h1>
         <p>{t('error.notFoundBody')}</p>
         <a href={lhref('/')}>{t('error.goHome')}</a>

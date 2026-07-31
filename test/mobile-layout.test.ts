@@ -1,8 +1,9 @@
-// MOBIL-LAYOUT I EN EKTE NETTLESER — to kontrakter som begge handler om hva
+// MOBIL-LAYOUT I EN EKTE NETTLESER — kontrakter som alle handler om hva
 // telefonen faktisk viser, og som ingen av de andre testnivåene kan se.
 //
 //   1. Ingen side er bredere enn skjermen (#50), heller ikke med stor tekst.
 //   2. Chromen på mobil viser bare kontroller som betyr noe der (#51).
+//   3. Ingen side kaster bort toppen av skjermen på tomt rom (#55).
 //
 // Bakgrunn (#50): med tekstforstørrelse fra telefonens TILGJENGELIGHETS-
 // innstillinger (Android: «Tekstskalering», 133–150 %) ble ti av ti målte sider
@@ -223,6 +224,128 @@ describe('mobil-chrome: bare kontroller som betyr noe (#51)', () => {
  * uten lesbar tekst må ha en trykkflate på linje med de andre og et navn en
  * skjermleser kan lese opp.
  */
+/**
+ * #55: mellom headeren og brødsmulestien lå det 80 px tomt på en 390 px-skjerm
+ * — 9,5 % av skjermhøyden brukt på ingenting, før leseren i det hele tatt hadde
+ * sett en NAVIGASJONS-rad. Årsaken var den samme som i #52, bare på loddrett
+ * akse: `.site-main` eide 32 px toppinnrykk, og hver sidecontainer
+ * (`.overview-main`, `.user-main`, …) la på sine egne 48 px uten å vite om det.
+ *
+ * Vakta har derfor to halvdeler, og de fanger hver sin ting:
+ *
+ *   AVSTANDEN — det brukeren ser. Header-bunn til brødsmule under 40 px på
+ *   mobil, og LIKT på alle sidetyper (i dag spriker de ikke). Desktop skal
+ *   fortsatt ha sin luftige innledning, ellers ville «fjern padding overalt»
+ *   bestått.
+ *
+ *   EIERSKAPET — det som gjør at neste container ikke kan legge på sitt eget i
+ *   stillhet. En wrapper UTEN egen flate (ingen bakgrunn, ramme eller skygge)
+ *   er ren layout og skal ikke eie toppinnrykk på mobil; et KORT har sin egen
+ *   innvendige luft og stopper gjennomgangen. Invarianten er dermed uavhengig
+ *   av hvilke klassenavn som finnes, så en helt ny sidecontainer blir målt uten
+ *   at noen har ført den opp.
+ */
+describe('mobil-layout: ett toppinnrykk mellom header og innhold (#55)', () => {
+  /** Under dette er «rett under headeren». `.site-main` eier 32 px selv. */
+  const MOBILE_MAX = 40;
+  /** Desktop skal beholde sin luft — 64–80 px i dag. */
+  const DESKTOP_MIN = 60;
+  /** Kapittelsidas brødsmule står midtstilt i en rad med knapper: +6 px. */
+  const SPREAD = 8;
+
+  const gaps = new Map<string, number>();
+
+  /** Avstand fra header-bunn til brødsmulestien, eller null om sida ikke har en. */
+  function crumbGap() {
+    const header = document.querySelector('.site-header');
+    const crumb = document.querySelector('.site-main .breadcrumbs');
+    if (!header || !crumb) return null;
+    return Math.round(crumb.getBoundingClientRect().top - header.getBoundingClientRect().bottom);
+  }
+
+  /**
+   * Går ned den FØRSTE synlige barnekjeden fra `.site-main` og rapporterer hver
+   * ren layout-wrapper som legger på toppinnrykk selv. Stopper ved første
+   * element som har en synlig flate (et kort eier sin egen innvendige luft) og
+   * ved første element som selv bærer tekst.
+   */
+  function topPadders() {
+    const main = document.querySelector('.site-main');
+    const out: { selector: string; paddingTop: string; marginTop: string }[] = [];
+    if (!main) return out;
+
+    const label = (el: Element) => {
+      const cls = typeof el.className === 'string' ? el.className.trim().split(/\s+/).filter(Boolean) : [];
+      return el.tagName.toLowerCase() + cls.slice(0, 2).map((c) => `.${c}`).join('');
+    };
+    const firstVisibleChild = (el: Element) => {
+      for (const kid of el.children) {
+        const r = kid.getBoundingClientRect();
+        // `.sr-only` er 1 px og `clip`-et — skjermlesertekst er ikke det som
+        // skyver innholdet nedover.
+        if (r.width < 2 || r.height < 2 || !(kid as HTMLElement).checkVisibility()) continue;
+        return kid;
+      }
+      return null;
+    };
+    const hasOwnText = (el: Element) =>
+      Array.from(el.childNodes).some((n) => n.nodeType === 3 && n.nodeValue?.trim());
+
+    for (let node = firstVisibleChild(main), depth = 0; node && depth < 12; depth++) {
+      const cs = getComputedStyle(node);
+      // Et KORT — ramme, hjørneradius eller skygge — eier sin egen innvendige
+      // luft, og der stopper gjennomgangen. En bar `background` teller IKKE:
+      // `.chapter-page` maler bare sidebakgrunnen og er ellers ren layout, og
+      // det var nettopp under den kapittelsidas 24 px lå.
+      const card = parseFloat(cs.borderTopWidth) > 0 || parseFloat(cs.borderTopLeftRadius) > 0 || cs.boxShadow !== 'none';
+      if (card) break;
+      if (parseFloat(cs.paddingTop) > 0 || parseFloat(cs.marginTop) > 0) {
+        out.push({ selector: label(node), paddingTop: cs.paddingTop, marginTop: cs.marginTop });
+      }
+      if (hasOwnText(node)) break;
+      node = firstVisibleChild(node);
+    }
+    return out;
+  }
+
+  for (const p of PAGES) {
+    test(
+      `${p.path} — ${p.name}`,
+      async () => {
+        const [path, query] = p.path.split('?');
+        const url = `http://localhost:${server.port}${href(DEFAULT_LOCALE, path!)}${query ? `?${query}` : ''}`;
+        await page.navigate(url);
+
+        await page.setViewport({ width: 390, height: 844 });
+        const padders = await page.evaluate(topPadders);
+        expect([
+          p.path,
+          padders.map((o) => `${o.selector} (padding-top: ${o.paddingTop}, margin-top: ${o.marginTop})`),
+        ]).toEqual([p.path, []]);
+
+        const gap = await page.evaluate(crumbGap);
+        if (gap === null) return; // sider uten brødsmule (forsiden, 404) — eierskapet er sjekket over
+        gaps.set(p.path, gap);
+        expect([p.path, gap <= MOBILE_MAX]).toEqual([p.path, true]);
+
+        // Desktop har råd til luften, og skal ikke miste den av denne fiksen.
+        await page.setViewport({ width: 1280, height: 900 });
+        const wide = await page.evaluate(crumbGap);
+        expect([p.path, (wide ?? 0) >= DESKTOP_MIN]).toEqual([p.path, true]);
+      },
+      60_000,
+    );
+  }
+
+  test('alle sidetyper starter på samme sted', () => {
+    expect(gaps.size).toBeGreaterThan(PAGES.length / 2);
+    const målte = [...gaps.values()];
+    const spredning = Math.max(...målte) - Math.min(...målte);
+    const verste = [...gaps.entries()].sort((a, b) => b[1] - a[1]).slice(0, 4);
+    expect([verste, spredning <= SPREAD]).toEqual([verste, true]);
+  });
+});
+
 describe('mobil-chrome: ikonknapper i headeren (#54)', () => {
   test('alt uten synlig tekst er minst 36×36 og har et tilgjengelig navn', async () => {
     await page.navigate(`http://localhost:${server.port}${href(DEFAULT_LOCALE, '/1mos/1')}`);

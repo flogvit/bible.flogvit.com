@@ -565,6 +565,40 @@ Feilmeldingen navngir det bredeste elementet OG lange tekstnoder, og hopper over
 alt som ligger i en egen scroll-boks — ellers peker vakta på det som skyves
 framfor på det som skyver.
 
+### Toppen av skjermen har ÉN eier på mobil (#55)
+
+Samme dobbelteierskap som sideinnrykket, på den loddrette aksen: `.site-main`
+la 32 px på toppen, og hver sidecontainer (`.overview-main`, `.user-main`,
+`.about-main`, `.search-main`, `.study-main`, `.persons-main`) la på sine egne
+48 px uten å vite om den. **80 px — 9,5 % av en 390 px-skjerm — brukt på
+ingenting før leseren hadde sett brødsmulestien**, og brødsmulen er navigasjon,
+ikke innhold. Sidetypene sprikte dessuten fra 62 (kapittelsida) til 80 px uten
+grunn. Verdiene er skrevet for et 1280 px vindu, der de er en bevisst luftig
+innledning.
+
+- **Under 768 px er toppinnrykket `.site-main` sitt**, og sidecontainerne
+  nulles i ÉN blokk i `styles.css`. Desktop røres ikke.
+- **Selektorene er kvalifisert med `.site-main`.** Sidenes egne stilark lastes
+  ETTER `styles.css`, så en uspesifisert `.user-main` taper på rekkefølge — og
+  da ser regelen riktig ut uten å virke.
+- **En wrapper uten egen flate eier ikke luft.** Et KORT (ramme, radius,
+  skygge) har sin egen innvendige padding og er unntaket; `.chapter-page` maler
+  bare sidebakgrunnen og er ren layout.
+- Inline `style` slår enhver regel: 404-sidas `padding: 4rem` lå der og var
+  dermed både usynlig for regelen og uslåelig av den. Den er nå `.notfound-page`.
+- Lesemodus beholder sine 80 px (`.chapter-page.reading-mode`) med vilje —
+  det er en modus leseren VELGER, og luften er poenget med den.
+
+**Vakta ligger i `mobile-layout.test.ts` og har to halvdeler.** AVSTANDEN:
+header-bunn til brødsmule er under 40 px på 390 px og lik på alle sidetyper
+(32 px, 38 på kapittelsida der brødsmulen står midtstilt i en rad med knapper),
+og minst 60 px på 1280 px — ellers ville «fjern padding overalt» bestått.
+EIERSKAPET: den går ned den første synlige barnekjeden fra `.site-main` og
+feiler på enhver wrapper uten egen flate som legger på `padding-top`/`margin-top`.
+Den halvdelen kjenner ingen klassenavn, så en HELT ny sidecontainer blir målt
+uten at noen har ført den opp — og den dekker også sider uten brødsmule
+(forsiden, 404), der avstandsmålet ikke har noe å måle mot.
+
 ## Lenker og lokale vakter
 
 **Alle interne lenker skal bruke `lhref(path)`** (`lib/i18n.ts`), aldri `href="/…"` rått.
