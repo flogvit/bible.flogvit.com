@@ -27,10 +27,53 @@ const xmlEsc = (s: string) =>
 let cachedPaths: string[] | null = null;
 const paths = () => (cachedPaths ??= [...new Set(sitemapPaths())]);
 
+/**
+ * Query-parametere som gjør en URL til en HANDLING eller en VISNINGSVARIANT —
+ * aldri til en ny side (#60).
+ *
+ * `vers`/`kap`/`bok`/`ref` åpner `/bidra` og `/manuskripter/ny` med stedet
+ * leseren kom fra. Med 31 167 vers, to lenkefamilier og åtte språkprefikser var
+ * det 498 672 crawlbare adresser mot 1 189 kapittelsider — en flate ~420 ganger
+ * større enn innholdet, der ingen av adressene ER innhold. Hver er dessuten
+ * unik, altså cache-miss, altså en render-plass i semaforen: 12 × 503 på én
+ * time, og 6,7 s til Googlebot på en vanlig kapittelside.
+ *
+ * `bible`/`secondary`/`mapping`/`visning` er visningsvalg (kapittelsiden, /dager). Skinne­
+ * bryterne lenker kapittelet til seg selv med et annet valg, og prev/neste
+ * bærer valget videre — altså hele Bibelen på nytt per kombinasjon, i den DYRE
+ * renderen. Canonical peker query-løst uansett, så ingen av dem har noe i en
+ * indeks å gjøre.
+ *
+ * `rel="nofollow"` på lenkene stopper OPPDAGELSE; dette stopper HENTING av det
+ * en crawler allerede kjenner. GPTBot hadde et halvt million adresser fra før,
+ * og de forsvinner ikke av at vi merker lenkene i dag.
+ *
+ * IKKE med: `q` (søk). Søkeresultatsiden skal ut av indeksen, og der er
+ * `noindex` direktivet (#41) — et robots-forbud ville hindret crawleren i å SE
+ * det. Lenkene dit er `nofollow`, så nye søke-URL-er oppdages ikke uansett.
+ */
+const CRAWL_BLOCKED_PARAMS = ['vers', 'kap', 'bok', 'ref', 'bible', 'secondary', 'mapping', 'visning'] as const;
+
+// Mønsteret matcher sti + query, og `/*?<param>=` treffer derfor alle åtte
+// språkprefiksene i én linje. RFC 9309 §2.2: lengste treff vinner, så disse
+// slår `Allow: /` (lengde 1).
+//
+// Merk hva som IKKE står her: `Disallow: /bidra`. Den ville vært den nærliggende
+// fiksen og er gal — /bidra står i sitemapen (STATIC_PATHS) på alle åtte språk,
+// og en sitemap full av adresser vår egen robots.txt forbyr tar siden ut av
+// indeksen uten at noen ville det. Det er QUERYEN som er flata, ikke stien.
+const ROBOTS = [
+  'User-agent: *',
+  'Allow: /',
+  ...CRAWL_BLOCKED_PARAMS.map((p) => `Disallow: /*?${p}=`),
+  ...CRAWL_BLOCKED_PARAMS.map((p) => `Disallow: /*&${p}=`),
+  '',
+  `Sitemap: ${SITE}/sitemap.xml`,
+  '',
+].join('\n');
+
 seoRoutes.get('/robots.txt', (c) =>
-  c.body(`User-agent: *\nAllow: /\n\nSitemap: ${SITE}/sitemap.xml\n`, 200, {
-    'content-type': 'text/plain; charset=utf-8',
-  }),
+  c.body(ROBOTS, 200, { 'content-type': 'text/plain; charset=utf-8' }),
 );
 
 seoRoutes.get('/sitemap.xml', (c) =>
