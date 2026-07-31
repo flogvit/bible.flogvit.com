@@ -4,10 +4,11 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "bun --watch src/index.ts",
+    "oppsett": "bun scripts/stage-kvn.ts && bun install",
+    "dev": "bun scripts/ensure-kvn.ts && bun --watch src/index.ts",
     "start": "bun src/index.ts",
-    "test": "bun test",
-    "typecheck": "tsc --noEmit"
+    "test": "bun scripts/ensure-kvn.ts && bun test",
+    "typecheck": "bun scripts/ensure-kvn.ts && tsc --noEmit"
   },
   "dependencies": {
     "@free-bible/kvn": "file:kvn-package",

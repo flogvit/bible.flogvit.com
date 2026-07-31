@@ -21,13 +21,66 @@ Hele sekvensen (rekkefølge, tagging, hva som skjer ved feilet deploy) står und
 «deploy <navn>» i driftsrepoets README.
 
 ## Oppsett
-- `bun install` — eneste runtime-dependency er `hono` + lokal `@free-bible/kvn`.
-- `kvn-package/` er gitignort og stages fra `../free-bible/kvn/` før bygg.
-- `.env` (gitignort): `DB_PORT=3312` for lokal DBngin-MySQL (root, tomt passord, db `flogvit_bibel`).
+- **`bun run oppsett`** — fersk klone eller nytt arbeidstre. Stager kvn-pakken og
+  kjører `bun install`. `bun install` ALENE er ikke nok, se neste avsnitt.
+- Eneste runtime-dependency er `hono` + lokal `@free-bible/kvn`.
+- `.env` (gitignort): `DB_PORT=3326` for lokal DBngin-MySQL (instansen «generic»,
+  som ALLE produkter deler siden 2026-07-30 — se `flogvit.com/lokal-db.sh`).
+  Uten `.env` faller testene tilbake til 3306 og 33 DB-tester feiler på «Access
+  denied»; et ferskt arbeidstre trenger derfor en `.env` (den er gitignort og
+  følger ikke med).
 - Prod-DB: managed MySQL (db-flogvit) via `DB_HOST`/`DB_PORT`/`DB_USER`/`DB_PASSWORD`/`DB_NAME`.
+
+### kvn-package/ er en VENDRET kopi — hvitlista eier hva som er i den (#62)
+
+`@free-bible/kvn` er en `file:`-avhengighet. Katalogen er gitignort (`mappings/`
+alene er 109 MB) og må fylles fra `../free-bible/kvn` før `bun install`.
+
+**Det sto som en setning her før — «stages fra `../free-bible/kvn/`» — og det er
+for lite til å handle på.** En agent i et ferskt arbeidstre leste den som
+«kopier hele kvn-repoet» og fikk med `tests/`, `data/`, `scripts/`, `research/`
+og `node_modules/`. `bun test` fra bibel-roten går inn i `kvn-package/` og kjørte
+da free-bibles 17 egne testfiler, som leser et råkorpus
+(`kvn/../../generate/bibles_raw/osnb`) som ikke finnes her og aldri skal finnes
+her. Ingen så det hjemme, for der er katalogen riktig staget:
+
+```
+bibel/       bun run test  ->     568 tester,  0 fail, 31 filer
+arbeidstre/  bun run test  ->  360 859 tester, 36 fail, 48 filer
+```
+
+36 røde tester ingen kunne fikse fra bibel. **Smia bygde hver sak ferdig,
+forkastet den med «RØDT», og gjorde den om igjen neste runde** — i repoet med
+flest issues i køen.
+
+- **`scripts/kvn-staging.ts` eier hvitlista**: `src`, `mappings`, `package.json`,
+  `tsconfig.json`. En HVITLISTE, ikke en svarteliste — en ny katalog i free-bible
+  blir holdt ute gratis, mens en svarteliste måtte utvides hver gang.
+- **`bun run oppsett`** = `stage-kvn.ts` + `bun install`. Stagingen **river** alt
+  som ikke står i hvitlista, så en tidligere full kopi ryddes framfor å bli
+  liggende ved siden av den nye — og den sier høyt hva den fjernet.
+- **`test`, `typecheck` og `dev` kjører `ensure-kvn.ts` først.** Det er ikke
+  pynt: `bun install` klarer ikke å bootstrappe en `file:`-avhengighet som ikke
+  ligger der ennå, og **avslutter med 0** mens den sier «Failed to install 1
+  package». `preinstall` redder det ikke — bun resolver `file:`-stier før
+  livssyklusskriptene — og bun KOPIERER pakka inn i `node_modules` (109 MB, ikke
+  symlink), så det holder ikke å fylle katalogen etterpå. `ensure-kvn` sjekker
+  både at pakka er installert OG at inventaret er rent, og reparerer begge.
+- **Ikke legg stagingen i `preinstall`.** Dockerfilen kjører `bun install` før
+  `COPY scripts ./scripts`, i et lag der free-bible uansett ikke finnes.
+- **Vakta er `test/kvn-staging.test.ts`**, og den er strukturell: inventaret må
+  være nøyaktig hvitlista, og ingen `*.test.ts` får ligge der `bun test` går inn.
+  Mutasjonstestet ved å kopiere inn `tests/` og `data/` på nytt.
+- Deployen (`server/deploy-bibel-hono.sh`) kaller samme skript framfor å ha sin
+  egen kopiliste. Gamle `.no`-appen (branch `bibel-no`) har fortsatt sine egne
+  `cp`-linjer — den branchen har ikke skriptet.
+- Porten på orkester-siden er `flogvit-com#40`: smias `finnTestporter` regnet
+  `kvn-package/` som en komponent i bibel og krevde free-bibles suite grønn. En
+  vendret `file:`-avhengighet er ikke en komponent, og telles ikke lenger.
 
 ## Kommandoer
 ```bash
+bun run oppsett        # fersk klone/arbeidstre: stager kvn + bun install
 bun run dev            # utviklingsserver (--watch)
 bun test               # tester
 bun run typecheck      # tsc --noEmit
