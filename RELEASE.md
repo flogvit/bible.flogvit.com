@@ -3,6 +3,11 @@
 What actually reached readers, newest first. Dates, not version numbers — we
 deploy continuously.
 
+## 2026-07-31 — Groundwork only: no visible changes this round
+
+**Behind the scenes**
+
+- Reviewed verse references are now moved into the Bible data by a script with an explicit allowlist and its own tests, rather than by a hand-written database statement. Nothing changes on the site — it just makes the next content update harder to get wrong, and documents how it is run.
 ## 2026-07-30 — Sixty-six people can be found again, and Luke gets its cross-references
 
 **Bug fixes**
