@@ -214,3 +214,44 @@ describe('mobil-chrome: bare kontroller som betyr noe (#51)', () => {
     expect(new Set(columns).size).toBe(3);
   }, 60_000);
 });
+
+/**
+ * #54: en kontroll uten synlig tekst må i det minste SE ut som en kontroll.
+ * Søketriggeren var en 40×30 ramme rundt et 14 px ikon, klemt mellom to 36×36
+ * ikonknapper — den leste som en tom boks framfor en knapp. Vakta er
+ * strukturell: den vet ikke hvilke knapper som finnes, bare at alt i headeren
+ * uten lesbar tekst må ha en trykkflate på linje med de andre og et navn en
+ * skjermleser kan lese opp.
+ */
+describe('mobil-chrome: ikonknapper i headeren (#54)', () => {
+  test('alt uten synlig tekst er minst 36×36 og har et tilgjengelig navn', async () => {
+    await page.navigate(`http://localhost:${server.port}${href(DEFAULT_LOCALE, '/1mos/1')}`);
+    await page.setViewport({ width: 390, height: 844 });
+
+    const bad = await page.evaluate(() => {
+      const header = document.querySelector('.site-header-inner')!;
+      const out: { selector: string; box: string; navn: string }[] = [];
+      for (const el of header.querySelectorAll('a, button, summary')) {
+        const r = el.getBoundingClientRect();
+        if (!r.width || !r.height) continue;
+        // Innholdet i et LUKKET <details> (produktmenyen, mobilmenyen) har
+        // fortsatt en boks, men rendres ikke — og `innerText` er tom for det.
+        // Uten denne linja leses hver skjulte menylenke som en navnløs
+        // ikonknapp, og vakta klager på noe brukeren aldri ser.
+        if (!el.checkVisibility()) continue;
+        // Har den lesbar tekst, er den ikke en ikonknapp.
+        if ((el as HTMLElement).innerText?.trim()) continue;
+        const navn = el.getAttribute('aria-label') || el.getAttribute('title') || '';
+        if (r.width >= 36 && r.height >= 36 && navn) continue;
+        out.push({
+          selector: el.tagName.toLowerCase() + (typeof el.className === 'string' && el.className ? `.${el.className.trim().split(/\s+/)[0]}` : ''),
+          box: `${Math.round(r.width)}×${Math.round(r.height)}`,
+          navn: navn || '(mangler)',
+        });
+      }
+      return out;
+    });
+
+    expect(bad).toEqual([]);
+  }, 60_000);
+});

@@ -577,6 +577,22 @@ a.fvmenu-item:hover { background: color-mix(in oklab, var(--ink) 6%, var(--surfa
      dyttet den innover; da kontrollene ble en egen klynge, sto den igjen ytterst
      og hang 14 px utenfor skjermen. Skjemaet skal være så bredt som knappen. */
   .cmdk-form { flex: 0 0 auto; margin-left: auto; }
+  /* Søket BLIR i headeren på mobil — det er den eneste chromen som finnes på
+     alle sider (bunnlinja rendres kun av kapittelsiden), og en meny man må åpne
+     først er ikke «lett tilgjengelig» (#54).
+     Men det skal se ut som en knapp, ikke som et sammenkrympet søkefelt: uten
+     etikett og hurtigtast-merke sto det igjen en 40×30 ramme rundt et 14 px
+     ikon, altså en tom boks ved siden av to ikonknapper. Nå er den samme form
+     som tannhjulet, med samme ikonstørrelse. */
+  .cmdk-trigger {
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    justify-content: center;
+    background: transparent;
+    border-color: transparent;
+  }
+  .cmdk-trigger svg { width: 18px; height: 18px; }
   .mobile-menu { display: block; }
   .mobile-panel {
     /* Forankret til HEADEREN (som er sticky, altså posisjonert), ikke til
