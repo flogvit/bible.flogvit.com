@@ -155,6 +155,51 @@ porten som gjør at det ikke når prod uansett.
   hånd, så skjemaet ikke kan vokse fra vakta i stillhet. Unntak må ha en
   begrunnelse i `UNCHECKED_TABLES`. Alle fire vaktene er mutasjonstestet.
 
+### Importert innhold får ikke peke på en PERSON som ikke finnes (#61)
+
+Samme klasse som #46, én akse over. Beviset kom fra .no-appen, som henter
+familien over API-et: `/api/persons/gomer` svarte 200 med
+`children: ["jisreel-hoseas-sønn", …]`, og `/api/persons/jisreel-hoseas-sønn`
+svarte 404 — **API-ets eget svar annonserte en id API-et selv ikke kunne
+servere**. Sju av sju API-404-er i loggvinduet hadde vår egen side som referer.
+
+.com har samme rot, med to ulike utslag. Persondetaljen slår opp familien
+server-side og hopper STILLE over det som ikke finnes, så leseren mister et
+familiemedlem uten at noe ser galt ut. Ættetavlene i `chapter_insights` lenker
+derimot rett ut: `/nb/matt/1` lenket «Tamar» til `/personer/tamar`, som er 404.
+Personen finnes — hun heter `tamar-juda`. Åtte språkprefikser, fra en av de
+tettest personlenkede sidene vi har.
+
+- **`src/lib/person-refs.ts` eier lista og regelen.** `PERSON_REF_KEYS` er
+  NØKKELEN, ikke stien: `personId` ligger på fire dybder i insight-JSON-en
+  (`sections[].persons[]`, `footer.links[]`, `persons[]`, `heroes[]`), og en ny
+  insight-type med samme nøkkel arver regelen gratis.
+- **Sannheten er `persons.name`** — kolonnen `/personer/<id>` slår opp i — lest
+  gjennom SAMME fallback-kjede som spørringen (`contentLanguageChain`). En
+  nb-rad som peker på en person vi bare har på engelsk er derfor ikke død.
+- **Lenka faller, navnet blir stående.** En død adresse nulles (skalar) eller
+  filtreres ut (liste); raden bæres uendret videre. «Tamar» står fortsatt i
+  ættetavlen, bare ikke som lenke — `PersonLink` uten id gir ren tekst, en form
+  dataene alt bruker («Peres», «Hesron»). Samme avveining som «start slettes,
+  slutt klippes» i #46: kast aldri innhold vi HAR for å bli kvitt en adresse vi
+  ikke har.
+- **Den gjetter aldri.** `tamar` kunne vært `tamar-juda`,
+  `tamar-absaloms-datter` eller `tamar-absaloms-soster-davids-datter`. Samme
+  grunn som at bare ÉN generasjon leseteksts-id-er kunne løses opp i #40.
+- **Ett etter-pass, fra to steder** — `ensureSchema()` (altså hver deploy, som
+  rydder prod) og slutten av `import-bible.ts`. Sveipen går over ALLE
+  innholdstabellene med en JSON-blob, ikke bare de to som har adresser i dag.
+- **Ryddingen teller som en endring** og løfter sync-versjonen, ellers ville
+  mikrocachen servert den døde lenka i inntil en time til.
+- **Vakta er `test/person-refs.test.ts` og har fire halvdeler.** REGELEN (ren
+  logikk: skalar nulles, liste filtreres, alt annet står), DATA (ingen rad i
+  noen innholdstabell peker på en person som ikke finnes — hele basen, ikke bare
+  `PAGES`), FORM (ny tabell med JSON-blob og ny adressenøkkel må deklareres) og
+  SIDA (`/nb/matt/1` og `/en/matt/1` rendret, hver personlenke svarer 200).
+  Nøkkel-halvdelen kjenner ingen nøkkelnavn: den finner nøkler hvis verdier
+  stort sett slår opp i `persons`, så en ny adressenøkkel oppdages uten at noen
+  har ført den opp. Alle vaktene er mutasjonstestet.
+
 ### Kapittelantall har ÉN sannhet: `books-data.ts` (#46, bifunn)
 
 Kapittelantallet lå i to hardkodede lister som var uenige om Joel — 3 i

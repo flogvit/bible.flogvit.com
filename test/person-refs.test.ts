@@ -30,6 +30,7 @@ import {
   UNSCANNED_TABLES,
   findDanglingPersonRefs,
   personResolverFrom,
+  stripDanglingPersonRefs,
 } from '../src/lib/person-refs.ts';
 import { TABLES } from '../src/lib/schema.ts';
 import { initBooks } from '../src/lib/bible.ts';
@@ -59,6 +60,46 @@ describe('personadresser i importert innhold', () => {
       .map((f) => `${f.table}.${f.key} → «${f.id}» (${f.hits} forekomst(er), ${f.languages.join(', ')})`)
       .join('\n');
     expect(report, `døde personadresser — kjør \`bun scripts/init-db.ts\` for å rydde:\n${report}`).toBe('');
+  });
+});
+
+describe('regelen: lenka faller, navnet blir', () => {
+  // Ren logikk, ingen DB. Halvparten av verdien i fiksen ligger her: at
+  // ryddingen fjerner ADRESSEN og ikke raden. Blir dette til «slett noden», er
+  // «Tamar» borte fra ættetavlen, og da har vi byttet en død lenke mot tapt
+  // innhold.
+  const known = (id: string) => id === 'finnes';
+  const strip = (content: unknown) => stripDanglingPersonRefs(content, known, () => {});
+
+  test('en død skalar nulles, navnet står igjen', () => {
+    expect(strip({ name: 'Tamar', personId: 'borte', note: 'med Juda' })).toEqual({
+      name: 'Tamar',
+      personId: null,
+      note: 'med Juda',
+    });
+  });
+
+  test('en død id i en liste filtreres bort, de levende blir', () => {
+    expect(strip({ family: { children: ['finnes', 'borte', 'finnes'] } })).toEqual({
+      family: { children: ['finnes', 'finnes'] },
+    });
+  });
+
+  test('en levende adresse røres ikke, uansett dybde', () => {
+    const insight = { sections: [{ persons: [{ name: 'Abraham', personId: 'finnes' }] }] };
+    expect(strip(insight)).toBe(null);
+  });
+
+  test('en streng under en NAVNELIK nøkkel er ikke en adresse', () => {
+    // `roles: ['borte']` er ikke en personadresse selv om verdien ikke slår
+    // opp. Bare nøklene i PERSON_REF_KEYS er adresser.
+    expect(strip({ roles: ['borte'], title: 'borte' })).toBe(null);
+  });
+
+  test('ryddingen er idempotent', () => {
+    const once = strip({ family: { father: 'borte', children: ['borte'] } });
+    expect(once).toEqual({ family: { father: null, children: [] } });
+    expect(strip(once)).toBe(null);
   });
 });
 

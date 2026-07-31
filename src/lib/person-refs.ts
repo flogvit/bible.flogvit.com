@@ -38,6 +38,14 @@
 // til feil person med full selvtillit — samme grunn som at bare ÉN generasjon
 // leseteksts-id-er kunne løses opp i #40.
 //
+// RYDDINGEN RØRER IKKE `content_hashes`, og det er med vilje: hashen er av
+// FILA, så en ryddet rad blir liggende ryddet til kilden faktisk endrer seg —
+// og retter free-bible id-en, endres fila, og raden importeres på nytt med den
+// riktige adressen. Hullet er det motsatte tilfellet: blir PERSONEN døpt om til
+// den id-en insight-fila allerede bruker, ser importen ingen endring i fila, og
+// lenka blir stående som ren tekst til noen kjører `--full`. Det er en degradert
+// lenke, ikke en død — riktig vei å feile.
+//
 // SANNHETEN ER `persons.name` — kolonnen `/personer/<id>` og `/api/persons/<id>`
 // slår opp i — lest gjennom SAMME fallback-kjede som spørringen bruker
 // (`contentLanguageChain`). En nb-rad som peker på en person vi bare har på
