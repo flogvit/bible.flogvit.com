@@ -68,6 +68,7 @@ import { mapChapter, resolveMappingId, getAvailableMappings } from '../../lib/ve
 import { getWorksForChapter, workHref, encodeKvn, type WorkRef } from '../../lib/works.ts';
 import { layoutProps, tFor, type Translator, type MessageKey, lhref } from '../../lib/i18n.ts';
 import { localeToContentLanguage } from '../../lib/lang.ts';
+import { relFor } from '../../lib/crawl.ts';
 
 const r = new Hono<AppEnv>();
 
@@ -374,6 +375,7 @@ function ChapterToc({
         {Array.from({ length: book.chapters }, (_, i) => i + 1).map((ch) => (
           <a
             href={lhref(`/${bookSlug}/${ch}${query}`)}
+            rel={relFor(query)}
             class={`toc-chapter-cell ${ch === chapter ? 'is-active' : ''}`}
             aria-current={ch === chapter ? 'page' : undefined}
           >
@@ -388,6 +390,7 @@ function ChapterToc({
           {siblings.map((b) => (
             <a
               href={lhref(`/${toUrlSlug(b.short_name)}/1${query}`)}
+              rel={relFor(query)}
               class={`toc-item ${b.id === book.id ? 'is-active' : ''}`}
             >
               <span class="toc-item-name">{bookName(b)}</span>
@@ -991,7 +994,7 @@ function VerseDetailPanel({
             ) : (
               <p class="text-muted">{t('rd.noRefs')}</p>
             )}
-            <a href={lhref(`/bidra?vers=${verseRef}`)} class="write-devotional-link">
+            <a href={lhref(`/bidra?vers=${verseRef}`)} rel="nofollow" class="write-devotional-link">
               {t('contrib.suggestWork')}
             </a>
           </div>
@@ -1063,7 +1066,7 @@ function VerseDetailPanel({
             <div data-devotionals-list>
               <p class="text-muted">{t('rd.noManuscripts')}</p>
             </div>
-            <a href={lhref(`/manuskripter/ny?vers=${verseRef}`)} class="write-devotional-link">
+            <a href={lhref(`/manuskripter/ny?vers=${verseRef}`)} rel="nofollow" class="write-devotional-link">
               {t('rd.noManuscripts')}
             </a>
           </div>
@@ -1442,7 +1445,7 @@ function StudyPanel({
       <StudyBlock id="manuskripter" title={t('nav.manuscripts')} defaultOpen>
         {/* Lokale manuskripter (localStorage) fylles inn av studium.js */}
         <ul class="st-ms-list" data-chapter-devotionals data-chapter-prefix={`${book.short_name.toLowerCase()}-${chapter}-`}></ul>
-        <a href={lhref(`/manuskripter/ny?ref=${encodeURIComponent(newManuscriptRef)}`)} class="st-new-ms-link">
+        <a href={lhref(`/manuskripter/ny?ref=${encodeURIComponent(newManuscriptRef)}`)} rel="nofollow" class="st-new-ms-link">
           + {`${t('rd.newManuscriptAbout')} ${bookName(book)} ${chapter}`}
         </a>
       </StudyBlock>
@@ -1531,12 +1534,17 @@ function MobileToolbar({
   const mappings = getAvailableMappings();
   const otBooks = booksData.filter((b) => b.testament === 'OT');
   const ntBooks = booksData.filter((b) => b.testament === 'NT');
+  // Utgavebryterne — samme kapittel, annen utgave. Hoistet ut av JSX-en fordi
+  // `rel` avhenger av om stien endte opp med en query (#60, relFor).
+  const toolsOsnb = `/${bookSlug}/${chapter}${buildQuery('osnb', mapping, secondary, defaultBible)}`;
+  const toolsOsnn = `/${bookSlug}/${chapter}${buildQuery('osnn', mapping, secondary, defaultBible)}`;
 
   return (
     <>
       <div class="mobile-toolbar" data-mobile-toolbar>
         <a
           href={chapter > 1 ? lhref(`/${bookSlug}/${chapter - 1}${query}`) : undefined}
+          rel={relFor(query)}
           class={`mt-nav ${chapter === 1 ? 'is-disabled' : ''}`}
           aria-label={`${t('rd.prevChapter')}${chapter > 1 ? `: ${bookName(book)} ${chapter - 1}` : ` (${t('rd.unavailable')})`}`}
           aria-disabled={chapter === 1 ? 'true' : undefined}
@@ -1554,6 +1562,7 @@ function MobileToolbar({
         </button>
         <a
           href={chapter < maxChapter ? lhref(`/${bookSlug}/${chapter + 1}${query}`) : undefined}
+          rel={relFor(query)}
           class={`mt-nav ${chapter === maxChapter ? 'is-disabled' : ''}`}
           aria-label={`${t('rd.nextChapter')}${chapter < maxChapter ? `: ${bookName(book)} ${chapter + 1}` : ` (${t('rd.unavailable')})`}`}
           aria-disabled={chapter === maxChapter ? 'true' : undefined}
@@ -1581,6 +1590,7 @@ function MobileToolbar({
             {Array.from({ length: maxChapter }, (_, i) => i + 1).map((ch) => (
               <a
                 href={lhref(`/${bookSlug}/${ch}${query}`)}
+                rel={relFor(query)}
                 class={`mt-chapter-cell ${ch === chapter ? 'is-active' : ''}`}
               >
                 {ch}
@@ -1633,13 +1643,15 @@ function MobileToolbar({
             <span class="tools-section-title">{t('rd.translation')}</span>
             <div class="tools-bibles">
               <a
-                href={lhref(`/${bookSlug}/${chapter}${buildQuery('osnb', mapping, secondary, defaultBible)}`)}
+                href={lhref(toolsOsnb)}
+                rel={relFor(toolsOsnb)}
                 class={`tools-bible-button ${bible === 'osnb' ? 'is-active' : ''}`}
               >
                 <span data-proper-names>OSNB (bokmål)</span>
               </a>
               <a
-                href={lhref(`/${bookSlug}/${chapter}${buildQuery('osnn', mapping, secondary, defaultBible)}`)}
+                href={lhref(toolsOsnn)}
+                rel={relFor(toolsOsnn)}
                 class={`tools-bible-button ${bible === 'osnn' ? 'is-active' : ''}`}
               >
                 <span data-proper-names>OSNN (nynorsk)</span>
@@ -1776,6 +1788,11 @@ r.get('/:book/:chapter', async (c) => {
   const grunntekstOn = secondary === 'original';
   const otherNorwegian = bible === 'osnn' ? 'osnb' : 'osnn';
 
+  // Skinnebryterne — samme kapittel, annet visningsvalg. Hoistet ut av JSX-en
+  // fordi `rel` avhenger av om stien endte opp med en query (#60, relFor).
+  const railUndertekst = `/${canonicalSlug}/${chapter}${buildQuery(requestedBible, mapping ?? undefined, undertekstOn ? undefined : otherNorwegian, localeDefault.id)}`;
+  const railGrunntekst = `/${canonicalSlug}/${chapter}${buildQuery(requestedBible, mapping ?? undefined, grunntekstOn ? undefined : 'original', localeDefault.id)}`;
+
   // Kontrakten mot shortcuts.js: data-attributter på <body>.
   const bodyData = `(function(d){d.bookSlug=${JSON.stringify(canonicalSlug)};d.chapter='${chapter}';d.maxChapter='${maxChapter}';${
     nextBookSlug ? `d.nextBookSlug=${JSON.stringify(nextBookSlug)};` : ''
@@ -1865,7 +1882,8 @@ r.get('/:book/:chapter', async (c) => {
 
             <div class="chapter-rail">
               <a
-                href={lhref(`/${canonicalSlug}/${chapter}${buildQuery(requestedBible, mapping ?? undefined, undertekstOn ? undefined : otherNorwegian, localeDefault.id)}`)}
+                href={lhref(railUndertekst)}
+                rel={relFor(railUndertekst)}
                 class={`rail-chip ${undertekstOn ? 'is-on' : ''}`}
                 aria-current={undertekstOn ? 'true' : undefined}
                 title={t('rd.secondaryUnderVerse')}
@@ -1873,30 +1891,31 @@ r.get('/:book/:chapter', async (c) => {
                 + Undertekst
               </a>
               <a
-                href={lhref(`/${canonicalSlug}/${chapter}${buildQuery(requestedBible, mapping ?? undefined, grunntekstOn ? undefined : 'original', localeDefault.id)}`)}
+                href={lhref(railGrunntekst)}
+                rel={relFor(railGrunntekst)}
                 class={`rail-chip ${grunntekstOn ? 'is-on' : ''}`}
                 aria-current={grunntekstOn ? 'true' : undefined}
               >
                 {t('u.originalText')}
               </a>
               {chapter > 1 && (
-                <a href={lhref(`/${canonicalSlug}/${chapter - 1}${query}`)} class="rail-chip">
+                <a href={lhref(`/${canonicalSlug}/${chapter - 1}${query}`)} rel={relFor(query)} class="rail-chip">
                   ← {t('rd.prevShort')}
                 </a>
               )}
               {chapter < maxChapter ? (
-                <a href={lhref(`/${canonicalSlug}/${chapter + 1}${query}`)} class="rail-chip">
+                <a href={lhref(`/${canonicalSlug}/${chapter + 1}${query}`)} rel={relFor(query)} class="rail-chip">
                   {t('rd.nextShort')} →
                 </a>
               ) : (
                 nextBook &&
                 nextBookSlug && (
-                  <a href={lhref(`/${nextBookSlug}/1${query}`)} class="rail-chip">
+                  <a href={lhref(`/${nextBookSlug}/1${query}`)} rel={relFor(query)} class="rail-chip">
                     {nextBook.name_no} →
                   </a>
                 )
               )}
-              <a href={lhref(`/bidra?kap=${canonicalSlug}-${chapter}`)} class="rail-chip">
+              <a href={lhref(`/bidra?kap=${canonicalSlug}-${chapter}`)} rel="nofollow" class="rail-chip">
                 {t('contrib.title')}
               </a>
             </div>
@@ -1919,18 +1938,18 @@ r.get('/:book/:chapter', async (c) => {
             <footer class="chapter-footer">
               <div class="nav-buttons">
                 {chapter > 1 && (
-                  <a href={lhref(`/${canonicalSlug}/${chapter - 1}${query}`)} class="nav-button">
+                  <a href={lhref(`/${canonicalSlug}/${chapter - 1}${query}`)} rel={relFor(query)} class="nav-button">
                     ← {t('rd.prevChapter')}
                   </a>
                 )}
                 {chapter < maxChapter ? (
-                  <a href={lhref(`/${canonicalSlug}/${chapter + 1}${query}`)} class="nav-button">
+                  <a href={lhref(`/${canonicalSlug}/${chapter + 1}${query}`)} rel={relFor(query)} class="nav-button">
                     {t('rd.nextChapter')} →
                   </a>
                 ) : (
                   nextBook &&
                   nextBookSlug && (
-                    <a href={lhref(`/${nextBookSlug}/1${query}`)} class="nav-button">
+                    <a href={lhref(`/${nextBookSlug}/1${query}`)} rel={relFor(query)} class="nav-button">
                       {nextBook.name_no} →
                     </a>
                   )

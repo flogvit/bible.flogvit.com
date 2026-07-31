@@ -432,7 +432,7 @@ r.get('/dager', async (c) => {
           <h1>{t('days.title')}</h1>
           <nav class="study-view-tabs" aria-label={t('days.view')}>
             <a href={lhref('/dager')} class={`study-view-tab ${thematic ? '' : 'is-active'}`} aria-current={thematic ? undefined : 'true'}>{t('days.chronological')}</a>
-            <a href={lhref('/dager?visning=tematisk')} class={`study-view-tab ${thematic ? 'is-active' : ''}`} aria-current={thematic ? 'true' : undefined}>{t('days.thematic')}</a>
+            <a href={lhref('/dager?visning=tematisk')} rel="nofollow" class={`study-view-tab ${thematic ? 'is-active' : ''}`} aria-current={thematic ? 'true' : undefined}>{t('days.thematic')}</a>
           </nav>
           <div class="study-search-container">
             <input type="text" class="study-search-input" data-card-search placeholder={t('days.searchPh')} aria-label={t('search.title')} autocomplete="off" />

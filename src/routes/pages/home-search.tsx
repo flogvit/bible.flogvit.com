@@ -533,12 +533,12 @@ r.get('/sok', async (c) => {
               </div>
               <div class="search-pager">
                 {side > 1 && (
-                  <a href={lhref(`/sok?q=${encodeURIComponent(query)}&side=${side - 1}`)} class="search-page-link">
+                  <a href={lhref(`/sok?q=${encodeURIComponent(query)}&side=${side - 1}`)} rel="nofollow" class="search-page-link">
                     ← {t('rd.prevShort')}
                   </a>
                 )}
                 {res.hasMore && (
-                  <a href={lhref(`/sok?q=${encodeURIComponent(query)}&side=${side + 1}`)} class="search-page-link">
+                  <a href={lhref(`/sok?q=${encodeURIComponent(query)}&side=${side + 1}`)} rel="nofollow" class="search-page-link">
                     {t('search.showMore')} →
                   </a>
                 )}
@@ -624,12 +624,12 @@ r.get('/sok/original', async (c) => {
               </div>
               <div class="search-pager">
                 {side > 1 && (
-                  <a href={lhref(`/sok/original?q=${encodeURIComponent(query)}&side=${side - 1}`)} class="search-page-link">
+                  <a href={lhref(`/sok/original?q=${encodeURIComponent(query)}&side=${side - 1}`)} rel="nofollow" class="search-page-link">
                     ← {t('rd.prevShort')}
                   </a>
                 )}
                 {res.hasMore && (
-                  <a href={lhref(`/sok/original?q=${encodeURIComponent(query)}&side=${side + 1}`)} class="search-page-link">
+                  <a href={lhref(`/sok/original?q=${encodeURIComponent(query)}&side=${side + 1}`)} rel="nofollow" class="search-page-link">
                     {t('search.showMore')} →
                   </a>
                 )}
