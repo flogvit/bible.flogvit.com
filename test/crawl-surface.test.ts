@@ -92,10 +92,12 @@ describe('crawl-flata (#60)', () => {
     });
   });
 
-  // Den mest sannsynlige feilfiksen på #60 er `Disallow: /bidra`, og den er
-  // gal: /bidra STÅR i sitemapen (STATIC_PATHS) på alle åtte språk. Å levere en
-  // sitemap med adresser vår egen robots.txt forbyr er å be Google om en
-  // feilmelding — og siden forsvinner ut av indeksen uten at noen ville det.
+  // Den mest sannsynlige feilfiksen på #60 er å forby STIEN. Mutasjonstestet:
+  // `Disallow: /bidra` er et rent no-op (prefiksmatch, og alle ekte adresser er
+  // prefikset — `/en/bidra`), så den som prøver ender på `Disallow: /*bidra`.
+  // DEN treffer, og den tar `/bidra` selv med seg — en side som STÅR i
+  // sitemapen på alle åtte språk. Å levere en sitemap med adresser vår egen
+  // robots.txt forbyr er å be om at siden forsvinner ut av indeksen.
   test('ingen URL i sitemapene er forbudt av robots.txt', async () => {
     for (const locale of LOCALES) {
       const xml = await (await app.request(`/sitemap-${locale}.xml`)).text();

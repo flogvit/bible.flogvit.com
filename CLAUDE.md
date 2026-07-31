@@ -377,6 +377,59 @@ contrib, aldri direkte DB-tilgang og aldri engangscontainere på VM-en.
   ingen (#42-lærdommen).
 - **Å PUBLISERE er plus** (teksten må være lagret i skyen), **å LESE er gratis**.
 
+### En URL med QUERY er en handling, ikke en side (#60)
+
+12 × 503 på én time. Ikke nedetid — lastvernet under gjorde jobben sin. Det som
+dyttet semaforen over kanten var vår EGEN HTML: hver kapittelside lenket to
+sider per vers uten `rel="nofollow"`, `/bidra?vers=sal-94-1` og
+`/manuskripter/ny?vers=sal-94-1`. 31 167 vers × 2 familier × 8 språkprefikser =
+**498 672 crawlbare URL-er mot 1 189 kapittelsider** — en flate ~420 ganger
+større enn innholdet, der ingen av adressene ER innhold. Hver er unik, altså
+cache-miss, altså en render-plass. GPTBot sto for 68 % av all trafikk i vinduet,
+72 % av den mot `/bidra?vers=`, på 1,7 req/s — permanent rett under de 1,8 req/s
+#19 slo fast at velter siden. Googlebot fikk 6,7 s på `/en/2kor/11`.
+
+- **Regelen er lenken, ikke lenkefamilien.** `relFor(path)` (`lib/crawl.ts`)
+  tar hele STIEN og gir `nofollow` når den bærer query. Da avgjør stien selv, og
+  en bryter som peker query-løst når valget er default («skru av undertekst» →
+  `/sal/94`) blir fortsatt fulgt — det er den kanoniske adressen. `Breadcrumbs`
+  kaller den selv framfor å ta imot et prop, så en ny smule arver regelen.
+- **`nofollow` og `robots.txt` er to forskjellige jobber.** `nofollow` stopper
+  OPPDAGELSE; robots stopper HENTING av det crawleren allerede kjenner — og
+  GPTBot hadde et halvt million adresser fra før. Begge trengs.
+- **Forby QUERYEN, ikke stien.** `Disallow: /*?vers=` treffer alle åtte
+  prefiksene i én linje. Sti-varianten har to feller, begge mutasjonstestet:
+  `Disallow: /bidra` er et rent no-op (prefiksmatch, og alle ekte adresser er
+  prefikset), mens `Disallow: /*bidra` treffer — og tar `/bidra` selv med seg,
+  en side som STÅR i sitemapen. Samme for `/*manuskripter/ny`, som ville stengt
+  `/manuskripter/nytt-liv-a1b2c3` ute av den åpne katalogen (#15).
+- **`?q=` er bevisst UTELATT fra robots.** Søkesiden skal deindekseres, og der
+  er `noindex` direktivet (#41) — et robots-forbud ville hindret crawleren i å
+  SE det. Lenkene dit er `nofollow`, så nye søke-URL-er oppdages ikke uansett.
+- **Visningsvalgene teller også.** `?bible=`/`?secondary=`/`?mapping=` lenker
+  kapittelet til seg selv, og prev/neste bærer valget videre: uten merking går
+  crawleren hele Bibelen på nytt per kombinasjon, i den DYRESTE renderen vi har.
+- **`noindex` på `/bidra?…`, ikke på `/bidra`.** Betingelsen er queryen, ikke
+  den enkelte parameteren, så en ny måte å åpne siden på arver regelen.
+  Canonical peker query-løst av seg selv (`Layout` bruker `path`), men canonical
+  er et hint — `noindex` er direktivet. Manuskript-editoren er `noindex` uansett:
+  en tom skriveflate bak innlogging er aldri svaret på et søk.
+- **`public/robots.txt` er SLETTET.** `seoRoutes` monteres før `serveStatic`, så
+  ruta har vunnet hele tiden; to kilder til samme sannhet er fella fra #42.
+
+**Vakta er todelt.** Sidekontrakten (invariant 6 og 7) gjelder HVER side i
+`PAGES`: en intern lenke med query må bære `nofollow`, og robots.txt må avvise
+den. Formulert på lenken, så en ny handlingslenke fanges uten at noen fører den
+opp. `crawl-surface.test.ts` holder på det målte tilfellet (Sal 94, også rendret
+MED query så prev/neste-fella fanges) og på det sveipen ikke kan se: **ingen URL
+i sitemapene er forbudt av vår egen robots.txt.** `test/robots.ts` er en ekte
+RFC 9309-matcher (`*`, `$`, lengste treff vinner) — en vakt som bare lette etter
+en STRENG ville bestått på en regel som ser riktig ut uten å treffe.
+
+**Ikke gjort, med vilje:** ingen Caddy-blokk av GPTBot. Den er en beslutning om
+en navngitt tredjepart og hører hos Vegard — og punkt over løser årsaken framfor
+symptomet: flata var for stor for Googlebot også.
+
 ## Lastvern (anonyme sidevisninger)
 
 `src/lib/page-cache.ts` er både mikrocache OG lastavvisning (#4, #14): anonyme

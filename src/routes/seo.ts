@@ -58,10 +58,17 @@ const CRAWL_BLOCKED_PARAMS = ['vers', 'kap', 'bok', 'ref', 'bible', 'secondary',
 // språkprefiksene i én linje. RFC 9309 §2.2: lengste treff vinner, så disse
 // slår `Allow: /` (lengde 1).
 //
-// Merk hva som IKKE står her: `Disallow: /bidra`. Den ville vært den nærliggende
-// fiksen og er gal — /bidra står i sitemapen (STATIC_PATHS) på alle åtte språk,
-// og en sitemap full av adresser vår egen robots.txt forbyr tar siden ut av
-// indeksen uten at noen ville det. Det er QUERYEN som er flata, ikke stien.
+// Merk hva som IKKE står her: et forbud mot STIEN. Det er den nærliggende
+// fiksen, og den har to feller. `Disallow: /bidra` gjør ingenting i det hele
+// tatt — mønstre er prefiksmatch, og hver eneste ekte adresse er prefikset
+// (`/en/bidra`). Skriver du den så den treffer (`Disallow: /*bidra`), tar den
+// samtidig `/bidra` selv, som står i sitemapen (STATIC_PATHS) på alle åtte
+// språk: en sitemap full av adresser vår egen robots.txt forbyr tar siden ut
+// av indeksen uten at noen ville det. Det er QUERYEN som er flata, ikke stien.
+//
+// Samme felle på den andre siden: `Disallow: /*manuskripter/ny` er prefiksmatch
+// og stenger `/manuskripter/nytt-liv-a1b2c3` — en publisert tekst i den åpne
+// katalogen (#15). Editoren holdes ute av `noindex`, ikke av robots.
 const ROBOTS = [
   'User-agent: *',
   'Allow: /',
