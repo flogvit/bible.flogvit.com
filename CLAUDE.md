@@ -151,7 +151,7 @@ unik-nøkkelen**, så flere språk kan ligge side om side. Kontrakten bor i
 
 - **Kilde på disk:** `free-bible/generate/<type>/<språk>/`. Importøren *oppdager*
   språk ved å lese katalogene (`contentLanguages()`), så **et nytt språk krever
-  ingen kodeendring** — bare en ny katalog. free-bibles `translate.mjs` skriver
+  ingen kodeendring** — bare en ny katalog. free-bibles `translate.ts` skriver
   nøyaktig denne strukturen (kildespråk `nb` → `<språk>`).
 - **To akser, ikke bland dem:** UI-locale (URL-prefiks, der norsk er `no`, se
   `portal/I18N.md`) vs innholdsspråk (`nb`/`nn`/`en`, katalognavn og kolonneverdi).

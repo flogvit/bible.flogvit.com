@@ -2,9 +2,9 @@
 // review.status ≠ pending) tilbake til bibel-databasen via det token-gatede
 // admin-API-et, og arkiverer filene til contrib/queue/archive/.
 //
-// REKKEFØLGE: kjør free-bibles contrib/export.mjs FØR dette skriptet —
+// REKKEFØLGE: kjør free-bibles contrib/export.ts FØR dette skriptet —
 // export leser godkjente filer fra queue/, apply flytter dem til archive/.
-// (export.mjs leser også archive/, så feil rekkefølge er ikke tap, bare rot.)
+// (export.ts leser også archive/, så feil rekkefølge er ikke tap, bare rot.)
 //
 // Bruk:
 //   CONTRIB_TOKEN=… bun scripts/contrib-apply.ts

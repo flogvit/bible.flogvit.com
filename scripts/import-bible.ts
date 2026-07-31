@@ -42,7 +42,7 @@ console.log(`Kilde: ${GENERATE_PATH}`);
 /**
  * Språkene en innholdstype har innhold for, lest fra
  * `generate/<type>/<språk>/`. DISKEN er kilden — ikke en liste i koden — slik at
- * et nytt språk bare er en ny katalog (free-bibles translate.mjs oversetter fra
+ * et nytt språk bare er en ny katalog (free-bibles translate.ts oversetter fra
  * `nb` til `<språk>` i nøyaktig denne strukturen). Kataloger som ikke er
  * velformede språkkoder hoppes over: samme mappe kan inneholde hjelpeskript og
  * arbeidskataloger (f.eks. `gospel_parallels/temp_verify`).
@@ -1045,7 +1045,7 @@ const bookNameMap: Record<string, number> = {
   'Jesaja': 23,
 };
 
-// NB: important_verses oversettes IKKE maskinelt (se translate.mjs) — filen
+// NB: important_verses oversettes IKKE maskinelt (se translate.ts) — filen
 // siterer faktisk bibeltekst, og maskinoversatte kjente vers ville reprodusert
 // opphavsrettsbeskyttede oversettelser. Andre språk må hentes fra en bibeltekst
 // på det språket. Løkken er likevel per språk, så en `en/`-katalog importeres
