@@ -20,14 +20,28 @@ import { getAllReadingTexts, initBooks } from '../src/lib/bible.ts';
 import { DEFAULT_LOCALE, LOCALES, missingKeys } from '../src/lib/i18n.ts';
 import { DICTIONARIES } from '../src/lib/dictionaries.ts';
 import { PAGES } from './pages.ts';
+import { anchors, parseRobots } from './robots.ts';
 
 const app = createApp();
+
+/**
+ * Sidene som skal stå UTENFOR søkeindeksen, som mønstre mot stien i PAGES.
+ *
+ * `?q=` er søkeresultatet (#41): URL-en bærer brukerens egen tekst.
+ * Resten er handlings- og editorflater (#60) — en tom skriveflate bak
+ * innlogging er aldri svaret på et søk, og `/bidra?vers=…` er 31 167 varianter
+ * av én side som allerede står i sitemapen på sin query-løse adresse.
+ */
+const NOINDEX_PAGES = [/\?q=/, /^\/bidra\?/, /^\/manuskripter\/ny$/, /^\/manuskripter\/[^/]+\/rediger$/];
 
 // Bok-tabellen caches i minnet ved oppstart (src/index.ts). Uten dette kaster
 // verse-display på sider som slår opp bøker — og testen ville bare bestått når
 // en annen testfil tilfeldigvis kjørte først.
+let robotsAllows: (url: string) => boolean;
+
 beforeAll(async () => {
   await initBooks();
+  robotsAllows = parseRobots(await (await app.request('/robots.txt')).text());
 });
 
 
@@ -88,17 +102,53 @@ describe('sidekontrakt', () => {
         const canonical = attrs(html, /rel="canonical" href="([^"]+)"/g)[0];
         expect(canonical?.startsWith(`${SITE}/de`)).toBe(true);
 
-        // 5. `noindex` KUN der URL-en bærer brukerens egen tekst (#41).
+        // 5. `noindex` KUN der URL-en IKKE er en side å finne i et søk.
+        //
+        // To slag: flater der URL-en bærer brukerens egen tekst (søk, #41), og
+        // handlings-/editorflater som aldri er et svar på et søk (#60).
         //
         // Begge retninger er verdt å vakte: uten noindex er søkeresultatsiden
         // en forgiftningsvektor (den reflekterer vilkårlig tekst inn i
         // <title> og svarer 200), og med noindex på feil side har vi stille
         // fjernet en ekte side fra indeksen.
-        const skalVæreNoindex = page.path.includes('?q=');
+        const skalVæreNoindex = NOINDEX_PAGES.some((re) => re.test(page.path));
         expect({ side: page.path, noindex: /name="robots" content="noindex,follow"/.test(html) }).toEqual({
           side: page.path,
           noindex: skalVæreNoindex,
         });
+
+        // 6. En intern lenke med QUERY er en handling eller en visningsvariant
+        //    — aldri en ny side (#60).
+        //
+        // Kapittelsiden lenket to sider per vers (`/bidra?vers=…`,
+        // `/manuskripter/ny?vers=…`) uten `rel="nofollow"`, og med åtte
+        // språkprefikser ga det 498 672 crawlbare URL-er mot 1 189
+        // kapittelsider. Hver av dem er unik, altså cache-miss, altså en
+        // render-plass — og semaforen svarte 12 × 503 på én time.
+        //
+        // Invarianten er lenken, ikke lenkefamilien: en NY handlingslenke
+        // noen legger inn senere fanges uten at noen har ført den opp.
+        const følges = anchors(html)
+          .filter((a) => a.href.includes('?'))
+          .filter((a) => !a.rel.split(/\s+/).includes('nofollow'))
+          .map((a) => a.href);
+        expect({ side: page.path, følges: [...new Set(følges)] }).toEqual({ side: page.path, følges: [] });
+
+        // 7. …og robots.txt avviser den, så en crawler som ALLEREDE kjenner
+        //    URL-en slutter å hente den. `nofollow` stopper bare oppdagelse;
+        //    GPTBot hadde 498 672 adresser den fant før vi merket lenkene.
+        //
+        //    Unntak: `?q=` (søk). Den skal deindekseres, og et robots-forbud
+        //    ville hindret crawleren i å SE `noindex`-direktivet (#41).
+        //    `nofollow` over gjelder likevel, så nye søke-URL-er oppdages ikke.
+        const hentbare = [
+          ...new Set(
+            anchors(html)
+              .map((a) => a.href)
+              .filter((h) => h.includes('?') && !h.includes('?q=') && !h.includes('&q=')),
+          ),
+        ].filter((h) => robotsAllows(h));
+        expect({ side: page.path, hentbare }).toEqual({ side: page.path, hentbare: [] });
       });
     }
   });
