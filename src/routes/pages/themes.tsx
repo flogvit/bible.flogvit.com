@@ -337,10 +337,10 @@ r.get('/tall/:number', async (c) => {
   }
 
   return c.html(
-    <Layout {...layoutProps(c)} title={`Tallet ${data.number}: ${data.meaning} — FLOGVIT.bible`} description={data.description.slice(0, 155)} styles={['study.css']} scripts={['tagging.js']}>
+    <Layout {...layoutProps(c)} title={`${t('numbers.crumb', { n: data.number })}: ${data.meaning} — FLOGVIT.bible`} description={data.description.slice(0, 155)} styles={['study.css']} scripts={['tagging.js']}>
       <div class="study-main">
         <div class="reading-container">
-          <Breadcrumbs items={[{ label: tCtx()('common.home'), href: '/' }, { label: tCtx()('nav.numbers'), href: '/tall' }, { label: `Tallet ${data.number}` }]} />
+          <Breadcrumbs items={[{ label: tCtx()('common.home'), href: '/' }, { label: tCtx()('nav.numbers'), href: '/tall' }, { label: tCtx()('numbers.crumb', { n: data.number }) }]} />
           <div class="study-number-header">
             <span class="study-big-number">{data.number}</span>
             <h1>{data.meaning}</h1>

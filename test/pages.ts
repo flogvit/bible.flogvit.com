@@ -18,6 +18,10 @@ export const PAGES: { path: string; name: string }[] = [
   { path: '/paralleller', name: 'evangelieparalleller' },
   { path: '/statistikk', name: 'statistikk' },
   { path: '/tall', name: 'tallsymbolikk' },
+  // Detaljsiden, ikke bare oversikten: brødsmulen og <title> sto med «Tallet 7»
+  // på alle åtte språk (#63, samme klasse som kapittelsmulen). En side som ikke
+  // står her, står utenfor ALLE invariantene — og da ser sveipen den ikke.
+  { path: '/tall/7', name: 'tallsymbolikk (detalj)' },
   { path: '/lesetekster', name: 'lesetekster' },
   { path: '/personer', name: 'personer (verse-display)' },
   { path: '/temaer', name: 'temaer (studiekort)' },

@@ -797,6 +797,37 @@ røres. Bruk `bookName()`/`bookAbbr()` ved visning.
 href={url}>`) er usynlige for tekstsøk etter `href="/`. Stol på den rendrede HTML-en,
 ikke på grep.
 
+### En oversatt etikett ser FORSKJELLIG ut på to språk (#63)
+
+Siste brødsmuleledd på kapittelsiden sto som «Kap. 1» på alle åtte språk —
+`{ label: \`Kap. ${chapter}\` }` — og alle fire vaktene over var blinde: «Kap.»
+står ikke i ordlista, har ingen æ/ø/å, er ikke verdien til noen nøkkel (den gikk
+aldri gjennom ordboka), og leddet er `textContent`, ikke et attributt.
+Kapittelsiden er den mest besøkte sida vi har, så det var den norske teksten
+flest ikke-norske lesere så.
+
+- **Den femte invarianten er STRUKTURELL og trenger ingen ordliste:** en
+  brødsmule som renderes ORDRETT LIKT under `/en/` og `/nb/` gikk aldri gjennom
+  `t()`. Den fanger neste literal uten at noen har ført opp ordet, og uansett
+  hvilket språk literalen tilfeldigvis er skrevet på — en hardkodet «Chapter 1»
+  er like lik på tvers og like avslørt.
+- **Unntaket er at ORDBOKA er enig:** det må finnes en nøkkel som har nettopp
+  den teksten på BEGGE språk (`nav.offline` er «Offline» i begge). At teksten
+  bare står i den ENGELSKE ordboka holder ikke — da ville en hardkodet «Ch. 1»
+  sluppet gjennom mens de sju andre språkene fortsatt sto på engelsk. Begge
+  mutasjonene er kjørt, og begge gir rødt.
+- **Nøkler med `{plassholder}` sammenlignes som mønster**, ellers ville vakta
+  krevd at fiksen ikke fantes. Et mønster uten egne bokstaver («{a} – {b}»)
+  matcher hva som helst og holdes utenfor.
+- **Egennavn fra dataene** (et personnavn, en manuskripttittel) er den ene
+  legitime grunnen til at to språk viser samme streng. `PROPER_CRUMBS` er lista,
+  og den er tom i dag — som `NORDIC_PROPER` er hver oppføring en påstand, ikke
+  et sted å gjemme en glemt oversettelse.
+- **Samme literal sto på `/tall/<n>`** («Tallet 7», i brødsmulen OG i
+  `<title>`), og sveipen kunne ikke se den fordi DETALJSIDEN ikke lå i `PAGES`.
+  Den ligger der nå. En vakt måles på matrisen sin: en side som ikke står der,
+  står utenfor alle invariantene.
+
 ## Regler
 - Minimal deps: innebygd/web-standard fremfor npm-pakker. Aldri React/Express/ORM-er.
 - Bibeldata er derivert og regenererbar — aldri inn i Docker-imaget; import kjøres separat mot DB-en.
