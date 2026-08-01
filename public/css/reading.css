@@ -1587,16 +1587,14 @@ a.ins-hero-name:hover {
   .chapter-title {
     font-size: 32px;
   }
+  /* Skinna er BORTE på mobil (#56). Fire av de fem brikkene fantes allerede i
+     den faste verktøylinja under (← og →) eller i ⚙-arket (undertekst og
+     grunntekst i samme nedtrekk), så skinna kostet en hel rad med sidelengs
+     scroll rett under tittelen for å tilby ÉN ting mobilen ikke nådde fra før
+     — «Bidra», det leseren trenger sjeldnest. Den har flyttet inn i ⚙-arket.
+     Desktop beholder skinna: der er verktøylinja skjult, så der er den ikke
+     duplikat av noe. */
   .chapter-rail {
-    overflow-x: auto;
-    flex-wrap: nowrap;
-    /* Skinna blør ut til skjermkanten så den SER scrollbar ut, men brikkene
-       ligger på samme 20 px-linje som teksten. Tallene følger `.site-main`. */
-    margin: 8px -20px 20px;
-    padding: 0 20px 4px;
-    scrollbar-width: none;
-  }
-  .chapter-rail::-webkit-scrollbar {
     display: none;
   }
   .mobile-toolbar {

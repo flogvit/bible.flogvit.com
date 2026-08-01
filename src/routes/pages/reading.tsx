@@ -91,6 +91,12 @@ function buildQuery(
   return s ? `?${s}` : '';
 }
 
+/**
+ * «Bidra» med kapittelet som opphav. Bygges ett sted fordi den står to steder:
+ * i skinna (desktop) og i ⚙-arket (mobil) — se #56.
+ */
+const contribChapterHref = (bookSlug: string, chapter: number) => `/bidra?kap=${bookSlug}-${chapter}`;
+
 /** Kort etikett over undertekst-stripen (som undertekstShortLabel). */
 function undertekstShortLabel(id: string | undefined): string {
   if (!id) return '';
@@ -1543,6 +1549,7 @@ function MobileToolbar({
   // `rel` avhenger av om stien endte opp med en query (#60, relFor).
   const toolsOsnb = `/${bookSlug}/${chapter}${buildQuery('osnb', mapping, secondary, defaultBible)}`;
   const toolsOsnn = `/${bookSlug}/${chapter}${buildQuery('osnn', mapping, secondary, defaultBible)}`;
+  const contribHref = contribChapterHref(bookSlug, chapter);
 
   return (
     <>
@@ -1705,6 +1712,13 @@ function MobileToolbar({
                 {t('u.large')}
               </button>
             </div>
+          </div>
+          {/* Å bidra er ikke det leseren gjør mest, og skal ikke stå sidestilt
+              med lesingen (#56). Her er den én tapp unna uten å konkurrere. */}
+          <div class="tools-section">
+            <a href={lhref(contribHref)} rel={relFor(contribHref)} class="tools-settings-link">
+              {t('contrib.title')} →
+            </a>
           </div>
           <div class="tools-section">
             <a href={lhref('/innstillinger')} class="tools-settings-link">
@@ -1893,7 +1907,7 @@ r.get('/:book/:chapter', async (c) => {
                 aria-current={undertekstOn ? 'true' : undefined}
                 title={t('rd.secondaryUnderVerse')}
               >
-                + Undertekst
+                + {t('rd.subtext')}
               </a>
               <a
                 href={lhref(railGrunntekst)}
@@ -1920,7 +1934,11 @@ r.get('/:book/:chapter', async (c) => {
                   </a>
                 )
               )}
-              <a href={lhref(`/bidra?kap=${canonicalSlug}-${chapter}`)} rel="nofollow" class="rail-chip">
+              <a
+                href={lhref(contribChapterHref(canonicalSlug, chapter))}
+                rel={relFor(contribChapterHref(canonicalSlug, chapter))}
+                class="rail-chip"
+              >
                 {t('contrib.title')}
               </a>
             </div>
