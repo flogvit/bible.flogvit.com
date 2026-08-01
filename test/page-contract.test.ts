@@ -436,6 +436,105 @@ describe('sidekontrakt', () => {
     }
   });
 
+  // ── Hver brødsmule gikk gjennom ordboka (GitHub #63) ──────────────────
+  //
+  // Siste ledd på kapittelsiden sto som «Kap. 1» på alle åtte språk, og INGEN
+  // av de tre sveipene over kunne se det: «Kap.» står ikke i ordlista, har
+  // ingen æ/ø/å, og er ikke verdien til noen nøkkel — den gikk aldri gjennom
+  // ordboka i det hele tatt. Kapittelsiden er den mest besøkte sida vi har.
+  //
+  // Invarianten er derfor ikke et ord, men en STRUKTURELL egenskap ved en
+  // oversatt etikett: den SER FORSKJELLIG UT på to språk. Renderes en
+  // brødsmule ordrett likt under /en/ og /nb/, gikk den enten aldri gjennom
+  // `t()` — eller ordboka har SAMME verdi for samme nøkkel på begge språk
+  // (`nav.offline` er «Offline» i begge, og det er ikke en feil).
+  //
+  // Den fanger dermed NESTE literal av samme slag uten at noen har ført opp
+  // ordet, og uansett hvilket språk literalen tilfeldigvis er skrevet på: en
+  // hardkodet «Chapter 1» ville vært like lik på tvers og like avslørt.
+  describe('ingen brødsmule er den samme strengen på /en/ og /nb/', () => {
+    const ENTITIES: Record<string, string> = { amp: '&', lt: '<', gt: '>', quot: '"', '#39': "'" };
+
+    /** Etikettene i brødsmulestien, i rekkefølge — både lenker og siste ledd. */
+    function crumbs(html: string): string[] {
+      return [...html.matchAll(/<nav class="breadcrumbs"[\s\S]*?<\/nav>/g)].flatMap((nav) =>
+        [...nav[0].matchAll(/<(a|span)\b[^>]*>([\s\S]*?)<\/\1>/g)].map((m) =>
+          m[2]!
+            .replace(/<[^>]+>/g, '')
+            .replace(/&([a-z]+|#\d+);/gi, (all, name: string) => ENTITIES[name.toLowerCase()] ?? all)
+            .trim(),
+        ),
+      );
+    }
+
+    /**
+     * Nøklene hvis verdi på DETTE språket er nøyaktig denne teksten. Nøkler med
+     * `{plassholder}` sammenlignes som mønster — «Ch. {n}» må godta «Ch. 1»,
+     * ellers ville vakta krevd at fiksen på denne saken ikke fantes.
+     *
+     * Et mønster uten bokstaver av eget («{a} – {b}») matcher hva som helst og
+     * ville gjort vakta blind; det holdes utenfor.
+     */
+    function keysFor(locale: 'en' | 'nb'): (text: string) => Set<string> {
+      const exact = new Map<string, string[]>();
+      const patterns: { key: string; re: RegExp }[] = [];
+      for (const [key, val] of Object.entries(DICTIONARIES[locale])) {
+        const s = String(val).trim();
+        if (!s) continue;
+        if (!s.includes('{')) {
+          exact.set(s, [...(exact.get(s) ?? []), key]);
+          continue;
+        }
+        const parts = s.split(/\{[^}]*\}/);
+        if (parts.join('').replace(/[^\p{L}]/gu, '').length < 3) continue;
+        patterns.push({
+          key,
+          re: new RegExp(`^${parts.map((p) => p.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('.+')}$`),
+        });
+      }
+      return (text: string) =>
+        new Set([...(exact.get(text) ?? []), ...patterns.filter((p) => p.re.test(text)).map((p) => p.key)]);
+    }
+    const enKeys = keysFor('en');
+    const nbKeys = keysFor('nb');
+
+    /**
+     * En etikett som er lik på begge språk er bare grei hvis ORDBOKA er enig:
+     * det må finnes en nøkkel som har nettopp denne teksten på BEGGE språk.
+     * «Offline» er `nav.offline` i både en og nb, og er dermed ikke en feil.
+     *
+     * At teksten bare finnes i den ENGELSKE ordboka holder ikke — da ville en
+     * hardkodet «Ch. 1» (samme literal, skrevet på engelsk i stedet) sluppet
+     * gjennom mens de sju andre språkene fortsatt sto på engelsk.
+     */
+    const oversattLikt = (text: string) => [...enKeys(text)].some((key) => nbKeys(text).has(key));
+
+    /**
+     * Etiketter som ER den samme strengen på begge språk fordi de kommer fra
+     * DATAENE og er egennavn — et personnavn, en manuskripttittel.
+     *
+     * Lista skal være nesten tom, som `NORDIC_PROPER`: hver oppføring er en
+     * påstand om at strengen ikke skal oversettes, ikke et sted å gjemme en
+     * glemt oversettelse.
+     */
+    const PROPER_CRUMBS: string[] = [];
+
+    for (const page of PAGES) {
+      test(page.name, async () => {
+        const en = crumbs((await fetchPage('en', page.path)).html);
+        const nb = crumbs((await fetchPage('nb', page.path)).html);
+        // Ulikt antall ledd på to språk er i seg selv en defekt — og uten
+        // denne ville sammenligningen under stille gått på feil ledd.
+        expect({ side: page.path, ledd: en.length }).toEqual({ side: page.path, ledd: nb.length });
+
+        const funn = en.filter(
+          (label, i) => label === nb[i] && !oversattLikt(label) && !PROPER_CRUMBS.includes(label),
+        );
+        expect({ side: page.path, uoversatte: [...new Set(funn)] }).toEqual({ side: page.path, uoversatte: [] });
+      });
+    }
+  });
+
   describe('ingen norsk tekst under /en/', () => {
     for (const page of PAGES) {
       test(page.name, async () => {

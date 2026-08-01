@@ -1840,7 +1840,7 @@ r.get('/:book/:chapter', async (c) => {
                 items={[
                   { label: tCtx()('common.home'), href: '/' },
                   { label: bookName(book), href: `/${canonicalSlug}/1${query}` },
-                  { label: `Kap. ${chapter}` },
+                  { label: tCtx()('rd.chapterCrumb', { n: chapter }) },
                 ]}
               />
               <span class="chapter-meta-actions">
