@@ -3,6 +3,11 @@
 What actually reached readers, newest first. Dates, not version numbers — we
 deploy continuously.
 
+## 2026-08-01 — No visible changes; groundwork on how the Bible text is prepared for release
+
+**Behind the scenes**
+- Preparing Bible text for publication is now a checked script with an explicit list of what may be included, rather than a single hand-run command — so a release can no longer quietly carry along text that was never meant to ship. Nothing changes in what you read or how the site behaves.
+- Routine release-notes upkeep.
 ## 2026-08-01 — Groundwork for safer Bible text updates; nothing changes for readers
 
 **Behind the scenes**
