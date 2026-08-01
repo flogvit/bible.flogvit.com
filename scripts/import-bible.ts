@@ -25,6 +25,7 @@ import { booksData } from '../src/lib/books-data.ts';
 import { getChapterVerseCount } from '../src/lib/verse-counts.ts';
 import { pruneDanglingRefs, pruneReportIsEmpty, formatPruneReport } from '../src/lib/verse-refs.ts';
 import { prunePersonRefs, personPruneReportIsEmpty, formatPersonPruneReport } from '../src/lib/person-refs.ts';
+import { CONTENT_TABLES, CONTENT_SOURCES, contentSourceReport } from '../src/lib/content-sources.ts';
 import { parseRefMarkup } from '@free-bible/kvn/ref';
 import { BOOK_IDS } from '@free-bible/kvn/types';
 import { UkvnMapper, loadUkvnMapping, ukvnEncode, ukvnDecode, resolveMappingId } from '@free-bible/kvn';
@@ -214,47 +215,6 @@ async function cleanupRemovedEntries(
   }
 }
 
-// Innholdstabellene som import-pipelinen eier (brukertabellene røres aldri).
-const CONTENT_TABLES = [
-  'books',
-  'verses',
-  'bible_editions',
-  'word4word',
-  'references_',
-  'book_summaries',
-  'book_context',
-  'chapter_summaries',
-  'chapter_context',
-  'important_words',
-  'important_verses',
-  'verse_prayers',
-  'verse_sermons',
-  'themes',
-  'timeline_periods',
-  'timeline_events',
-  'timeline_references',
-  'timeline_book_sections',
-  'prophecy_categories',
-  'prophecies',
-  'prophecy_fulfillments',
-  'persons',
-  'chapter_insights',
-  'daily_verses',
-  'reading_plans',
-  'db_meta',
-  'gospel_parallel_sections',
-  'gospel_parallels',
-  'gospel_parallel_passages',
-  'verse_mappings',
-  'works',
-  'work_verse_refs',
-  'days',
-  'number_symbolism',
-  'reading_texts',
-  'reading_text_refs',
-  'stories',
-  'content_hashes',
-];
 
 console.log('Oppretter database-skjema...');
 await ensureSchema(sql);
@@ -2252,6 +2212,40 @@ if (personsPruned.skipped) {
   console.log('Kilden lenker til personer som ikke finnes — meld det på flogvit/free-bible.');
 }
 
+// PORTEN MOT FORELDRELØST INNHOLD (#58). De to over spør om en ADRESSE peker på
+// noe som finnes; denne spør om KILDEN til en hel innholdstype fortsatt finnes.
+//
+// `syncDeletions` rydder rader som forsvinner fra en katalog, men når KATALOGEN
+// forsvinner gir `contentLanguages()` bare `[]`, løkka hopper over, og radene
+// blir stående. Det skjedde med `important_verses`: 62 rader drev /kjente-vers i
+// månedsvis etter at free-bible slettet kilden, mens importen sa «ingen
+// endringer» hver gang. En manglende katalog ser nemlig nøyaktig ut som
+// ingenting nytt — importen fortalte hva den KASTET, ikke hva den ikke lenger
+// FANT.
+//
+// Rapport, ikke rydding: en feilsatt FREE_BIBLE_DIR ser ut som «alle kildene er
+// borte», og en automatisk sletting ville da tømt hele basen. Beslutningen om
+// hva som skal skje med innholdet hører hos den som kjører importen.
+const rowCounts: Record<string, number> = {};
+for (const table of Object.keys(CONTENT_SOURCES)) {
+  const rows = (await sql.unsafe(`SELECT COUNT(*) AS n FROM ${table}`)) as { n: number }[];
+  rowCounts[table] = Number(rows[0]?.n ?? 0);
+}
+const sourceReport = contentSourceReport({
+  generatePath: GENERATE_PATH,
+  generateExists: fs.existsSync(GENERATE_PATH),
+  presentSources: [...new Set(Object.values(CONTENT_SOURCES))].filter((dir) =>
+    fs.existsSync(path.join(GENERATE_PATH, dir)),
+  ),
+  rowCounts,
+});
+if (sourceReport) console.log(`\n${sourceReport}`);
+
+// En import som ikke fant kilden har ikke importert noe, og skal ikke se ut som
+// en vellykket kjøring. Den ENESTE kilden er borte — ikke én katalog — så det er
+// ingen delvis import å bevare; den som kjørte den må peke et annet sted.
+if (!fs.existsSync(GENERATE_PATH)) process.exitCode = 1;
+
 // Check if any content was updated
 const totalUpdated = Object.values(stats).reduce((sum, s) => sum + s.updated, 0);
 const totalUnchanged = Object.values(stats).reduce((sum, s) => sum + s.unchanged, 0);
@@ -2321,4 +2315,6 @@ console.log(`Dager                 ${String(stats.days.updated).padStart(9)}  ${
 console.log(`Verk                  ${String(stats.verseWorks.updated).padStart(9)}  ${String(stats.verseWorks.unchanged).padStart(7)}  ${d('verk')}`);
 console.log('--------------------------------------------------');
 console.log(`Totalt                ${String(totalUpdated).padStart(9)}  ${String(totalUnchanged).padStart(7)}  ${totalDeleted > 0 ? String(totalDeleted).padStart(7) : '      -'}`);
-console.log('\nFerdig!');
+// «Ferdig!» er en påstand om utfallet, og den skal ikke stå der utfallet var at
+// vi ikke fant kilden. Sammendraget over er da bare nuller.
+console.log(process.exitCode ? '\nAvbrutt: ingenting ble importert.' : '\nFerdig!');
