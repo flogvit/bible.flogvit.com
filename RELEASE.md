@@ -3,6 +3,10 @@
 What actually reached readers, newest first. Dates, not version numbers — we
 deploy continuously.
 
+## 2026-08-01 — Groundwork for safer Bible text updates; nothing changes for readers
+
+**Behind the scenes**
+- Preparing Bible text data for a release is now a scripted step with an explicit whitelist of what may be copied — covered by tests — so content updates land the same way every time instead of depending on someone following a written instruction correctly.
 ## 2026-08-01 — Groundwork only: nothing on the site changes this time
 
 **Behind the scenes**
