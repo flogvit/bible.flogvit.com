@@ -13,7 +13,16 @@ import { booksData, getBookInfoBySlug } from './books-data.ts';
 import { toUrlSlug } from './url-utils.ts';
 import { IMPORTED_BIBLES } from './editions.ts';
 
-/** Sider utenom kapitlene. Uprefiksede — seo.ts legger på språket. */
+/**
+ * Sider utenom kapitlene. Uprefiksede — seo.ts legger på språket.
+ *
+ * Lista er håndholdt, og det er nettopp derfor `test/sitemap-coverage.test.ts`
+ * finnes: den krysser rutetabellen mot denne lista og krever at HVER
+ * parameterløse siderute er enten her eller eksplisitt unntatt med en grunn
+ * (#47). En rute som ble registrert uten å komme hit var usynlig i drift —
+ * ingen 404, ingen logglinje, bare en side søkemotorene bare fant hvis de
+ * fulgte en intern lenke.
+ */
 export const STATIC_PATHS: readonly string[] = [
   '/',
   '/om',
@@ -26,6 +35,19 @@ export const STATIC_PATHS: readonly string[] = [
   '/leseplan',
   '/kjente-vers',
   '/bidra',
+  // Studie- og oversiktssidene (#47). De sto i navigasjonens «Studier»- og
+  // «Oversikt»-grupper ved siden av /temaer og /personer, som lå inne — det
+  // var altså ingen beslutning om å holde dem ute, bare fem oppføringer som
+  // aldri ble skrevet. Alle rendrer det samme innholdet på alle åtte språk
+  // (tysk faller til engelsk, som er terminalt).
+  '/historier',
+  '/tall',
+  '/dager',
+  '/paralleller',
+  '/statistikk',
+  // Endringsloggen. Samme slag som /om og /tilgjengelighet: en fast,
+  // offentlig side med ekte innhold på alle åtte språk, lenket fra bunnteksten.
+  '/changes',
   // Den åpne manuskriptkatalogen (#15, del 2). LISTA står her; de enkelte
   // oppføringene gjør ikke — de kommer og går med review og tilbaketrekking,
   // og en sitemap full av adresser som forsvinner er verre enn ingen.
