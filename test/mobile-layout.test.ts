@@ -2,7 +2,7 @@
 // telefonen faktisk viser, og som ingen av de andre testnivåene kan se.
 //
 //   1. Ingen side er bredere enn skjermen (#50), heller ikke med stor tekst.
-//   2. Chromen på mobil viser bare kontroller som betyr noe der (#51).
+//   2. Chromen på mobil viser bare kontroller som betyr noe der (#51, #56).
 //   3. Ingen side kaster bort toppen av skjermen på tomt rom (#55).
 //
 // Bakgrunn (#50): med tekstforstørrelse fra telefonens TILGJENGELIGHETS-
@@ -344,6 +344,113 @@ describe('mobil-layout: ett toppinnrykk mellom header og innhold (#55)', () => {
     const verste = [...gaps.entries()].sort((a, b) => b[1] - a[1]).slice(0, 4);
     expect([verste, spredning <= SPREAD]).toEqual([verste, true]);
   });
+});
+
+/**
+ * #56: på mobil vises BÅDE den faste verktøylinja og kapittel-skinna, og fire
+ * av skinnas fem brikker fantes allerede i verktøylinja eller ⚙-arket. Skinna
+ * kostet altså en hel rad med sidelengs scroll for å tilby ÉN ting som ikke
+ * fantes fra før — «Bidra» — og nettopp den trenger leseren sjeldnest.
+ *
+ * Vakta har to halvdeler, og de holder hverandre ærlige:
+ *
+ *   SKINNA er borte under 768 px og står igjen over. Bare mobil-siden ville
+ *   bestått like fint om noen skjulte skinna overalt — og på desktop er den
+ *   ikke duplikat, for der er verktøylinja skjult.
+ *
+ *   HANDLINGENE overlever flyttingen. For hver brikke i skinna (målt på
+ *   desktop, der den finnes) må mobilens chrome — verktøylinja og arkene, som
+ *   er én tapp unna selv når de er `hidden` — tilby det samme: enten nøyaktig
+ *   samme adresse, eller, når brikka bare skrur en query-parameter av eller på,
+ *   det samme valget i en `<select>`. Den halvdelen kjenner ingen brikker ved
+ *   navn, så en NY brikke i skinna må også finne en plass på mobil — ellers
+ *   forsvinner den for telefonleseren uten at noen merker det.
+ */
+describe('mobil-chrome: skinna gjentar ikke verktøylinja (#56)', () => {
+  const railDisplay = () => {
+    const rail = document.querySelector('.chapter-rail');
+    return rail ? getComputedStyle(rail).display : '(finnes ikke)';
+  };
+
+  /**
+   * Hva hver brikke i skinna FAKTISK gjør: en adresse, og — når den peker på
+   * sida vi står på — hvilke query-parametre den endrer.
+   */
+  function railActions() {
+    const here = new URL(location.href);
+    return Array.from(document.querySelectorAll('.chapter-rail a[href]')).map((el) => {
+      const url = new URL(el.getAttribute('href')!, location.href);
+      const changed: string[] = [];
+      for (const name of new Set([...url.searchParams.keys(), ...here.searchParams.keys()])) {
+        const to = url.searchParams.get(name) ?? '';
+        if (to !== (here.searchParams.get(name) ?? '')) changed.push(`${name}=${to}`);
+      }
+      return {
+        label: (el as HTMLElement).textContent!.trim(),
+        samePath: url.pathname === here.pathname,
+        target: url.pathname + url.search,
+        changed,
+      };
+    });
+  }
+
+  /**
+   * Hva mobilens chrome tilbyr. Arkene teller selv om de er `hidden` — de er
+   * én tapp unna, og det er hele poenget med å flytte noe DIT. Navnet på
+   * parameteren en `<select>` styrer leses ut av `data-<param>-select`, så et
+   * nytt nedtrekk kommer med uten at noen fører det opp her.
+   */
+  function mobileReach() {
+    const urls: string[] = [];
+    const choices: string[] = [];
+    for (const root of document.querySelectorAll('[data-mobile-toolbar], .mt-overlay, .studium-overlay')) {
+      for (const a of root.querySelectorAll('a[href]')) {
+        const u = new URL(a.getAttribute('href')!, location.href);
+        urls.push(u.pathname + u.search);
+      }
+      for (const sel of root.querySelectorAll('select')) {
+        const attr = Array.from(sel.attributes).find((a) => /^data-.+-select$/.test(a.name));
+        if (!attr) continue;
+        const param = attr.name.slice('data-'.length, -'-select'.length);
+        for (const opt of sel.querySelectorAll('option')) choices.push(`${param}=${(opt as HTMLOptionElement).value}`);
+      }
+    }
+    return { urls, choices };
+  }
+
+  const url = (path: string) => `http://localhost:${server.port}${href(DEFAULT_LOCALE, path)}`;
+
+  test('skinna er borte på mobil og står igjen på desktop', async () => {
+    await page.navigate(url('/1mos/12'));
+    for (const width of [320, 390, 768]) {
+      await page.setViewport({ width, height: 844 });
+      expect([width, await page.evaluate(railDisplay)]).toEqual([width, 'none']);
+    }
+    await page.setViewport({ width: 1280, height: 900 });
+    expect(await page.evaluate(railDisplay)).not.toBe('none');
+  }, 60_000);
+
+  test('hver handling i skinna er fortsatt innen rekkevidde på mobil', async () => {
+    await page.navigate(url('/1mos/12'));
+
+    await page.setViewport({ width: 1280, height: 900 });
+    const actions = await page.evaluate(railActions);
+    // Uten dette ville vakta bestått på en skinne som ikke finnes i det hele
+    // tatt, og da måler den ingenting.
+    expect(actions.length).toBeGreaterThan(3);
+
+    await page.setViewport({ width: 390, height: 844 });
+    const reach = await page.evaluate(mobileReach);
+
+    const lost = actions.filter((a) => {
+      if (reach.urls.includes(a.target)) return false;
+      // En brikke som bare skrur en parameter av/på er dekket når arket tilbyr
+      // det samme valget — mekanismen er en annen, handlingen er den samme.
+      return !(a.samePath && a.changed.length > 0 && a.changed.every((c) => reach.choices.includes(c)));
+    });
+
+    expect(lost.map((a) => `${a.label} → ${a.target}`)).toEqual([]);
+  }, 60_000);
 });
 
 describe('mobil-chrome: ikonknapper i headeren (#54)', () => {
