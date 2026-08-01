@@ -70,7 +70,6 @@ export const VERSE_REF_TABLES: VerseRefTable[] = [
   // Kryssreferansene — tabellen saken handler om. Merk navnene: `to_verse_start`
   // bærer kildens `fromVerseId`, `to_verse_end` bærer `toVerseId`.
   { table: 'references_', book: 'to_book_id', chapter: 'to_chapter', start: 'to_verse_start', end: 'to_verse_end' },
-  { table: 'important_verses', book: 'book_id', chapter: 'chapter', start: 'verse' },
   { table: 'verse_prayers', book: 'book_id', chapter: 'chapter', start: 'verse' },
   { table: 'verse_sermons', book: 'book_id', chapter: 'chapter', start: 'verse' },
   { table: 'timeline_references', book: 'book_id', chapter: 'chapter', start: 'verse_start', end: 'verse_end' },

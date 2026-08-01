@@ -66,6 +66,13 @@ const NOT_IN_SITEMAP: Record<string, string> = {
   // handling, ikke en side. Selve queryen er dessuten crawl-sperret (#60).
   '/tekst': 'verktøy som krever ?refs= — tom uten query, og queryen er sperret (#60)',
 
+  // FJERNET side som fortsatt har en rute, med vilje: `/kjente-vers` svarer 410
+  // Gone (#58). Ruta finnes nettopp for å SI at siden er borte — å annonsere den
+  // i sitemapen ville vært det motsatte. `removed-pages.test.ts` holder på at
+  // svaret faktisk er 410, så unntaket her kan ikke bli et gjemmested for en
+  // side som stille sluttet å virke.
+  '/kjente-vers': 'fjernet (#58) — ruta svarer 410 Gone, kilden finnes ikke lenger',
+
   // Teknisk flate for service workeren, ikke en side noen leser.
   '/offline': 'nedlastingsflate for offline-bruk, bak innlogging',
   '/offline-fallback': 'service worker-fallback, ikke en leserside',

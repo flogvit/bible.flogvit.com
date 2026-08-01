@@ -20,7 +20,7 @@
 // engelsk, fordi nabospråket ligger nærmere enn basespråket.
 //
 // Konsekvensen er bevisst: mangler noe også på engelsk, vises INGENTING framfor
-// norsk. Norsk-spesifikt innhold (`important_verses`, `reading_texts`) blir
+// norsk. Norsk-spesifikt innhold (`reading_texts`) blir
 // dermed tomt på andre språk — det er riktig, ikke et hull å tette.
 //
 // Nye språk krever INGEN kodeendring her: importøren oppdager språk-kataloger på

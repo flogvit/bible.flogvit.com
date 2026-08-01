@@ -40,7 +40,6 @@ import timeline from './routes/api/timeline.ts';
 import verseExtras from './routes/api/verse-extras.ts';
 import verses from './routes/api/verses.ts';
 import version from './routes/api/version.ts';
-import wellknownVerses from './routes/api/wellknown-verses.ts';
 import word4word from './routes/api/word4word.ts';
 import { getCookie } from 'hono/cookie';
 import { LOCALES, href, layoutProps, negotiateLocale, apiLocale } from './lib/i18n.ts';
@@ -87,7 +86,6 @@ export function createApp() {
   app.route('/api/version', version);
   app.route('/api/themes', themes);
   app.route('/api/favorites', favorites);
-  app.route('/api/wellknown-verses', wellknownVerses);
   app.route('/api/word4word', word4word);
   app.route('/api/references', references);
   app.route('/api/verse-extras', verseExtras);

@@ -33,7 +33,6 @@ export const STATIC_PATHS: readonly string[] = [
   '/personer',
   '/temaer',
   '/leseplan',
-  '/kjente-vers',
   '/bidra',
   // Studie- og oversiktssidene (#47). De sto i navigasjonens «Studier»- og
   // «Oversikt»-grupper ved siden av /temaer og /personer, som lå inne — det

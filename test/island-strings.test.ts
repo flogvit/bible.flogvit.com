@@ -100,7 +100,7 @@ describe('klient-øyene', () => {
           const value = s.trim();
           if (value.length < 3) continue;
           // URL-stier og CSS-selektorer er DATA, ikke tekst. Rutesluggene er
-          // norske med vilje (`/kjente-vers`), og de oversettes ikke.
+          // norske med vilje (`/lesetekster`), og de oversettes ikke.
           if (/^[/.#[]/.test(value) || /^[a-z-]+\.js$/.test(value)) continue;
           // Attributt-selektorer (`a[href="/manuskripter/ny"]`) er også data.
           if (/\[[a-z-]+[~^$*|]?=/.test(value)) continue;

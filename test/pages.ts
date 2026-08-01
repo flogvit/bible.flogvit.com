@@ -5,8 +5,14 @@
 /**
  * Representative sider. Målet er DEKNING AV KOMPONENTER, ikke av URL-er: hver
  * oppføring skal dra inn minst én komponent de andre ikke rører.
+ *
+ * `status` er svaret siden SKAL gi (default 200). Sider som ikke svarer 200
+ * rendrer likevel HTML og hører derfor til i matrisen — 404-siden og 410-siden
+ * (#58) skal følge de samme invariantene som resten. Feltet står her og ikke som
+ * en `if` i sidekontrakten: da eier lista regelen, og den neste slike siden
+ * arver den uten at noen må røre vakta.
  */
-export const PAGES: { path: string; name: string }[] = [
+export const PAGES: { path: string; name: string; status?: number }[] = [
   { path: '/', name: 'forsiden' },
   { path: '/1mos/1', name: 'kapittelsiden (TOC, skinne, versdetaljer, referanser)' },
   // 1 Mos 1 har INGEN personer, så studieblokka for personer rendres ikke der.
@@ -28,7 +34,6 @@ export const PAGES: { path: string; name: string }[] = [
   { path: '/historier', name: 'historier' },
   { path: '/tidslinje', name: 'tidslinje' },
   { path: '/dager', name: 'dager' },
-  { path: '/kjente-vers', name: 'kjente vers' },
   { path: '/oversettelser', name: 'oversettelser' },
   { path: '/leseplan', name: 'leseplan' },
   { path: '/lesekart', name: 'lesekart (heatmap)' },
@@ -60,5 +65,8 @@ export const PAGES: { path: string; name: string }[] = [
   { path: '/manuskripter/et-manuskript/rediger', name: 'manuskript-editor (rediger)' },
   { path: '/tilgjengelighet', name: 'tilgjengelighet' },
   { path: '/changes', name: 'endringslogg' },
-  { path: '/finnes-ikke', name: '404-siden' },
+  { path: '/finnes-ikke', name: '404-siden', status: 404 },
+  // 410-siden (#58). En fjernet side RENDRES fortsatt — den skal si at den er
+  // borte — og en side som ikke står her står utenfor alle invariantene.
+  { path: '/kjente-vers', name: '410-siden (fjernet, #58)', status: 410 },
 ];

@@ -200,6 +200,57 @@ tettest personlenkede sidene vi har.
   stort sett slår opp i `persons`, så en ny adressenøkkel oppdages uten at noen
   har ført den opp. Alle vaktene er mutasjonstestet.
 
+### En innholdstabell hvis KILDE er borte skal ikke bli stående (#58)
+
+Samme klasse som #46 og #61, men én etasje opp: der handler det om en ADRESSE
+som ikke finnes, her om at hele KILDEN til et innholdsslag er borte.
+`syncDeletions` rydder rader som forsvinner fra en kildekatalog, men når
+katalogen selv forsvinner gir `contentLanguages()` bare `[]`, løkka hopper over,
+og radene blir stående. free-bible slettet `generate/important_verses`
+2026-07-29, og 62 rader drev `/kjente-vers` i månedsvis etterpå — med nøyaktig de
+feilene kilden ble slettet for (`Sal 46:1` ga overskriften «Til kordirigenten»
+framfor «Gud er vår tilflukt», fordi fila brukte europeisk versnummerering der
+osnb følger hebraisk). Importen sa «ingen endringer» hver gang: en manglende
+katalog ser ut som ingenting nytt.
+
+- **`src/lib/content-sources.ts` eier koblingen tabell → kildekatalog.**
+  `CONTENT_TABLES` bor der og ikke i importskriptet, som ikke kan importeres av
+  en test (det EKSEKVERER). Hver eid tabell må ha enten en kilde eller en
+  begrunnet plass i `SOURCELESS_TABLES` — en ny innholdstype arver sjekken
+  gratis.
+- **Rapport, ikke rydding.** En feilsatt `FREE_BIBLE_DIR` ser ut som «alle
+  kildene er borte», og automatisk sletting ville da tømt basen.
+- **Mangler HELE kildetreet, er diagnosen en annen.** Kjørt i et arbeidstre
+  peker standard `FREE_BIBLE_DIR` (`../free-bible` fra cwd) på ingenting:
+  importen leste null filer, skrev null rader og sa «Ingen endringer … Ferdig!»
+  med exit 0. Da navngir rapporten katalogen og `FREE_BIBLE_DIR` framfor å liste
+  33 tabeller, og skriptet avslutter med 1. **Sett `FREE_BIBLE_DIR` eksplisitt
+  når du importerer fra et arbeidstre.**
+- **`/kjente-vers` gikk UT framfor å bli skrevet om.** «Kjent vers» er et
+  kulturfaktum, ikke en egenskap ved teksten, og free-bible#22 målte at
+  referansegrafen ikke kan erstatte lista (null overlapp mellom topp-100
+  innkommende referanser og de 49). Å plukke 62 vers på nytt her ville vært den
+  samme kildeløse lista én gang til. Kravene til en gjeninnføring — egen tekst,
+  hebraisk nummerering, per språk, kildeangivelse — står i free-bible#22.
+- **410, ikke 404.** Adressen sto i navigasjonen og i sitemapen, altså er den
+  indeksert og bokmerket. 404 sier «ikke her nå» og blir prøvd igjen; 410 sier
+  «fjernet med vilje». `GonePage` (`misc.tsx`) forklarer det for leseren som kom
+  fra et bokmerke; ingen `noindex`, for statuskoden er allerede direktivet.
+- **Tabellen droppes av `dropRemovedTables()` i `runMigrations()`**, altså ved
+  HVER deploy — samme plassering som ryddingen i #46 og #61.
+  `CREATE TABLE IF NOT EXISTS` kan bare legge til, så en tabell som bare fjernes
+  fra `TABLES` blir stående med alle radene i hver eksisterende base.
+- **Å fjerne en side er mer enn å slette en rute.** Sida lå i navigasjonen, i
+  kommandopaletten, på hurtigtast K, blant oppdagelseskortene, i verktøylista på
+  /om, i sitemapen og i åtte ordbøker. `test/removed-pages.test.ts` er vakta, og
+  invariantene er formulert på SIDEN (410 på alle åtte prefikser, ute av
+  sitemapen, ingen side i `PAGES` lenker dit, ingen klient-øy navigerer dit,
+  ingen ordboksnøkler igjen, tabellen borte etter `ensureSchema()`) — en ny
+  oppføring i `REMOVED_PAGES` arver alle seks.
+- **410-siden står i `PAGES`** med `status: 410`. En side som ikke står i
+  matrisen står utenfor alle invariantene (#63), og en fjernet side rendrer
+  fortsatt HTML.
+
 ### Kapittelantall har ÉN sannhet: `books-data.ts` (#46, bifunn)
 
 Kapittelantallet lå i to hardkodede lister som var uenige om Joel — 3 i

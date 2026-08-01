@@ -128,7 +128,6 @@ r.get('/om', (c) => {
               <li><strong>{t('about.lbl.bookSummary')}</strong> - {t('about.tool.bookSummary')}</li>
               <li><strong>{t('about.lbl.chapterSummary')}</strong> - {t('about.tool.chapterSummary')}</li>
               <li><strong>{t('rd.keyWords')}</strong> - {t('about.tool.keyWords')}</li>
-              <li><strong>{t('nav.knownVerses')}</strong> - {t('about.tool.knownVerses')}</li>
               <li><strong>{t('nav.stories')}</strong> - {t('about.tool.stories')}</li>
               <li><strong>{t('nav.themes')}</strong> - {t('about.tool.themes')}</li>
               <li><strong>{t('nav.prophecies')}</strong> - {t('about.tool.prophecies')}</li>
@@ -413,6 +412,30 @@ r.get('/offline-fallback', (c) => {
     </Layout>,
   );
 });
+
+/**
+ * 410-siden: adressen var vår, og vi har tatt den bort (#58).
+ *
+ * Den finnes fordi 404 er feil svar for en side som har stått i navigasjonen og
+ * i sitemapen i månedsvis: leseren som kommer fra et bokmerke skal få vite at
+ * dette er en beslutning, ikke en midlertidig feil, og søkemotoren skal ta
+ * adressen ut framfor å prøve igjen.
+ *
+ * Ingen `noindex`: statuskoden er allerede det sterkeste direktivet vi har, og
+ * 404-siden gjør det samme. To signaler om det samme ville vært pynt.
+ */
+export function GonePage({ locale, path }: { locale: Locale; path: string }) {
+  const t = makeT(locale);
+  return (
+    <Layout locale={locale} path={path} title={`${t('error.gone')} — FLOGVIT.bible`}>
+      <div class="reading-container notfound-page">
+        <h1>{t('error.gone')}</h1>
+        <p>{t('error.goneBody')}</p>
+        <a href={lhref('/')}>{t('error.goHome')}</a>
+      </div>
+    </Layout>
+  );
+}
 
 export function NotFoundPage({ locale, path }: { locale: Locale; path: string }) {
   const t = makeT(locale);

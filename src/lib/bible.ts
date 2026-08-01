@@ -451,55 +451,6 @@ export function formatReference(ref: Reference, lang = currentContentLanguage())
   return `${bookAbbrByShort(ref.book_short_name, lang)} ${ref.to_chapter}:${verseRange}`;
 }
 
-export interface ImportantVerse {
-  book_id: number;
-  chapter: number;
-  verse: number;
-  text: string | null;
-}
-
-export async function getImportantVersesForChapter(
-  bookId: number,
-  chapter: number,
-  lang = currentContentLanguage(),
-): Promise<number[]> {
-  const sql = getSql();
-  const results = await inLanguage(lang, (language) => sql`
-    SELECT verse FROM important_verses
-    WHERE book_id = ${bookId} AND chapter = ${chapter} AND language = ${language}
-  ` as Promise<{ verse: number }[]>);
-  return results.map(r => r.verse);
-}
-
-export interface WellKnownVerse {
-  book_id: number;
-  book_name_no: string;
-  book_short_name: string;
-  chapter: number;
-  verse: number;
-  text: string;
-  verse_text: string;
-}
-
-export async function getAllWellKnownVerses(lang = currentContentLanguage()): Promise<WellKnownVerse[]> {
-  const sql = getSql();
-  return await inLanguage(lang, (language) => sql`
-    SELECT
-      iv.book_id,
-      b.name_no as book_name_no,
-      b.short_name as book_short_name,
-      iv.chapter,
-      iv.verse,
-      iv.text,
-      v.text as verse_text
-    FROM important_verses iv
-    JOIN books b ON iv.book_id = b.id
-    JOIN verses v ON iv.book_id = v.book_id AND iv.chapter = v.chapter AND iv.verse = v.verse AND v.bible = 'osnb'
-    WHERE iv.language = ${language}
-    ORDER BY iv.book_id, iv.chapter, iv.verse
-  ` as Promise<WellKnownVerse[]>);
-}
-
 export interface SearchResult {
   book_id: number;
   book_name_no: string;

@@ -141,16 +141,6 @@ export const TABLES: string[] = [
     INDEX idx_important_words_chapter (book_id, chapter, language)
   ) ENGINE=InnoDB ${CS}`,
 
-  `CREATE TABLE IF NOT EXISTS important_verses (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    book_id INT NOT NULL,
-    chapter INT NOT NULL,
-    verse INT NOT NULL,
-    text TEXT,
-    ${LANG},
-    UNIQUE KEY uq_important_verses (book_id, chapter, verse, language)
-  ) ENGINE=InnoDB ${CS}`,
-
   `CREATE TABLE IF NOT EXISTS verse_prayers (
     id INT AUTO_INCREMENT PRIMARY KEY,
     book_id INT NOT NULL,
@@ -653,7 +643,6 @@ const LANGUAGE_MIGRATIONS: {
   { table: 'chapter_summaries', keys: [{ name: 'uq_chapter_summaries', columns: ['book_id', 'chapter', 'language'], kind: 'unique' }] },
   { table: 'chapter_context', keys: [{ name: 'uq_chapter_context', columns: ['book_id', 'chapter', 'language'], kind: 'unique' }] },
   { table: 'important_words', keys: [{ name: 'idx_important_words_chapter', columns: ['book_id', 'chapter', 'language'], kind: 'index' }] },
-  { table: 'important_verses', keys: [{ name: 'uq_important_verses', columns: ['book_id', 'chapter', 'verse', 'language'], kind: 'unique' }] },
   { table: 'verse_prayers', keys: [{ name: 'uq_verse_prayers', columns: ['book_id', 'chapter', 'verse', 'language'], kind: 'unique' }] },
   { table: 'verse_sermons', keys: [{ name: 'uq_verse_sermons', columns: ['book_id', 'chapter', 'verse', 'language'], kind: 'unique' }] },
   { table: 'themes', keys: [{ name: 'uq_themes', columns: ['name', 'language'], kind: 'unique' }], dropLegacy: ['name'] },
@@ -898,6 +887,30 @@ async function syncBookChapters(sql: SQL): Promise<void> {
   }
 }
 
+/**
+ * Tabeller som er tatt UT av appen, og som derfor skal ut av basen (#58).
+ *
+ * `CREATE TABLE IF NOT EXISTS` kan bare legge til. Fjerner vi en tabell fra
+ * `TABLES`, blir den stående i hver eksisterende base med alle radene sine —
+ * usynlig for koden, men ikke borte, og en senere «hvorfor ligger det data her»
+ * er da et arkeologisk spørsmål. `important_verses` er ute fordi KILDEN ble
+ * slettet i free-bible: de 62 radene kunne ikke lenger regenereres, og tre av
+ * dem pekte på feil vers (europeisk versnummerering mot osnbs hebraiske).
+ *
+ * Den står i migreringene, ikke i importen: importen kjøres bare ved
+ * innholdsoppdatering, mens `ensureSchema()` går ved HVER deploy — samme
+ * plassering som ryddingen i #46 og #61, og av samme grunn.
+ */
+const REMOVED_TABLES = ['important_verses'];
+
+async function dropRemovedTables(sql: SQL): Promise<void> {
+  for (const table of REMOVED_TABLES) {
+    if (!(await tableExists(sql, table))) continue;
+    await sql.unsafe(`DROP TABLE ${table}`).simple();
+    console.log(`Slettet tabellen ${table} — innholdet har ingen kilde lenger (#58)`);
+  }
+}
+
 /** Kjører alle skjemaendringer som CREATE-ene ikke kan uttrykke. Idempotent. */
 async function runMigrations(sql: SQL): Promise<void> {
   // Dupliserte lesedager MÅ vike før uq_reading_texts kan legges på (#40).
@@ -943,6 +956,7 @@ async function runMigrations(sql: SQL): Promise<void> {
 
   await renameBibleIds(sql);
   await syncBookChapters(sql);
+  await dropRemovedTables(sql);
 
   // Døde versadresser ryddes her, altså ved HVER deploy (#46). Det er ikke en
   // engangsmigrering: så lenge generatoren i free-bible kan skrive en adresse

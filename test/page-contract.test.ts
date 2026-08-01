@@ -78,7 +78,7 @@ describe('sidekontrakt', () => {
     for (const page of PAGES) {
       test(page.name, async () => {
         const { url, res, html } = await fetchPage('de', page.path);
-        const expectStatus = page.path === '/finnes-ikke' ? 404 : 200;
+        const expectStatus = page.status ?? 200;
         expect({ url, status: res.status }).toEqual({ url, status: expectStatus });
 
         // 1. Alle interne lenker bærer språkprefiks (#18).

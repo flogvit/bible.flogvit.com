@@ -23,7 +23,6 @@ const PAGES = [
   { key: 'nav.readingPlan', to: '/leseplan', group: 'nav.mine', k: 'L' },
   { key: 'nav.manuscripts', to: '/manuskripter', group: 'nav.mine', k: 'M' },
   { key: 'cmdk.newManuscript', to: '/manuskripter/ny', group: 'nav.manuscripts' },
-  { key: 'nav.knownVerses', to: '/kjente-vers', group: 'nav.studies', k: 'K' },
   { key: 'nav.themes', to: '/temaer', group: 'nav.studies', k: 'C' },
   { key: 'nav.stories', to: '/historier', group: 'nav.studies', k: 'B' },
   { key: 'pub.catalog', to: '/manuskripter/katalog', group: 'nav.studies' },

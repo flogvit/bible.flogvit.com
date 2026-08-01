@@ -1,5 +1,5 @@
-// Oversiktssider. FERDIG her: /kjente-vers (rent innhold) og /lesetekster
-// (liste; detalj /lesetekster/:id). De øvrige oversiktssidene (tidslinje-viz,
+// Oversiktssider. FERDIG her: /lesetekster (liste; detalj /lesetekster/:id).
+// De øvrige oversiktssidene (tidslinje-viz,
 // profetier, paralleller, statistikk) har tunge interaktive visninger og
 // bygges av side-agenten — se ISSUES.md #9. /oversettelser hører til
 // brukersidene (opplasting til IndexedDB/sync), ikke her.
@@ -13,7 +13,6 @@ import { ItemTagging } from '../../views/item-tagging.tsx';
 import { VerseRefList } from '../../views/verse-display.tsx';
 import { bookNameByShort, bookAbbrByShort } from '../../lib/books-data.ts';
 import {
-  getAllWellKnownVerses,
   getAllReadingTexts,
   getReadingTextById,
   getReadingTextsByDate,
@@ -33,6 +32,7 @@ import {
   normalizeBibleId,
   defaultBibleForLanguage,
 } from '../../lib/bible.ts';
+import { GonePage } from './misc.tsx';
 import { enrichWithVerseText, readingTypeKey } from '../../lib/reading-text-enrich.ts';
 import { toUrlSlug } from '../../lib/url-utils.ts';
 import { layoutProps, tFor, lhref, currentIntlTag, langName, scriptName } from '../../lib/i18n.ts';
@@ -277,58 +277,29 @@ r.get('/oversettelser/:id', async (c) => {
   );
 });
 
-// ---------- /kjente-vers ----------
+// ---------- /kjente-vers: FJERNET (#58) ----------
+//
+// Sida viste 62 kort fra `important_verses`, og KILDEN til den tabellen ble
+// slettet i free-bible 2026-07-29 (`0afddcdb8`): sitatene var fra en
+// oversettelse vi ikke eier, utvalget var avskrevet uten kilde, og tre av
+// referansene pekte på feil vers fordi fila brukte europeisk versnummerering
+// der osnb følger hebraisk. `Sal 46:1` ga overskriften «Til kordirigenten»
+// framfor «Gud er vår tilflukt». Radene kunne ikke regenereres av noen, og
+// siden serverte nøyaktig de feilene kilden ble slettet for.
+//
+// Utvalget ble ikke skrevet om her. «Kjent vers» er et KULTURFAKTUM, ikke en
+// egenskap ved teksten, og free-bible#22 målte at referansegrafen ikke kan
+// erstatte lista (null overlapp mellom topp-100 innkommende referanser og de
+// 49). Å plukke 62 vers på nytt i dette repoet ville vært den samme kildeløse
+// lista én gang til, bare med vår signatur på. Kravene til en gjeninnføring —
+// egen tekst, hebraisk nummerering, per språk, kildeangivelse — står i
+// free-bible#22, og sangkorpuset (free-bible#8) er kandidaten.
+//
+// 410, ikke 404: adressen sto i navigasjonen og i sitemapen, altså er den
+// indeksert og bokmerket. 404 sier «ikke her nå» og blir prøvd igjen; 410 sier
+// «fjernet med vilje».
 
-r.get('/kjente-vers', async (c) => {
-  const t = tFor(c);
-  const verses = await getAllWellKnownVerses();
-  const ot = verses.filter((v) => v.book_id <= 39);
-  const nt = verses.filter((v) => v.book_id >= 40);
-
-  function card(v: (typeof verses)[number]) {
-    return (
-      <a
-        href={lhref(`/${toUrlSlug(v.book_short_name)}/${v.chapter}#v${v.verse}`)}
-        class="famous-verse-card"
-      >
-        <span class="famous-verse-ref">
-          {bookNameByShort(v.book_short_name)} {v.chapter}:{v.verse}
-        </span>
-        <p class="famous-verse-text">{v.verse_text}</p>
-      </a>
-    );
-  }
-
-  return c.html(
-    <Layout {...layoutProps(c)}
-      title={`${t('kv.title')} — FLOGVIT.bible`}
-      description={t('kv.meta')}
-      styles={['overview.css']}
-    >
-      <div class="overview-main">
-        <div class="container">
-          <Breadcrumbs items={[{ label: tCtx()('common.home'), href: '/' }, { label: tCtx()('nav.knownVerses') }]} />
-          <header>
-            <h1>{t('kv.title')}</h1>
-            <p class="overview-intro">
-              {t('kv.intro')}
-            </p>
-          </header>
-
-          <section class="overview-section">
-            <h2>{t('kv.newTestament', { n: nt.length })}</h2>
-            <div class="famous-verse-list">{nt.map(card)}</div>
-          </section>
-
-          <section class="overview-section">
-            <h2>{t('kv.oldTestament', { n: ot.length })}</h2>
-            <div class="famous-verse-list">{ot.map(card)}</div>
-          </section>
-        </div>
-      </div>
-    </Layout>,
-  );
-});
+r.get('/kjente-vers', (c) => c.html(GonePage(layoutProps(c)), 410));
 
 // ---------- /lesetekster ----------
 

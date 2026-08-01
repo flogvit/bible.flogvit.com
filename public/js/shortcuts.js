@@ -16,7 +16,7 @@ const isMac = /Mac|iP(hone|ad|od)/.test(navigator.platform);
 
 const NAV = {
   KeyH: '/', KeyS: '/sok', KeyL: '/leseplan', KeyT: '/tidslinje', KeyP: '/profetier',
-  KeyF: '/favoritter', KeyE: '/emner', KeyN: '/notater', KeyK: '/kjente-vers',
+  KeyF: '/favoritter', KeyE: '/emner', KeyN: '/notater',
   KeyO: '/personer', KeyV: '/lister', KeyA: '/paralleller', KeyI: '/statistikk',
   KeyM: '/manuskripter', KeyC: '/temaer', KeyD: '/dager', KeyY: '/tall',
 };
@@ -41,7 +41,7 @@ function mod(key) {
 const NAV_LABELS = [
   ['H', 'kbd.homeBookList'], ['S', 'cmdk.searchGroup'], ['L', 'nav.readingPlan'], ['T', 'nav.timeline'],
   ['P', 'nav.prophecies'], ['F', 'nav.favorites'], ['E', 'nav.topicsMine'], ['N', 'nav.notes'],
-  ['K', 'nav.knownVerses'], ['O', 'nav.persons'], ['V', 'nav.verseLists'], ['A', 'nav.parallels'],
+  ['O', 'nav.persons'], ['V', 'nav.verseLists'], ['A', 'nav.parallels'],
   ['I', 'nav.statistics'], ['M', 'nav.manuscripts'], ['C', 'nav.themes'], ['D', 'nav.days'], ['Y', 'nav.numbers'],
 ].map(([key, label]) => [key, t(label)]);
 

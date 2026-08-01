@@ -31,7 +31,7 @@ const CHROME_ISLAND_KEYS = [
   'cmdk.hebrewGreek', 'cmdk.goToVerse', 'cmdk.downloadBible', 'cmdk.accountSync',
   'cmdk.searchGroup', 'nav.searchOriginal',
   'nav.mine', 'nav.studies', 'nav.overview', 'nav.favorites', 'nav.topicsMine', 'nav.notes',
-  'nav.verseLists', 'nav.readingPlan', 'nav.manuscripts', 'nav.knownVerses', 'nav.themes',
+  'nav.verseLists', 'nav.readingPlan', 'nav.manuscripts', 'nav.themes',
   'nav.stories', 'nav.prophecies', 'nav.parallels', 'nav.persons', 'nav.numbers',
   'nav.timeline', 'nav.readingTexts', 'nav.statistics', 'nav.translations',
   'pub.catalog',
@@ -234,7 +234,6 @@ const navGroups = (t: Translator): { label: string; links: { href: string; label
   {
     label: t('nav.studies'),
     links: [
-      { href: '/kjente-vers', label: t('nav.knownVerses') },
       { href: '/temaer', label: t('nav.themes') },
       { href: '/historier', label: t('nav.stories') },
       { href: '/manuskripter/katalog', label: t('pub.catalog') },
