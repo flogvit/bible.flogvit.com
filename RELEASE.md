@@ -3,6 +3,10 @@
 What actually reached readers, newest first. Dates, not version numbers — we
 deploy continuously.
 
+## 2026-08-01 — Groundwork only: nothing on the site changes this time
+
+**Behind the scenes**
+- Staging of Bible data before a release is now a script with an explicit allowlist, covered by tests, so unintended files can no longer slip into a data rollout — invisible today, but it protects the text you read.
 ## 2026-07-31 — No visible changes this round; the content pipeline got safer
 
 **Behind the scenes**
