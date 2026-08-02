@@ -177,28 +177,64 @@ tettest personlenkede sidene vi har.
 - **Sannheten er `persons.name`** — kolonnen `/personer/<id>` slår opp i — lest
   gjennom SAMME fallback-kjede som spørringen (`contentLanguageChain`). En
   nb-rad som peker på en person vi bare har på engelsk er derfor ikke død.
-- **Lenka faller, navnet blir stående.** En død adresse nulles (skalar) eller
-  filtreres ut (liste); raden bæres uendret videre. «Tamar» står fortsatt i
-  ættetavlen, bare ikke som lenke — `PersonLink` uten id gir ren tekst, en form
-  dataene alt bruker («Peres», «Hesron»). Samme avveining som «start slettes,
-  slutt klippes» i #46: kast aldri innhold vi HAR for å bli kvitt en adresse vi
-  ikke har.
+- **Kan adressen RETTES, rettes den — sletting er siste utvei.** Første utgave
+  hadde bare ett svar, «fjern», og det er feil for den største klassen: av 90
+  døde peker-id-er målt på .no var 16 slike vi HAR, bare stavet på den gamle
+  måten (`jisreel-hoseas-sønn` mot rada `jisreel-hoseas-sonn`, `na'ama` mot
+  `naama`). Der slettet ryddingen en ekte familierelasjon for å bli kvitt en
+  adresse den kunne rettet. `personResolverFrom` gir derfor den KANONISKE
+  id-en framfor ja/nei, i tre trinn som alle krever et EKSAKT treff i
+  `persons`: id-en som den står → `PERSON_ID_ALIASES` (de 68 håndverifiserte
+  fra free-bible#25, altså formene translitterering ikke kan redde —
+  `akabs-snn` mangler bokstaven helt) → `normalizePersonId()`, som gjør
+  nøyaktig det free-bible sin rettede `nameToId` gjør (ø→o, æ→ae, å→a).
+  Rapporten skiller rettet fra fjernet: «fjernet 16 lenker» der den rettet dem
+  beskriver en annen hendelse enn den som skjedde.
+- **Lenka faller, navnet blir stående** — når den ikke kan rettes. En død
+  adresse nulles (skalar) eller filtreres ut (liste); raden bæres uendret
+  videre. «Tamar» står fortsatt i ættetavlen, bare ikke som lenke —
+  `PersonLink` uten id gir ren tekst, en form dataene alt bruker («Peres»,
+  «Hesron»). Samme avveining som «start slettes, slutt klippes» i #46: kast
+  aldri innhold vi HAR for å bli kvitt en adresse vi ikke har.
 - **Den gjetter aldri.** `tamar` kunne vært `tamar-juda`,
   `tamar-absaloms-datter` eller `tamar-absaloms-soster-davids-datter`. Samme
   grunn som at bare ÉN generasjon leseteksts-id-er kunne løses opp i #40.
+  Rettingen bryter ikke med dette: den er en deterministisk omstaving med
+  eksakt treff, ikke et valg mellom kandidater. `josef` normaliserer til seg
+  selv, vi har elleve `josef-*`, og ingen av dem velges — den adressen dør.
+- **Begge personflatene honorerer samme alias-kart.** Kartet lå bare på
+  `/personer/:personId`, så `/api/persons/:id` slo opp rått: de 68 rettede
+  id-ene 301-et for en leser som klikket og 404-et for en klient som hentet
+  dem — samme adresse, samme app, to svar. Seks av dem har et ordrett `ø` og
+  kommer inn som `%C3%B8`, altså nøyaktig formen saken er meldt på. Queryen
+  bæres over redirecten, ellers svarer neste kall på gulvspråket (#24).
 - **Ett etter-pass, fra to steder** — `ensureSchema()` (altså hver deploy, som
   rydder prod) og slutten av `import-bible.ts`. Sveipen går over ALLE
   innholdstabellene med en JSON-blob, ikke bare de to som har adresser i dag.
 - **Ryddingen teller som en endring** og løfter sync-versjonen, ellers ville
   mikrocachen servert den døde lenka i inntil en time til.
-- **Vakta er `test/person-refs.test.ts` og har fire halvdeler.** REGELEN (ren
-  logikk: skalar nulles, liste filtreres, alt annet står), DATA (ingen rad i
-  noen innholdstabell peker på en person som ikke finnes — hele basen, ikke bare
-  `PAGES`), FORM (ny tabell med JSON-blob og ny adressenøkkel må deklareres) og
-  SIDA (`/nb/matt/1` og `/en/matt/1` rendret, hver personlenke svarer 200).
-  Nøkkel-halvdelen kjenner ingen nøkkelnavn: den finner nøkler hvis verdier
-  stort sett slår opp i `persons`, så en ny adressenøkkel oppdages uten at noen
-  har ført den opp. Alle vaktene er mutasjonstestet.
+- **Vakta er `test/person-refs.test.ts` og har fem halvdeler.** REGELEN (ren
+  logikk: skalar nulles, liste filtreres, alt annet står), RETTINGEN (en
+  ø-adresse rettes framfor å forsvinne, en uredelig id slettes fortsatt, og
+  rapporten skiller de to), DATA (ingen rad i noen innholdstabell peker på en
+  person som ikke finnes — hele basen, ikke bare `PAGES`), FORM (ny tabell med
+  JSON-blob og ny adressenøkkel må deklareres) og SIDA (`/nb/matt/1` og
+  `/en/matt/1` rendret, hver personlenke svarer 200). API-flata har sin egen i
+  `person-id-aliases.test.ts`: ingen gammel id får 404-e over API-et når sida
+  sender den videre. Nøkkel-halvdelen kjenner ingen nøkkelnavn: den finner
+  nøkler hvis verdier stort sett slår opp i `persons`, så en ny adressenøkkel
+  oppdages uten at noen har ført den opp. Alle vaktene er mutasjonstestet —
+  også de to grenene i resolveren, hver for seg.
+
+> **`bibel.flogvit.no` får IKKE disse fiksene, og det er ikke en forglemmelse.**
+> Saken over er meldt på .no, som er frosset på branch `bibel-no`. Alt her ligger
+> på `main`, altså hono-appen bak `bible.flogvit.com`. En fiks på `main` kan
+> ikke nå .no — den ble merget og saken lukket 2026-07-31 på nettopp den
+> misforståelsen, og gjenåpnet av prod-vakten 2026-08-02 med beviset fortsatt
+> rødt på .no. Hva som skal skje med den frosne flata (301 til .com, tine opp
+> branchen, eller la den stå) er en avgjørelse, ikke en kodeoppgave — den bærer
+> merket `beslutning` sammen med søskensakene #48 og #49. **Lukk den ikke fra
+> en commit på `main`.**
 
 ### En innholdstabell hvis KILDE er borte skal ikke bli stående (#58)
 
