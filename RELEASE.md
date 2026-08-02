@@ -3,6 +3,21 @@
 What actually reached readers, newest first. Dates, not version numbers — we
 deploy continuously.
 
+## 2026-08-02 — No more dead ends in the text, and the phone gets what the desktop had
+
+**Polish**
+- On a phone, the reading toolbar now carries everything the desktop side rail does, including Contribute, so no action is desktop-only anymore.
+- Chapter breadcrumbs and the counts on theme pages now read in your own language everywhere; a few spots still said "Kap. 1" no matter which language you had chosen.
+- Search results now point at chapters and themes rather than at action links like the contribute form or your account page, so what you click is the text you were looking for.
+
+**Bug fixes**
+- A reference to a person who has no page yet no longer leads to a dead end — the name stays readable in the text instead of turning into a broken link.
+- Six pages existed but were missing from the sitemap, so search engines never found them. They are listed now.
+- A page that could no longer be built was removed, along with the six places that still linked to it.
+- During a sudden burst of traffic the site now falls back to cached pages as intended; the safeguard existed but never actually engaged.
+
+**Behind the scenes**
+- Automated checks now cover sitemap coverage, person links, mobile/desktop parity, untranslated strings and the size of the crawlable surface; the content importer reports sources that have disappeared, not just the ones it rejects.
 ## 2026-08-01 — No visible changes; groundwork on how the Bible text is prepared for release
 
 **Behind the scenes**
