@@ -68,7 +68,9 @@ describe('regelen: lenka faller, navnet blir', () => {
   // ryddingen fjerner ADRESSEN og ikke raden. Blir dette til «slett noden», er
   // «Tamar» borte fra ættetavlen, og da har vi byttet en død lenke mot tapt
   // innhold.
-  const known = (id: string) => id === 'finnes';
+  // Resolveren gir den kanoniske id-en eller `null` — ikke ja/nei. Her finnes
+  // ingenting å rette til, så alt som ikke er «finnes» er dødt.
+  const known = (id: string) => (id === 'finnes' ? id : null);
   const strip = (content: unknown) => stripDanglingPersonRefs(content, known, () => {});
 
   test('en død skalar nulles, navnet står igjen', () => {
@@ -100,6 +102,82 @@ describe('regelen: lenka faller, navnet blir', () => {
     const once = strip({ family: { father: 'borte', children: ['borte'] } });
     expect(once).toEqual({ family: { father: null, children: [] } });
     expect(strip(once)).toBe(null);
+  });
+});
+
+// REGELEN FØR REGELEN: EN ADRESSE SOM KAN RETTES, RETTES (#61)
+// -------------------------------------------------------------
+// «Lenka faller, navnet blir» er riktig for en adresse vi ikke HAR. Men i
+// målingen på .no var 16 av 90 døde peker-id-er slike vi har — personen ligger
+// der under en NORMALISERT id: `jisreel-hoseas-sønn` mot rada `jisreel-hoseas-sonn`,
+// `na'ama` mot `naama`. Da er sletting feil svar: den kaster en ekte
+// familierelasjon for å bli kvitt en adresse vi kunne rettet, og det er
+// nøyaktig det CLAUDE.md forbyr — «kast aldri innhold vi HAR for å bli kvitt en
+// adresse vi ikke har».
+//
+// Verre: ryddingen kjører ved HVER deploy, og vakta over blir grønn AV
+// slettingen. Feilen ville altså vært usynlig i begge ender.
+//
+// Rettingen gjetter ikke. Den bruker samme translitterering free-bible sin
+// rettede `nameToId` bruker (ø→o, æ→ae, å→a), og godtar bare et EKSAKT treff.
+// `josef` normaliserer til seg selv og finnes ikke — den blir stående som død
+// og slettes, slik den skal. Vi har elleve `josef-*`, og å velge en av dem
+// ville vært gjettingen #46 og #61 begge sier nei til.
+describe('regelen før regelen: en adresse som kan rettes, rettes', () => {
+  // Basen «har» bare de normaliserte formene — som i virkeligheten.
+  const rows = [
+    { name: 'jisreel-hoseas-sonn', language: 'nb' },
+    { name: 'ananias-oversteprest', language: 'nb' },
+    { name: 'josef-gt', language: 'nb' },
+    { name: 'finnes', language: 'nb' },
+  ];
+  const resolve = personResolverFrom(rows);
+  const strip = (content: unknown) => stripDanglingPersonRefs(content, (id) => resolve(id, 'nb'), () => {});
+
+  test('resolveren gir den KANONISKE id-en, ikke bare ja/nei', () => {
+    expect(resolve('jisreel-hoseas-sonn', 'nb')).toBe('jisreel-hoseas-sonn');
+    expect(resolve('jisreel-hoseas-sønn', 'nb')).toBe('jisreel-hoseas-sonn');
+    expect(resolve('josef', 'nb')).toBe(null);
+  });
+
+  test('en ø-id i en liste RETTES framfor å forsvinne', () => {
+    expect(strip({ family: { children: ['jisreel-hoseas-sønn', 'finnes'] } })).toEqual({
+      family: { children: ['jisreel-hoseas-sonn', 'finnes'] },
+    });
+  });
+
+  test('en ø-id i en skalar rettes framfor å nulles', () => {
+    expect(strip({ family: { father: 'ananias-øversteprest' } })).toEqual({
+      family: { father: 'ananias-oversteprest' },
+    });
+  });
+
+  test('en id som IKKE kan rettes, slettes fortsatt — den gjetter aldri', () => {
+    // `josef` normaliserer til seg selv. Elleve `josef-*` finnes; ingen velges.
+    expect(strip({ family: { children: ['josef', 'finnes'], father: 'josef' } })).toEqual({
+      family: { children: ['finnes'], father: null },
+    });
+  });
+
+  test('rettingen er idempotent — andre kjøring endrer ingenting', () => {
+    const once = strip({ family: { children: ['jisreel-hoseas-sønn'] } });
+    expect(once).toEqual({ family: { children: ['jisreel-hoseas-sonn'] } });
+    expect(strip(once)).toBe(null);
+  });
+
+  test('en rettet adresse rapporteres som RETTET, ikke som fjernet', () => {
+    // En import som sier «fjernet 16 lenker» der den rettet dem, beskriver en
+    // annen hendelse enn den som skjedde.
+    const seen: { id: string; replacement: string | null }[] = [];
+    stripDanglingPersonRefs(
+      { family: { children: ['jisreel-hoseas-sønn', 'josef'] } },
+      (id) => resolve(id, 'nb'),
+      (_key, id, replacement) => seen.push({ id, replacement }),
+    );
+    expect(seen).toEqual([
+      { id: 'jisreel-hoseas-sønn', replacement: 'jisreel-hoseas-sonn' },
+      { id: 'josef', replacement: null },
+    ]);
   });
 });
 

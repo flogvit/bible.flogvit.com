@@ -53,6 +53,7 @@
 
 import type { SQL } from 'bun';
 import { contentLanguageChain } from './lang.ts';
+import { PERSON_ID_ALIASES, normalizePersonId } from './person-id-aliases.ts';
 
 /**
  * JSON-nøklene som bærer en PERSONADRESSE — altså en id som skal kunne slås opp
@@ -132,13 +133,30 @@ export const UNSCANNED_TABLES: UnscannedTable[] = [
   },
 ];
 
-/** Et oppslag som svarer på om en person-id finnes for et gitt innholdsspråk. */
-export type PersonResolver = (id: string, language: string) => boolean;
+/**
+ * Slår en person-id opp for et gitt innholdsspråk og gir den KANONISKE id-en
+ * tilbake — ikke ja/nei. `null` betyr «finnes ikke, og kan ikke rettes».
+ *
+ * Skillet er hele poenget: en peker som bare er stavet på den gamle måten skal
+ * rettes, ikke slettes.
+ */
+export type PersonResolver = (id: string, language: string) => string | null;
 
 /**
  * Bygger oppslaget fra `persons`-tabellen. Kjeden er den samme som
  * `inLanguage()` i `bible.ts` bruker, så vakta og spørringen er enige om hva
  * som finnes: `nn` → `nb` → `en`.
+ *
+ * Tre trinn, i tur, og hvert av dem krever et EKSAKT treff i `persons`:
+ *
+ *   1. id-en slik den står,
+ *   2. `PERSON_ID_ALIASES` — de 68 håndverifiserte omskrivingene fra
+ *      free-bible#25, altså de formene translitterering ikke kan redde
+ *      (`akabs-snn` mangler bokstaven helt),
+ *   3. `normalizePersonId()` — ø/æ/å-klassen saken er meldt på.
+ *
+ * Slår ingen av dem opp, er adressen død. Den gjetter aldri videre: `josef`
+ * blir ikke til en av de elleve `josef-*`.
  */
 export function personResolverFrom(rows: { name: string; language: string }[]): PersonResolver {
   const byLanguage = new Map<string, Set<string>>();
@@ -151,16 +169,28 @@ export function personResolverFrom(rows: { name: string; language: string }[]): 
   return (id, language) => {
     let chain = chains.get(language);
     if (!chain) chains.set(language, (chain = contentLanguageChain(language)));
-    return chain.some((lang) => byLanguage.get(lang)?.has(id));
+    const has = (candidate: string) => chain!.some((lang) => byLanguage.get(lang)?.has(candidate));
+
+    if (has(id)) return id;
+    const alias = PERSON_ID_ALIASES[id];
+    if (alias && has(alias)) return alias;
+    const normalized = normalizePersonId(id);
+    if (normalized !== id && has(normalized)) return normalized;
+    return null;
   };
 }
 
-/** En død personadresse, slik den rapporteres. */
+/** En personadresse som ikke slår opp slik den står, slik den rapporteres. */
 export interface DanglingPersonRef {
   table: string;
   key: string;
   /** Id-en som ikke finnes. */
   id: string;
+  /**
+   * Den kanoniske id-en adressen ble RETTET til, eller `null` når den ikke
+   * kunne reddes og altså ble fjernet.
+   */
+  replacement: string | null;
   /** Språkene raden(e) ligger på. */
   languages: string[];
   /** Antall forekomster. */
@@ -180,24 +210,26 @@ export interface DanglingPersonRef {
  */
 export function stripDanglingPersonRefs(
   content: unknown,
-  known: (id: string) => boolean,
-  onRemoved: (key: string, id: string) => void,
+  resolve: (id: string) => string | null,
+  onChanged: (key: string, id: string, replacement: string | null) => void,
 ): unknown | null {
-  let removed = false;
+  let changed = false;
 
   const walk = (node: unknown, key: string | null): unknown => {
     if (Array.isArray(node)) {
       const out: unknown[] = [];
       for (const item of node) {
-        // Et dødt element i en ADRESSELISTE forsvinner helt — en tom streng i
-        // `children` ville vært en lenke til `/personer/`.
-        if (key !== null && REF_KEYS.has(key) && typeof item === 'string') {
-          if (item !== '' && !known(item)) {
-            onRemoved(key, item);
-            removed = true;
+        if (key !== null && REF_KEYS.has(key) && typeof item === 'string' && item !== '') {
+          const canonical = resolve(item);
+          if (canonical === item) {
+            out.push(item);
             continue;
           }
-          out.push(item);
+          onChanged(key, item, canonical);
+          changed = true;
+          // Kan den rettes, rettes den. Ellers forsvinner elementet helt — en
+          // tom streng i `children` ville vært en lenke til `/personer/`.
+          if (canonical !== null) out.push(canonical);
           continue;
         }
         out.push(walk(item, key));
@@ -207,14 +239,17 @@ export function stripDanglingPersonRefs(
     if (node !== null && typeof node === 'object') {
       const out: Record<string, unknown> = {};
       for (const [k, value] of Object.entries(node as Record<string, unknown>)) {
-        if (REF_KEYS.has(k) && typeof value === 'string') {
-          if (value !== '' && !known(value)) {
-            onRemoved(k, value);
-            removed = true;
-            out[k] = null;
+        if (REF_KEYS.has(k) && typeof value === 'string' && value !== '') {
+          const canonical = resolve(value);
+          if (canonical === value) {
+            out[k] = value;
             continue;
           }
-          out[k] = value;
+          onChanged(k, value, canonical);
+          changed = true;
+          // Rettet id, eller null. `PersonLink` uten id gir ren tekst, så
+          // navnet blir stående der adressen ikke kunne reddes.
+          out[k] = canonical;
           continue;
         }
         out[k] = walk(value, k);
@@ -225,7 +260,7 @@ export function stripDanglingPersonRefs(
   };
 
   const next = walk(content, null);
-  return removed ? next : null;
+  return changed ? next : null;
 }
 
 /** Samler adressene uten å endre noe — brukes av vakta og av rapporteringen. */
@@ -246,14 +281,14 @@ export function findDanglingPersonRefsIn(
     stripDanglingPersonRefs(
       parsed,
       (id) => resolve(id, row.language),
-      (key, id) => {
+      (key, id, replacement) => {
         const mapKey = `${key} ${id}`;
         const entry = found.get(mapKey);
         if (entry) {
           entry.hits++;
           if (!entry.languages.includes(row.language)) entry.languages.push(row.language);
         } else {
-          found.set(mapKey, { table, key, id, languages: [row.language], hits: 1 });
+          found.set(mapKey, { table, key, id, replacement, languages: [row.language], hits: 1 });
         }
       },
     );
@@ -298,8 +333,12 @@ export function personPruneReportIsEmpty(r: PersonPruneReport): boolean {
 export function formatPersonPruneReport(r: PersonPruneReport): string {
   if (r.skipped) return 'Personadresser: ingen personer i basen — hoppet over.';
   if (personPruneReportIsEmpty(r)) return 'Personadresser: ingen døde adresser.';
-  const lines = r.removed.map(
-    (f) => `  ${f.table}.${f.key}: fjernet ${f.hits} lenke(r) til «${f.id}» (${f.languages.join(', ')})`,
+  // Rettet og fjernet er to forskjellige hendelser. En rapport som sa «fjernet»
+  // om begge ville beskrevet tapt innhold der vi nettopp berget det.
+  const lines = r.removed.map((f) =>
+    f.replacement === null
+      ? `  ${f.table}.${f.key}: fjernet ${f.hits} lenke(r) til «${f.id}» (${f.languages.join(', ')})`
+      : `  ${f.table}.${f.key}: rettet ${f.hits} lenke(r) «${f.id}» → «${f.replacement}» (${f.languages.join(', ')})`,
   );
   return `Personadresser ryddet i ${r.rows} rad(er):\n${lines.join('\n')}`;
 }
@@ -332,14 +371,14 @@ export async function prunePersonRefs(sql: SQL): Promise<PersonPruneReport> {
       const next = stripDanglingPersonRefs(
         parsed,
         (id) => resolve(id, row.language),
-        (key, id) => {
+        (key, id, replacement) => {
           const mapKey = `${source.table} ${key} ${id}`;
           const entry = found.get(mapKey);
           if (entry) {
             entry.hits++;
             if (!entry.languages.includes(row.language)) entry.languages.push(row.language);
           } else {
-            found.set(mapKey, { table: source.table, key, id, languages: [row.language], hits: 1 });
+            found.set(mapKey, { table: source.table, key, id, replacement, languages: [row.language], hits: 1 });
           }
         },
       );

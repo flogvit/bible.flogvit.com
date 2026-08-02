@@ -82,3 +82,29 @@ export const PERSON_ID_ALIASES: Record<string, string> = {
   'tubal-snn-av-jafet': 'tubal-sonn-av-jafet',
   'ussiaasarja': 'ussia-asarja',
 };
+
+/**
+ * Samme translitterering free-bible sin RETTEDE `nameToId()` gjør
+ * (`generate/lib.ts`): små bokstaver, `æ`→`ae`, `ø`→`o`, `å`→`a`, NFD-stripping
+ * av diakritiske tegn, og alt annet enn `[a-z0-9]` blir bindestrek.
+ *
+ * Brukt til å RETTE en peker som bærer den gamle formen, ikke til å lage nye
+ * id-er — dem eier free-bible. Derfor er ett ledd i originalen med vilje utelatt:
+ * `nameToId` fjerner også parenteser, fordi den får et VISNINGSNAVN inn. Her
+ * kommer det en id inn, og å fjerne noe fra den ville endret hvem den peker på
+ * framfor bare hvordan den staves.
+ *
+ * Rettingen er ikke en gjetning: den er bare gyldig når resultatet slår opp
+ * EKSAKT i `persons` (se `personResolverFrom` i `person-refs.ts`).
+ */
+export function normalizePersonId(id: string): string {
+  return id
+    .toLowerCase()
+    .replace(/æ/g, 'ae')
+    .replace(/ø/g, 'o')
+    .replace(/å/g, 'a')
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
