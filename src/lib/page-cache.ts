@@ -17,6 +17,9 @@
 // svarte vanlige kapittelsider på 8–29 sekunder mens semaforen «holdt». Riktig
 // utfall under overlast er raske 503-er til noen få, ikke 20-sekunders svar til
 // alle. Derfor er standarden lav (6) og skal måles, ikke gjettes oppover.
+//
+// Taket verner SSR-RENDEREN og ingenting annet. robots.txt, sitemapene og de
+// statiske filene sto bak det og fikk 503 under last — se NOT_A_PAGE (#64).
 
 import type { Context, Next } from 'hono';
 
@@ -164,12 +167,53 @@ const NEVER_CACHED = [
   /^\/(?:[a-z]{2}\/)?manuskripter\/katalog(?:\/|$)/,
 ];
 
+/**
+ * Stier som ALDRI når SSR-renderen, og som derfor ikke skal kunne ta en plass i
+ * semaforen: `/robots.txt`, sitemapene og alt i `public/` (#64).
+ *
+ * `/robots.txt` fikk 503 av vårt eget lastvern natt til 2026-08-02 — 1 av 7
+ * hentinger, `Retry-After: 30`, varighet nøyaktig 3,003 s (= `queueWaitMs`).
+ * Det er selvopphevende: robots.txt er BREMSEN på lasten som utløste
+ * avvisningen. #60 la `Disallow: /*?vers=` der nettopp for å få crawlerne bort
+ * fra handlingsflata, og den regelen virker bare hvis crawleren får LESE fila.
+ * Alle de store behandler 5xx på robots.txt som «stopp crawlingen av hele siten
+ * en stund», og vedvarende 5xx (Google: over ~30 dager) som `Disallow: /`. Jo
+ * hardere crawlen presser oss, desto mindre sannsynlig er det at den som
+ * presser får se at vi ba den la være. En brems bak sin egen port er ingen
+ * brems. En 503 på en sitemap er mildere: en indekseringsrunde som går tapt.
+ *
+ * Samme regel tar de statiske filene, og der var utslaget verre enn i saken:
+ * `/styles.css` og `/js/*` sto også bak semaforen, så en leser som fikk sida fra
+ * CACHEN (`x-cache: hit`, ingen plass brukt) kunne få 503 på stilarket rett
+ * etterpå. Å skjære bort en filutlevering for å berge en SSR-render er nøyaktig
+ * baklengs.
+ *
+ * Felles for dem: de kan aldri fylle cachen — bare `text/html` caches (nederst
+ * i fila) — så de KOSTER en plass og GIR ingenting tilbake. Ren kostnad i
+ * akkurat det øyeblikket kapasiteten er knapp. Og de er billige, målt: 0,02 ms
+ * for robots.txt og 0,35 ms for `/styles.css`, 3,3 ms for den dyreste sitemapen
+ * (ren strengbygging, ingen DB), mot ~47 ms + DB for en kapittelside. Det finnes
+ * dessuten 9 sitemap-URL-er mot 1 189 kapittelsider — ingen crawl-flate (#60).
+ *
+ * Regelen er FILNAVNET, ikke en liste over ruter: en ny SEO-rute eller en ny fil
+ * i `public/` arver den gratis. Det er samme skille `app.ts` allerede bruker for
+ * å avgjøre at en sti med punktum ikke er en side (den 404-er framfor å bli
+ * forhandlet inn i et språk), og ingen siderute har punktum i stien —
+ * `test/load-shedding.test.ts` holder på begge deler.
+ *
+ * Det ene som følger med: en ukjent sti MED punktum (`/foo.php`) rendrer
+ * 404-siden, og den går nå utenom taket. Den koster 1,15 ms uten DB, og den ble
+ * uansett aldri cachet (status ≠ 200) — altså samme regnestykke som over.
+ */
+export const NOT_A_PAGE = /\.[^./]+$/;
+
 export async function withPageCache(c: Context, next: Next): Promise<Response | void> {
   const anonymous = !(c.req.header('cookie') ?? '').includes('fv-session=');
   if (
     c.req.method !== 'GET' ||
     !anonymous ||
     c.req.path.startsWith('/api/') ||
+    NOT_A_PAGE.test(c.req.path) ||
     NEVER_CACHED.some((re) => re.test(c.req.path))
   ) {
     return next();
