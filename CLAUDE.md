@@ -550,6 +550,54 @@ med jevne mellomrom gjennom en INJISERT leser (`setContentVersionReader`, satt i
 selv når versjonen endres. Feiler spørringen, BEHOLDES cachen: den er det eneste
 som fortsatt kan svare.
 
+### Taket verner RENDEREN — ikke alt som passerer middlewaren (#64)
+
+`withPageCache` er montert på `*`, så `/robots.txt` sto bak semaforen som alle
+andre og fikk **503** natt til 2026-08-02: 1 av 7 hentinger, `Retry-After: 30`,
+varighet nøyaktig 3,003 s (= `queueWaitMs`).
+
+Det er selvopphevende. robots.txt er **bremsen** på lasten som utløste
+avvisningen: `#60` la `Disallow: /*?vers=` der nettopp for å få crawlerne bort
+fra handlingsflata, og den regelen virker bare hvis crawleren får LESE fila.
+Kortvarig 5xx på robots.txt får de store til å stanse crawlingen av hele siten
+en stund; vedvarende 5xx (Google: over ~30 dager) tolkes som `Disallow: /`. **Jo
+hardere crawlen presser oss, desto mindre sannsynlig er det at den som presser
+får se at vi ba den la være.**
+
+- **Utslaget var større enn saken beskrev.** Målt sto også alle 50 filene i
+  `public/` bak semaforen: en leser som fikk sida fra CACHEN (`x-cache: hit` —
+  som ikke bruker en plass) kunne få 503 på `/styles.css` rett etterpå. Å skjære
+  bort en filutlevering for å berge en SSR-render er nøyaktig baklengs.
+- **Felles for dem: de kan aldri fylle cachen.** Bare `text/html` caches, så de
+  KOSTER en plass og GIR ingenting tilbake — ren kostnad i akkurat det øyeblikket
+  kapasiteten er knapp. Og de er billige, målt: 0,02 ms (robots.txt), 0,35 ms
+  (`/styles.css`), 3,3 ms for den dyreste sitemapen (ren strengbygging, ingen DB)
+  mot ~47 ms + DB for en kapittelside. Sitemapene er heller ingen crawl-flate:
+  9 URL-er mot 1 189 kapittelsider (`#60`).
+- **Regelen er FILNAVNET, ikke en liste over ruter.** `NOT_A_PAGE` i
+  `page-cache.ts` er samme skille `app.ts` allerede bruker for å avgjøre at en
+  sti med punktum ikke er en side (den 404-er framfor å bli forhandlet inn i et
+  språk). En ny SEO-rute eller en ny fil i `public/` arver omgåelsen gratis —
+  en `ALWAYS_THROUGH`-liste ville vært ett sted til å glemme.
+- **Ingen siderute har punktum i stien**, og det er en forutsetning for regelen,
+  ikke en tilfeldighet: manuskript-slugene er `[a-z0-9-]`, lesedagene er datoer,
+  kapitlene er `/<bok>/<n>`. Adresserer du en ny detaljside, hold den punktumfri.
+- **Det ene som følger med:** en ukjent sti MED punktum (`/foo.php`) rendrer
+  404-siden utenom taket. Den koster 1,15 ms uten DB og ble uansett aldri cachet
+  (status ≠ 200), altså samme regnestykke.
+- **Ikke gjort:** ingen memoisering av sitemap-XML-en. 1,09 MB × 8 språk = ~8,7 MB
+  permanent heap for noe som hentes en håndfull ganger i døgnet — samme avveining
+  som det bevisste unntaket i `getAvailableMappings()` (`#19`).
+
+**Vakta er `test/load-shedding.test.ts`** og har fire halvdeler. Den setter
+`maxConcurrentRenders: 0` — semaforen alltid full — og spør hva som kommer
+gjennom. De to første kjenner ingen sti-liste: de leser **rutetabellen**
+(`seoRoutes.routes`) og **katalogen** `public/`. Den tredje krever at en ekte
+side fortsatt skjæres bort, ellers ville «fjern hele lastvernet» bestått. Den
+fjerde importerer `NOT_A_PAGE` og krever at ingen sti i sitemapen eller i `PAGES`
+ser ut som en fil. Alle fire er mutasjonstestet, også mot den smale fiksen som
+bare slipper `/robots.txt` gjennom.
+
 ### Kapasitet: profilér før du skrur på tak (#19)
 
 En CPU-profil av kapittelrenderen (`bun --cpu-prof --cpu-prof-md`) viste at **85 %
