@@ -63,3 +63,59 @@ describe('person-id-aliaser', () => {
     expect(res.headers.get('location')).toBe(href('de', `/personer/${next}`));
   });
 });
+
+// BEGGE PERSONFLATENE HONORERER SAMME KART (#61)
+// ----------------------------------------------
+// Kartet ble lagt inn på SIDA og bare der, så `/personer/<gammel>` 301-et mens
+// `/api/persons/<gammel>` 404-et — to svar på samme adresse, fra samme app.
+//
+// Det er nøyaktig symptomet #61 er meldt på, målt på .no: appens eget API
+// 404-er en person-id appen selv fortsatt honorerer et annet sted. Seks av de
+// gamle id-ene har et ORDRETT `ø`, altså `%C3%B8` på veien inn — den ene
+// formen saken navngir i tittelen (`jisreel-hoseas-s%C3%B8nn`).
+//
+// Adressene har vært offentlige og er indeksert og bokmerket; det er hele
+// grunnen til at kartet finnes framfor en 404. En klient som henter dem over
+// API-et har samme krav på å bli sendt videre som en leser som klikker.
+describe('personadresser: API-et honorerer samme alias-kart som sida', () => {
+  const aliases = Object.entries(PERSON_ID_ALIASES);
+
+  // Klassen saken er meldt på: gammel id med et ordrett ø/æ/å.
+  const nordic = aliases.filter(([old]) => /[øæå]/.test(old));
+
+  test('det finnes gamle id-er med ordrett ø/æ/å å måle på', () => {
+    expect(nordic.length).toBeGreaterThan(0);
+  });
+
+  test('en gammel id 301-er også over API-et', async () => {
+    const [old, next] = aliases[0]!;
+    const res = await app.request(`/api/persons/${encodeURIComponent(old)}`);
+    expect(res.status).toBe(301);
+    expect(res.headers.get('location')).toBe(`/api/persons/${next}`);
+  });
+
+  test('ingen gammel id 404-er over API-et når sida sender den videre', async () => {
+    const dead: string[] = [];
+    for (const [old] of aliases) {
+      const res = await app.request(`/api/persons/${encodeURIComponent(old)}`);
+      if (res.status === 404) dead.push(old);
+    }
+    expect(dead, `API-et 404-er ${dead.length} id-er sida 301-er:\n${dead.join('\n')}`).toEqual([]);
+  });
+
+  test('den prosentkodede ø-formen — saken sitt eget eksempel — svarer', async () => {
+    for (const [old, next] of nordic) {
+      // encodeURIComponent gir nettopp %C3%B8, slik klienten sender den.
+      const res = await app.request(`/api/persons/${encodeURIComponent(old)}`);
+      expect(res.status, `${old} skulle 301-et til ${next}`).toBe(301);
+      expect(res.headers.get('location')).toBe(`/api/persons/${next}`);
+    }
+  });
+
+  test('redirecten beholder ?lang=, ellers svarer neste kall på feil språk', async () => {
+    const [old, next] = aliases[0]!;
+    const res = await app.request(`/api/persons/${encodeURIComponent(old)}?lang=en`);
+    expect(res.status).toBe(301);
+    expect(res.headers.get('location')).toBe(`/api/persons/${next}?lang=en`);
+  });
+});
