@@ -3,6 +3,16 @@
 What actually reached readers, newest first. Dates, not version numbers — we
 deploy continuously.
 
+## 2026-08-03 — Older person references now lead to the right person, on the page and in the API
+
+**Bug fixes**
+
+- A link or cross-reference that uses an older id for a person no longer comes up empty. The id is recognised as an alias and you land on that person, instead of the reference being dropped.
+- The API now agrees with the site. Where the site would forward you to a person, `/api/persons` used to answer 404 for the very same id; both now resolve it the same way.
+
+**Behind the scenes**
+
+- Written down why the frozen Norwegian edition does not get this fix, in the place the next round will actually read it.
 ## 2026-08-02 — No more dead ends in the text, and the phone gets what the desktop had
 
 **Polish**
