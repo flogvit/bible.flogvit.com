@@ -562,6 +562,61 @@ en STRENG ville bestått på en regel som ser riktig ut uten å treffe.
 en navngitt tredjepart og hører hos Vegard — og punkt over løser årsaken framfor
 symptomet: flata var for stor for Googlebot også.
 
+## Delekortet — hva en delt lenke faktisk viser (#65)
+
+Flata deklarerte ingen `og:image` i det hele tatt, så hver lenke noen delte på
+Facebook, LinkedIn, Slack, iMessage eller Discord ble et kort med tittel og
+beskrivelse **uten bilde**. Målt i prod på forsiden og på `/en/matt/5`.
+
+**Ingen kunne se det innenfra, og det er sakens egentlige lærdom.** Siden svarer
+200 og ser riktig ut; en manglende meta-tagg gir verken 404, 5xx eller en
+logglinje. Prod-vakten kunne per konstruksjon aldri fanget det — `usage_errors`
+inneholder bare FEIL. Hullet finnes utelukkende utenfor produktet, hos noen som
+ennå ikke har klikket. Samme klasse hull som #45 og #60: skaden skjer der vi
+ikke ser den, og bare en vakt som er formulert på KONTRAKTEN finner den.
+Tverrgående sak med målingen for alle åtte flatene: `flogvit-com#74`.
+
+- **Kortet står i SIDEMALEN, ikke per rute.** `layout.tsx` deklarerer det som
+  standard for alle sider. Legges det per side, mangler det på den ruta noen
+  legger til i morgen — og da er vi tilbake til å oppdage det utenfra.
+- **`src/lib/share-card.ts` eier adressen og målene.** Målene er en del av
+  kontrakten, ikke pynt: uten `og:image:width`/`:height` må skraperen HENTE
+  bildet før den vet om det kan vises bredt, og den FØRSTE delingen av en URL —
+  den som betyr noe — blir uten bilde.
+- **Adressen er absolutt.** En relativ sti resolves ikke av alle skrapere.
+- **`twitter:image` er bevisst utelatt.** X faller tilbake på `og:image`, så
+  taggen ville vært duplisering med to steder å glemme å oppdatere. `twitter:card`
+  må derimot stå — uten `summary_large_image` vises et 1200x630-bilde som en
+  liten firkant ved siden av teksten.
+- **`og:image:alt` går gjennom ordboka.** Den er tekst en skjermleser leser opp,
+  altså brukervendt tekst. Den leses dessuten av norsk-sveipene i
+  sidekontrakten, som nå tar den sammen med `<title>` og description — et
+  attributt på en `<meta>` var usynlig for begge de gamle sveipene.
+- **KILDEN til bildet er HTML**, `assets/og/card.html`, rastrert av
+  `bun scripts/generate-og-card.ts` i samme headless Chrome som layout-vakta.
+  En binær fil noen laget i et bilderedigeringsprogram kan ikke diffes, og da
+  er neste endring en ny fil ingen kan sammenligne med den forrige. Runbooken
+  er `assets/og/README.md`.
+- **Kortet ligger i `public/`, ikke i objektlagring — og det er en RESTANSE,
+  ikke et valg.** Porteføljeregelen er at bilder hører i objektlagring, også
+  systeminnhold. Bøtta `bibel` finnes ikke, og en bøtte er en beslutning om
+  skyprosjekt, region og kostnad (`flogvit.com/CLAUDE.md`), ikke noe en
+  kodeendring kan ta. `OG_IMAGE_URL` er flyttelasset: last opp bildet, sett
+  variabelen i `bibel.env`, ferdig. Ingen kodeendring — og testen holder
+  knappen i live så den virker den dagen den brukes.
+- **Per-side-kort er et eget og senere steg.** Ingen ubrukt `shareCard`-prop
+  ligger og venter på det; generisk kort først, ellers venter hele flata på den
+  mest arbeidskrevende varianten.
+
+**Vakta er todelt.** Sidekontraktens invariant 8 sveiper HVER side i `PAGES` —
+absolutt `og:image`, målene 1200x630, en alt-tekst, og `twitter:card` — så en ny
+side arver kortet uten at noen har tenkt på det. `test/share-card.test.ts` tar
+det sveipen ikke kan se: at bildet FINNES, at det er en PNG med nøyaktig de
+målene sidemalen deklarerer (lest ut av IHDR-chunken, ikke antatt), at appen
+serverer det med validator, og at `OG_IMAGE_URL` faktisk flytter det. Alt-testen
+er strukturell som brødsmulevakta i #63 — en hardkodet literal rendres ordrett
+likt på fire ubeslektede språk. Alle vaktene er mutasjonstestet.
+
 ## Lastvern (anonyme sidevisninger)
 
 `src/lib/page-cache.ts` er både mikrocache OG lastavvisning (#4, #14): anonyme

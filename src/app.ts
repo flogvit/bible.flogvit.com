@@ -114,7 +114,9 @@ export function createApp() {
   //
   // staticCache FØRST: serveStatic sender ingen cache-headere i det hele tatt,
   // så etter en deploy satt leseren igjen med gammel CSS til ny HTML.
-  app.use('/*', staticCache(['/css/', '/js/', '/styles.css']));
+  // `/og.png` er delekortet (#65). Det hentes av skrapere, ikke av nettlesere,
+  // og uten en validator laster hver av dem hele bildet på nytt hver gang.
+  app.use('/*', staticCache(['/css/', '/js/', '/styles.css', '/og.png']));
   app.use('/*', serveStatic({ root: './public' }));
 
   // Én montering per språk (I18N.md §2). Locale settes av monteringen, ikke av

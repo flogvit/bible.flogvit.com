@@ -17,6 +17,7 @@ import { ACCOUNT_URL } from '../lib/session.ts';
 import { DEFAULT_LOCALE, LOCALES, href, makeT, ogLocale, type Locale, type Translator, lhref } from '../lib/i18n.ts';
 import { tCtx, islandStrings, type MessageKey } from '../lib/i18n.ts';
 import { assetUrl } from '../lib/static-cache.ts';
+import { shareCard } from '../lib/share-card.ts';
 
 /**
  * Strenger klient-øyene som lastes på HVER side trenger: plus-CTA-en (plus.js),
@@ -470,6 +471,7 @@ export function Layout(props: LayoutProps) {
   const t = makeT(props.locale);
   const u = (p: string) => href(props.locale, p);
   const desc = props.description ?? t('chrome.searchPlaceholder');
+  const card = shareCard();
   return (
     <>
       {raw('<!DOCTYPE html>')}
@@ -483,6 +485,21 @@ export function Layout(props: LayoutProps) {
           {props.noindex && <meta name="robots" content="noindex,follow" />}
           <meta name="author" content="FLOGVIT" />
           <meta property="og:locale" content={ogLocale(props.locale)} />
+          {/* Delekortet (#65). Uten `og:image` blir en delt lenke et kort med
+              bare tittel og beskrivelse — og hullet er usynlig fra flata selv,
+              for siden svarer 200 og ser riktig ut.
+
+              Det står her, i SIDEMALEN, som standard for alle sider: legges
+              det per rute, mangler det på den ruta noen legger til i morgen.
+
+              `twitter:image` er bevisst utelatt — X faller tilbake på
+              `og:image`, så taggen ville vært duplisering med to steder å
+              glemme å oppdatere. */}
+          <meta property="og:image" content={card.url} />
+          <meta property="og:image:width" content={String(card.width)} />
+          <meta property="og:image:height" content={String(card.height)} />
+          <meta property="og:image:alt" content={t('chrome.shareCardAlt')} />
+          <meta name="twitter:card" content="summary_large_image" />
           <link rel="canonical" href={props.canonical ?? SITE + href(props.locale, props.path)} />
           <HrefLang path={props.path} locales={props.locales} />
           <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
