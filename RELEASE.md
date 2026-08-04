@@ -3,6 +3,19 @@
 What actually reached readers, newest first. Dates, not version numbers — we
 deploy continuously.
 
+## 2026-08-04 — Bible book names now read in your own language
+
+**New features**
+
+- Book names appear in your own language on all eight languages. Five of them previously showed English names — Genesis, Matthew, Revelation — no matter which language you were reading in.
+
+**Bug fixes**
+
+- The reference palette no longer answers in Norwegian when you are reading in another language. It looked book names up by their internal key, so every language got the Norwegian name back.
+
+**Behind the scenes**
+
+- The mobile layout guard now measures the longest translation of a book name instead of the shortest, so a name that overflows on a narrow screen in one language is caught before release.
 ## 2026-08-04 — Shared links now unfold into a proper preview card
 
 **New features**
