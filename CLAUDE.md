@@ -479,10 +479,18 @@ crawler trenger ingen lenke når `<link rel="alternate">` sier at siden finnes.
 - **`x-default` må ligge INNENFOR settet.** Det er adressen Google velger når
   ingen språkvariant passer; pekte den på engelsk for en norsk-bare side, sendte
   vi hver uplasserbar leser til en 404.
-- Vakta i `page-contract.test.ts` sjekker invarianten, ikke tilfellet: **hver
-  annonserte URL svarer 200.** Den fanger dermed neste innholdsslag som mangler
-  et språk. Detaljsiden kan ikke ligge i `PAGES` — den 302-er under `/de/`, som
-  er hele poenget — så den har sin egen oppføring.
+- **Vakta er invariant 9 i `page-contract.test.ts`, og den er en SVEIP.** Den
+  sto først som tre håndplukkede sider mens både testfila og denne teksten lovte
+  at den «fanger neste innholdsslag som mangler et språk» — de 36 andre sidene i
+  `PAGES` var aldri sjekket. Invariant 3 sveiper riktignok hele matrisen, men den
+  ser bare FORMEN: at åtte språk og `x-default` STÅR der. Om adressene FINNES kan
+  den per konstruksjon ikke se, og det var nettopp hullet. Invariant 9 krever at
+  **hver adresse klyngen annonserer svarer det samme som siden selv** — mot
+  sidens EGEN status framfor mot 200, så 404-siden og 410-siden i matrisen holdes
+  til samme regel framfor å bli unntak.
+- **Detaljsiden kan ikke ligge i `PAGES`** — den svarer noe annet enn 200 under
+  `/de/`, som er hele poenget — så den måles der detaljsidene måles: se
+  «Detaljsidene er der klyngen kan lyve» under.
 - De to produktbeslutningene saken lot ligge, er tatt i **#76 under**: dagsiden
   302-er nå til språket den finnes på, og oversikten oppgir fortsatt alle åtte.
   Klyngen er uendret av det — hreflang skal peke på adressen som ER siden, ikke
