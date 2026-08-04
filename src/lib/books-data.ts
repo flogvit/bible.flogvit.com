@@ -3,6 +3,7 @@
  * This file can be imported in both client and server components
  */
 import { bookAliases } from './book-aliases.ts';
+import { BOOK_ABBRS, BOOK_NAMES, type BookNameTable } from './book-names.ts';
 import { contentLanguageChain, currentContentLanguage } from './lang.ts';
 
 export interface BookInfo {
@@ -128,71 +129,40 @@ export function getBookShortNameById(id: number): string | undefined {
   return booksById.get(id)?.short_name;
 }
 
-// ── Boknavn per språk (GitHub #20) ───────────────────────────────────
+// ── Boknavn per språk (GitHub #20, alle åtte språk i #69) ────────────
 //
 // `name_no`/`short_name` over er NORSKE og er samtidig NØKLENE: URL-slugene
 // og begge referanseparserne slår opp på dem, og de ligger i delte lenker og
-// i brukernes egne data. De skal derfor ikke røres — engelske navn legges ved
-// siden av, og valget skjer først ved visning.
+// i brukernes egne data. De skal derfor ikke røres — navnene på de andre
+// språkene ligger ved siden av (`book-names.ts`), og valget skjer først ved
+// visning.
 //
-// Bare engelsk er fylt ut. De øvrige fem språkene har ingen verifiserte
-// boknavn hos oss, og faller gjennom innholdskjeden til engelsk — samme
-// oppførsel som resten av innholdet. Et nytt språk er ren data her.
-
-const BOOK_NAMES_EN: Record<number, string> = {
-  1: 'Genesis', 2: 'Exodus', 3: 'Leviticus', 4: 'Numbers', 5: 'Deuteronomy',
-  6: 'Joshua', 7: 'Judges', 8: 'Ruth', 9: '1 Samuel', 10: '2 Samuel',
-  11: '1 Kings', 12: '2 Kings', 13: '1 Chronicles', 14: '2 Chronicles',
-  15: 'Ezra', 16: 'Nehemiah', 17: 'Esther', 18: 'Job', 19: 'Psalms',
-  20: 'Proverbs', 21: 'Ecclesiastes', 22: 'Song of Solomon', 23: 'Isaiah',
-  24: 'Jeremiah', 25: 'Lamentations', 26: 'Ezekiel', 27: 'Daniel', 28: 'Hosea',
-  29: 'Joel', 30: 'Amos', 31: 'Obadiah', 32: 'Jonah', 33: 'Micah', 34: 'Nahum',
-  35: 'Habakkuk', 36: 'Zephaniah', 37: 'Haggai', 38: 'Zechariah', 39: 'Malachi',
-  40: 'Matthew', 41: 'Mark', 42: 'Luke', 43: 'John', 44: 'Acts', 45: 'Romans',
-  46: '1 Corinthians', 47: '2 Corinthians', 48: 'Galatians', 49: 'Ephesians',
-  50: 'Philippians', 51: 'Colossians', 52: '1 Thessalonians',
-  53: '2 Thessalonians', 54: '1 Timothy', 55: '2 Timothy', 56: 'Titus',
-  57: 'Philemon', 58: 'Hebrews', 59: 'James', 60: '1 Peter', 61: '2 Peter',
-  62: '1 John', 63: '2 John', 64: '3 John', 65: 'Jude', 66: 'Revelation',
-};
-
-/** Standardforkortelsene (SBL-nær), brukt i referansene. */
-const BOOK_ABBR_EN: Record<number, string> = {
-  1: 'Gen', 2: 'Exod', 3: 'Lev', 4: 'Num', 5: 'Deut', 6: 'Josh', 7: 'Judg',
-  8: 'Ruth', 9: '1 Sam', 10: '2 Sam', 11: '1 Kgs', 12: '2 Kgs', 13: '1 Chr',
-  14: '2 Chr', 15: 'Ezra', 16: 'Neh', 17: 'Esth', 18: 'Job', 19: 'Ps',
-  20: 'Prov', 21: 'Eccl', 22: 'Song', 23: 'Isa', 24: 'Jer', 25: 'Lam',
-  26: 'Ezek', 27: 'Dan', 28: 'Hos', 29: 'Joel', 30: 'Amos', 31: 'Obad',
-  32: 'Jonah', 33: 'Mic', 34: 'Nah', 35: 'Hab', 36: 'Zeph', 37: 'Hag',
-  38: 'Zech', 39: 'Mal', 40: 'Matt', 41: 'Mark', 42: 'Luke', 43: 'John',
-  44: 'Acts', 45: 'Rom', 46: '1 Cor', 47: '2 Cor', 48: 'Gal', 49: 'Eph',
-  50: 'Phil', 51: 'Col', 52: '1 Thess', 53: '2 Thess', 54: '1 Tim',
-  55: '2 Tim', 56: 'Titus', 57: 'Phlm', 58: 'Heb', 59: 'Jas', 60: '1 Pet',
-  61: '2 Pet', 62: '1 John', 63: '2 John', 64: '3 John', 65: 'Jude',
-  66: 'Rev',
-};
+// Bokmål bor derfor HER og ikke i tabellene: én verdi, som både er nøkkelen og
+// den norske visningen, kan ikke drive fra seg selv.
 
 /**
- * Første ledd i innholdskjeden vi har navn for. `nn` treffer `nb` (nabospråk
- * før basespråk), alt annet ender på engelsk — nøyaktig som resten av
- * innholdet.
+ * Første ledd i innholdskjeden vi har navnet på. Bokmål er nøkkelspråket over;
+ * resten slås opp i tabellen. Mangler et språk navnet, ender kjeden på engelsk
+ * — nøyaktig som resten av innholdet — men det er nettopp det `#69` handlet om,
+ * så `test/book-names.test.ts` er rød hvis det skjer.
  */
-function pickByLanguage<T>(lang: string, norwegian: T, english: T | undefined): T {
+function pickByLanguage(lang: string, book: BookInfo, table: BookNameTable, norwegian: string): string {
   for (const candidate of contentLanguageChain(lang)) {
     if (candidate === 'nb') return norwegian;
-    if (candidate === 'en' && english !== undefined) return english;
+    const hit = table[candidate]?.[book.id];
+    if (hit) return hit;
   }
   return norwegian;
 }
 
 /** Boknavnet slik det skal VISES. Språket følger forespørselen. */
 export function bookName(book: BookInfo, lang = currentContentLanguage()): string {
-  return pickByLanguage(lang, book.name_no, BOOK_NAMES_EN[book.id]);
+  return pickByLanguage(lang, book, BOOK_NAMES, book.name_no);
 }
 
 /** Forkortelsen slik den skal VISES (referansechips, kompakte lister). */
 export function bookAbbr(book: BookInfo, lang = currentContentLanguage()): string {
-  return pickByLanguage(lang, book.short_name, BOOK_ABBR_EN[book.id]);
+  return pickByLanguage(lang, book, BOOK_ABBRS, book.short_name);
 }
 
 /** Som `bookName`, men fra en bok-id. Ukjent id gir tom streng. */
