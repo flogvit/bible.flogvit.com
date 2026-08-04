@@ -149,6 +149,41 @@ describe('sidekontrakt', () => {
           ),
         ].filter((h) => robotsAllows(h));
         expect({ side: page.path, hentbare }).toEqual({ side: page.path, hentbare: [] });
+
+        // 8. Delekortet (#65). Uten `og:image` blir en delt lenke et kort med
+        //    bare tittel og beskrivelse — på Facebook, LinkedIn, Slack,
+        //    iMessage og Discord.
+        //
+        //    Kortet hører i SIDEMALEN, ikke per rute: legges det per side,
+        //    mangler det på den ruta noen legger til i morgen. Derfor er dette
+        //    en sveip over hele matrisen framfor én test mot forsiden — det er
+        //    nettopp den forskjellen som gjør at neste side arver kortet uten
+        //    at noen har tenkt på det.
+        //
+        //    Målene må STÅ i taggene: uten dem må skraperen hente bildet før
+        //    den vet om det kan vises bredt, og den FØRSTE delingen av en URL
+        //    blir uten bilde. Adressen må være absolutt — en relativ sti
+        //    resolves ikke av alle skrapere.
+        //
+        //    `twitter:image` kreves IKKE: X faller tilbake på `og:image`, så
+        //    taggen ville vært duplisering med to steder å glemme å oppdatere.
+        const ogMeta = (prop: string) =>
+          new RegExp(`<meta property="${prop}" content="([^"]*)"`).exec(html)?.[1];
+        const kort = {
+          bilde: ogMeta('og:image')?.startsWith('https://') ? 'absolutt' : ogMeta('og:image') ?? 'mangler',
+          bredde: ogMeta('og:image:width'),
+          høyde: ogMeta('og:image:height'),
+          alt: ogMeta('og:image:alt')?.trim() ? 'satt' : 'mangler',
+          twitter: /<meta name="twitter:card" content="([^"]*)"/.exec(html)?.[1],
+        };
+        expect({ side: page.path, ...kort }).toEqual({
+          side: page.path,
+          bilde: 'absolutt',
+          bredde: '1200',
+          høyde: '630',
+          alt: 'satt',
+          twitter: 'summary_large_image',
+        });
       });
     }
   });
@@ -320,7 +355,12 @@ describe('sidekontrakt', () => {
   function metaText(html: string): string {
     const title = /<title>([^<]*)<\/title>/.exec(html)?.[1] ?? '';
     const desc = /<meta name="description" content="([^"]*)"/.exec(html)?.[1] ?? '';
-    return `${title}\n${desc}`;
+    // Delekortets alt-tekst (#65) er tekst en skjermleser leser opp og står i
+    // hver eneste delte lenke — men den er et attributt på en <meta>, altså
+    // usynlig for både brødteksten under og attributt-sveipen (som leser
+    // `alt="…"`, ikke `content="…"`).
+    const alt = /<meta property="og:image:alt" content="([^"]*)"/.exec(html)?.[1] ?? '';
+    return `${title}\n${desc}\n${alt}`;
   }
 
   function visibleText(html: string): string {
