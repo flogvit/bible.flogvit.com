@@ -136,33 +136,46 @@ function measure(scale: number) {
   return { clientWidth, scrollWidth, offenders: offenders.slice(0, 6) };
 }
 
+/**
+ * Åpner adressen og krever at INGEN av de fire kombinasjonene (320/390 px ×
+ * 100/150 % tekst) gjør sida bredere enn skjermen. `label` er det som står i
+ * feilmeldingen, og skal si hvilken side OG hvilket språk som ble målt.
+ */
+async function måleBredde(label: string, url: string) {
+  await page.navigate(url);
+
+  for (const vp of VIEWPORTS) {
+    await page.setViewport(vp);
+    for (const scale of SCALES) {
+      const m = await page.evaluate(measure, scale);
+      const over = m.scrollWidth - m.clientWidth;
+      if (over > TOLERANCE) {
+        const worst = m.offenders
+          .map((o) => `    ${o.selector} → høyre kant ${o.right} px (min-width: ${o.minWidth}, white-space: ${o.whiteSpace})`)
+          .join('\n');
+        throw new Error(
+          `${label} er ${over} px for bred på ${vp.name} ved ${scale * 100} % tekst ` +
+            `(${m.scrollWidth} px i et ${m.clientWidth} px viewport).\n` +
+            `  Bredeste elementer:\n${worst}`,
+        );
+      }
+      expect(over).toBeLessThanOrEqual(TOLERANCE);
+    }
+  }
+}
+
+/** `/sok?q=gud` → adressen på ett bestemt språk. */
+const pageUrl = (locale: Locale, pagePath: string) => {
+  const [path, query] = pagePath.split('?');
+  return `http://localhost:${server.port}${href(locale, path!)}${query ? `?${query}` : ''}`;
+};
+
 describe('mobil-layout: ingen side er bredere enn skjermen (#50)', () => {
   for (const p of PAGES) {
     test(
       `${p.path} — ${p.name}`,
       async () => {
-        const [path, query] = p.path.split('?');
-        const url = `http://localhost:${server.port}${href(DEFAULT_LOCALE, path!)}${query ? `?${query}` : ''}`;
-        await page.navigate(url);
-
-        for (const vp of VIEWPORTS) {
-          await page.setViewport(vp);
-          for (const scale of SCALES) {
-            const m = await page.evaluate(measure, scale);
-            const over = m.scrollWidth - m.clientWidth;
-            if (over > TOLERANCE) {
-              const worst = m.offenders
-                .map((o) => `    ${o.selector} → høyre kant ${o.right} px (min-width: ${o.minWidth}, white-space: ${o.whiteSpace})`)
-                .join('\n');
-              throw new Error(
-                `${p.path} er ${over} px for bred på ${vp.name} ved ${scale * 100} % tekst ` +
-                  `(${m.scrollWidth} px i et ${m.clientWidth} px viewport).\n` +
-                  `  Bredeste elementer:\n${worst}`,
-              );
-            }
-            expect(over).toBeLessThanOrEqual(TOLERANCE);
-          }
-        }
+        await måleBredde(p.path, pageUrl(DEFAULT_LOCALE, p.path));
       },
       60_000,
     );
@@ -198,29 +211,107 @@ describe('mobil-layout: boknavn på det LENGSTE språket (#69)', () => {
       test(
         `${path} på /${locale}/`,
         async () => {
-          await page.navigate(`http://localhost:${server.port}${href(locale, path)}`);
-          for (const vp of VIEWPORTS) {
-            await page.setViewport(vp);
-            for (const scale of SCALES) {
-              const m = await page.evaluate(measure, scale);
-              const over = m.scrollWidth - m.clientWidth;
-              if (over > TOLERANCE) {
-                const worst = m.offenders
-                  .map((o) => `    ${o.selector} → høyre kant ${o.right} px (min-width: ${o.minWidth}, white-space: ${o.whiteSpace})`)
-                  .join('\n');
-                throw new Error(
-                  `/${locale}${path} er ${over} px for bred på ${vp.name} ved ${scale * 100} % tekst ` +
-                    `(${m.scrollWidth} px i et ${m.clientWidth} px viewport).\n` +
-                    `  Bredeste elementer:\n${worst}`,
-                );
-              }
-              expect(over).toBeLessThanOrEqual(TOLERANCE);
-            }
-          }
+          await måleBredde(`/${locale}${path}`, pageUrl(locale, path));
         },
         60_000,
       );
     }
+  }
+});
+
+/**
+ * #70: #69 dekket BOKNAVNENE på tre sider. UI-strengene fra `dictionaries.ts`
+ * var fortsatt bare målt på basespråket — og engelsk er det korteste språket vi
+ * har. Tysk setter sammen ord («Apostelgeschichte», «Barrierefreiheit»,
+ * «Leseeinstellungen»), finsk bøyer med lange endelser, svensk har
+ * «Uppenbarelseboken». Sju av åtte flater var altså aldri holdt opp mot
+ * `scrollWidth <= clientWidth`, og symptomet er stille i drift: ingen 404, ingen
+ * logglinje, bare en side som må sveipes sidelengs på en telefon.
+ *
+ * Språket velges av SIDA, ikke av en literal og ikke av en liste noen
+ * vedlikeholder: hver side rendres på alle åtte språk — ren SSR uten nettleser,
+ * altså billig — og bare den utgaven med det lengste UBRYTELIGE ORDET måles i
+ * Chrome. Det er ett ord som velter en smal skjerm; en lang frase brytes.
+ * Er to språk like lange, vinner det med mest tekst totalt — ellers ville et
+ * langt ord som står LIKT på alle åtte (en URL på /om) avgjort valget.
+ *
+ * Kostnaden er dermed én nettleser-navigasjon per side, ikke åtte, og et
+ * niende språk kommer med uten at noen rører vakta.
+ *
+ * Grensen: øyene i `public/js/` bygger tekst i nettleseren, så SSR-utvalget ser
+ * dem ikke. MÅLINGEN gjør — Chrome kjører skriptene — men et språk kan i teorien
+ * bli valgt bort på grunn av tekst som bare finnes i en øy.
+ */
+describe('mobil-layout: UI-strengene på det BREDESTE språket (#70)', () => {
+  /**
+   * Ordene leseren faktisk ser. Skript og stil ut, tagger ut, entiteter inn
+   * igjen som tegn — `&nbsp;` som ekte NBSP, for et hardt mellomrom BINDER to
+   * ord sammen til ett bredt, og det er nettopp det vi leter etter.
+   */
+  function words(html: string): string[] {
+    const text = html
+      .replace(/<(script|style)\b[^>]*>[\s\S]*?<\/\1>/gi, ' ')
+      .replace(/<[^>]*>/g, ' ')
+      .replace(/&nbsp;/g, ' ')
+      .replace(/&(amp|lt|gt|quot|#39|apos);/g, 'x')
+      .replace(/&[#a-z0-9]+;/gi, 'x');
+    // Ikke `\s`: den tar NBSP med seg, og da mister vi det harde mellomrommet.
+    return text.split(/[ \t\r\n\f\v]+/).filter(Boolean);
+  }
+
+  /**
+   * Lastvernet (#4, #19) slipper bare `RENDER_MAX_CONCURRENT` (6) render
+   * gjennom om gangen og avviser resten med 503. Åtte samtidige hentinger kunne
+   * derfor komme til å SCORE en 503-side som om den var sida — et språk valgt
+   * på en feilside er en vakt som måler feil ting. Fire om gangen ligger godt
+   * under taket, og statusen sjekkes uansett.
+   */
+  const SAMTIDIG = 4;
+
+  /** Den locale-en som gir sida det lengste ordet. */
+  async function bredesteSpråk(pagePath: string, status: number) {
+    const scored: { locale: Locale; longest: number; total: number; word: string }[] = [];
+
+    for (let i = 0; i < LOCALES.length; i += SAMTIDIG) {
+      const bolk = await Promise.all(
+        LOCALES.slice(i, i + SAMTIDIG).map(async (locale) => {
+          const res = await fetch(pageUrl(locale, pagePath));
+          const html = await res.text();
+          // En feilside er kortere enn sida og ville stille sendt språkvalget
+          // til en annen locale. Da måler vakta noe annet enn den sier.
+          if (res.status !== status) {
+            throw new Error(`/${locale}${pagePath} svarte ${res.status}, ventet ${status} — språkvalget ville blitt tatt på feil side.`);
+          }
+          const w = words(html);
+          return {
+            locale,
+            longest: w.reduce((n, o) => Math.max(n, o.length), 0),
+            total: w.reduce((n, o) => n + o.length, 0),
+            word: w.reduce((a, b) => (b.length > a.length ? b : a), ''),
+          };
+        }),
+      );
+      scored.push(...bolk);
+    }
+
+    return scored.sort((a, b) => b.longest - a.longest || b.total - a.total)[0]!;
+  }
+
+  for (const p of PAGES) {
+    test(
+      `${p.path} — ${p.name}`,
+      async () => {
+        const valgt = await bredesteSpråk(p.path, p.status ?? 200);
+        // Er basespråket selv det bredeste, er sida allerede målt av sveipen
+        // øverst — å navigere dit en gang til måler ingenting nytt.
+        if (valgt.locale === DEFAULT_LOCALE) return;
+        await måleBredde(
+          `${p.path} på /${valgt.locale}/ (lengste ord: «${valgt.word}», ${valgt.longest} tegn)`,
+          pageUrl(valgt.locale, p.path),
+        );
+      },
+      60_000,
+    );
   }
 });
 
