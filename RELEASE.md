@@ -3,6 +3,13 @@
 What actually reached readers, newest first. Dates, not version numbers — we
 deploy continuously.
 
+## 2026-08-04 — Shared links now unfold into a proper preview card
+
+**New features**
+- Paste a link to any page — a chapter, a search, the front page — into a chat app, a forum or a social feed, and it now unfolds with a title, a description and an image instead of a bare URL. The wording comes from the same dictionary as the page itself, so it shows up in the language you were reading in.
+
+**Behind the scenes**
+- The preview card is an HTML template rasterised at build time rather than a hand-made image file, so it can be reviewed and changed like any other source; the page template declares the card once, so pages added later carry it without anyone remembering to ask. Tests check that every page actually serves the card, and that the image has the dimensions the platforms expect.
 ## 2026-08-03 — Older person references now lead to the right person, on the page and in the API
 
 **Bug fixes**
