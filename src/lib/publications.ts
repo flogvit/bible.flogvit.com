@@ -235,12 +235,22 @@ export async function listPendingPublications(limit = 50): Promise<PendingPublic
   return rows.map((r) => ({ ...toRow(r), content: String(r.content), userId: Number(r.user_id) }));
 }
 
-/** Rapporterte oppføringer som ALLEREDE er ute — reviewerens andre kø. */
+/**
+ * Rapporterte oppføringer som ALLEREDE er ute — reviewerens andre kø.
+ *
+ * Samme JOIN som katalogen, og av samme grunn: «fortsatt publisert» må være
+ * SANT. Sletter forfatteren manuskriptet, er oppføringen borte for leseren —
+ * uten JOIN-en her ble den likevel stående i køen, og revieweren ville vurdert
+ * en tekst ingen kan se. Verre: ingen avgjørelse tar den ut igjen, siden en
+ * rapport på noe usynlig aldri kommer i veien for noen.
+ */
 export async function listReportedPublications(limit = 50): Promise<PendingPublication[]> {
   const rows = (await getSql()`
-    SELECT * FROM devotional_publications
-    WHERE reports > 0 AND status = 'approved'
-    ORDER BY reports DESC, submitted_at ASC
+    SELECT p.* FROM devotional_publications p
+    JOIN sync_items i
+      ON i.user_id = p.user_id AND i.item_id = p.item_id AND i.data_type = 'devotionals'
+    WHERE p.reports > 0 AND p.status = 'approved' AND i.deleted = 0
+    ORDER BY p.reports DESC, p.submitted_at ASC
     LIMIT ${limit}
   `) as Record<string, unknown>[];
   return rows.map((r) => ({ ...toRow(r), content: String(r.content), userId: Number(r.user_id) }));
