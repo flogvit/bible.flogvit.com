@@ -987,6 +987,54 @@ røres. Bruk `bookName()`/`bookAbbr()` ved visning.
 href={url}>`) er usynlige for tekstsøk etter `href="/`. Stol på den rendrede HTML-en,
 ikke på grep.
 
+### Boknavnet er DATA på åtte språk, ikke en engelsk fallback på fem (#69)
+
+`bookName()` gikk gjennom innholdskjeden med bare `nb` og `en` fylt ut, så
+`/fr/`, `/de/`, `/es/`, `/sv/` og `/fi/` leste «Matthew 5» i `<title>`, i
+brødsmulen, i kapitteloverskriften og i hver referansechip — det ordet leseren
+ser oftest, på fem av åtte flater. **Ingen av de fire norsk-sveipene kunne se
+det:** engelsk på en fransk side er ikke norsk tekst, og et boknavn er ikke en
+ordboksnøkkel som MANGLER. Det er samme klasse hull som #45 og #65 — skaden
+ligger utenfor det vaktene var formulert på.
+
+- **`src/lib/book-names.ts` eier navnene og forkortelsene**, `BOOK_NAMES` og
+  `BOOK_ABBRS`, for de sju locale-ene som ikke er nøkkelspråket. **Bokmål blir
+  stående i `books-data.ts`**: `name_no`/`short_name` er både NØKKEL og norsk
+  visning, og én verdi kan ikke drive fra seg selv.
+- **De kommer ikke fra free-bible, og det er undersøkt, ikke antatt.**
+  `generate/constants.ts` har fulle navn for `nb`, `nn` og `es` — en intern
+  hjelper for prompten — ingen forkortelser for noe språk, og ingen
+  `generate/<type>/<språk>/` å importere fra. Der pipelinen «har» franske
+  boknavn, er det modellen som skriver dem fra en promptlinje i `translate.ts`
+  («Use standard ${language} Bible book names»), uverifisert og ikke lagret. Å
+  vente på den kilden ville latt fem språk stå på engelsk på ubestemt tid.
+  Skulle free-bible en dag EKSPORTERE dem, er dette fila som byttes ut.
+- **Ikke i ordboka.** `dictionaries.ts` er «KUN grensesnittet», og dette er en
+  lukket oppregning på 66 verdier adressert av en id fra dataene — samme klasse
+  som språknavnene, der `langName()` bevisst valgte en egen mekanisme framfor
+  ~700 nøkler.
+- **Én navngitt utgave per språk**, så navn og forkortelse hører sammen framfor
+  å bli plukket fra hver sin tradisjon: Bibelselskapets nynorskutgave, Luther
+  2017, Segond, Reina-Valera, Bibel 2000, Kirkkoraamattu 1992. `es` og `nn` er
+  ordrett free-bibles egne, så katalogen og det importerte innholdet staver
+  bøkene likt. **De fire uten in-house kilde (de, fr, sv, fi) er ført opp her
+  og bør leses over av en som har språket** — vakta ser at navnet FINNES og at
+  det ikke er engelsk, ikke at det er riktig.
+- **Nynorsk fikk sine egne navn.** «Openberringa» sto som «Åpenbaringen» fordi
+  nabospråk-fallbacken gjorde jobben sin på data vi faktisk hadde.
+- **Vakta er `test/book-names.test.ts`**, formulert på DATAENE: 66 bøker ×
+  `LOCALES`, både at navnet finnes og at `bookName()` viser språkets EGET navn
+  (en tabell som ligger der ubrukt består ikke). Den leser `LOCALES`, så et
+  niende språk blir rødt uten at noen rører vakta. FORM-halvdelen fanger
+  duplikater innen et språk og to språk med identisk tabell — «lim inn engelsk
+  og oversett siden» ville ellers bestått alt. SIDA måler sakens eget bevis:
+  `<title>` på `/<språk>/matt/5`. Alle fem mutasjonene er kjørt.
+- **Lengden er en layout-egenskap.** Samme bok heter «1Mos», «1. Mose» og
+  «Första Moseboken», og `mobile-layout.test.ts` målte bare basespråket — det
+  KORTESTE. Den har nå en blokk til som velger språk av dataene (den locale-en
+  med lengst navn, og den med lengst forkortelse) og måler lesesida, forsida og
+  lesekartet på 320/390 px ved 100/150 % tekst.
+
 ### En oversatt etikett ser FORSKJELLIG ut på to språk (#63)
 
 Siste brødsmuleledd på kapittelsiden sto som «Kap. 1» på alle åtte språk —

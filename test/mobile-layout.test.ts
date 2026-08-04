@@ -23,7 +23,9 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { createApp } from '../src/app.ts';
 import { initBooks } from '../src/lib/bible.ts';
-import { DEFAULT_LOCALE, href } from '../src/lib/i18n.ts';
+import { bookAbbr, bookName, booksData } from '../src/lib/books-data.ts';
+import { DEFAULT_LOCALE, href, LOCALES, type Locale } from '../src/lib/i18n.ts';
+import { localeToContentLanguage } from '../src/lib/lang.ts';
 import { Chrome, type Page } from './chrome-cdp.ts';
 import { PAGES } from './pages.ts';
 
@@ -164,6 +166,61 @@ describe('mobil-layout: ingen side er bredere enn skjermen (#50)', () => {
       },
       60_000,
     );
+  }
+});
+
+/**
+ * Sveipen over måler BASESPRÅKET, og engelsk har de korteste boknavnene vi
+ * har. Etter #69 heter samme bok «1Mos», «1. Mose», «Första Moseboken» og
+ * «1. Mooseksen kirja» — og et boknavn står i brødsmulen, i
+ * kapitteloverskriften, i innholdsfortegnelsen og i bokvelgeren, altså i
+ * nettopp de radene #50 handlet om.
+ *
+ * Språket velges av DATAENE, ikke av en literal: den locale-en som faktisk har
+ * det lengste navnet (og den med den lengste forkortelsen, om det er en annen).
+ * Legges det til et språk med enda lengre navn, måles det uten at noen har rørt
+ * vakta.
+ */
+describe('mobil-layout: boknavn på det LENGSTE språket (#69)', () => {
+  /** Sidene der et boknavn faktisk rendres: lesesida, forsida og lesekartet. */
+  const BOOK_NAME_PAGES = ['/1mos/1', '/', '/lesekart'];
+
+  const longestBy = (pick: (b: (typeof booksData)[number], lang: string) => string): Locale =>
+    LOCALES.map((locale) => {
+      const lang = localeToContentLanguage(locale);
+      return { locale, len: Math.max(...booksData.map((b) => pick(b, lang).length)) };
+    }).sort((a, b) => b.len - a.len)[0]!.locale;
+
+  const locales = [...new Set([longestBy(bookName), longestBy(bookAbbr)])];
+
+  for (const locale of locales) {
+    for (const path of BOOK_NAME_PAGES) {
+      test(
+        `${path} på /${locale}/`,
+        async () => {
+          await page.navigate(`http://localhost:${server.port}${href(locale, path)}`);
+          for (const vp of VIEWPORTS) {
+            await page.setViewport(vp);
+            for (const scale of SCALES) {
+              const m = await page.evaluate(measure, scale);
+              const over = m.scrollWidth - m.clientWidth;
+              if (over > TOLERANCE) {
+                const worst = m.offenders
+                  .map((o) => `    ${o.selector} → høyre kant ${o.right} px (min-width: ${o.minWidth}, white-space: ${o.whiteSpace})`)
+                  .join('\n');
+                throw new Error(
+                  `/${locale}${path} er ${over} px for bred på ${vp.name} ved ${scale * 100} % tekst ` +
+                    `(${m.scrollWidth} px i et ${m.clientWidth} px viewport).\n` +
+                    `  Bredeste elementer:\n${worst}`,
+                );
+              }
+              expect(over).toBeLessThanOrEqual(TOLERANCE);
+            }
+          }
+        },
+        60_000,
+      );
+    }
   }
 });
 
