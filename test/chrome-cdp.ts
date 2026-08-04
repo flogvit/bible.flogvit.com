@@ -30,6 +30,12 @@ async function findChrome(): Promise<string> {
 export interface Viewport {
   width: number;
   height: number;
+  /**
+   * Emuler en telefon. Standard er `true` — layout-vakta måler mobil.
+   * Delekortet er en fast 1200x630-flate uten `<meta viewport>`, og der ville
+   * mobil-emuleringen lagt på et 980 px standardviewport i stedet.
+   */
+  mobile?: boolean;
 }
 
 export class Chrome {
@@ -167,10 +173,10 @@ export class Page {
     throw new Error(`Siden ble aldri stabil: ${url}`);
   }
 
-  async setViewport({ width, height }: Viewport) {
+  async setViewport({ width, height, mobile = true }: Viewport) {
     await this.chrome.call(
       'Emulation.setDeviceMetricsOverride',
-      { width, height, deviceScaleFactor: 1, mobile: true },
+      { width, height, deviceScaleFactor: 1, mobile },
       this.sessionId,
     );
     // Overstyringen slår inn i renderer-prosessen, ikke synkront med
@@ -197,6 +203,24 @@ export class Page {
       throw new Error(`Feil i sidekonteksten: ${res.exceptionDetails.exception?.description ?? ''}`);
     }
     return res.result.value as T;
+  }
+
+  /**
+   * PNG-bytene av viewportet. Brukes av `scripts/generate-og-card.ts` til å
+   * rastrere delekortet (#65) — en skraper viser et bilde eller ingenting, så
+   * wordmarken må finnes som piksler ett sted.
+   *
+   * `captureBeyondViewport: false` er poenget: kortet skal være NØYAKTIG
+   * viewportet, ikke dokumentets fulle høyde. Deklarerer vi 1200x630 og
+   * leverer noe annet, beskriver taggene et bilde som ikke finnes.
+   */
+  async screenshot(): Promise<Uint8Array> {
+    const { data } = await this.chrome.call(
+      'Page.captureScreenshot',
+      { format: 'png', captureBeyondViewport: false },
+      this.sessionId,
+    );
+    return Uint8Array.from(atob(data), (ch) => ch.charCodeAt(0));
   }
 
   async close() {
