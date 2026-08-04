@@ -23,7 +23,14 @@ import {
 import { DEFAULT_CONTENT_LANGUAGE, isLanguageCode } from '../src/lib/lang.ts';
 import { booksData } from '../src/lib/books-data.ts';
 import { getChapterVerseCount } from '../src/lib/verse-counts.ts';
-import { pruneDanglingRefs, pruneReportIsEmpty, formatPruneReport } from '../src/lib/verse-refs.ts';
+import {
+  pruneDanglingRefs,
+  pruneReportIsEmpty,
+  formatPruneReport,
+  pruneDanglingJsonVerseRefs,
+  jsonPruneReportIsEmpty,
+  formatJsonPruneReport,
+} from '../src/lib/verse-refs.ts';
 import { prunePersonRefs, personPruneReportIsEmpty, formatPersonPruneReport } from '../src/lib/person-refs.ts';
 import { CONTENT_TABLES, CONTENT_SOURCES, contentSourceReport } from '../src/lib/content-sources.ts';
 import { parseRefMarkup } from '@free-bible/kvn/ref';
@@ -2113,6 +2120,18 @@ if (pruned.skipped) {
   console.log('\nAdvarsel: ingen osnb-vers i basen — versadresser ble ikke validert.');
 } else if (!pruneReportIsEmpty(pruned)) {
   console.log(`\n${formatPruneReport(pruned)}`);
+  console.log('Kilden skriver adresser som ikke finnes — se flogvit/free-bible#26.');
+}
+
+// SAMME PORT FOR ADRESSER SOM LIGGER I EN JSON-BLOB. Kolonnesveipen over ser
+// dem ikke: `persons`, `stories`, `themes`, `reading_plans`, `number_symbolism`
+// og `days` har ingen `book_id`-kolonne å joine mot. Kjøres etter dem, så den
+// måler mot versene denne runden faktisk la inn.
+const prunedJson = await pruneDanglingJsonVerseRefs(sql);
+if (prunedJson.skipped) {
+  console.log('\nAdvarsel: ingen osnb-vers i basen — versadresser i JSON ble ikke validert.');
+} else if (!jsonPruneReportIsEmpty(prunedJson)) {
+  console.log(`\n${formatJsonPruneReport(prunedJson)}`);
   console.log('Kilden skriver adresser som ikke finnes — se flogvit/free-bible#26.');
 }
 

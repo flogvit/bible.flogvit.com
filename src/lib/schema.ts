@@ -32,7 +32,14 @@
 
 import type { SQL } from 'bun';
 import { DEFAULT_CONTENT_LANGUAGE } from './lang.ts';
-import { pruneDanglingRefs, pruneReportIsEmpty, formatPruneReport } from './verse-refs.ts';
+import {
+  pruneDanglingRefs,
+  pruneReportIsEmpty,
+  formatPruneReport,
+  pruneDanglingJsonVerseRefs,
+  jsonPruneReportIsEmpty,
+  formatJsonPruneReport,
+} from './verse-refs.ts';
 import { prunePersonRefs, personPruneReportIsEmpty, formatPersonPruneReport } from './person-refs.ts';
 import { booksData } from './books-data.ts';
 
@@ -964,6 +971,14 @@ async function runMigrations(sql: SQL): Promise<void> {
   // gjør at feil data ikke blir liggende i prod til neste innholdsimport.
   const pruned = await pruneDanglingRefs(sql);
   if (!pruneReportIsEmpty(pruned)) console.log(formatPruneReport(pruned));
+
+  // Samme invariant, andre lagring: adressen ligger i en JSON-blob og har
+  // dermed aldri vært med i kolonnesveipen over. `persons.references[]` bygger
+  // en `<a href>` uten å slå opp om verset finnes, så en død adresse der er
+  // 404-stormen om igjen; resten faller bort i stillhet og etterlater en
+  // hendelse uten ett eneste vers.
+  const prunedJson = await pruneDanglingJsonVerseRefs(sql);
+  if (!jsonPruneReportIsEmpty(prunedJson)) console.log(formatJsonPruneReport(prunedJson));
 
   // Samme stående invariant, én akse over (#61): en adresse mot en PERSON som
   // ikke finnes. Ættetavlen på `/matt/1` lenket «Tamar» til `/personer/tamar`,

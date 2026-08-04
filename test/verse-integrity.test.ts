@@ -16,7 +16,19 @@
 
 import { beforeAll, describe, expect, test } from 'bun:test';
 import { getSql } from '../src/lib/db.ts';
-import { CHAPTER_REF_TABLES, VERSE_REF_TABLES, UNCHECKED_TABLES, findDanglingRefs } from '../src/lib/verse-refs.ts';
+import {
+  CHAPTER_REF_TABLES,
+  VERSE_REF_TABLES,
+  UNCHECKED_TABLES,
+  findDanglingRefs,
+  JSON_ADDRESS_KEYS,
+  EXEMPT_ADDRESS_KEYS,
+  allAddressKeys,
+  verseExtentFrom,
+  stripDanglingJsonVerseRefs,
+  findDanglingJsonVerseRefs,
+} from '../src/lib/verse-refs.ts';
+import { CONTENT_SOURCES } from '../src/lib/person-refs.ts';
 import { TABLES } from '../src/lib/schema.ts';
 import { booksData } from '../src/lib/books-data.ts';
 import { verseCounts } from '../src/lib/verse-counts.ts';
@@ -141,6 +153,177 @@ describe('vakta dekker skjemaet', () => {
 
   test('hvert unntak har en begrunnelse', () => {
     const uten = UNCHECKED_TABLES.filter((t) => !t.why.trim()).map((t) => t.table);
+    expect(uten.join(', ')).toBe('');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// SAMME KLASSE, ANNEN LAGRING: versadressen ligger i en JSON-BLOB
+// ---------------------------------------------------------------------------
+//
+// Sveipen over leser KOLONNER, og `verseAddressingTablesInSchema()` leter etter
+// `book_id` + `chapter` i DDL-en. `persons`, `stories`, `themes`,
+// `reading_plans`, `number_symbolism` og `days` har ingen slik kolonne — de
+// bærer adressen inne i en JSON-blob — så de har aldri vært med i sveipen, og
+// FORM-halvdelens løfte om at «skjemaet ikke kan vokse fra vakta i stillhet»
+// gjaldt bare halve lagringen.
+//
+// Målt i basen da dette ble skrevet: 282 døde adresser, 276 i `persons` og 6 i
+// `stories`. Utslaget er todelt, og begge sidene er verifisert i prod:
+//
+//   - `persons.references[]` bygger en `<a href>` DIREKTE, uten å slå opp om
+//     verset finnes (`persons.tsx`). En død adresse der er #46 om igjen, ordrett.
+//     Den er tom i dag — men ingenting fanget den om den ble det.
+//   - Resten går gjennom `getVersesWithOriginal()`, som `continue`-r på et vers
+//     som ikke finnes. Da faller innholdet BORT i stillhet: 128 nøkkelhendelser
+//     rendres som overskrift og beskrivelse uten ett eneste vers
+//     (`/nb/personer/epainetos` — fire hendelser, null vers), og
+//     `/nb/historier/susanna-frikjennes-av-daniel` er en `<h2>Daniel 13,1-64</h2>`
+//     over ingenting, fordi osnb har 12 kapitler i Daniel.
+//
+// Samme lærdom som #61: en adresse som bor i en blob er usynlig for en vakt som
+// er formulert på kolonner.
+
+describe('regelen for en versadresse i en JSON-blob', () => {
+  // Bok 1: kapittel 1 (31 vers) og 2 (25 vers). Bok 2: kapittel 1 (10 vers).
+  const extent = verseExtentFrom([
+    { book_id: 1, chapter: 1, mx: 31 },
+    { book_id: 1, chapter: 2, mx: 25 },
+    { book_id: 2, chapter: 1, mx: 10 },
+  ]);
+  const strip = (content: unknown) => stripDanglingJsonVerseRefs(content, extent, () => {});
+
+  test('en adresse til en bok vi ikke har, fjernes', () => {
+    expect(strip({ references: [{ bookId: 72, chapterId: 2, verseId: 3 }] })).toEqual({ references: [] });
+  });
+
+  test('en adresse til et kapittel som ikke finnes, fjernes', () => {
+    // Saken selv: `Ordsp 119:36`, bare lagret i en blob i stedet for i en kolonne.
+    expect(strip({ references: [{ bookId: 1, chapterId: 119, verseId: 36 }] })).toEqual({ references: [] });
+  });
+
+  test('døde vers i en liste filtreres bort — de levende blir', () => {
+    // «Kast aldri innhold vi HAR for å bli kvitt en adresse vi ikke har.»
+    expect(strip({ verses: [{ bookId: 1, chapter: 1, verses: [1, 99, 5] }] })).toEqual({
+      verses: [{ bookId: 1, chapter: 1, verses: [1, 5] }],
+    });
+  });
+
+  test('dør ALLE versene i lista, faller hele adressen', () => {
+    expect(strip({ verses: [{ bookId: 1, chapter: 1, verses: [98, 99] }] })).toEqual({ verses: [] });
+  });
+
+  test('et startvers som ikke finnes, feller adressen', () => {
+    expect(strip({ references: [{ bookId: 2, chapter: 1, fromVerseId: 40, toVerseId: 41 }] })).toEqual({
+      references: [],
+    });
+  });
+
+  test('et sluttvers forbi kapittelslutt KLIPPES, ikke slettes', () => {
+    // Samme avveining som «start slettes, slutt klippes» i kolonnesveipen.
+    expect(strip({ references: [{ bookId: 2, chapter: 1, fromVerseId: 2, toVerseId: 99 }] })).toEqual({
+      references: [{ bookId: 2, chapter: 1, fromVerseId: 2, toVerseId: 10 }],
+    });
+  });
+
+  test('et sluttkapittel forbi bokas slutt klippes', () => {
+    expect(
+      strip({ references: [{ bookId: 1, startChapter: 1, startVerse: 1, endChapter: 9, endVerse: 4 }] }),
+    ).toEqual({ references: [{ bookId: 1, startChapter: 1, startVerse: 1, endChapter: 2, endVerse: 4 }] });
+  });
+
+  test('en levende adresse røres ikke, uansett dybde', () => {
+    const levende = { a: { b: [{ keyEvents: [{ verses: [{ bookId: 1, chapter: 2, verses: [4, 5] }] }] }] } };
+    expect(strip(levende)).toBeNull();
+  });
+
+  test('et objekt UTEN bok-nøkkel er ikke en adresse', () => {
+    // `{day, chapter}` i en leseplan-dag ser adresse-likt ut uten å være det.
+    expect(strip({ readings: [{ day: 3, chapter: 119 }] })).toBeNull();
+  });
+
+  test('ryddingen er idempotent', () => {
+    const en = strip({ verses: [{ bookId: 1, chapter: 1, verses: [1, 99] }] });
+    expect(strip(en)).toBeNull();
+  });
+
+  test('rapporten navngir adressen som falt', () => {
+    const sett: string[] = [];
+    stripDanglingJsonVerseRefs({ references: [{ bookId: 1, chapterId: 119, verseId: 36 }] }, extent, (_k, addr) =>
+      sett.push(addr),
+    );
+    expect(sett.join(', ')).toContain('1:119');
+  });
+});
+
+describe('versadresser i JSON-blobbene', () => {
+  test('ingen JSON-blob peker på et vers som ikke finnes', async () => {
+    const findings = await findDanglingJsonVerseRefs(db());
+    const report = findings.map((f) => `${f.table}.${f.key}: ${f.hits} × ${f.address}`).join('\n');
+    expect(report, `døde versadresser i JSON — kjør \`bun scripts/init-db.ts\` for å rydde:\n${report}`).toBe('');
+  });
+});
+
+describe('vakta dekker adressenøklene i JSON-en', () => {
+  // Samme grep som nøkkelhalvdelen i `person-refs.test.ts`: lista over nøkler
+  // skal ikke kunne bli stale i stillhet. Denne finner objektene som BÆRER en
+  // bok-nøkkel og krever at hver TALL-nøkkel på dem er deklarert — så en ny
+  // `endVerseId` fra free-bible dukker opp her av seg selv.
+  let numericKeys: Map<string, number> = new Map();
+
+  beforeAll(async () => {
+    const bookKeys = new Set(JSON_ADDRESS_KEYS.book);
+    const counts = new Map<string, number>();
+    const walk = (node: unknown) => {
+      if (Array.isArray(node)) return node.forEach(walk);
+      if (node === null || typeof node !== 'object') return;
+      const obj = node as Record<string, unknown>;
+      const erAdresse = Object.keys(obj).some((k) => bookKeys.has(k) && typeof obj[k] === 'number');
+      if (erAdresse) {
+        for (const [k, v] of Object.entries(obj)) {
+          const tallbærende = typeof v === 'number' || (Array.isArray(v) && v.every((x) => typeof x === 'number'));
+          if (tallbærende) counts.set(k, (counts.get(k) ?? 0) + 1);
+        }
+      }
+      for (const v of Object.values(obj)) walk(v);
+    };
+    for (const source of CONTENT_SOURCES) {
+      const rows = (await db().unsafe(`SELECT ${source.column} AS content FROM ${source.table}`)) as {
+        content: string;
+      }[];
+      for (const row of rows) {
+        try {
+          walk(JSON.parse(row.content));
+        } catch {
+          /* ugyldig blob er ikke denne vaktas sak */
+        }
+      }
+    }
+    numericKeys = counts;
+  });
+
+  test('sveipen finner faktisk adresseobjekter i dataene', () => {
+    // Uten denne ville en walk som traff feil gjort neste test grønn av
+    // ingenting funnet i det hele tatt.
+    expect([...numericKeys.keys()], 'bookId skal finnes i innholdet').toContain('bookId');
+    expect(numericKeys.get('bookId') ?? 0).toBeGreaterThan(100);
+  });
+
+  test('ingen udeklarert tall-nøkkel sitter på et adresseobjekt', () => {
+    const dekket = new Set<string>([...allAddressKeys(), ...EXEMPT_ADDRESS_KEYS.map((e) => e.key)]);
+    const udekket = [...numericKeys.entries()]
+      .filter(([k]) => !dekket.has(k))
+      .map(([k, n]) => `${k} (${n})`)
+      .sort();
+    expect(
+      udekket.join(', '),
+      'ny tall-nøkkel på et adresseobjekt: legg den i JSON_ADDRESS_KEYS, ' +
+        'eller i EXEMPT_ADDRESS_KEYS med en begrunnelse',
+    ).toBe('');
+  });
+
+  test('hvert nøkkelunntak har en begrunnelse', () => {
+    const uten = EXEMPT_ADDRESS_KEYS.filter((e) => !e.why.trim()).map((e) => e.key);
     expect(uten.join(', ')).toBe('');
   });
 });
