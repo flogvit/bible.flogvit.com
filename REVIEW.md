@@ -39,7 +39,14 @@ Køen viser to lister:
 1. **Til vurdering** — venter på svar, eldste først.
 2. **Rapportert, men fortsatt publisert** — allerede ute, og noen har reagert.
    Rapporter skjuler ingenting av seg selv, så denne lista er det eneste stedet
-   de dukker opp.
+   de dukker opp. «Fortsatt publisert» er bokstavelig: har forfatteren slettet
+   manuskriptet i mellomtiden, er oppføringen allerede borte for leseren, og da
+   faller den ut av denne lista også — du skal ikke bruke tid på en tekst ingen
+   kan se.
+
+Svarer en kommando med `404` eller `403` framfor en liste, er det `REVIEW_TOKEN`
+det står på — se «Legitimasjonen» over. Skriptet stopper da høylytt med vilje:
+en tom kø og en utilgjengelig kø ser ellers helt like ut.
 
 ## Hva du faktisk vurderer
 
@@ -73,7 +80,7 @@ i en åpen katalog» er nyttig; «avvist» er det ikke.
 | `avvis` | forblir usynlig | «Ikke godtatt» + begrunnelsen din |
 | forfatteren redigerer og publiserer på nytt | den godkjente kopien forsvinner mens den venter | «Til vurdering» |
 | forfatteren trekker | borte umiddelbart, adressen 404-er | ingen oppføring |
-| forfatteren sletter manuskriptet | borte, selv om teksten ligger frosset i tabellen | — |
+| forfatteren sletter manuskriptet | borte, selv om teksten ligger frosset i tabellen — og ut av begge køene dine | — |
 
 Merk raden i midten: **du godkjenner en tekst, ikke en person.** En redigering
 går tilbake i kø, og det er med vilje — ellers ville godkjenningen vært en

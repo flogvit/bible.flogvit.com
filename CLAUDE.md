@@ -555,6 +555,31 @@ contrib, aldri direkte DB-tilgang og aldri engangscontainere på VM-en.
   ingen (#42-lærdommen).
 - **Å PUBLISERE er plus** (teksten må være lagret i skyen), **å LESE er gratis**.
 
+#### «Fortsatt publisert» må være SANT, og CLI-en er en egen søm
+
+Køen er det eneste som gjør at en innsending noen gang kommer ut, og den har to
+lag som begge kan svikte stille.
+
+- **Reviewerens andre kø JOIN-er som katalogen.** «Rapportert, men fortsatt
+  publisert» gjorde det ikke, så et manuskript forfatteren hadde SLETTET ble
+  stående der: en tekst ingen leser kan se, som revieweren likevel må vurdere —
+  og som ingen avgjørelse tar ut igjen, siden en rapport på noe usynlig aldri
+  kommer i veien for noen. Alle tre spørringene mot katalogen (`listCatalog`,
+  `getPublication`, `listReportedPublications`) krever nå den samme levende
+  raden i `sync_items`.
+- **`scripts/publications-review.ts` er et EGET PROGRAM**, ikke en funksjon.
+  `publications.test.ts` går inn med `app.request()` og ser derfor ingenting av
+  sømmen mellom CLI-en og API-et: døpes `authorName` om i svaret, står den
+  suiten grønn mens køen slutter å vise hvem som har sendt inn. Mutasjonstestet
+  nettopp slik.
+- **`test/publications-review-cli.test.ts`** kjører de fire kommandoene fra
+  `REVIEW.md` som ekte underprosesser mot en ekte lyttende server. To av dem
+  finnes fordi et STILLE svar er det farlige: mangler TJENESTEN `REVIEW_TOKEN`
+  (404) eller er den feil (403), skal CLI-en stoppe høylytt — melder den «(tom)»
+  i stedet, ser en feilkonfigurert prod ut som en tom kø, og innsendingene blir
+  liggende for alltid. Den pinner også at `vis` gir HELE teksten der køen bare
+  gir 100 tegn; det er der en innsending som vil noe annet, plasserer det.
+
 ### En URL med QUERY er en handling, ikke en side (#60)
 
 12 × 503 på én time. Ikke nedetid — lastvernet under gjorde jobben sin. Det som
