@@ -91,13 +91,63 @@
         border-radius: 999px;
         background: var(--accent);
       }
+
+      /* ── Kapittelvarianten (#68) ─────────────────────────────────────
+         SAMME fil, samme identitet: kortet som sier hvilket kapittel en
+         delt lenke peker på, er dette kortet med to SLOTTER fylt ut.
+
+         Slottene er `[data-og-slot]`. Generatoren måler dem her — plass,
+         skrift, farge og grunnlinje — og rastrerer bakgrunnen med teksten
+         SKJULT. Teksten tegnes så per forespørsel, fordi den er forskjellig
+         for 1189 kapitler × 8 språk. Endrer du en slotts skrift eller
+         plassering, er det HER det gjøres; kjør generatoren etterpå.
+
+         Åpne fila med `#chapter` i nettleseren for å se varianten. */
+      .slots { display: none; }
+      body.chapter { justify-content: space-between; padding: 80px 96px; }
+      .chapter .wordmark { font-size: 48px; }
+      .chapter .slots { display: block; }
+      .chapter .domain { margin-top: 0; font-size: 28px; }
+      .chapter .mark { bottom: 80px; }
+
+      /* Bokstittelen får plass til TO linjer, og én linje står midtstilt i
+         den samme kassa. Uten den reservasjonen ville «Ensimmäinen
+         Mooseksen kirja» dyttet resten av kortet ned — og bakgrunnen er
+         rastrert på forhånd, så den kan ikke flytte seg. */
+      .slot-book {
+        display: flex;
+        align-items: center;
+        min-height: 212px;
+        font-family: 'Schibsted Grotesk';
+        font-weight: 800;
+        font-size: 96px;
+        line-height: 1.1;
+        letter-spacing: -0.02em;
+        color: var(--ink);
+      }
+      .slot-chapter {
+        margin-top: 8px;
+        font-family: 'IBM Plex Mono';
+        font-weight: 500;
+        font-size: 40px;
+        line-height: 1.3;
+        color: var(--accent);
+      }
     </style>
   </head>
   <body>
     <div class="wordmark">
       <span class="brand">FLOGVIT</span><span class="dot">.</span><span class="product">bible</span>
     </div>
+    <div class="slots">
+      <div class="slot-book" data-og-slot="book">Matteus</div>
+      <div class="slot-chapter" data-og-slot="chapter">Kapittel 5</div>
+    </div>
     <p class="domain">bible.flogvit.com</p>
     <span class="mark"></span>
+    <script>
+      // Bare for et menneske som åpner fila: generatoren setter klassen selv.
+      if (location.hash === '#chapter') document.body.className = 'chapter';
+    </script>
   </body>
 </html>

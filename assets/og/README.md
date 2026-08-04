@@ -1,25 +1,50 @@
 # Delekortet — hvordan du lager det på nytt
 
 Kortet er bildet en delt lenke til bible.flogvit.com viser på Facebook,
-LinkedIn, Slack, iMessage og Discord (#65). Det ligger som `public/og.png` og
-deklareres av sidemalen; **hvorfor** det ser slik ut står i `../../CLAUDE.md`
+LinkedIn, Slack, iMessage og Discord. Det finnes i to utgaver:
+
+| Utgave | Vises for | Ligger som |
+|---|---|---|
+| Generisk (#65) | alle sider unntatt kapittelsidene | `public/og.png` |
+| Kapittel (#68) | `/nb/matt/5` og de 9511 andre | settes sammen ved forespørsel av delene i `generated/` |
+
+Begge deklareres av sidemalen (`src/views/layout.tsx`), begge er 1200x630, og
+begge har `assets/og/card.html` som kilde — kapittelutgaven er den samme malen
+med `body.chapter` og to slotter fylt ut. **Hvorfor** det ser slik ut, og
+hvorfor kapittelkortet ikke ligger som ferdige filer, står i `../../CLAUDE.md`
 → «Delekortet».
 
 ## Lag det på nytt
 
 ```bash
-bun scripts/generate-og-card.ts   # assets/og/card.html -> public/og.png
-bun test test/share-card.test.ts  # bekrefter at målene stemmer med taggene
-git add public/og.png && git commit
+bun scripts/generate-og-card.ts        # card.html -> public/og.png + generated/
+bun test test/share-card.test.ts test/og-chapter-card.test.ts
+git add public/og.png assets/og/generated && git commit
 ```
 
 Skriptet krever Chrome — samme som layout-vakta. Finner det ingen, sier det
 hvilke stier det prøvde; `CHROME_BIN` overstyrer.
 
-Kjør det når du har endret `card.html`, eller når identiteten i
-`portal/STYLE.md` endres (papirfargen, lær-aksenten, wordmarken). Kortet er en
-brand-ressurs som ellers står i ro, så det er **ikke** en del av deployen:
-`public/og.png` ligger i git og rulles ut med imaget.
+Kjør det når du har endret `card.html`, når identiteten i `portal/STYLE.md`
+endres (papirfargen, lær-aksenten, wordmarken), **eller når et boknavn i
+`src/lib/book-names.ts` får en bokstav vi ikke hadde fra før** — malen bærer
+ett bilde per bokstav, og en bokstav som mangler ville falt stille ut av
+kortet. Vakta i `test/og-chapter-card.test.ts` er rød før det skjer.
+
+Kortene er brand-ressurser som ellers står i ro, så dette er **ikke** en del av
+deployen: `public/og.png` og `generated/` ligger i git og rulles ut med imaget.
+
+## Se etter deploy at kortet faktisk kommer ut
+
+```bash
+curl -s https://bible.flogvit.com/en/matt/5 | grep 'og:image'
+curl -sI "$(curl -s https://bible.flogvit.com/en/matt/5 | grep -o 'https://[^"]*og/en/[^"]*png')"
+```
+
+Andre linja skal svare `200` og `content-type: image/png`. Svarer den 404, er
+`assets/og/generated/` ikke med i imaget (se `COPY`-linja i `Dockerfile`);
+viser bildet bare wordmarken, falt renderen tilbake til det generiske kortet og
+har logget `og-card:` i containerloggen.
 
 ## Hva du kan endre
 
@@ -32,6 +57,11 @@ Målene 1200x630 er derimot ikke frie: sidemalen deklarerer dem i
 ut av PNG-en og krever at de tre er enige. Skal kortet ha andre mål, endres
 `SHARE_CARD_WIDTH`/`HEIGHT` i `src/lib/share-card.ts` og konstantene i
 generatoren i samme slengen.
+
+Slottene (`[data-og-slot]`) er kapittelkortets to tekstfelt. Flytt dem, bytt
+skrift eller farge på dem i CSS-en her — generatoren MÅLER dem, den antar
+ingenting. Legger du til et nytt slott, må `charsets()` i generatoren si hvilke
+tegn det kan komme til å vise; ellers stopper skriptet med navnet på slottet.
 
 ## Skriftene
 

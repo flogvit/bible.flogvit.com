@@ -17,6 +17,10 @@ COPY src ./src
 # kode som forventer en ny kolonne tar ned siden (skjedde 2026-07-26).
 COPY scripts ./scripts
 COPY public ./public
+# Delene kapittelkortet settes sammen av (#68). Uten dem faller HVERT
+# kapittelkort tilbake til det generiske — og det svarer 200, så ingen
+# feillogg ville sagt fra. `test/og-chapter-card.test.ts` holder på linja.
+COPY assets/og/generated ./assets/og/generated
 # Endringsloggen rendres av /changes ved kjoretid.
 COPY RELEASE.md ./
 ENV NODE_ENV=production
