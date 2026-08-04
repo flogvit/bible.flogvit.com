@@ -1,6 +1,7 @@
 import type { Book } from './bible.ts';
 import { getAllBooks, getBookById, getBookUrlSlug } from './bible.ts';
 import { bookAliases } from './book-aliases.ts';
+import { bookNameById } from './books-data.ts';
 
 export interface ParsedReference {
   book: Book;
@@ -203,10 +204,18 @@ export function looksLikeReference(input: string): boolean {
 }
 
 /**
- * Format a reference for display
+ * Referansen slik den skal VISES — kommandopaletten (⌘K) og oppslaget i
+ * studiepanelet skriver denne strengen rett i lista.
+ *
+ * `name_no` er nøkkelen parseren slår opp PÅ, og sto her som visningsnavn: det
+ * ga «Matteus 5» i paletten på alle åtte språk, også engelsk (#69).
+ * `bookNameById()` leser locale fra contextStorage, og `/api/*` setter den fra
+ * `?lang=`/Referer (#24), så oppslaget svarer på leserens språk. Nøkkelen er
+ * fallback for en bok-id som ikke finnes i den statiske tabellen — da er den
+ * bedre enn en tom streng.
  */
 export function formatParsedReference(ref: ParsedReference): string {
-  let result = `${ref.book.name_no} ${ref.chapter}`;
+  let result = `${bookNameById(ref.book.id) || ref.book.name_no} ${ref.chapter}`;
   if (ref.verseStart) {
     result += `:${ref.verseStart}`;
     if (ref.verseEnd && ref.verseEnd !== ref.verseStart) {

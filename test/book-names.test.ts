@@ -137,6 +137,18 @@ describe('boknavn per språk (#69)', () => {
         // engelske i saken.
         expect(html).toContain(`<span class="chapter-book">${name}</span>`);
       });
+
+      // Kommandopaletten (⌘K) og oppslaget i studiepanelet skriver
+      // `reference.formatted` rett i lista. Den strengen ble bygget av
+      // `name_no` — altså NØKKELEN — så paletten svarte «Matteus 5» på alle
+      // åtte språk, også engelsk. Øya rendres i nettleseren og er dermed
+      // usynlig for sveipen over.
+      test(`/api/reference svarer med boknavnet på ${locale}`, async () => {
+        const res = await app.request(`/api/reference?q=${encodeURIComponent('matt 5,3')}&lang=${locale}`);
+        expect(res.status).toBe(200);
+        const data = (await res.json()) as { reference?: { formatted?: string } };
+        expect(data.reference?.formatted).toBe(`${ownName(lang, MATT)} 5:3`);
+      });
     }
   });
 });

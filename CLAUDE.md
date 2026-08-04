@@ -1022,6 +1022,13 @@ ligger utenfor det vaktene var formulert på.
   det ikke er engelsk, ikke at det er riktig.
 - **Nynorsk fikk sine egne navn.** «Openberringa» sto som «Åpenbaringen» fordi
   nabospråk-fallbacken gjorde jobben sin på data vi faktisk hadde.
+- **Kommandopaletten og studieoppslaget hentet navnet fra NØKKELEN.**
+  `formatParsedReference()` bygde «Matteus 5:3» av `name_no` og sendte det ut
+  som `reference.formatted` fra `/api/reference` — altså norsk i ⌘K-paletten på
+  alle åtte språk, engelsk inkludert. Strengen er ren visning og har én kaller,
+  så den går nå gjennom `bookNameById()`; `/api/*` har alt locale fra
+  `?lang=`/Referer (#24). Øya rendres i nettleseren og er dermed usynlig for
+  sidesveipen — API-svaret måles derfor direkte.
 - **Vakta er `test/book-names.test.ts`**, formulert på DATAENE: 66 bøker ×
   `LOCALES`, både at navnet finnes og at `bookName()` viser språkets EGET navn
   (en tabell som ligger der ubrukt består ikke). Den leser `LOCALES`, så et
