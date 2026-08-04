@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, test } from 'bun:test';
+import { afterAll, beforeEach, describe, expect, test } from 'bun:test';
 import { Hono } from 'hono';
 import {
   clearPageCache,
@@ -163,6 +163,16 @@ describe('lastavvisning', () => {
   beforeEach(() => {
     clearPageCache();
     configurePageCache({ maxConcurrentRenders: 1, queueWaitMs: 30, ttlMs: 5 * 60 * 1000 });
+  });
+
+  // `config` er modulnivå-tilstand, og `bun test` kjører alle filene i SAMME
+  // prosess: uten dette ser hver senere fil et lastvern med ETT render-spor og
+  // 30 ms køtid. To samtidige sidehentinger i en helt annen test ble da 503,
+  // og feilmeldingen pekte på feil fil (#72). `load-shedding.test.ts` rydder
+  // allerede slik.
+  afterAll(() => {
+    configurePageCache({});
+    clearPageCache();
   });
 
   test('over taket uten stale: 503 med Retry-After', async () => {
