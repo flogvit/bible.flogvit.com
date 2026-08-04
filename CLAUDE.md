@@ -675,9 +675,8 @@ Tverrgående sak med målingen for alle åtte flatene: `flogvit-com#74`.
   kodeendring kan ta. `OG_IMAGE_URL` er flyttelasset: last opp bildet, sett
   variabelen i `bibel.env`, ferdig. Ingen kodeendring — og testen holder
   knappen i live så den virker den dagen den brukes.
-- **Per-side-kort er et eget og senere steg.** Ingen ubrukt `shareCard`-prop
-  ligger og venter på det; generisk kort først, ellers venter hele flata på den
-  mest arbeidskrevende varianten.
+- **Per-side-kort er et eget og senere steg** — tatt i #68 under, for
+  kapittelsidene. Sidemalens kort er fortsatt standarden for alt annet.
 
 **Vakta er todelt.** Sidekontraktens invariant 8 sveiper HVER side i `PAGES` —
 absolutt `og:image`, målene 1200x630, en alt-tekst, og `twitter:card` — så en ny
@@ -687,6 +686,60 @@ målene sidemalen deklarerer (lest ut av IHDR-chunken, ikke antatt), at appen
 serverer det med validator, og at `OG_IMAGE_URL` faktisk flytter det. Alt-testen
 er strukturell som brødsmulevakta i #63 — en hardkodet literal rendres ordrett
 likt på fire ubeslektede språk. Alle vaktene er mutasjonstestet.
+
+### Kortet skal si HVILKET kapittel lenken peker på (#68)
+
+Det generiske kortet er gulvet, og det er kapittellenkene folk deler: en delt
+`/en/matt/5` så nøyaktig ut som en delt forside. Kapittelsiden sender nå sitt
+eget kort — «Matthew» over «Chapter 5» — på **lenkens** språk.
+
+- **Begge veiene saken satte opp var stengt, og det er sakens egentlige svar.**
+  «~1200 kort på disk» er i virkeligheten 1189 kapitler × 8 språk = **9512**
+  bilder, altså ~200 MB derivert binær i git som må lages på nytt hver gang et
+  boknavn rettes. «Rastrér ved første treff» er headless Chrome, og prod-imaget
+  er `oven/bun:1.3-slim`: et Chrome-lag er ~1 GB på en disk som har tatt ned
+  prod før, på en VM der CPU er den kjente flaskehalsen (#19, #64).
+- **Veien som står igjen er å SETTE SAMMEN kortet per forespørsel.**
+  Generatoren rastrerer én gang det som ikke varierer — bakgrunnen, og ett
+  alfabilde per BOKSTAV i de to skriftene malen bruker, med kerningen målt i
+  samme Chrome. Kjøretiden er da piksel-aritmetikk og `node:zlib`: ~10 ms, ingen
+  ny avhengighet, 138 kB artefakter mot 200 MB. `src/lib/og-card.ts` bærer både
+  koden og begrunnelsen; runbooken er `assets/og/README.md`.
+- **Malen er fortsatt HTML-en.** `assets/og/card.html` fikk en `body.chapter`
+  med to `[data-og-slot]`, og generatoren MÅLER dem — plass, grunnlinje,
+  skrift, farge — framfor å ha tallene i seg. Flytter du et slott i CSS-en,
+  flytter teksten seg med.
+- **Boknavnet kommer fra `bookNameById()`** (#69), ikke fra ordboka: 66 verdier
+  adressert av en id fra dataene hører ikke i `dictionaries.ts`. Kapittelledda
+  går derimot gjennom ordboka, for ordstillingen er ikke vår å anta (#63).
+- **Renderen nekter framfor å tegne et halvt kort.** Mangler malen et tegn,
+  serveres det generiske. En tittel med hull i ser riktig ut fra en 200-linje i
+  loggen og er bare synlig for den som fikk lenken.
+- **Ruta ligger UTENFOR lastvernet** — stien har punktum, altså `NOT_A_PAGE`
+  (#64) — og det er med vilje: en 503 på delekortet er et kort som aldri kommer,
+  og skraperen prøver ikke igjen. **Den er heller ikke forbudt i robots.txt**;
+  Facebook og LinkedIn leser robots, så et `Disallow: /og/` ville tatt bort
+  nettopp bildet som er poenget. #60 forbyr HANDLINGS-URL-er, ikke dette.
+- **Boka adresseres med SLUGEN sida bruker** (`/og/en/matt-5.png`), ikke med
+  rad-id-en (#40).
+- **`COPY assets/og/generated` i Dockerfilen er en del av fiksen.** `assets/`
+  var ikke med i imaget, og uten linja ville hvert kapittelkort falt tilbake til
+  det generiske — med 200 i loggen og ingen feilrad. Vakta leser Dockerfilen.
+
+**Vakta er `test/og-chapter-card.test.ts`**, og den er formulert på kontrakten:
+kapittelsiden deklarerer sitt EGET kort på alle åtte språk (ellers rødt), de
+deklarerte målene er kortets EKTE mål lest ut av IHDR, kortbytene er
+FORSKJELLIGE på fire ubeslektede språk (en tekst som aldri gikk gjennom ordboka
+eller boknavntabellen ville gitt identiske byte — samme strukturelle grep som
+#63), malen har tegn for **hvert boknavn på hvert språk** lest ut av
+`booksData` × `LOCALES`, alt annet beholder det generiske kortet, et kapittel
+som ikke finnes gir 404, og artefaktene blir med i imaget. Alle vaktene er
+mutasjonstestet.
+
+**Ikke gjort, med vilje:** kortet viser ikke de første ordene av teksten. Vi har
+bibeltekst på `nb`, `nn` og `en` — et fransk kort med norsk vers ville vært verre
+enn det generiske, som er nøyaktig det saken advarer mot. Vers- og
+person-/temasider har heller ikke egne kort ennå; de arver gulvet fra #65.
 
 ## Lastvern (anonyme sidevisninger)
 
