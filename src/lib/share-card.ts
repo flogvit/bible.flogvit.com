@@ -15,6 +15,9 @@
 // KILDEN til bildet er `assets/og/card.html`, rastrert av
 // `bun scripts/generate-og-card.ts` til `public/og.png`.
 
+import { makeT, type Locale } from './i18n.ts';
+import { chapterCardPath, chapterCardText } from './og-card.ts';
+
 const SITE = 'https://bible.flogvit.com';
 
 /**
@@ -33,6 +36,8 @@ export interface ShareCard {
   url: string;
   width: number;
   height: number;
+  /** Alt-tekst. Utelatt = sidemalens generiske, som er riktig for et generisk kort. */
+  alt?: string;
 }
 
 /**
@@ -54,5 +59,28 @@ export function shareCard(): ShareCard {
     url: process.env.OG_IMAGE_URL || `${SITE}/og.png`,
     width: SHARE_CARD_WIDTH,
     height: SHARE_CARD_HEIGHT,
+  };
+}
+
+/**
+ * Kortet for ÉN kapittelside (#68) — «Matthew 5» framfor bare merkenavnet.
+ *
+ * Det er kapittel- og verselenkene folk deler, så det er her et kort som sier
+ * hva lenken peker på er verdt mest. Alt annet beholder det generiske: en rute
+ * uten noe bedre skal aldri bli uten kort.
+ *
+ * Bildet settes sammen per forespørsel av deler som er rastrert på forhånd
+ * (`lib/og-card.ts`), fordi settet er 1189 kapitler × 8 språk. Adressen er
+ * absolutt av samme grunn som over — en skraper har ingen base-URL — og peker
+ * på vårt eget opphav; kortene kan flyttes til objektlagring når bøtta finnes
+ * (#66), men det er 9512 filer å laste opp, ikke en kodeendring.
+ */
+export function chapterShareCard(bookId: number, chapter: number, locale: Locale): ShareCard {
+  const [book, kapittel] = chapterCardText(bookId, chapter, locale);
+  return {
+    url: SITE + chapterCardPath(bookId, chapter, locale),
+    width: SHARE_CARD_WIDTH,
+    height: SHARE_CARD_HEIGHT,
+    alt: makeT(locale)('chrome.shareCardChapterAlt', { book, chapter }),
   };
 }

@@ -17,7 +17,7 @@ import { ACCOUNT_URL } from '../lib/session.ts';
 import { DEFAULT_LOCALE, LOCALES, href, makeT, ogLocale, type Locale, type Translator, lhref } from '../lib/i18n.ts';
 import { tCtx, islandStrings, type MessageKey } from '../lib/i18n.ts';
 import { assetUrl } from '../lib/static-cache.ts';
-import { shareCard } from '../lib/share-card.ts';
+import { shareCard, type ShareCard } from '../lib/share-card.ts';
 
 /**
  * Strenger klient-øyene som lastes på HVER side trenger: plus-CTA-en (plus.js),
@@ -464,6 +464,14 @@ export interface LayoutProps {
    * gi crawl-verdi.
    */
   noindex?: boolean;
+  /**
+   * Delekortet siden skal vise når noen deler lenken (#68).
+   *
+   * Utelatt = det GENERISKE kortet, og det er ikke en mangel: en rute uten noe
+   * bedre skal aldri bli uten kort. Kapittelsiden sender sitt eget, fordi det
+   * er kapittellenkene folk deler — se `lib/share-card.ts`.
+   */
+  shareCard?: ShareCard;
 }
 
 /** Fullt HTML-dokument med familie-chromen. */
@@ -471,7 +479,7 @@ export function Layout(props: LayoutProps) {
   const t = makeT(props.locale);
   const u = (p: string) => href(props.locale, p);
   const desc = props.description ?? t('chrome.searchPlaceholder');
-  const card = shareCard();
+  const card = props.shareCard ?? shareCard();
   return (
     <>
       {raw('<!DOCTYPE html>')}
@@ -498,7 +506,7 @@ export function Layout(props: LayoutProps) {
           <meta property="og:image" content={card.url} />
           <meta property="og:image:width" content={String(card.width)} />
           <meta property="og:image:height" content={String(card.height)} />
-          <meta property="og:image:alt" content={t('chrome.shareCardAlt')} />
+          <meta property="og:image:alt" content={card.alt ?? t('chrome.shareCardAlt')} />
           <meta name="twitter:card" content="summary_large_image" />
           <link rel="canonical" href={props.canonical ?? SITE + href(props.locale, props.path)} />
           <HrefLang path={props.path} locales={props.locales} />

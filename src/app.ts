@@ -43,6 +43,7 @@ import version from './routes/api/version.ts';
 import word4word from './routes/api/word4word.ts';
 import { getCookie } from 'hono/cookie';
 import { LOCALES, href, layoutProps, negotiateLocale, apiLocale } from './lib/i18n.ts';
+import { ogRoutes } from './routes/og.ts';
 import { seoRoutes } from './routes/seo.ts';
 
 export function createApp() {
@@ -108,6 +109,11 @@ export function createApp() {
   // Crawler-flater FØR serveStatic, ellers vinner den gamle statiske
   // sitemap.xml med sine uprefiksede URL-er.
   app.route('/', seoRoutes);
+
+  // Delekortene per kapittel (#68). Uprefikset, som `/og.png`: språket ligger
+  // i STIEN og ikke i monteringen, fordi kortet hentes av en skraper som
+  // hverken har cookie eller Accept-Language — bare URL-en fra lenken.
+  app.route('/', ogRoutes);
 
   // Statiske filer (styles.css, /js/*) — registrert etter /api/* så API vinner,
   // og faller gjennom til siderutene når ingen fil matcher.

@@ -69,6 +69,7 @@ import { getWorksForChapter, workHref, encodeKvn, type WorkRef } from '../../lib
 import { layoutProps, tFor, type Translator, type MessageKey, lhref } from '../../lib/i18n.ts';
 import { localeToContentLanguage } from '../../lib/lang.ts';
 import { relFor } from '../../lib/crawl.ts';
+import { chapterShareCard } from '../../lib/share-card.ts';
 
 const r = new Hono<AppEnv>();
 
@@ -1819,11 +1820,17 @@ r.get('/:book/:chapter', async (c) => {
     userBible ? `d.userBible=${JSON.stringify(userBible)};` : ''
   }${userSecondary ? `d.userSecondary=${JSON.stringify(userSecondary)};` : ''}})(document.body.dataset);`;
 
+  const props = layoutProps(c);
+
   return c.html(
-    <Layout {...layoutProps(c)}
+    <Layout {...props}
       title={title}
       description={description}
       canonical={SITE + lhref(`/${canonicalSlug}/${chapter}`)}
+      // Delekortet sier hvilket kapittel lenken peker på (#68). Det er
+      // kapittellenkene folk deler, og det generiske kortet gjorde en delt
+      // `/en/matt/5` umulig å skille fra en delt forside.
+      shareCard={chapterShareCard(book.id, chapter, props.locale)}
       styles={['reading.css', 'studium.css']}
       scripts={['reading.js', 'studium.js', 'ref-preview.js', 'tagging.js', 'user-bibles.js']}
     >
