@@ -3,6 +3,16 @@
 What actually reached readers, newest first. Dates, not version numbers — we
 deploy continuously.
 
+## 2026-08-04 — Chapter links now come with their own preview card
+
+**New features**
+- Share a link to a chapter — in a chat, on social media, anywhere links unfurl — and it now shows a card naming that chapter and book, in the language you were reading, instead of the generic site image.
+
+**Polish**
+- A preview card is all or nothing: if any part of it can't be built for a given chapter, the site serves the standard card rather than a half-drawn image. Every page other than the chapter page keeps the card it already had.
+
+**Behind the scenes**
+- The card artwork is now baked into the build as reusable pieces and assembled per request, so it renders in production without an image rasterizer; the publication review tooling gained tests around the one path that moves an entry out of the queue, and the internal docs were brought in line.
 ## 2026-08-04 — Broken verse references can no longer slip past us
 
 **Behind the scenes**
