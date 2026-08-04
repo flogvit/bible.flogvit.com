@@ -3,6 +3,10 @@
 What actually reached readers, newest first. Dates, not version numbers — we
 deploy continuously.
 
+## 2026-08-04 — Broken verse references can no longer slip past us
+
+**Behind the scenes**
+- Cross-references that live inside JSON fields are now checked the same way as the ones stored in ordinary columns, so a reference pointing at a chapter or verse that doesn't exist gets caught before publishing instead of turning into a dead link when you tap it.
 ## 2026-08-04 — Bible book names now read in your own language
 
 **New features**
