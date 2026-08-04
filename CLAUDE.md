@@ -155,6 +155,52 @@ porten som gjør at det ikke når prod uansett.
   hånd, så skjemaet ikke kan vokse fra vakta i stillhet. Unntak må ha en
   begrunnelse i `UNCHECKED_TABLES`. Alle fire vaktene er mutasjonstestet.
 
+#### Adressen kan ligge i en JSON-BLOB, der kolonnesveipen ikke ser (#46)
+
+Sveipen over leser KOLONNER, og FORM-halvdelen leter etter `book_id` +
+`chapter` i DDL-en. Seks innholdstabeller har ingen slik kolonne — `persons`,
+`stories`, `themes`, `reading_plans`, `number_symbolism`, `days` bærer adressen
+inne i en JSON-blob — så de har aldri vært med, og løftet om at «skjemaet ikke
+kan vokse fra vakta i stillhet» gjaldt bare halve lagringen. **282 døde
+adresser** lå der: 276 i `persons`, 6 i `stories`.
+
+- **Utslaget er todelt, og den STILLE varianten er den vanligste.**
+  `persons.references[]` bygger en `<a href>` DIREKTE uten å slå opp om verset
+  finnes, altså 404-stormen om igjen — den er tom i dag, men ingenting fanget
+  den om den ble det. Resten går gjennom `getVersesWithOriginal()`, som
+  `continue`-r på et vers som ikke finnes, så innholdet faller bort uten at noe
+  ser galt ut: 128 nøkkelhendelser rendret som overskrift og beskrivelse uten
+  ett eneste vers (`/nb/personer/epainetos` — fire hendelser, null vers), og
+  `/nb/historier/susanna-frikjennes-av-daniel` var en `<h2>Daniel 13,1-64</h2>`
+  over ingenting, fordi osnb følger protestantisk kanon med 12 kapitler.
+  **En side som mangler innhold svarer 200 og skriver ingen loggrad** — derfor
+  kunne bare en vakt formulert på KONTRAKTEN finne den. Samme klasse hull som
+  #45, #65 og #69.
+- **Samme regel som for kolonnene: start slettes, slutt klippes.** Et dødt
+  startvers, eller en bok/et kapittel vi ikke har, feller adressen; et sluttvers
+  eller sluttkapittel forbi slutten klippes; døde vers i en `verses`-liste
+  filtreres bort mens de levende blir. Adressen er alltid et element i en liste,
+  så «feller» betyr at elementet forsvinner — raden ellers bæres uendret videre.
+  Susanna-sida beholder tittel og beskrivelse, og har bare ikke lenger en
+  overskrift som lover en tekst vi ikke kan vise.
+- **Tabellista er IKKE en ny liste.** Den er `CONTENT_SOURCES` fra #61, som
+  allerede er fullstendighets-sikret av `person-refs.test.ts`, så en ny
+  blob-tabell arver BEGGE sveipene gratis. To lister ville vært to steder å
+  glemme den.
+- **Kjøres fra de samme to stedene** — `ensureSchema()` (hver deploy, som rydder
+  prod) og slutten av importen, som rapporterer det den kaster med peker til
+  free-bible#26.
+- **Vakta har tre halvdeler:** REGELEN (ren logikk, ti tilfeller), DATA (ingen
+  blob peker på et vers som ikke finnes) og NØKLENE, som ikke kjenner et eneste
+  nøkkelnavn — den finner objektene som bærer en bok-nøkkel og krever at hver
+  TALL-nøkkel på dem er deklarert i `JSON_ADDRESS_KEYS`, så en ny `endVerseId`
+  fra free-bible dukker opp av seg selv. `EXEMPT_ADDRESS_KEYS` er tom, og som
+  `NORDIC_PROPER` er hver framtidig oppføring en påstand, ikke et gjemmested.
+  Seks mutasjoner kjørt, inkludert hele veien injisert → rød → `init-db` → grønn.
+- **Ikke gjort, med vilje:** en nøkkelhendelse uten vers vi kan vise rendres
+  fortsatt som en tom blokk. Ryddingen gjør dataene ærlige, men om en slik
+  hendelse skal skjules er en produktavgjørelse — den ligger i **#73**.
+
 ### Importert innhold får ikke peke på en PERSON som ikke finnes (#61)
 
 Samme klasse som #46, én akse over. Beviset kom fra .no-appen, som henter
