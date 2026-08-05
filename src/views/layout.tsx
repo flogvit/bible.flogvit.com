@@ -472,6 +472,16 @@ export interface LayoutProps {
    * er kapittellenkene folk deler — se `lib/share-card.ts`.
    */
   shareCard?: ShareCard;
+  /**
+   * Gi siden HEADERENS bredde framfor lesebredden `--maxw` (#78).
+   *
+   * `--maxw` er en spaltebredde: den finnes for at én tekstkolonne ikke skal
+   * bli for lang å følge. En side som selv DELER bredden på flere deler —
+   * kapittelsidas innholdsfortegnelse, tekst og studiepanel — får taket til å
+   * treffe feil del, og tekstdelen betaler for alle tre. Utelatt = `--maxw`,
+   * som er riktig for alt som er én spalte.
+   */
+  wide?: boolean;
 }
 
 /** Fullt HTML-dokument med familie-chromen. */
@@ -533,7 +543,7 @@ export function Layout(props: LayoutProps) {
             {tCtx()('common.skipToContent')}
           </a>
           <Header t={t} u={u} />
-          <main id="innhold" class="site-main">
+          <main id="innhold" class={props.wide ? 'site-main site-main-wide' : 'site-main'}>
             {props.children}
           </main>
           <Footer t={t} u={u} />

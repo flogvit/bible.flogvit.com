@@ -1833,6 +1833,9 @@ r.get('/:book/:chapter', async (c) => {
       shareCard={chapterShareCard(book.id, chapter, props.locale)}
       styles={['reading.css', 'studium.css']}
       scripts={['reading.js', 'studium.js', 'ref-preview.js', 'tagging.js', 'user-bibles.js']}
+      // Sida er tre deler som deler bredden, ikke én spalte (#78) — lesebredden
+      // `--maxw` ville tatt pikslene fra teksten og gitt dem til margen.
+      wide
     >
       {raw(`<script>${bodyData}</script>`)}
       <div class="chapter-page" data-reading-root>

@@ -129,6 +129,12 @@ p a:not([class]),
   --radius-lg: 14px;
   --radius-pill: 999px;
   --maxw: 1120px;
+  /* Chromens egen bredde. Headeren har alltid vært bredere enn `--maxw`, og
+     lesesida låner den (#78) — ETT tall, så de to kantene ikke kan drive fra
+     hverandre uten at noen mener det. `--chrome-pad` er sideinnrykket som gjør
+     at de deler INNHOLDS-kant, ikke bare bokskant. */
+  --maxw-wide: 1240px;
+  --chrome-pad: 24px;
 
   /* skrift */
   --font-ui: 'Schibsted Grotesk', system-ui, sans-serif;
@@ -374,12 +380,12 @@ a.fvmenu-item:hover { background: color-mix(in oklab, var(--ink) 6%, var(--surfa
 }
 
 .site-header-inner {
-  max-width: 1240px;
+  max-width: var(--maxw-wide);
   margin: 0 auto;
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 10px 24px;
+  padding: 10px var(--chrome-pad);
   min-height: 3.25rem;
 }
 
@@ -656,6 +662,28 @@ a.fvmenu-item:hover { background: color-mix(in oklab, var(--ink) 6%, var(--surfa
   max-width: var(--maxw);
   margin: 0 auto;
   padding: 32px 20px 64px;
+}
+
+/* En flate som er en LAYOUT, ikke en spalte, får headerens bredde (#78).
+   `--maxw` er en LESEBREDDE — den finnes for at en tekstspalte ikke skal bli
+   for lang å følge. Kapittelsida er noe annet: den deler bredden på tre
+   (innholdsfortegnelse, tekst, studiepanel), og da traff taket feil del.
+   Tekstdelen satt igjen med 448 px lesbar tekst på en 1440 px skjerm mens
+   headeren over strakte seg 1192 px.
+
+   Boksen OG innrykket er headerens, ikke bare taket: deler de ikke innrykk,
+   ligger kantene 4 px fra hverandre, og det ser ut som en feil framfor som en
+   bredde. Mobil beholder sine 20 px — de er #50s avgjørelse, tatt for at
+   lesekolonnen ikke skal stå unødig langt inn på en 390 px-skjerm, og der
+   biter taket uansett ikke. */
+.site-main-wide {
+  max-width: var(--maxw-wide);
+}
+@media (min-width: 769px) {
+  .site-main-wide {
+    padding-left: var(--chrome-pad);
+    padding-right: var(--chrome-pad);
+  }
 }
 
 /* ÉN eier av TOPPINNRYKKET på mobil (#55) — samme oppgjør som #52 gjorde med
