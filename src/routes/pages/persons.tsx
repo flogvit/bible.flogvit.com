@@ -252,10 +252,12 @@ r.get('/personer/:personId', async (c) => {
             </section>
           )}
 
-          <section class="person-events-section">
-            <h2>{t('persons.keyEvents')}</h2>
-            <KeyEventList keyEvents={person.keyEvents} />
-          </section>
+          {person.keyEvents.length > 0 && (
+            <section class="person-events-section">
+              <h2>{t('persons.keyEvents')}</h2>
+              <KeyEventList keyEvents={person.keyEvents} />
+            </section>
+          )}
 
           {person.references && person.references.length > 0 && (
             <section class="person-references-section">

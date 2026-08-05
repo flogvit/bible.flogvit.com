@@ -913,6 +913,14 @@ a.fvmenu-item:hover { background: color-mix(in oklab, var(--ink) 6%, var(--surfa
   padding-bottom: 16px;
   border-bottom: 1px solid var(--border);
 }
+/* Skillelinja over skiller beskrivelsen fra skriftstedet. Har hendelsen ingen
+   vers vi kan vise, åpner den mot ingenting — da er den et løfte kortet ikke
+   holder, og den skal bort sammen med lufta under (#73). */
+.event-no-verses .event-description {
+  margin-bottom: 0;
+  padding-bottom: 0;
+  border-bottom: 0;
+}
 .verse-group { margin-top: 8px; }
 .verse-header {
   display: flex;

@@ -89,7 +89,10 @@ export async function KeyEventList({ keyEvents, bible }: { keyEvents: PersonKeyE
   return (
     <div class="event-list">
       {events.map(({ event, verses }) => (
-        <div class="event">
+        // Har hendelsen ingen vers vi kan vise, beholder den tittel og
+        // beskrivelse — det er ekte innhold — men trekker tilbake løftet om et
+        // skriftsted under (#73). Løftet er skillelinja i `.event-description`.
+        <div class={verses.length > 0 ? 'event' : 'event event-no-verses'}>
           <div class="event-header">
             <h3>{event.title}</h3>
           </div>
