@@ -923,6 +923,50 @@ bibeltekst på `nb`, `nn` og `en` — et fransk kort med norsk vers ville vært 
 enn det generiske, som er nøyaktig det saken advarer mot. Vers- og
 person-/temasider har heller ikke egne kort ennå; de arver gulvet fra #65.
 
+### En PUBLISERT adresse er prosentkodet — og bare ett ledd koder den (#80)
+
+Sidemalen sendte rå UTF-8-bytes i `og:image`, `canonical` og hreflang-klyngen,
+mens sitemapen kodet de samme adressene. De to var altså uenige om hva adressen
+ER. Amazonbot, som fikk den rå formen, sendte `GET /og/en/1kr` — prefikset fram
+til første ikke-ASCII-byte — og fikk 404, mens `/og/en/1kr%C3%B8n-15.png` ga 200
+i samme vindu. 760 delekort- og 760 canonical-URL-er sto slik.
+
+- **`src/lib/site-url.ts` eier BÅDE opphavet og kodingen.** `absoluteUrl(sti)`
+  er `SITE + encodeURI(sti)`, og literalen `https://bible.flogvit.com` finnes
+  ikke lenger noe annet sted i `src/` — den var kopiert til fire filer, og fire
+  av canonical-ene var derfor bygget utenom enhver koding.
+- **`SITE` eksporteres IKKE, og det er hele grepet.** Er konstanten
+  tilgjengelig, er `SITE + sti` tilgjengelig — og da er kodingen frivillig.
+  `absoluteUrl()` er den eneste veien til en absolutt adresse, så en ny rute
+  som vil utenom må skrive opphavet selv, og det er nettopp det vakta ser.
+- **Ikke i `toUrlSlug()`.** Den brukes også der rå form er riktig (ruter og
+  interne lenker), og #42 viser hva som skjer når en verdi tar en runde gjennom
+  en kodet representasjon og kodes igjen: `%C3%B8` → `%25C3%25B8`, 95 kapitler
+  404 i alle åtte sitemaps. Én representasjon internt, én koding ved utsending —
+  samme regel `sitemap-paths.ts` allerede sier.
+- **Hreflang-klyngen fulgte med.** Saken navnga `og:image` og canonical, men
+  klyngen er den samme adressen sagt et annet sted; lot vi den stå rå, hadde vi
+  bare flyttet uenigheten med sitemapen.
+- **Usynlig innenfra, som #65.** Et delekort som ikke lar seg hente svarer
+  ingen: skraperen viser et kort uten bilde, og det gir verken 404, 5xx eller en
+  logglinje hos oss. At det dukket opp i vakta i det hele tatt var flaks — én
+  crawler sendte prefikset sitt framfor å gi opp i stillhet.
+- **Vakta er `test/published-url-encoding.test.ts`, og sidene velges av
+  DATAENE** (som i #69 og #70): hver bok hvis slug bærer et tegn utenfor ASCII,
+  altså `åp`, `1krøn`, `2krøn`, `høys` i dag. En test på `/1mos/1` beviser
+  ingenting her — `encodeURI` er identiteten på ren ASCII, som er hele
+  blindsonen. Fem halvdeler: ingen publisert adresse bærer et tegn utenfor
+  ASCII; den kodede adressen DEKODER tilbake til sidas egen sti (ellers ville
+  «strip ø i slugen» bestått); sitemapen og sida oppgir BIT-IDENTISK samme
+  adresse, klyngen inkludert (at de var uenige er selve feilen — hver for seg
+  svarer begge formene 200); opphavet settes bare sammen med en sti i
+  `site-url.ts`, så neste rute ikke kan bygge sin egen; og kortet svarer 200 på
+  adressen slik den er publisert. En egen test krever at det FINNES en slik
+  slug, ellers måler de andre ingenting. Seks mutasjoner kjørt — den ene som
+  IKKE ble rød av ASCII-sveipen er sidemalens egen canonical: hver sti med
+  ikke-ASCII i dag er en kapittelside, og den sender sin EGEN canonical. Det er
+  den strukturelle halvdelen og typesjekkeren som holder den, ikke sveipen.
+
 ## Lastvern (anonyme sidevisninger)
 
 `src/lib/page-cache.ts` er både mikrocache OG lastavvisning (#4, #14): anonyme
