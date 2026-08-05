@@ -70,10 +70,9 @@ import { layoutProps, tFor, type Translator, type MessageKey, lhref } from '../.
 import { localeToContentLanguage } from '../../lib/lang.ts';
 import { relFor } from '../../lib/crawl.ts';
 import { chapterShareCard } from '../../lib/share-card.ts';
+import { absoluteUrl } from '../../lib/site-url.ts';
 
 const r = new Hono<AppEnv>();
-
-const SITE = 'https://bible.flogvit.com';
 
 // ── Hjelpere ──────────────────────────────────────────────────────────
 
@@ -1826,7 +1825,7 @@ r.get('/:book/:chapter', async (c) => {
     <Layout {...props}
       title={title}
       description={description}
-      canonical={SITE + lhref(`/${canonicalSlug}/${chapter}`)}
+      canonical={absoluteUrl(lhref(`/${canonicalSlug}/${chapter}`))}
       // Delekortet sier hvilket kapittel lenken peker på (#68). Det er
       // kapittellenkene folk deler, og det generiske kortet gjorde en delt
       // `/en/matt/5` umulig å skille fra en delt forside.
@@ -2125,7 +2124,7 @@ r.get('/tekst', async (c) => {
     <Layout {...layoutProps(c)}
       title={`${t('rd.passagesTitle')} — FLOGVIT.bible`}
       description={t('rd.passagesMeta')}
-      canonical={SITE + lhref('/tekst')}
+      canonical={absoluteUrl(lhref('/tekst'))}
       styles={['reading.css']}
       scripts={['ref-preview.js']}
     >

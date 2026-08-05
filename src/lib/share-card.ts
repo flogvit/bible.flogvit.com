@@ -17,8 +17,7 @@
 
 import { makeT, type Locale } from './i18n.ts';
 import { chapterCardPath, chapterCardText } from './og-card.ts';
-
-const SITE = 'https://bible.flogvit.com';
+import { SITE, absoluteUrl } from './site-url.ts';
 
 /**
  * Målene er DEL AV KONTRAKTEN, ikke pynt. Uten dem må skraperen hente bildet
@@ -74,11 +73,16 @@ export function shareCard(): ShareCard {
  * absolutt av samme grunn som over — en skraper har ingen base-URL — og peker
  * på vårt eget opphav; kortene kan flyttes til objektlagring når bøtta finnes
  * (#66), men det er 9512 filer å laste opp, ikke en kodeendring.
+ *
+ * Den er også PROSENTKODET (#80): fire boksluger bærer `ø`/`å`, og en crawler
+ * som fikk den rå formen sendte prefikset fram til første ikke-ASCII-byte
+ * (`GET /og/en/1kr` → 404). Kodingen ligger i `absoluteUrl()`, ikke i
+ * `chapterCardPath()` — stien er rå der den brukes internt.
  */
 export function chapterShareCard(bookId: number, chapter: number, locale: Locale): ShareCard {
   const [book, kapittel] = chapterCardText(bookId, chapter, locale);
   return {
-    url: SITE + chapterCardPath(bookId, chapter, locale),
+    url: absoluteUrl(chapterCardPath(bookId, chapter, locale)),
     width: SHARE_CARD_WIDTH,
     height: SHARE_CARD_HEIGHT,
     alt: makeT(locale)('chrome.shareCardChapterAlt', { book, chapter }),

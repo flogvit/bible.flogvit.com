@@ -15,10 +15,9 @@
 import { Hono } from 'hono';
 import { DEFAULT_LOCALE, LOCALES, href, type Locale } from '../lib/i18n.ts';
 import { localesForPath, sitemapLocales, sitemapPaths } from '../lib/sitemap-paths.ts';
+import { SITE, absoluteUrl } from '../lib/site-url.ts';
 
 export const seoRoutes = new Hono();
-
-const SITE = 'https://bible.flogvit.com';
 
 const xmlEsc = (s: string) =>
   s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!));
@@ -104,7 +103,7 @@ seoRoutes.get('/sitemap.xml', (c) =>
 // er 1 200 oppføringer lang.
 for (const locale of LOCALES) {
   seoRoutes.get(`/sitemap-${locale}.xml`, async (c) => {
-    const loc = (l: Locale, p: string) => xmlEsc(SITE + encodeURI(href(l, p)));
+    const loc = (l: Locale, p: string) => xmlEsc(absoluteUrl(href(l, p)));
     const scoped = await sitemapLocales();
     const urls = paths()
       .map((p) => {
