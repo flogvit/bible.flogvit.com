@@ -16,6 +16,7 @@ import type { AppEnv } from '../lib/session.ts';
 import { ACCOUNT_URL } from '../lib/session.ts';
 import { DEFAULT_LOCALE, LOCALES, href, makeT, ogLocale, type Locale, type Translator, lhref } from '../lib/i18n.ts';
 import { tCtx, islandStrings, type MessageKey } from '../lib/i18n.ts';
+import { absoluteUrl } from '../lib/site-url.ts';
 import { assetUrl } from '../lib/static-cache.ts';
 import { shareCard, type ShareCard } from '../lib/share-card.ts';
 
@@ -100,8 +101,6 @@ function islandKeysFor(scripts: readonly string[]): MessageKey[] {
   return [...keys];
 }
 
-const SITE = 'https://bible.flogvit.com';
-
 /**
  * Hreflang-klyngen (I18N.md §3): URL-ene er samme side på ulike språk, ikke
  * duplikater.
@@ -114,6 +113,10 @@ const SITE = 'https://bible.flogvit.com';
  * Derfor følger `x-default` med: den er adressen Google velger når ingen
  * språkvariant passer, så den må ligge INNENFOR settet. Pekte den på engelsk for
  * en norsk-bare side, sendte vi hver uplasserbar leser til en 404.
+ *
+ * Adressene går gjennom `absoluteUrl()` (#80): en klynge er maskinlesbar, og
+ * en rå `ø` her ville vært den samme uenigheten med sitemapen som `og:image`
+ * og canonical hadde — bare sagt et annet sted.
  */
 function HrefLang({ path, locales }: { path: string; locales?: readonly Locale[] }) {
   const available = locales?.length ? locales : LOCALES;
@@ -121,9 +124,9 @@ function HrefLang({ path, locales }: { path: string; locales?: readonly Locale[]
   return (
     <>
       {available.map((l) => (
-        <link rel="alternate" hreflang={l} href={SITE + href(l, path)} />
+        <link rel="alternate" hreflang={l} href={absoluteUrl(href(l, path))} />
       ))}
-      <link rel="alternate" hreflang="x-default" href={SITE + href(fallback, path)} />
+      <link rel="alternate" hreflang="x-default" href={absoluteUrl(href(fallback, path))} />
     </>
   );
 }
@@ -518,7 +521,11 @@ export function Layout(props: LayoutProps) {
           <meta property="og:image:height" content={String(card.height)} />
           <meta property="og:image:alt" content={card.alt ?? t('chrome.shareCardAlt')} />
           <meta name="twitter:card" content="summary_large_image" />
-          <link rel="canonical" href={props.canonical ?? SITE + href(props.locale, props.path)} />
+          {/* Absolutt OG prosentkodet (#80) — se `lib/site-url.ts`. En rute som
+              sender sin egen canonical bygger den med samme `absoluteUrl()`;
+              `published-url-encoding.test.ts` krever at opphavet bare settes
+              sammen med en sti DER. */}
+          <link rel="canonical" href={props.canonical ?? absoluteUrl(href(props.locale, props.path))} />
           <HrefLang path={props.path} locales={props.locales} />
           <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
           <link rel="icon" href="/favicon.ico" sizes="any" />

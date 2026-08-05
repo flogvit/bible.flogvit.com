@@ -15,6 +15,7 @@ import { Layout } from '../../views/layout.tsx';
 import { Breadcrumbs } from '../../views/breadcrumbs.tsx';
 import { layoutProps, tFor, lhref, currentIntlTag } from '../../lib/i18n.ts';
 import { tCtx } from '../../lib/i18n.ts';
+import { absoluteUrl } from '../../lib/site-url.ts';
 
 const r = new Hono<AppEnv>();
 
@@ -138,7 +139,7 @@ r.get('/changes', async (c) => {
       title={`${t('ch.title')} — FLOGVIT.bible`}
       description={t('ch.meta')}
       styles={['about.css', 'changes.css']}
-      canonical={`https://bible.flogvit.com${lhref('/changes')}`}
+      canonical={absoluteUrl(lhref('/changes'))}
     >
       <div class="about-main">
         <div class="reading-container">

@@ -36,6 +36,7 @@ import {
 import { GonePage } from './misc.tsx';
 import { enrichWithVerseText, readingTypeKey } from '../../lib/reading-text-enrich.ts';
 import { toUrlSlug } from '../../lib/url-utils.ts';
+import { absoluteUrl } from '../../lib/site-url.ts';
 import { layoutProps, tFor, lhref, href, currentIntlTag, langName, scriptName, type Locale } from '../../lib/i18n.ts';
 import { tCtx, tEnum } from '../../lib/i18n.ts';
 import { pickLocalisedText, localesWithContent, localeToContentLanguage } from '../../lib/lang.ts';
@@ -111,7 +112,7 @@ r.get('/oversettelser/:id', async (c) => {
       title={`${name} — ${t('nav.translations')} — FLOGVIT.bible`}
       description={t('ed.metaDesc', { name: edition.abbreviation ? `${name} (${edition.abbreviation})` : name })}
       styles={['overview.css']}
-      canonical={`https://bible.flogvit.com${lhref(`/oversettelser/${edition.id}`)}`}
+      canonical={absoluteUrl(lhref(`/oversettelser/${edition.id}`))}
     >
       <div class="overview-main">
         <div class="container">
