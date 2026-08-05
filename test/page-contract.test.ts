@@ -656,11 +656,18 @@ describe('sidekontrakt', () => {
 
       await expectAllAlive('nb', `/lesetekster/${date}`);
 
-      // Og de seks andre er fortsatt 404 — klyngen ble smalere fordi sidene
-      // MANGLER, ikke fordi noen begynte å svare på dem.
+      // Og de seks andre RENDRER fortsatt ikke dagen — klyngen ble smalere
+      // fordi siden mangler på de språkene, ikke fordi noen begynte å svare på
+      // dem. De 302-er til den norske adressen (#76) framfor å 404-e, og det er
+      // nettopp derfor de ikke skal stå i klyngen: hreflang skal peke på
+      // adressen som ER siden, ikke på en som viser videre til den.
       for (const locale of ['en', 'de', 'sv', 'fr', 'es', 'fi']) {
-        const dead = await app.request(`/${locale}/lesetekster/${date}`);
-        expect({ locale, status: dead.status }).toEqual({ locale, status: 404 });
+        const away = await app.request(`/${locale}/lesetekster/${date}`);
+        expect({ locale, status: away.status, location: away.headers.get('location') }).toEqual({
+          locale,
+          status: 302,
+          location: `/nb/lesetekster/${date}`,
+        });
       }
     });
   });

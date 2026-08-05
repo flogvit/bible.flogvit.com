@@ -3135,6 +3135,22 @@ export async function getReadingTextLanguages(date: string): Promise<string[]> {
   return rows.map((r) => r.language);
 }
 
+/**
+ * Innholdsspråkene lesetekster i det hele tatt finnes på (#76).
+ *
+ * Samme spørsmål som over, uten datoen: brukt av `/lesetekster` når lista er
+ * tom fordi språket mangler innholdet, for å kunne peke leseren på utgaven som
+ * HAR det. Spørres av basen av samme grunn — et importert språk slår gjennom
+ * uten kodeendring.
+ */
+export async function getReadingTextContentLanguages(): Promise<string[]> {
+  const sql = getSql();
+  const rows = await sql`
+    SELECT DISTINCT language FROM reading_texts
+  ` as { language: string }[];
+  return rows.map((r) => r.language);
+}
+
 export async function getTodaysReadingTexts(lang = currentContentLanguage()): Promise<ReadingTextWithSlots[]> {
   const today = new Date().toISOString().substring(0, 10);
   return getReadingTextsByDate(today, lang);

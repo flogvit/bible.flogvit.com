@@ -17,6 +17,7 @@ import {
   getReadingTextById,
   getReadingTextsByDate,
   getReadingTextLanguages,
+  getReadingTextContentLanguages,
   getProphecies,
   getProphecyCategories,
   getGospelParallels,
@@ -35,9 +36,9 @@ import {
 import { GonePage } from './misc.tsx';
 import { enrichWithVerseText, readingTypeKey } from '../../lib/reading-text-enrich.ts';
 import { toUrlSlug } from '../../lib/url-utils.ts';
-import { layoutProps, tFor, lhref, currentIntlTag, langName, scriptName } from '../../lib/i18n.ts';
+import { layoutProps, tFor, lhref, href, currentIntlTag, langName, scriptName, type Locale } from '../../lib/i18n.ts';
 import { tCtx, tEnum } from '../../lib/i18n.ts';
-import { pickLocalisedText, localesWithContent } from '../../lib/lang.ts';
+import { pickLocalisedText, localesWithContent, localeToContentLanguage } from '../../lib/lang.ts';
 
 const r = new Hono<AppEnv>();
 
@@ -326,6 +327,7 @@ function formatMonth(yearMonth: string): string {
 
 r.get('/lesetekster', async (c) => {
   const t = tFor(c);
+  const { locale } = layoutProps(c);
   const texts = await getAllReadingTexts();
   // Kronologisk fremover (som gamle appens standardvisning): dato ≥ i dag.
   const today = new Date().toISOString().slice(0, 10);
@@ -347,6 +349,21 @@ r.get('/lesetekster', async (c) => {
     groups.get(key)!.push([date, dayTexts]);
   }
 
+  // Menypunktet står på alle åtte språk, og på seks av dem er lista tom (#76).
+  // De to tomme tilfellene er IKKE det samme:
+  //
+  //   texts.length === 0     språket har ikke lesetekstene i det hele tatt
+  //   upcoming.length === 0  vi har dem, men alle datoene har passert
+  //
+  // Bare det første har en vei ut. Pekte vi videre i det andre tilfellet også,
+  // ville et tomt /nb/lesetekster sendt leseren til et like tomt /nn/lesetekster
+  // — en blindvei med et ekstra klikk.
+  const elsewhere =
+    texts.length === 0
+      ? localesWithContent(await getReadingTextContentLanguages()).find((l) => l !== locale)
+      : undefined;
+  const elsewhereName = elsewhere ? langName(t, localeToContentLanguage(elsewhere)) : '';
+
   return c.html(
     <Layout {...layoutProps(c)}
       title={`${t('nav.readingTexts')} — FLOGVIT.bible`}
@@ -362,7 +379,17 @@ r.get('/lesetekster', async (c) => {
           </p>
 
           {upcoming.length === 0 ? (
-            <p>{t('rt.noUpcoming')}</p>
+            <>
+              <p>{t('rt.noUpcoming')}</p>
+              {elsewhere && (
+                <p>
+                  {t('rt.onlyIn', { language: elsewhereName })}{' '}
+                  <a href={href(elsewhere, '/lesetekster')}>
+                    {t('rt.openIn', { language: elsewhereName })}
+                  </a>
+                </p>
+              )}
+            </>
           ) : (
             [...groups.entries()].map(([key, group]) => (
               <section class="overview-section">
@@ -410,7 +437,31 @@ r.get('/lesetekster/:date{[0-9]{4}-[0-9]{2}-[0-9]{2}}', async (c) => {
   const t = tFor(c);
   const date = c.req.param('date');
   const texts = await getReadingTextsByDate(date);
-  if (texts.length === 0) return c.notFound();
+
+  // Finnes dagen, men ikke på DETTE språket, går leseren dit den finnes (#76).
+  //
+  // En delt lenke er hele bruken av denne siden: den kommer fra en som leser
+  // norsk, til en som kanskje ikke gjør det, og en 404 gjør lenken verdiløs for
+  // begge. Det bryter ikke med #26 — vi viser ikke norsk tekst under /en/, vi
+  // sier at teksten bor på den norske adressen og tar leseren dit, der
+  // `<html lang>` er ærlig.
+  //
+  // 302, ikke 301: at lesetekstene bare finnes på norsk er en egenskap ved
+  // DATAENE, ikke ved adressen. Blir de importert på flere språk, skal en
+  // nettleser som har lagret en permanent redirect slutte å bruke den.
+  //
+  // Målet utledes av basen, ikke av en hardkodet `nb` — og ALDRI av gjetning:
+  // en dato uten lesetekst i det hele tatt 404-er som før, framfor å bli en
+  // omvei til den samme blindveien.
+  if (texts.length === 0) {
+    const target = localesWithContent(await getReadingTextLanguages(date)).find(
+      (l) => l !== layoutProps(c).locale,
+    );
+    if (!target) return c.notFound();
+    const query = c.req.url.slice(c.req.url.indexOf('?') + 1);
+    const suffix = c.req.url.includes('?') ? `?${query}` : '';
+    return c.redirect(href(target, `/lesetekster/${date}`) + suffix, 302);
+  }
 
   // Prefs (bibel/mapping) er klient-side i dag; osnb er standard server-side.
   const bible = normalizeBibleId(c.req.query('bible')) || (await defaultBibleForLanguage());
