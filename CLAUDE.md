@@ -1031,6 +1031,36 @@ testfil som transitivt importerer `src/lib/db.ts` må bære linja, og en fil som
 ikke gjør det må la være (ellers ville «sett den overalt» bestått, og de rene
 logikktestene mistet 5 s-taket sitt i stillhet). Fire mutasjoner kjørt.
 
+**En testfil som skrur ned LASTVERNET setter det tilbake:
+`afterAll(resetPageCache);` på toppnivå (#72).** `bun test` kjører alle filene i
+SAMME prosess, og knappene, cachen, semaforen og versjonsleseren i
+`page-cache.ts` er modulnivå-tilstand. `page-cache.test.ts` satte taket til ETT
+render-spor og 30 ms køtid for å måle lastavvisning, og satte det aldri tilbake
+— så alt som kjørte etterpå målte mot en app vi ikke ruller ut. Utslaget er
+STILLE og det er poenget: en sveip som henter sidene én om gangen holder seg
+innenfor det ene sporet og består, mens fire samtidige hentinger gir tre
+503-er. En vakt som da måler 503-siden i stedet for sida, består også — og
+måler ingenting. Målt: fire samtidige hentinger etter `page-cache.test.ts` ga
+`[503, 200, 503, 503]`.
+
+- **`resetPageCache()` er ett kall for hele tilstanden.**
+  `configurePageCache({})` satte bare KNAPPENE tilbake; semaforen var det
+  ingenting som kunne nullstille. En render som aldri ble ferdig — en test som
+  røk på taket, en port som aldri ble åpnet — holdt plassen sin ut prosessen,
+  og kapasiteten var da lavere enn den som sto i konfigurasjonen.
+  `releaseRenderSlot()` har et gulv på null, ellers ville en render som
+  fullførte ETTER nullstillingen tatt telleren negativ og hevet taket permanent
+  — den motsatte feilen, like stille.
+- **Linja skal stå på TOPPNIVÅ**, ikke inne i describen som skrudde. Da fyrer
+  den etter siste describe, uansett hva noen legger til nederst i fila.
+- **Vakta er `test/page-cache-reset.test.ts`, og den har to halvdeler.**
+  STRUKTUREN er formulert på hva filen GJØR — kaller den `configurePageCache(`,
+  må den bære linja, og en fil som ikke rører lastvernet må la være (ellers
+  ville «sett linja overalt» bestått). RESETTEN måler at linja virker: at et tak
+  satt for en måling ikke gjelder etterpå, at en forlatt render ikke holder
+  plassen, og at en sen release ikke hever taket. Kapasiteten leses fra
+  `PAGE_CACHE_DEFAULTS` framfor å skrives av. Fem mutasjoner kjørt.
+
 **Grense:** happy-dom lar seg ikke patche der `plus.js` overstyrer
 `localStorage.setItem`, så den stille skrivesperren for gratisbrukere må verifiseres i
 en ekte nettleser. Den brukersynlige porten (klikk registrerer ingenting) er dekket.

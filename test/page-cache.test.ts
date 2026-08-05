@@ -1,14 +1,22 @@
-import { beforeEach, describe, expect, test } from 'bun:test';
+import { afterAll, beforeEach, describe, expect, test } from 'bun:test';
 import { Hono } from 'hono';
 import {
   clearPageCache,
   configurePageCache,
+  resetPageCache,
   setContentVersionReader,
   withPageCache,
 } from '../src/lib/page-cache.ts';
 
 // Mikrocachen (GitHub #4): anonyme GET-HTML-sider caches og får Cache-Control;
 // innloggede forespørsler og /api/* går alltid gjennom.
+
+// Lastvernet er modulnivå-tilstand, og `bun test` kjører alle filene i samme
+// prosess: `lastavvisning` nedenfor skrur taket ned til ETT render-spor, og uten
+// denne linja hadde hver etterfølgende fil målt mot det (#72). Den står på
+// toppnivå med vilje — da fyrer den etter siste describe, uansett hvilken
+// describe noen legger til nederst i fila.
+afterAll(resetPageCache);
 
 function buildApp() {
   let renders = 0;

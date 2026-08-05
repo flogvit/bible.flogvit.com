@@ -23,7 +23,12 @@ import { DB_TEST_TIMEOUT_MS } from './db-timeout.ts';
 import { readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { createApp } from '../src/app.ts';
-import { NOT_A_PAGE, clearPageCache, configurePageCache } from '../src/lib/page-cache.ts';
+import {
+  NOT_A_PAGE,
+  clearPageCache,
+  configurePageCache,
+  resetPageCache,
+} from '../src/lib/page-cache.ts';
 import { seoRoutes } from '../src/routes/seo.ts';
 import { sitemapPaths } from '../src/lib/sitemap-paths.ts';
 import { PAGES } from './pages.ts';
@@ -47,10 +52,9 @@ beforeAll(() => {
   configurePageCache({ maxConcurrentRenders: 0, queueWaitMs: 10 });
 });
 
-afterAll(() => {
-  configurePageCache({});
-  clearPageCache();
-});
+// Ett kall setter knappene, cachen OG semaforen tilbake — `configurePageCache({})`
+// lot en plass som ble stående i en avbrutt render bli stående (#72).
+afterAll(resetPageCache);
 
 describe('lastvernet med semaforen full (#64)', () => {
   // Ikke bare `/robots.txt` og `/sitemap.xml`: HVER rute i seoRoutes. Lista
