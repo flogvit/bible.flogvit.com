@@ -3,6 +3,19 @@
 What actually reached readers, newest first. Dates, not version numbers — we
 deploy continuously.
 
+## 2026-08-05 — Page through the catalog, and a site that comes back to full strength on its own after a rush
+
+**New features**
+- The publication catalog is now split into pages. Long lists open quickly, you can step between pages, and the page you are on — and how many there are — is always stated.
+
+**Polish**
+- A passage block with no scripture reference no longer draws the thin rule that promises one, so person pages read cleanly where a reference is missing.
+
+**Bug fixes**
+- After a burst of traffic the site could stay in its reduced mode long after the rush was over. It now lifts the limits — including the reserved slots, not just the buttons — as soon as the load drops, instead of waiting for the next restart.
+
+**Behind the scenes**
+- Tests now declare their own time limits, seed quietly, and catch markup whose styling is never honoured; the runbooks were updated to explain the reasoning behind each limit.
 ## 2026-08-05 — Long words no longer push the page sideways on narrow screens
 
 **Bug fixes**
