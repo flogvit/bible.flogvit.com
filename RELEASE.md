@@ -3,6 +3,16 @@
 What actually reached readers, newest first. Dates, not version numbers — we
 deploy continuously.
 
+## 2026-08-05 — Shared links survive special characters, and nothing sits stuck in the review queue
+
+**Bug fixes**
+
+- Addresses we publish — share cards, canonical links, sitemap entries — are now percent-encoded, so a page whose title or reference contains non-ASCII characters resolves properly. Paste such a link into a chat or a social post and the preview card loads instead of breaking; crawlers reach the page too.
+- The review queue pages through everything that has been submitted. Contributions past the first batch are now visible and can be accepted or declined, rather than sitting out of reach because the list stopped at fifty.
+
+**Behind the scenes**
+
+- Our tests now choose their sample pages from the real data instead of a conveniently plain-ASCII book, so an encoding fault can no longer slip past a green suite. Reviewer and contributor documentation was updated to match.
 ## 2026-08-05 — Reading texts you can share in any language, with more room to read
 
 **New features**
