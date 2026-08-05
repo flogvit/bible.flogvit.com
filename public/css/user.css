@@ -6,6 +6,20 @@
 .user-note { color: var(--muted); font-size: 14px; margin-top: 16px; }
 .user-toolbar { margin-bottom: 20px; }
 
+/* Sidebytteren i manuskriptkatalogen (#75). `wrap` fordi rada bærer tekst på
+   åtte språk og skal bryte framfor å gjøre siden bredere enn skjermen (#50). */
+.pager {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 24px;
+}
+.pager-status { color: var(--muted); font-size: 14px; }
+.pager-link { color: var(--gold-text); text-decoration: none; font-size: 14px; }
+.pager-link:hover { text-decoration: underline; }
+
 .user-input {
   padding: 10px 14px;
   font-size: 15px;

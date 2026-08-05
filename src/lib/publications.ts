@@ -176,21 +176,66 @@ export async function listOwnPublications(userId: number): Promise<Publication[]
 }
 
 /**
- * Katalogen: godkjente oppføringer der kilderaden fortsatt finnes.
+ * Hvor mange oppføringer én katalogside viser.
+ *
+ * Tallet er ikke et TAK på katalogen — det er sidelengden. Før #75 var det et
+ * tak: `LIMIT 100` uten en side 2, og enkeltoppføringene ligger med vilje ikke
+ * i sitemapen (#42-lærdommen), så oppføring nummer 101 var godkjent, publisert
+ * og uoppdagbar. Forfatteren så «Publisert» med en lenke som virket, og ingen
+ * leser hadde en vei dit.
+ */
+export const CATALOG_PAGE_SIZE = 50;
+
+export interface CatalogPage {
+  items: Publication[];
+  /** 1-basert, som i adressen. */
+  page: number;
+  /** Alltid minst 1: en tom katalog HAR en førsteside, den er bare tom. */
+  pageCount: number;
+  total: number;
+}
+
+/** Adressen til en katalogside. Side 1 er den korte — den ligger i sitemapen. */
+export function catalogPagePath(page: number): string {
+  return page <= 1 ? '/manuskripter/katalog' : `/manuskripter/katalog/side/${page}`;
+}
+
+/**
+ * Katalogen, én side om gangen: godkjente oppføringer der kilderaden fortsatt
+ * finnes.
  *
  * JOIN-en mot sync_items er tilgangskontroll, ikke pynt: sletter forfatteren
  * manuskriptet, skal oppføringen forsvinne selv om teksten ligger frosset her.
+ *
+ * `total` er ikke pynt heller: den er det siden SIER (#75 — «og sier ikke fra»)
+ * og det som avgjør om det finnes en side til. Uten den kunne en side være
+ * siste side uten å vite det.
  */
-export async function listCatalog(limit = 100): Promise<Publication[]> {
-  const rows = (await getSql()`
+export async function listCatalog(page = 1, pageSize = CATALOG_PAGE_SIZE): Promise<CatalogPage> {
+  const sql = getSql();
+  const [count] = (await sql`
+    SELECT COUNT(*) AS n FROM devotional_publications p
+    JOIN sync_items i
+      ON i.user_id = p.user_id AND i.item_id = p.item_id AND i.data_type = 'devotionals'
+    WHERE p.status = 'approved' AND i.deleted = 0
+  `) as { n: number | string }[];
+  const total = Number(count?.n ?? 0);
+  const pageCount = Math.max(1, Math.ceil(total / pageSize));
+  const current = Math.min(Math.max(1, Math.trunc(page)), pageCount);
+
+  const rows = (await sql`
     SELECT p.* FROM devotional_publications p
     JOIN sync_items i
       ON i.user_id = p.user_id AND i.item_id = p.item_id AND i.data_type = 'devotionals'
     WHERE p.status = 'approved' AND i.deleted = 0
-    ORDER BY p.decided_at DESC, p.submitted_at DESC
-    LIMIT ${limit}
+    -- Slugen til slutt gjør sorteringen TOTAL. To oppføringer godkjent i samme
+    -- millisekund har ellers ingen innbyrdes rekkefølge, og en rad kan da
+    -- havne på begge sider av et sideskille — altså bli listet to ganger, eller
+    -- ingen. Det er nettopp usynligheten saken handler om.
+    ORDER BY p.decided_at DESC, p.submitted_at DESC, p.slug ASC
+    LIMIT ${pageSize} OFFSET ${(current - 1) * pageSize}
   `) as Record<string, unknown>[];
-  return rows.map(toRow);
+  return { items: rows.map(toRow), page: current, pageCount, total };
 }
 
 /** Én katalogoppføring med tekst. Ikke godkjent eller slettet kilde ⇒ null. */

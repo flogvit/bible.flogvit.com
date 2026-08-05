@@ -13,12 +13,13 @@
 // rendereren som resten av appen (views/markdown.tsx), altså aldri som rå HTML.
 
 import { Hono } from 'hono';
+import type { Context } from 'hono';
 import type { AppEnv } from '../../lib/session.ts';
 import { Layout } from '../../views/layout.tsx';
 import { Breadcrumbs } from '../../views/breadcrumbs.tsx';
 import { Markdown } from '../../views/markdown.tsx';
 import { layoutProps, tFor, tCtx, lhref, currentIntlTag } from '../../lib/i18n.ts';
-import { getPublication, listCatalog } from '../../lib/publications.ts';
+import { catalogPagePath, getPublication, listCatalog } from '../../lib/publications.ts';
 
 const r = new Hono<AppEnv>();
 
@@ -26,9 +27,34 @@ const fmtDate = (ms: number) =>
   new Intl.DateTimeFormat(currentIntlTag(), { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' })
     .format(new Date(ms));
 
-r.get('/manuskripter/katalog', async (c) => {
+/**
+ * Katalogen er PAGINERT PÅ STI, ikke på query (#75).
+ *
+ * `?side=2` ville vært en handlings-URL etter #60 — altså `nofollow` og
+ * forbudt i robots.txt — og side 2 dermed like uoppdagbar som oppføringene den
+ * skulle vise. To segmenter kolliderer heller ikke med `:slug` under.
+ */
+r.get('/manuskripter/katalog', async (c) => renderCatalog(c, 1));
+
+r.get('/manuskripter/katalog/side/:page', async (c) => {
+  const raw = c.req.param('page');
+  // Alt annet enn et ekte sidetall er 404: en side som ikke finnes skal ikke
+  // svare 200 med en tom liste — det er en uendelig flate for en crawler.
+  if (!/^[1-9][0-9]*$/.test(raw)) return c.notFound();
+  const page = Number(raw);
+  // Side 1 har ÉN adresse, og det er den korte — den som ligger i sitemapen.
+  if (page === 1) return c.redirect(lhref('/manuskripter/katalog'), 301);
+  return renderCatalog(c, page);
+});
+
+async function renderCatalog(c: Context<AppEnv>, page: number) {
   const t = tFor(c);
-  const items = await listCatalog();
+  const { items, pageCount, page: current } = await listCatalog(page);
+  // Et sidetall forbi siste side er 404, ikke en tom side med 200.
+  if (page > pageCount) return c.notFound();
+  const pageHref = (n: number) => lhref(catalogPagePath(n));
+  const crumbs = [{ label: tCtx()('common.home'), href: '/' }];
+  if (current > 1) crumbs.push({ label: tCtx()('pub.catalog'), href: '/manuskripter/katalog' });
 
   return c.html(
     <Layout {...layoutProps(c)}
@@ -38,7 +64,12 @@ r.get('/manuskripter/katalog', async (c) => {
     >
       <div class="user-main">
         <div class="reading-container">
-          <Breadcrumbs items={[{ label: tCtx()('common.home'), href: '/' }, { label: tCtx()('pub.catalog') }]} />
+          <Breadcrumbs
+            items={[
+              ...crumbs,
+              current > 1 ? { label: tCtx()('pub.pageN', { page: String(current) }) } : { label: tCtx()('pub.catalog') },
+            ]}
+          />
           <h1>{t('pub.catalog')}</h1>
           <p class="user-intro">{t('pub.intro')}</p>
 
@@ -55,12 +86,33 @@ r.get('/manuskripter/katalog', async (c) => {
           </div>
           {items.length === 0 && <p class="user-empty">{t('pub.empty')}</p>}
 
+          {/* Veien videre. Uten den er oppføringene på side 2 godkjent,
+              publisert og uoppdagbare (#75) — de ligger med vilje ikke i
+              sitemapen, så DENNE lenka er hele oppdagelsesveien. */}
+          {pageCount > 1 && (
+            <nav class="pager" aria-label={t('pub.catalog')}>
+              {current > 1 ? (
+                <a class="pager-link" data-pager="prev" rel="prev" href={pageHref(current - 1)}>
+                  {t('pub.prevPage')}
+                </a>
+              ) : <span class="pager-gap" />}
+              <span class="pager-status">
+                {t('pub.pageOf', { page: String(current), pages: String(pageCount) })}
+              </span>
+              {current < pageCount ? (
+                <a class="pager-link" data-pager="next" rel="next" href={pageHref(current + 1)}>
+                  {t('pub.nextPage')}
+                </a>
+              ) : <span class="pager-gap" />}
+            </nav>
+          )}
+
           <p class="user-note">{t('pub.ownHint')} <a href={lhref('/manuskripter')}>{t('nav.manuscripts')}</a></p>
         </div>
       </div>
     </Layout>,
   );
-});
+}
 
 /**
  * Én oppføring. Teksten er ØYEBLIKKSBILDET som ble godkjent, ikke forfatterens
