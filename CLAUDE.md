@@ -971,6 +971,21 @@ getSql()` øverst i en testfil tar vare på instansen som fantes ved import;
 med «Connection closed» — i to filer som ikke har med saken å gjøre. Bruk
 `getSql()` inne i hver test/hook, og la de filene som allerede lukker, lukke.
 
+**En DB-testfil oppgir taket sitt selv: `setDefaultTimeout(DB_TEST_TIMEOUT_MS)`
+(#74).** Buns standard er 5000 ms, og det tallet er valgt for en test som enten
+svarer med en gang eller henger — ikke for en hook som migrerer skjemaet.
+`ensureSchema()` er 33 CREATE TABLE + hele `runMigrations()`: målt 2,4 s på en
+tom maskin og 14 s på en travel. Utslaget er ikke en rød test, men at HELE FILEN
+forsvinner — ryker `beforeAll`, kjøres ingen av testene, og suiten melder et
+lavere totaltall som ser grønt ut (799 mot 822 i saken). Én konstant i
+`test/db-timeout.ts`, og linja gjelder både hooks og tester i filen, så en tung
+sveip inne i en `test()` arver samme tak. **Ikke skriv et eget tall ved siden
+av** — det setter taket ned igjen uten at noen ser det. Vakta er
+`test/db-test-timeout.test.ts`, og den er formulert på hva filen NÅR: enhver
+testfil som transitivt importerer `src/lib/db.ts` må bære linja, og en fil som
+ikke gjør det må la være (ellers ville «sett den overalt» bestått, og de rene
+logikktestene mistet 5 s-taket sitt i stillhet). Fire mutasjoner kjørt.
+
 **Grense:** happy-dom lar seg ikke patche der `plus.js` overstyrer
 `localStorage.setItem`, så den stille skrivesperren for gratisbrukere må verifiseres i
 en ekte nettleser. Den brukersynlige porten (klikk registrerer ingenting) er dekket.
