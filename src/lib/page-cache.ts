@@ -26,7 +26,15 @@ import type { Context, Next } from 'hono';
 const MAX_TOTAL_BYTES = 48 * 1024 * 1024;
 const MAX_ENTRY_BYTES = 1.5 * 1024 * 1024;
 
-const DEFAULTS = {
+/**
+ * Verdiene modulen STARTER i — altså det lastvernet vi faktisk ruller ut.
+ *
+ * Eksportert med vilje: en vakt som skal måle at knappene er satt tilbake, må
+ * måle mot standarden framfor å skrive av tallene. En kopi i testen ville
+ * fortsatt vært grønn etter at standarden ble endret — samme grunn som at
+ * `NOT_A_PAGE` importeres framfor å gjentas i `load-shedding.test.ts` (#64).
+ */
+export const PAGE_CACHE_DEFAULTS = Object.freeze({
   // 5 minutter var unødvendig kort (#19). Innholdet endres BARE ved import, og
   // en crawler som går gjennom Bibelen kommer tilbake til samme URL flere ganger
   // i timen — 5289 forespørsler over 1068 unike stier i hendelsen. Med en time
@@ -40,13 +48,13 @@ const DEFAULTS = {
   queueWaitMs: Number(process.env.RENDER_QUEUE_WAIT_MS || 3000),
   /** Hvor sjelden innholdsversjonen sjekkes (én liten spørring per intervall). */
   versionCheckMs: Number(process.env.PAGE_CACHE_VERSION_CHECK_MS || 30 * 1000),
-};
+});
 
-let config = { ...DEFAULTS };
+let config = { ...PAGE_CACHE_DEFAULTS };
 
 /** Kun for tester. */
-export function configurePageCache(next: Partial<typeof DEFAULTS>): void {
-  config = { ...DEFAULTS, ...next };
+export function configurePageCache(next: Partial<typeof PAGE_CACHE_DEFAULTS>): void {
+  config = { ...PAGE_CACHE_DEFAULTS, ...next };
 }
 
 const cacheControl = () =>
@@ -136,9 +144,37 @@ function releaseRenderSlot(): void {
   const next = waiters.shift();
   if (next) {
     next(true); // plassen går videre, active står
-  } else {
+  } else if (active > 0) {
+    // Gulvet på null er ikke pynt: `resetPageCache()` nuller telleren mens en
+    // render kan være i gang, og uten gulvet ville dens release tatt `active`
+    // til -1 — altså et STØRRE tak enn det som er konfigurert, permanent og
+    // stille. En teller som beskriver kapasiteten kan ikke være negativ.
     active--;
   }
+}
+
+/**
+ * Kun for tester: setter modulen tilbake til den tilstanden den STARTET i.
+ *
+ * `bun test` kjører alle filene i SAMME prosess, og både knappene, cachen,
+ * semaforen og versjonsleseren er modulnivå-tilstand. En fil som skrur taket
+ * ned til ett spor for å måle lastavvisning, måler alt som kjører etterpå mot
+ * en app vi ikke ruller ut — feilmeldingen peker da på feil fil, og i verste
+ * fall består en vakt fordi den stille målte en 503-side (#72).
+ *
+ * `configurePageCache({})` setter bare knappene tilbake. SEMAFOREN er også
+ * tilstand, og den er det ingenting som kunne nullstille: en render som aldri
+ * ble ferdig — en test som røk på taket, en port som aldri ble åpnet — holder
+ * plassen sin ut prosessen, og kapasiteten er dermed lavere enn den som står i
+ * konfigurasjonen. Venterne får nei framfor plassen: de holder ingen plass, så
+ * ingen av dem slipper en de ikke har.
+ */
+export function resetPageCache(): void {
+  config = { ...PAGE_CACHE_DEFAULTS };
+  clearPageCache();
+  setContentVersionReader(null);
+  active = 0;
+  for (const waiter of waiters.splice(0)) waiter(false);
 }
 
 function serveEntry(c: Context, entry: CacheEntry, xCache: 'hit' | 'stale'): Response {
