@@ -14,6 +14,7 @@ brukerens egen tekst, og den blir aldri innholdsdata.
 review. To endepunkter sjekker headeren `x-review-token` mot env-variabelen:
 
 - `GET /api/publications/pending`
+- `GET /api/publications/review/<slug>`
 - `POST /api/publications/decide`
 
 Uten variabelen i env **finnes ikke endepunktene** (404); feil verdi gir 403.
@@ -26,7 +27,8 @@ svarer prod 403 på hver kommando.
 Kjøres fra `bibel/`. Tokenet leses fra `.env`, så det trenger ikke stå på linja.
 
 ```bash
-bun scripts/publications-review.ts                  # køen + rapporterte
+bun scripts/publications-review.ts                  # køen + rapporterte, side 1
+bun scripts/publications-review.ts kø 2             # neste side av begge køene
 bun scripts/publications-review.ts vis <slug>       # hele teksten
 bun scripts/publications-review.ts godkjenn <slug>
 bun scripts/publications-review.ts avvis <slug> "begrunnelse"
@@ -43,6 +45,17 @@ Køen viser to lister:
    manuskriptet i mellomtiden, er oppføringen allerede borte for leseren, og da
    faller den ut av denne lista også — du skal ikke bruke tid på en tekst ingen
    kan se.
+
+**Tallet i parentes er HELE køen**, ikke det siden viser. Er det flere enn én
+side, står sidetallet i overskriften og skriptet skriver ut kommandoen for neste
+side nederst — følg den til den ikke står der lenger, da har du sett alt. Én
+side er 50 oppføringer, og begge listene blar med samme sidetall.
+
+**Du trenger ikke se en oppføring i køen for å gjøre noe med den.** `vis`,
+`godkjenn` og `avvis` slår opp slugen direkte, så en adresse du har fra
+katalogen, fra tavla eller fra forfatteren virker uansett hvilken side den står
+på. `vis` oppgir også statusen (til vurdering / publisert / avvist), så du ser
+hva du har foran deg når slugen ikke kom fra køen.
 
 Svarer en kommando med `404` eller `403` framfor en liste, er det `REVIEW_TOKEN`
 det står på — se «Legitimasjonen» over. Skriptet stopper da høylytt med vilje:

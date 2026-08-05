@@ -762,6 +762,56 @@ stille (200, ingen loggrad, ingen 404), som #45, #60, #65 og #69.
   finnes bare når katalogen er stor nok, og 404-er ellers. Rot-adressen står der
   som før.
 
+#### Og KØEN har samme tak, med en verre konsekvens (#81)
+
+#75 løste lista LESEREN ser. Køen er en annen flate med en annen bruker —
+revieweren — og der stoppet `LIMIT 50` en innsending fra å komme ut i det hele
+tatt: den som står bak sideskillet blir aldri sett, altså aldri godkjent, og
+forfatteren ser «Til vurdering» i det uendelige. Køen er den ENESTE veien ut i
+katalogen.
+
+- **`REVIEW_PAGE_SIZE` er sidelengden, ikke et tak**, og begge køene
+  (`listPendingPublications`, `listReportedPublications`) returnerer
+  `{items, page, pageCount, total}` som `listCatalog`. Sorteringen fikk `slug
+  ASC` til slutt av samme grunn som i #75: uten en TOTAL orden kan en rad havne
+  på begge sider av et sideskille, altså vises to ganger eller ingen.
+- **`total` er ikke pynt — det er tallet CLI-en SKRIVER.** «Til vurdering (50)»
+  var et tall som så ut som hele køen; det er selve løgnen saken handler om.
+  Skriptet skriver også ut kommandoen for neste side, framfor å anta at
+  revieweren gjetter at det finnes en.
+- **Paginering på ARGUMENT, ikke på sti.** Motsatt av #75, og med vilje: dette
+  er en CLI mot et token-gatet endepunkt, ingen crawler ser den og ingenting
+  skal indekseres. `kø 2` er den formen en reviewer faktisk skriver.
+- **Ett sidetall blar i BEGGE køene.** Den rapporterte er nesten alltid kort, og
+  to uavhengige markører ville vært to ting å holde styr på for å gjøre én jobb.
+- **Oppslaget står UTENFOR køen.** `vis` lette i køen den nettopp hentet, så en
+  oppføring bak sideskillet kunne ikke engang leses med slugen i hånda.
+  `GET /api/publications/review/:slug` slår opp på slugen alene, uansett status,
+  med samme `sync_items`-JOIN som køene. **`godkjenn`/`avvis` var derimot ALDRI
+  avhengige av køen** — de poster slugen rett til `/decide`, og saken tar feil på
+  akkurat det punktet. `vis` var hele blokkeringen, og den er nok: du avgjør ikke
+  en tekst du ikke kan lese.
+- **404 fra den ruta betyr to ulike ting**, og CLI-en skiller dem: `not_found` er
+  ukjent adresse, mens en tjeneste uten `REVIEW_TOKEN` svarer 404 på at
+  endepunktet ikke finnes. Sier vi «fant ikke» på det siste, ser en
+  feilkonfigurert prod ut som en skrivefeil — samme felle som «(tom) framfor
+  høylytt stopp» i CLI-vakta over.
+- **Tavla teller riktig allerede.** `dashboard/src/collect/prod.ts` gjør
+  `COUNT(*)` rett mot basen og har aldri sett de 50 — den var altså det eneste
+  stedet køens sanne lengde fantes, og revieweren så et annet tall enn tavla.
+- **Vakta er `test/review-queue-pagination.test.ts`, og den er formulert på
+  USYNLIGHETEN — ikke på tallet 50.** Den seeder flere enn én side rommer (målt i
+  `REVIEW_PAGE_SIZE`), GÅR køen som revieweren gjør — `kø`, så kommandoen
+  skriptet selv skrev ut — og krever at hver innsending dukker opp nøyaktig én
+  gang, at tallet i overskriften er hele køen, og at den som faller utenfor
+  første side kan `vis`-es med hele teksten og godkjennes helt ut i katalogen.
+  Den rapporterte køen måles på samme vandring. Kommandoene kjøres som ekte
+  underprosesser: CLI-en er en egen søm, og `publications.test.ts` går inn med
+  `app.request()`. Fem mutasjoner kjørt (tak uten side 2, sidens antall framfor
+  `total`, ingen neste-kommando, `vis` som leter i køen, urørt rapportert kø).
+  `slug ASC` lot seg ikke mutasjonsteste — som i #75 leverer MySQL tilfeldigvis
+  stabil rekkefølge for denne spørringen lokalt.
+
 ### En URL med QUERY er en handling, ikke en side (#60)
 
 12 × 503 på én time. Ikke nedetid — lastvernet under gjorde jobben sin. Det som

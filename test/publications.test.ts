@@ -277,8 +277,8 @@ describe('rapportering', () => {
 
   test('men den havner i reviewerens andre kø', async () => {
     const res = await app.request('/api/publications/pending', { headers: REVIEW });
-    const { reported } = (await res.json()) as { reported: { slug: string; reports: number }[] };
-    expect(reported.some((r) => r.reports > 0)).toBe(true);
+    const { reported } = (await res.json()) as { reported: { items: { slug: string; reports: number }[] } };
+    expect(reported.items.some((r) => r.reports > 0)).toBe(true);
   });
 });
 
@@ -300,9 +300,14 @@ describe('review-endepunktene', () => {
     await app.request(`/api/publications/${ITEM_ID}`, { method: 'DELETE', headers: PLUS });
     await submit();
     const res = await app.request('/api/publications/pending', { headers: REVIEW });
-    const { pending } = (await res.json()) as { pending: { title: string; content: string }[] };
-    expect(pending.length).toBeGreaterThan(0);
-    expect(pending[0]!.content).toContain('En andakt over');
+    const { pending } = (await res.json()) as {
+      pending: { items: { title: string; content: string }[]; total: number };
+    };
+    expect(pending.items.length).toBeGreaterThan(0);
+    // `total` er hele køen, ikke det siden viste (#81) — CLI-en skriver ut dette
+    // tallet, og et sideantall der ville sett ut som at køen var tom bak det.
+    expect(pending.total).toBeGreaterThanOrEqual(pending.items.length);
+    expect(pending.items[0]!.content).toContain('En andakt over');
   });
 
   test('ukjent slug kan ikke avgjøres', async () => {

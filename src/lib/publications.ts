@@ -267,17 +267,59 @@ export interface PendingPublication extends PublicationWithContent {
   userId: number;
 }
 
+/**
+ * Hvor mange oppføringer én KØ-side viser.
+ *
+ * Tallet er sidelengden, ikke et tak. Før #81 var det et tak: `LIMIT 50` uten
+ * en side 2, og CLI-en skrev «Til vurdering (50)» — et tall som ser ut som hele
+ * køen. Innsending nummer 51 ble aldri vist, altså aldri godkjent, og
+ * forfatteren så «Til vurdering» i det uendelige. Samme feil som #75 gjorde på
+ * katalogen, én flate over.
+ */
+export const REVIEW_PAGE_SIZE = 50;
+
+export interface ReviewQueue {
+  items: PendingPublication[];
+  /** 1-basert, som i kommandoen `kø <side>`. */
+  page: number;
+  /** Alltid minst 1: en tom kø HAR en førsteside, den er bare tom. */
+  pageCount: number;
+  /** HELE køen, ikke det denne siden rakk å vise — det er tallet som skrives ut. */
+  total: number;
+}
+
+const toPending = (r: Record<string, unknown>): PendingPublication => ({
+  ...toRow(r),
+  content: String(r.content),
+  userId: Number(r.user_id),
+});
+
 /** Køen, eldste først — den som har ventet lengst skal ses på først. */
-export async function listPendingPublications(limit = 50): Promise<PendingPublication[]> {
-  const rows = (await getSql()`
+export async function listPendingPublications(page = 1, pageSize = REVIEW_PAGE_SIZE): Promise<ReviewQueue> {
+  const sql = getSql();
+  const [count] = (await sql`
+    SELECT COUNT(*) AS n FROM devotional_publications p
+    JOIN sync_items i
+      ON i.user_id = p.user_id AND i.item_id = p.item_id AND i.data_type = 'devotionals'
+    WHERE p.status = 'pending' AND i.deleted = 0
+  `) as { n: number | string }[];
+  const total = Number(count?.n ?? 0);
+  const pageCount = Math.max(1, Math.ceil(total / pageSize));
+  const current = Math.min(Math.max(1, Math.trunc(page) || 1), pageCount);
+
+  const rows = (await sql`
     SELECT p.* FROM devotional_publications p
     JOIN sync_items i
       ON i.user_id = p.user_id AND i.item_id = p.item_id AND i.data_type = 'devotionals'
     WHERE p.status = 'pending' AND i.deleted = 0
-    ORDER BY p.submitted_at ASC
-    LIMIT ${limit}
+    -- Slugen til slutt gjør sorteringen TOTAL, av samme grunn som i katalogen
+    -- (#75): to innsendinger i samme millisekund har ellers ingen innbyrdes
+    -- rekkefølge, og en rad kan da havne på begge sider av et sideskille —
+    -- altså bli vist to ganger, eller ingen. Det er nettopp usynligheten.
+    ORDER BY p.submitted_at ASC, p.slug ASC
+    LIMIT ${pageSize} OFFSET ${(current - 1) * pageSize}
   `) as Record<string, unknown>[];
-  return rows.map((r) => ({ ...toRow(r), content: String(r.content), userId: Number(r.user_id) }));
+  return { items: rows.map(toPending), page: current, pageCount, total };
 }
 
 /**
@@ -288,17 +330,53 @@ export async function listPendingPublications(limit = 50): Promise<PendingPublic
  * uten JOIN-en her ble den likevel stående i køen, og revieweren ville vurdert
  * en tekst ingen kan se. Verre: ingen avgjørelse tar den ut igjen, siden en
  * rapport på noe usynlig aldri kommer i veien for noen.
+ *
+ * Paginert som køen over, og av samme grunn (#81): en rapport ingen reviewer
+ * kommer til, er en rapport ingen behandler.
  */
-export async function listReportedPublications(limit = 50): Promise<PendingPublication[]> {
-  const rows = (await getSql()`
+export async function listReportedPublications(page = 1, pageSize = REVIEW_PAGE_SIZE): Promise<ReviewQueue> {
+  const sql = getSql();
+  const [count] = (await sql`
+    SELECT COUNT(*) AS n FROM devotional_publications p
+    JOIN sync_items i
+      ON i.user_id = p.user_id AND i.item_id = p.item_id AND i.data_type = 'devotionals'
+    WHERE p.reports > 0 AND p.status = 'approved' AND i.deleted = 0
+  `) as { n: number | string }[];
+  const total = Number(count?.n ?? 0);
+  const pageCount = Math.max(1, Math.ceil(total / pageSize));
+  const current = Math.min(Math.max(1, Math.trunc(page) || 1), pageCount);
+
+  const rows = (await sql`
     SELECT p.* FROM devotional_publications p
     JOIN sync_items i
       ON i.user_id = p.user_id AND i.item_id = p.item_id AND i.data_type = 'devotionals'
     WHERE p.reports > 0 AND p.status = 'approved' AND i.deleted = 0
-    ORDER BY p.reports DESC, p.submitted_at ASC
-    LIMIT ${limit}
+    ORDER BY p.reports DESC, p.submitted_at ASC, p.slug ASC
+    LIMIT ${pageSize} OFFSET ${(current - 1) * pageSize}
   `) as Record<string, unknown>[];
-  return rows.map((r) => ({ ...toRow(r), content: String(r.content), userId: Number(r.user_id) }));
+  return { items: rows.map(toPending), page: current, pageCount, total };
+}
+
+/**
+ * Én oppføring for REVIEWEREN, slått opp på slugen alene (#81).
+ *
+ * `vis` lette tidligere i køen den nettopp hadde hentet, så en oppføring bak
+ * sideskillet ikke kunne leses i det hele tatt — og teksten er det revieweren
+ * faktisk vurderer. Oppslaget står derfor utenfor køen, og gjelder enhver
+ * status: har man slugen (fra en side lenger ute, fra tavla, fra forfatteren),
+ * skal man kunne lese teksten som ble sendt inn.
+ *
+ * Samme JOIN som køene: er kilderaden slettet, finnes ikke oppføringen.
+ */
+export async function getPublicationForReview(slug: string): Promise<PendingPublication | null> {
+  if (!slug) return null;
+  const rows = (await getSql()`
+    SELECT p.* FROM devotional_publications p
+    JOIN sync_items i
+      ON i.user_id = p.user_id AND i.item_id = p.item_id AND i.data_type = 'devotionals'
+    WHERE p.slug = ${slug} AND i.deleted = 0
+  `) as Record<string, unknown>[];
+  return rows[0] ? toPending(rows[0]) : null;
 }
 
 /**

@@ -18,6 +18,7 @@ import type { AppEnv } from '../../lib/session.ts';
 import { requirePlus } from '../../lib/session.ts';
 import {
   decidePublication,
+  getPublicationForReview,
   listOwnPublications,
   listPendingPublications,
   listReportedPublications,
@@ -77,9 +78,23 @@ r.post('/report/:slug', async (c) => {
 
 // ── Reviewen: kø og avgjørelse ───────────────────────────────────────────
 
+// Begge køene er PAGINERT, og svaret bærer `total` (#81). Uten det kunne
+// CLI-en bare skrive antallet den fikk — «Til vurdering (50)» — og en
+// innsending bak sideskillet var usynlig for den eneste som kan slippe den ut.
 r.get('/pending', requireReviewToken, async (c) => {
-  const [pending, reported] = await Promise.all([listPendingPublications(), listReportedPublications()]);
+  const page = Number(c.req.query('side') ?? '1');
+  const [pending, reported] = await Promise.all([listPendingPublications(page), listReportedPublications(page)]);
   return c.json({ pending, reported }, 200, NO_CACHE);
+});
+
+/**
+ * GET /api/publications/review/:slug — én oppføring, uansett hvor i køen den
+ * står. Det er dette som gjør at ingenting blir uavgjørbart bak et sideskille.
+ */
+r.get('/review/:slug', requireReviewToken, async (c) => {
+  const publication = await getPublicationForReview(c.req.param('slug') ?? '');
+  if (!publication) return c.json({ error: 'not_found' }, 404, NO_CACHE);
+  return c.json({ publication }, 200, NO_CACHE);
 });
 
 r.post('/decide', requireReviewToken, async (c) => {
