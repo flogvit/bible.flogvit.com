@@ -3,6 +3,20 @@
 What actually reached readers, newest first. Dates, not version numbers — we
 deploy continuously.
 
+## 2026-08-05 — Reading texts you can share in any language, with more room to read
+
+**New features**
+
+- A link to a reading text now works in all eight languages: open one anywhere and you get it in your own language, and a link you pass on works for whoever receives it.
+- The reading texts overview now lists the texts and links straight into them, so you can get from the list to a passage without going through the menu.
+
+**Polish**
+
+- Reading pages now use the same width as the page header, so passages have more room on screen and lines break where you expect.
+
+**Behind the scenes**
+
+- Reading texts are listed in the sitemap under the languages that actually have them, so search engines find each one in the right language; tests and the runbook were extended to cover the new width, sitemap and language rules.
 ## 2026-08-05 — Page through the catalog, and a site that comes back to full strength on its own after a rush
 
 **New features**
