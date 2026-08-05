@@ -538,6 +538,48 @@ GET /en/lesetekster              200   <- men lista er tom, uten en vei ut
   menypunktet fjernet. Fem mutasjoner kjørt (ingen redirect, redirect uten
   oppslag, tapt query, ingen vei ut av tom liste, skjult menypunkt).
 
+#### Sitemapen har en SPRÅKAKSE — ellers er valget alt eller ingenting (#77)
+
+`STATIC_PATHS` er uprefikset, og `seo.ts` sendte HVER sti under HVERT språk med
+en `xhtml:link`-klynge over alle åtte. Sitemapen kunne dermed ikke si «denne
+stien finnes på nb og nn, ikke på de seks andre», og `/lesetekster` — en ekte,
+offentlig side i navigasjonen med 236 lesedager bak seg — sto som eksplisitt
+unntak i `NOT_IN_SITEMAP`. Begge utfallene mekanikken tillot er gale: å legge
+den inn ville annonsert seks tomme sider for å få med én ekte (#45 om igjen, én
+etasje ned), og å la den stå ute er en side søkemotorene bare finner ved å følge
+en intern lenke — nøyaktig hullet #47 fantes for å stenge.
+
+- **`LANGUAGE_SCOPED_PATHS` i `sitemap-paths.ts` eier unntakene, og verdien er
+  en SPØRRING, ikke en liste.** `sitemapLocales()` gir
+  `localesWithContent(await getReadingTextContentLanguages())` — samme mekanikk
+  som hreflang-klyngen (#45), så et importert språk slår gjennom uten
+  kodeendring, og et språk som forsvinner gjør det samme. Kartet inneholder bare
+  unntakene; alt annet er alle åtte.
+- **Klyngen bygges av SAMME liste som `<loc>`**, og `x-default` velges innenfor
+  den. Bygde vi klyngen av `LOCALES`, ville de seks tomme adressene bare flyttet
+  seg fra `<loc>` til `xhtml:link` — og det er den samme løgnen, sagt et annet
+  sted.
+- **Aksen slås opp PER FORESPØRSEL.** Én `SELECT DISTINCT` per unntak (i dag
+  ett) mot en liten tabell, på en flate som hentes en håndfull ganger i døgnet.
+  Stilista på ~1 200 oppføringer bygges fortsatt bare én gang. Alternativet —
+  cache ved oppstart — ville krevd en restart for at en innholdsimport skulle
+  slå gjennom.
+- **Sitemapen og HTML-ens hreflang er IKKE samme spørsmål her, med vilje.**
+  `/en/lesetekster` svarer 200 og peker leseren videre (#76), så sidas egen
+  klynge oppgir alle åtte — adressen FINNES. Sitemapen sier hva som er et svar
+  på et søk, og en tom liste med en vei ut er det ikke.
+- **Vakta er `test/sitemap-locales.test.ts`, formulert på SIDEN.** Peker
+  `/lesetekster` leseren videre til et annet språk, mangler DETTE språket
+  lesetekstene, og da skal adressen ikke stå i sitemapen — og motsatt. De to
+  andre halvdelene kjenner ingen sti: de leser språkaksen ut av sitemapene selv
+  og krever at klyngen (og `x-default`) er enig med den, og at hver
+  språk-scopet URL svarer 200. En egen test krever at det FINNES en scopet sti,
+  ellers måler de to ingenting. Fire mutasjoner kjørt (klynge fra `LOCALES`,
+  ingen filtrering på locale, `x-default` utenfor settet, stien ut av
+  `STATIC_PATHS`). Den siste halvdelen lot seg ikke mutasjonsteste: alle åtte
+  `/lesetekster`-adressene svarer 200 i dag, så det finnes ingen locale å
+  annonsere feil.
+
 ### Bibel-ID-er: `osnb`/`osnn` (omdøpt fra `osnb2`/`osnn1` 2026-07-26)
 
 free-bible omdøpte de to norske grunntekstene. ID-en er ikke bare en streng i
