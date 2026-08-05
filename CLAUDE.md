@@ -935,6 +935,10 @@ i samme vindu. 760 delekort- og 760 canonical-URL-er sto slik.
   er `SITE + encodeURI(sti)`, og literalen `https://bible.flogvit.com` finnes
   ikke lenger noe annet sted i `src/` — den var kopiert til fire filer, og fire
   av canonical-ene var derfor bygget utenom enhver koding.
+- **`SITE` eksporteres IKKE, og det er hele grepet.** Er konstanten
+  tilgjengelig, er `SITE + sti` tilgjengelig — og da er kodingen frivillig.
+  `absoluteUrl()` er den eneste veien til en absolutt adresse, så en ny rute
+  som vil utenom må skrive opphavet selv, og det er nettopp det vakta ser.
 - **Ikke i `toUrlSlug()`.** Den brukes også der rå form er riktig (ruter og
   interne lenker), og #42 viser hva som skjer når en verdi tar en runde gjennom
   en kodet representasjon og kodes igjen: `%C3%B8` → `%25C3%25B8`, 95 kapitler
@@ -958,7 +962,10 @@ i samme vindu. 760 delekort- og 760 canonical-URL-er sto slik.
   svarer begge formene 200); opphavet settes bare sammen med en sti i
   `site-url.ts`, så neste rute ikke kan bygge sin egen; og kortet svarer 200 på
   adressen slik den er publisert. En egen test krever at det FINNES en slik
-  slug, ellers måler de andre ingenting. Fem mutasjoner kjørt.
+  slug, ellers måler de andre ingenting. Seks mutasjoner kjørt — den ene som
+  IKKE ble rød av ASCII-sveipen er sidemalens egen canonical: hver sti med
+  ikke-ASCII i dag er en kapittelside, og den sender sin EGEN canonical. Det er
+  den strukturelle halvdelen og typesjekkeren som holder den, ikke sveipen.
 
 ## Lastvern (anonyme sidevisninger)
 

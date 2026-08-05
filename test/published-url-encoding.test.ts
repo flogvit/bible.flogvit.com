@@ -129,6 +129,10 @@ describe('publiserte adresser (#80)', () => {
   // ingen koding rører. Fire canonical-er ble bygget slik da saken ble
   // skrevet — to i lesesida, én i oversettelsene, én i endringsloggen — og
   // sveipene over ser bare de sidene de rendrer.
+  //
+  // Den andre veien dit er stengt av typesjekkeren: `SITE` eksporteres ikke,
+  // så `SITE + sti` er en byggefeil. Da står bare den skrevne literalen igjen,
+  // og det er den denne halvdelen leter etter.
   test('opphavet settes bare sammen med en sti i site-url.ts', async () => {
     const filer = [...new Bun.Glob('src/**/*.{ts,tsx}').scanSync('.')].sort();
     expect(filer.length).toBeGreaterThan(10);

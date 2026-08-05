@@ -15,7 +15,11 @@
 // kodet representasjon og kodes på nytt (`%C3%B8` → `%25C3%25B8`, 95 kapitler
 // 404 i alle åtte sitemaps). Én representasjon internt, én koding ved utsending.
 
-export const SITE = 'https://bible.flogvit.com';
+// Ikke eksportert, og det er poenget: den ENESTE måten å bygge en absolutt
+// adresse på er `absoluteUrl()`. Er konstanten tilgjengelig, er `SITE + sti`
+// tilgjengelig — og det var nettopp fire slike konkateneringer som gikk utenom
+// kodingen. Trenger en test opphavet, skriver den det selv.
+const SITE = 'https://bible.flogvit.com';
 
 /**
  * Absolutt, publisert adresse for en RÅ intern sti (`/en/1krøn/15`).

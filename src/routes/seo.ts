@@ -15,7 +15,7 @@
 import { Hono } from 'hono';
 import { DEFAULT_LOCALE, LOCALES, href, type Locale } from '../lib/i18n.ts';
 import { localesForPath, sitemapLocales, sitemapPaths } from '../lib/sitemap-paths.ts';
-import { SITE, absoluteUrl } from '../lib/site-url.ts';
+import { absoluteUrl } from '../lib/site-url.ts';
 
 export const seoRoutes = new Hono();
 
@@ -74,7 +74,7 @@ const ROBOTS = [
   ...CRAWL_BLOCKED_PARAMS.map((p) => `Disallow: /*?${p}=`),
   ...CRAWL_BLOCKED_PARAMS.map((p) => `Disallow: /*&${p}=`),
   '',
-  `Sitemap: ${SITE}/sitemap.xml`,
+  `Sitemap: ${absoluteUrl('/sitemap.xml')}`,
   '',
 ].join('\n');
 
@@ -85,7 +85,7 @@ seoRoutes.get('/robots.txt', (c) =>
 seoRoutes.get('/sitemap.xml', (c) =>
   c.body(
     `<?xml version="1.0" encoding="UTF-8"?>\n<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n` +
-      LOCALES.map((l) => `  <sitemap><loc>${xmlEsc(`${SITE}/sitemap-${l}.xml`)}</loc></sitemap>`).join('\n') +
+      LOCALES.map((l) => `  <sitemap><loc>${xmlEsc(absoluteUrl(`/sitemap-${l}.xml`))}</loc></sitemap>`).join('\n') +
       `\n</sitemapindex>\n`,
     200,
     { 'content-type': 'application/xml; charset=utf-8' },

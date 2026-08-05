@@ -17,7 +17,7 @@
 
 import { makeT, type Locale } from './i18n.ts';
 import { chapterCardPath, chapterCardText } from './og-card.ts';
-import { SITE, absoluteUrl } from './site-url.ts';
+import { absoluteUrl } from './site-url.ts';
 
 /**
  * Målene er DEL AV KONTRAKTEN, ikke pynt. Uten dem må skraperen hente bildet
@@ -55,7 +55,7 @@ export interface ShareCard {
  */
 export function shareCard(): ShareCard {
   return {
-    url: process.env.OG_IMAGE_URL || `${SITE}/og.png`,
+    url: process.env.OG_IMAGE_URL || absoluteUrl('/og.png'),
     width: SHARE_CARD_WIDTH,
     height: SHARE_CARD_HEIGHT,
   };
