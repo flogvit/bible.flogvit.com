@@ -197,9 +197,53 @@ adresser** lå der: 276 i `persons`, 6 i `stories`.
   fra free-bible dukker opp av seg selv. `EXEMPT_ADDRESS_KEYS` er tom, og som
   `NORDIC_PROPER` er hver framtidig oppføring en påstand, ikke et gjemmested.
   Seks mutasjoner kjørt, inkludert hele veien injisert → rød → `init-db` → grønn.
-- **Ikke gjort, med vilje:** en nøkkelhendelse uten vers vi kan vise rendres
-  fortsatt som en tom blokk. Ryddingen gjør dataene ærlige, men om en slik
-  hendelse skal skjules er en produktavgjørelse — den ligger i **#73**.
+- **Rendringen av en slik hendelse er tatt i #73 under.** Ryddingen gjør
+  DATAENE ærlige; hva sida VISER når adressen er borte er en egen avgjørelse.
+
+#### En blokk skal ikke love et skriftsted den ikke leverer (#73)
+
+Ryddingen over etterlot `event.verses` tom framfor å peke dødt, og blokka
+rendret like tom: `/nb/personer/epainetos` ga fire `class="event"` og null
+`class="verse-group"`. 156 hendelser på 52 personsider (nb+en) mistet ALLE
+versene sine.
+
+- **Løftet lå i STILEN, ikke i teksten.** `.event-description` har en
+  `border-bottom` og 16 px `padding-bottom` — en skillelinje som sier «under her
+  kommer skriftstedet». Uten vers åpner den mot ingenting. `.event-no-verses`
+  fjerner linja og lufta; markupen setter klassen når hendelsen ikke leverte et
+  eneste vers.
+- **Hendelsen SKJULES IKKE.** Beskrivelsen er ekte, kuratert innhold vi har
+  («Epainetos beskrives som den første som ble omvendt til Kristus i provinsen
+  Asia»), og på Epainetos ville alle fire forsvunnet — da hadde vi byttet ett
+  tomt løfte mot et større. Samme avveining som «start slettes, slutt klippes» i
+  #46 og «lenka faller, navnet blir stående» i #61: kast aldri innhold vi HAR
+  for å bli kvitt en adresse vi ikke har. Leseren når dessuten teksten: samme
+  side lister «Nevnt i Bibelen (1) → Romerne 16:5» fra `persons.references`,
+  som har adressen i behold.
+- **Vi skriver ikke «finnes ikke i denne utgaven».** For den STØRSTE klassen er
+  det usant — Rom 16:5 ligger i utgaven vår, det er adressen som er borte fordi
+  kilden staver den som bok 52 = 1 Tess (free-bible#26). En forklaring vi ikke
+  kan belegge er en gjetning, og #61 gjetter aldri. Etter ryddingen kan vi
+  uansett ikke skille «kanon har den ikke» (Tobias, Judas Makkabeus, Rafael —
+  osnb er protestantisk) fra «vi mistet adressen»; å kunne det ville krevd at
+  #46 beholdt den døde adressen.
+- **Seksjonen var det STØRRE hullet, og lå utenfor det saken målte.** 97
+  nb-personer har ingen nøkkelhendelser i det hele tatt og fikk
+  `<h2>Nøkkelhendelser</h2>` over en tom `<div class="event-list"></div>`.
+  Seksjonen rendres nå bare når det finnes hendelser — samme betingelse de
+  andre seksjonene på sida alt har.
+- **Vakta er `test/key-event-promise.test.ts`** og har fire halvdeler. REGELEN
+  (ren markup: uten vers merkes, MED vers merkes ikke, og en hendelse der bare
+  NOEN vers falt bort beholder de levende og merkes ikke). SEKSJONEN (ingen
+  overskrift uten innhold — og motsatt, ellers ville «fjern seksjonen helt»
+  bestått). DATA (hver hendelsesblokk på hver personside som faktisk har en
+  slik hendelse har enten vers ELLER merket, aldri begge og aldri ingen; sidene
+  velges av DATAENE som i #70, så en ny innholdsrunde flytter målingen selv).
+  FLATA måler i ekte Chrome at merket faktisk VIRKER: beregnet
+  `border-bottom-width` og `padding-bottom` er 0 uten vers og større enn 0 med.
+  Den halvdelen finnes fordi #55 er nettopp fella — en klasse stilarket ikke
+  honorerer ser riktig ut i en HTML-sammenligning og endrer ingenting for
+  leseren. Seks mutasjoner kjørt.
 
 ### Importert innhold får ikke peke på en PERSON som ikke finnes (#61)
 
