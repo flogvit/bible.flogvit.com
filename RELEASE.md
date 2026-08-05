@@ -3,6 +3,15 @@
 What actually reached readers, newest first. Dates, not version numbers — we
 deploy continuously.
 
+## 2026-08-05 — Long words no longer push the page sideways on narrow screens
+
+**Bug fixes**
+
+- A long, unbreakable word — a place name, a compound noun, a transliterated term — used to make the whole page wider than the screen, so you had to swipe sideways to read anything. Such words now wrap instead, everywhere text is set. This was easiest to hit on a phone with enlarged text, where a single word can be wider than the column it sits in.
+
+**Behind the scenes**
+
+- The mobile layout test now measures every language at its own widest point rather than only English, so a word that overflows in German or Norwegian is caught before release.
 ## 2026-08-04 — Chapter links now come with their own preview card
 
 **New features**
