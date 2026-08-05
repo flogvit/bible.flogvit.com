@@ -481,11 +481,62 @@ crawler trenger ingen lenke når `<link rel="alternate">` sier at siden finnes.
   vi hver uplasserbar leser til en 404.
 - Vakta i `page-contract.test.ts` sjekker invarianten, ikke tilfellet: **hver
   annonserte URL svarer 200.** Den fanger dermed neste innholdsslag som mangler
-  et språk. Detaljsiden kan ikke ligge i `PAGES` — den 404-er under `/de/`, som
+  et språk. Detaljsiden kan ikke ligge i `PAGES` — den 302-er under `/de/`, som
   er hele poenget — så den har sin egen oppføring.
-- Ikke gjort, bevisst: `/en/lesetekster/<dato>` 302-er IKKE til `/nb/…`, og
-  `/lesetekster`-OVERSIKTEN oppgir fortsatt alle åtte (den svarer 200 overalt,
-  bare med tom liste). Begge er produktbeslutninger, ikke SEO-feil.
+- De to produktbeslutningene saken lot ligge, er tatt i **#76 under**: dagsiden
+  302-er nå til språket den finnes på, og oversikten oppgir fortsatt alle åtte.
+  Klyngen er uendret av det — hreflang skal peke på adressen som ER siden, ikke
+  på en som viser videre til den.
+
+#### Norsk-spesifikt innhold skal ikke bli en blindvei på de sju andre (#76)
+
+`reading_texts` ligger bare på `nb`, og det er riktig (#26). Men leseren møtte
+to blindveier som ikke fulgte av den regelen:
+
+```
+GET /en/lesetekster/2026-12-25   404   <- delt lenke fra en norsk venn
+GET /en/lesetekster              200   <- men lista er tom, uten en vei ut
+```
+
+- **Dagsiden 302-er til språket dagen FINNES på.** Hele bruken av den adressen
+  er en delt lenke: den går fra en som leser norsk til en som kanskje ikke gjør
+  det, og en 404 gjør lenken verdiløs for begge. Det bryter ikke med #26 — vi
+  viser ikke norsk tekst under `/en/`; vi sier at teksten bor på den norske
+  adressen og tar leseren dit, der `<html lang>` er ærlig. Alternativet «rendre
+  den norske teksten under `/en/`» er nettopp det #26 forbyr.
+- **302, ikke 301.** At lesetekstene bare finnes på norsk er en egenskap ved
+  DATAENE, ikke ved adressen. Blir de importert på flere språk, skal en
+  nettleser som har lagret en permanent redirect slutte å bruke den.
+- **Målet utledes av basen** — `localesWithContent(getReadingTextLanguages(date))`,
+  samme funksjon som hreflang-klyngen (#45) — aldri en hardkodet `nb`. Locale-en
+  leseren står på utelates, så en redirect ikke kan peke på seg selv.
+- **Redirecten gjetter ikke.** En dato uten lesetekst i det hele tatt 404-er som
+  før; «send alt til `/nb/`» ville gjort hver ugyldig dato til en omvei til den
+  samme blindveien. Queryen bæres over (`?bible=`), ellers svarer neste side på
+  noe annet enn det leseren ba om (#24).
+- **Menypunktet skjules IKKE på de seks andre språkene.** En locale-betinget meny
+  er en ny akse i navigasjonen — hver flate måtte spørre databasen om innhold før
+  chromet kunne rendres — og den koster mer enn den ene siden. Prisen betales
+  heller der problemet er: **er lista tom fordi SPRÅKET mangler innholdet, sier
+  siden det og lenker til utgaven som har det.** Da er menypunktet et svar, ikke
+  en blindvei, og leseren får vite at teksten finnes.
+- **De to tomme tilfellene er ikke det samme, og bare det ene har en vei ut.**
+  Ingen rader i det hele tatt (språket mangler innholdet) → pek videre. Rader,
+  men alle datoene passert (settet går ut 2028-12-31) → si bare det. Pekte vi
+  videre også da, ville et tomt `/nb/lesetekster` sendt leseren til et like tomt
+  `/nn/lesetekster`.
+- **Språknavnet kommer fra `langName()`**, ikke fra en hardkodet «norsk» i åtte
+  ordbøker: teksten følger da dataene, som resten av regelen.
+- **Vakta er `test/reading-texts-locale.test.ts`, og den er formulert på
+  UTFALLET.** LENKA: for hver av de åtte locale-ene ender
+  `/<språk>/lesetekster/<dato>` i teksten — fulgt gjennom høyst ett hopp — så en
+  fiks som OVERSETTER lesetekstene består like gjerne som en som redirecter, og
+  det er riktig: da er ingenting en blindvei. LISTA: hver locale viser enten
+  lesedager eller en lenke videre som selv svarer 200. MENYEN måles inne i
+  `<nav class="site-nav">`, ikke i dokumentet som helhet — forsiden lenker også
+  dit fra oppdagelseskortene, så en sveip over hele HTML-en ville bestått med
+  menypunktet fjernet. Fem mutasjoner kjørt (ingen redirect, redirect uten
+  oppslag, tapt query, ingen vei ut av tom liste, skjult menypunkt).
 
 ### Bibel-ID-er: `osnb`/`osnn` (omdøpt fra `osnb2`/`osnn1` 2026-07-26)
 

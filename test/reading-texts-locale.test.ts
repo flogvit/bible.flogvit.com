@@ -97,10 +97,14 @@ describe('menypunktet fører aldri til en blindvei (#76)', () => {
   // Beslutningen i #76: seksjonen SKJULES IKKE på de seks andre språkene. En
   // locale-betinget meny er en ny akse i navigasjonen, og den koster mer enn
   // den ene siden — så prisen betales der problemet er, på siden selv.
-  test('/lesetekster står i menyen på alle åtte språk', async () => {
+  test('/lesetekster står i HOVEDMENYEN på alle åtte språk', async () => {
+    // Målt inne i `<nav class="site-nav">`, ikke i sidas HTML som helhet:
+    // forsiden lenker også til lesetekstene fra oppdagelseskortene, så en
+    // sveip over hele dokumentet ville bestått med menypunktet fjernet.
     for (const locale of LOCALES) {
       const html = await (await app.request(href(locale, '/'))).text();
-      expect({ locale, iMenyen: html.includes(`href="${href(locale, '/lesetekster')}"`) }).toEqual({
+      const meny = /<nav class="site-nav"[\s\S]*?<\/nav>/.exec(html)?.[0] ?? '';
+      expect({ locale, iMenyen: meny.includes(`href="${href(locale, '/lesetekster')}"`) }).toEqual({
         locale,
         iMenyen: true,
       });
