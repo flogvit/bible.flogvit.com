@@ -14,7 +14,7 @@
 // — les kommentaren der før du endrer noe på kodingen.
 import { Hono } from 'hono';
 import { DEFAULT_LOCALE, LOCALES, href, type Locale } from '../lib/i18n.ts';
-import { sitemapPaths } from '../lib/sitemap-paths.ts';
+import { localesForPath, sitemapLocales, sitemapPaths } from '../lib/sitemap-paths.ts';
 
 export const seoRoutes = new Hono();
 
@@ -95,17 +95,34 @@ seoRoutes.get('/sitemap.xml', (c) =>
 
 // Én konkret rute per språk: ruteren matcher ikke en parameter etterfulgt av
 // «.xml» pålitelig, og en eksplisitt liste gir 404 på ukjente koder gratis.
+// Språkaksen (#77) slås opp PER FORESPØRSEL, ikke ved oppstart: den er en
+// spørring mot basen, og et importert språk skal slå gjennom uten en restart.
+// Prisen er én `SELECT DISTINCT` per unntak (i dag ett) mot en liten tabell, på
+// en flate som hentes en håndfull ganger i døgnet — sitemapene er 9 URL-er mot
+// 1 189 kapittelsider (#60), og står utenfor lastvernet fordi de aldri fyller
+// cachen (#64). Stilista i `paths()` er fortsatt bygget én gang; det er den som
+// er 1 200 oppføringer lang.
 for (const locale of LOCALES) {
-  seoRoutes.get(`/sitemap-${locale}.xml`, (c) => {
+  seoRoutes.get(`/sitemap-${locale}.xml`, async (c) => {
     const loc = (l: Locale, p: string) => xmlEsc(SITE + encodeURI(href(l, p)));
+    const scoped = await sitemapLocales();
     const urls = paths()
       .map((p) => {
+        // Klyngen bygges av SAMME liste som `<loc>`. Bygde den av LOCALES,
+        // ville vi annonsert de seks tomme adressene i `xhtml:link` for å
+        // slippe å annonsere dem i `<loc>` — altså #45 om igjen, én etasje ned.
+        const available = localesForPath(p, scoped);
+        if (!available.includes(locale)) return null;
+        // x-default må ligge INNENFOR settet (#45): den er adressen Google
+        // velger når ingen språkvariant passer.
+        const fallback = available.includes(DEFAULT_LOCALE) ? DEFAULT_LOCALE : available[0]!;
         const alts = [
-          ...LOCALES.map((l) => `    <xhtml:link rel="alternate" hreflang="${l}" href="${loc(l, p)}"/>`),
-          `    <xhtml:link rel="alternate" hreflang="x-default" href="${loc(DEFAULT_LOCALE, p)}"/>`,
+          ...available.map((l) => `    <xhtml:link rel="alternate" hreflang="${l}" href="${loc(l, p)}"/>`),
+          `    <xhtml:link rel="alternate" hreflang="x-default" href="${loc(fallback, p)}"/>`,
         ].join('\n');
         return `  <url>\n    <loc>${loc(locale, p)}</loc>\n${alts}\n  </url>`;
       })
+      .filter((u) => u !== null)
       .join('\n');
     return c.body(
       `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">\n${urls}\n</urlset>\n`,

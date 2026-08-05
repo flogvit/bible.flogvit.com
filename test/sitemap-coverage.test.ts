@@ -79,18 +79,13 @@ const NOT_IN_SITEMAP: Record<string, string> = {
   // Teknisk flate for service workeren, ikke en side noen leser.
   '/offline': 'nedlastingsflate for offline-bruk, bak innlogging',
   '/offline-fallback': 'service worker-fallback, ikke en leserside',
-
-  // Offentlig og ekte, men kan ikke annonseres likt på alle åtte språk:
-  // `reading_texts` ligger bare på `nb` (med vilje — se språkdimensjonen i
-  // CLAUDE.md), så `/en/lesetekster` er 168 kort fattigere enn `/nb/lesetekster`
-  // og i praksis tom. Sitemapen har ingen språkakse i dag: `STATIC_PATHS` er
-  // uprefikset og seo.ts sender HVER sti under HVERT språk. Å legge den inn
-  // ville derfor annonsert seks tomme sider for å få med én ekte — samme feil
-  // som #45, bare i sitemapen framfor i hreflang-klynga. Riktig fiks er den
-  // samme mekanikken som #45 (`localesWithContent()`), og den er sitt eget
-  // issue.
-  '/lesetekster': 'ligger bare på nb; sitemapen har ingen språkakse ennå (#45)',
 };
+
+// `/lesetekster` sto her fram til #77, med den ærlige begrunnelsen at sitemapen
+// ikke hadde noen språkakse: `STATIC_PATHS` er uprefikset, og seo.ts sendte hver
+// sti under hvert språk. Nå har den det (`sitemapLocales()`), så siden ligger i
+// sitemapene til de språkene som faktisk HAR lesetekstene og ingen andre.
+// Vakta for det er `test/sitemap-locales.test.ts`.
 
 /** GET-ruter uten parameter, lest ut av ruteren selv. */
 function parameterlessRoutes(): string[] {

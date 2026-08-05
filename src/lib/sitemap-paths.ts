@@ -12,6 +12,9 @@
 import { booksData, getBookInfoBySlug } from './books-data.ts';
 import { toUrlSlug } from './url-utils.ts';
 import { IMPORTED_BIBLES } from './editions.ts';
+import { getReadingTextContentLanguages } from './bible.ts';
+import { LOCALES, type Locale } from './i18n.ts';
+import { localesWithContent } from './lang.ts';
 
 /**
  * Sider utenom kapitlene. Uprefiksede — seo.ts legger på språket.
@@ -52,11 +55,53 @@ export const STATIC_PATHS: readonly string[] = [
   // og en sitemap full av adresser som forsvinner er verre enn ingen.
   '/manuskripter/katalog',
   '/tilgjengelighet',
+  // Lesetekstene (#77). Den er IKKE en side på alle åtte språk — se
+  // `LANGUAGE_SCOPED_PATHS` under, som avgjør hvilke sitemaps den havner i.
+  '/lesetekster',
   // Utgavesidene (#30). De er ferdig oversatt til alle åtte språk med hreflang
   // og canonical, og beskriver akkurat det en ny leser søker etter.
   '/oversettelser',
   ...IMPORTED_BIBLES.map((id) => `/oversettelser/${id}`),
 ];
+
+/**
+ * Stier som ikke finnes på alle åtte språk — med KILDEN til språkaksen, aldri
+ * lista (GitHub #77).
+ *
+ * `STATIC_PATHS` er uprefikset, og seo.ts sendte hver sti under hvert språk.
+ * Sitemapen kunne dermed ikke uttrykke «denne stien finnes på nb og nn, ikke på
+ * de seks andre», og `/lesetekster` — en ekte, offentlig side med 236 lesedager
+ * bak seg — ble stående helt utenfor alle åtte framfor å annonsere seks tomme
+ * sider for å få med én ekte. Begge er feil: det siste er #45 om igjen, det
+ * første er en side søkemotorene bare finner ved å følge en intern lenke (#47).
+ *
+ * Verdien er en spørring mot BASEN, ikke en liste noen vedlikeholder: samme
+ * mekanikk som hreflang-klyngen (#45), så et importert språk slår gjennom uten
+ * kodeendring — og et språk som forsvinner gjør det samme.
+ */
+const LANGUAGE_SCOPED_PATHS: Record<string, () => Promise<readonly string[]>> = {
+  '/lesetekster': getReadingTextContentLanguages,
+};
+
+/**
+ * Språkaksen for stiene som har en, slått opp på sti (#77).
+ *
+ * Bare de scopede stiene står i kartet; alt som ikke er der gjelder alle åtte.
+ * Det holder spørringene nede på antallet unntak framfor på antallet stier —
+ * i dag er `reading_texts` den eneste innholdstabellen uten engelske rader.
+ */
+export async function sitemapLocales(): Promise<Map<string, readonly Locale[]>> {
+  const scoped = new Map<string, readonly Locale[]>();
+  for (const [path, languages] of Object.entries(LANGUAGE_SCOPED_PATHS)) {
+    scoped.set(path, localesWithContent(await languages()));
+  }
+  return scoped;
+}
+
+/** Locale-ene en sti skal annonseres under. Uten språkakse: alle åtte. */
+export function localesForPath(path: string, scoped: Map<string, readonly Locale[]>): readonly Locale[] {
+  return scoped.get(path) ?? LOCALES;
+}
 
 /**
  * Alle stier i sitemapen, uprefikset og UDEKODET.
