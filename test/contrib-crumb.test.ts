@@ -8,10 +8,13 @@
 // Ingen DB, ingen sesjon: skallet — og dermed brødsmulene — er det samme for
 // den som ikke er logget inn, og det er nettopp hun som lettest står fast.
 
-import { describe, expect, test } from 'bun:test';
+import { describe, expect, setDefaultTimeout, test } from 'bun:test';
+import { DB_TEST_TIMEOUT_MS } from './db-timeout.ts';
 import { createApp } from '../src/app.ts';
 import { L } from './paths.ts';
 import { href } from '../src/lib/i18n.ts';
+
+setDefaultTimeout(DB_TEST_TIMEOUT_MS);
 
 const app = createApp();
 

@@ -10,10 +10,13 @@
 // dagsiden 404-er med rette på de andre språkene (contentLanguageChain, #26).
 // Krever lokal DB (DBngin :3312) med importert innhold.
 
-import { describe, expect, test } from 'bun:test';
+import { describe, expect, setDefaultTimeout, test } from 'bun:test';
+import { DB_TEST_TIMEOUT_MS } from './db-timeout.ts';
 import { createApp } from '../src/app.ts';
 import { getSql } from '../src/lib/db.ts';
 import { href } from '../src/lib/i18n.ts';
+
+setDefaultTimeout(DB_TEST_TIMEOUT_MS);
 
 const app = createApp();
 const NB = (path: string) => href('nb', path);

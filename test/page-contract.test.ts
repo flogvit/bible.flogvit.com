@@ -14,13 +14,16 @@
 // Legger du til en ny side: sett den i PAGES. Legger du til en ny invariant:
 // den gjelder umiddelbart for alle sidene.
 
-import { beforeAll, describe, expect, test } from 'bun:test';
+import { beforeAll, describe, expect, setDefaultTimeout, test } from 'bun:test';
+import { DB_TEST_TIMEOUT_MS } from './db-timeout.ts';
 import { createApp } from '../src/app.ts';
 import { getAllReadingTexts, initBooks } from '../src/lib/bible.ts';
 import { DEFAULT_LOCALE, LOCALES, missingKeys } from '../src/lib/i18n.ts';
 import { DICTIONARIES } from '../src/lib/dictionaries.ts';
 import { PAGES } from './pages.ts';
 import { anchors, parseRobots } from './robots.ts';
+
+setDefaultTimeout(DB_TEST_TIMEOUT_MS);
 
 const app = createApp();
 

@@ -14,10 +14,13 @@
 // Ingen DB nødvendig for 1; 2 treffer bare redirect-grenen, som ligger FØR
 // oppslaget nettopp fordi en gammel id ikke finnes i basen lenger.
 
-import { describe, expect, test } from 'bun:test';
+import { describe, expect, setDefaultTimeout, test } from 'bun:test';
+import { DB_TEST_TIMEOUT_MS } from './db-timeout.ts';
 import { createApp } from '../src/app.ts';
 import { PERSON_ID_ALIASES } from '../src/lib/person-id-aliases.ts';
 import { href } from '../src/lib/i18n.ts';
+
+setDefaultTimeout(DB_TEST_TIMEOUT_MS);
 
 const app = createApp();
 

@@ -14,7 +14,8 @@
 //   2. FORM  — hver tabell i skjemaet som HAR en versadresse står i lista som
 //              punkt 1 sveiper. Uten den vokser skjemaet fra vakta i stillhet.
 
-import { beforeAll, describe, expect, test } from 'bun:test';
+import { beforeAll, describe, expect, setDefaultTimeout, test } from 'bun:test';
+import { DB_TEST_TIMEOUT_MS } from './db-timeout.ts';
 import { getSql } from '../src/lib/db.ts';
 import {
   CHAPTER_REF_TABLES,
@@ -32,6 +33,8 @@ import { CONTENT_SOURCES } from '../src/lib/person-refs.ts';
 import { TABLES } from '../src/lib/schema.ts';
 import { booksData } from '../src/lib/books-data.ts';
 import { verseCounts } from '../src/lib/verse-counts.ts';
+
+setDefaultTimeout(DB_TEST_TIMEOUT_MS);
 
 // Poolen hentes PER KALL, aldri på modulnivå. `closeSql()` i en annen testfil
 // nuller den ut, og en referanse tatt ved import ville da vært død når denne

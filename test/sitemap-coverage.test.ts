@@ -23,12 +23,15 @@
 // OVERSIKT er parameterløs og fanges her; en ny detaljfamilie er en større
 // avgjørelse som kommer med sitt eget issue.
 
-import { beforeAll, describe, expect, test } from 'bun:test';
+import { beforeAll, describe, expect, setDefaultTimeout, test } from 'bun:test';
+import { DB_TEST_TIMEOUT_MS } from './db-timeout.ts';
 import { createApp } from '../src/app.ts';
 import { initBooks } from '../src/lib/bible.ts';
 import { STATIC_PATHS } from '../src/lib/sitemap-paths.ts';
 import { LOCALES } from '../src/lib/i18n.ts';
 import pages from '../src/routes/pages.tsx';
+
+setDefaultTimeout(DB_TEST_TIMEOUT_MS);
 
 const app = createApp();
 

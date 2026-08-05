@@ -1,8 +1,11 @@
-import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
+import { afterAll, beforeAll, describe, expect, setDefaultTimeout, test } from 'bun:test';
+import { DB_TEST_TIMEOUT_MS } from './db-timeout.ts';
 import { Hono } from 'hono';
 import type { AppEnv } from '../src/lib/session.ts';
 import { requireUser, withSession } from '../src/lib/session.ts';
 import { createApp } from '../src/app.ts';
+
+setDefaultTimeout(DB_TEST_TIMEOUT_MS);
 
 // Mock-konto: svarer som kontoens /api/auth/session. Oppførselen styres av
 // hvilken fv-session-verdi som sendes inn.

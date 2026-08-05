@@ -6,9 +6,12 @@
 // Referer > cookie/Accept-Language. Regelen «URL-en vinner over cookien» må
 // holde også her, ellers viser en delt lenke mottakerens språk.
 
-import { describe, expect, test } from 'bun:test';
+import { describe, expect, setDefaultTimeout, test } from 'bun:test';
+import { DB_TEST_TIMEOUT_MS } from './db-timeout.ts';
 import { createApp } from '../src/app.ts';
 import { apiLocale } from '../src/lib/i18n.ts';
+
+setDefaultTimeout(DB_TEST_TIMEOUT_MS);
 
 /** Minimal stand-in for Hono-requesten — apiLocale trenger bare de to. */
 function req(query: Record<string, string> = {}, headers: Record<string, string> = {}) {

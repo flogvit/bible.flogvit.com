@@ -18,12 +18,15 @@
 // Her står det sveipen ikke kan se — at robots.txt og sitemapen er enige, og at
 // de query-løse sidene fortsatt er velkomne.
 
-import { beforeAll, describe, expect, test } from 'bun:test';
+import { beforeAll, describe, expect, setDefaultTimeout, test } from 'bun:test';
+import { DB_TEST_TIMEOUT_MS } from './db-timeout.ts';
 import { createApp } from '../src/app.ts';
 import { initBooks } from '../src/lib/bible.ts';
 import { LOCALES } from '../src/lib/i18n.ts';
 import { anchors, parseRobots } from './robots.ts';
 import { L } from './paths.ts';
+
+setDefaultTimeout(DB_TEST_TIMEOUT_MS);
 
 const app = createApp();
 

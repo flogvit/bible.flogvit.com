@@ -10,7 +10,8 @@
 // getterne skal gi bit for bit samme rader som per-vers-variantene, som fortsatt
 // finnes og brukes andre steder.
 
-import { beforeAll, describe, expect, test } from 'bun:test';
+import { beforeAll, describe, expect, setDefaultTimeout, test } from 'bun:test';
+import { DB_TEST_TIMEOUT_MS } from './db-timeout.ts';
 import {
   getOriginalWord4Word,
   getOriginalWord4WordByVerse,
@@ -19,6 +20,8 @@ import {
   getVerses,
   initBooks,
 } from '../src/lib/bible.ts';
+
+setDefaultTimeout(DB_TEST_TIMEOUT_MS);
 
 beforeAll(async () => {
   await initBooks();

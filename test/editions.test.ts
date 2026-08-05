@@ -1,7 +1,10 @@
-import { describe, expect, test } from 'bun:test';
+import { describe, expect, setDefaultTimeout, test } from 'bun:test';
+import { DB_TEST_TIMEOUT_MS } from './db-timeout.ts';
 import { createApp } from '../src/app.ts';
 import { getBibleEditions } from '../src/lib/bible.ts';
 import { L } from './paths.ts';
+
+setDefaultTimeout(DB_TEST_TIMEOUT_MS);
 
 // L() kjører på basespråket (engelsk), så overskriftene her er de engelske —
 // ikke fordi seksjonen har byttet språk, men fordi testen ber om /en.

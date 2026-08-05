@@ -1,7 +1,10 @@
 // Ren validerings-/payload-logikk for contrib — ingen DB.
-import { describe, expect, test } from 'bun:test';
+import { describe, expect, setDefaultTimeout, test } from 'bun:test';
+import { DB_TEST_TIMEOUT_MS } from './db-timeout.ts';
 import { buildSubmissionPayload, validateContribInput } from '../src/lib/contrib.ts';
 import type { SessionUser } from '../src/lib/session.ts';
+
+setDefaultTimeout(DB_TEST_TIMEOUT_MS);
 
 const USER: SessionUser = {
   id: 990001,

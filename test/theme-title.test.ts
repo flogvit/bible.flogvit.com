@@ -8,8 +8,11 @@
 // Testen vokter utledningen, ikke rendringen: så lenge begge sidene kaller
 // themeTitle() kan de ikke drive fra hverandre igjen.
 
-import { describe, expect, test } from 'bun:test';
+import { describe, expect, setDefaultTimeout, test } from 'bun:test';
+import { DB_TEST_TIMEOUT_MS } from './db-timeout.ts';
 import { themeTitle } from '../src/lib/bible.ts';
+
+setDefaultTimeout(DB_TEST_TIMEOUT_MS);
 
 describe('themeTitle', () => {
   test('tittelen kommer fra JSON-en, ikke fra slugen', () => {

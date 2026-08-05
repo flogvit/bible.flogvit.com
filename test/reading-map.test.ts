@@ -1,9 +1,12 @@
 // Lesekartet (GitHub #16): statistikken som utledes av hendelsesloggen.
 // Rene funksjoner, testet uten DB — sidene mater dem med getReadingProgress().
 
-import { describe, expect, test } from 'bun:test';
+import { describe, expect, setDefaultTimeout, test } from 'bun:test';
+import { DB_TEST_TIMEOUT_MS } from './db-timeout.ts';
 import { summarizeProgress, bookHeat, HEAT_LEVELS, planCoverage, suggestedPlans } from '../src/lib/reading-map.ts';
 import type { ChapterProgress } from '../src/lib/user-data.ts';
+
+setDefaultTimeout(DB_TEST_TIMEOUT_MS);
 
 const p = (bookId: number, chapter: number, extra: Partial<ChapterProgress> = {}): ChapterProgress => ({
   bookId,

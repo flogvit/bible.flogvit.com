@@ -5,9 +5,12 @@
 // deploy fikk de ny HTML med gammel CSS, altså et halvt design — og ingenting
 // i logg eller røyktest sa fra, fordi begge svarte 200.
 
-import { beforeAll, describe, expect, it } from 'bun:test';
+import { beforeAll, describe, expect, it, setDefaultTimeout } from 'bun:test';
+import { DB_TEST_TIMEOUT_MS } from './db-timeout.ts';
 import { createApp } from '../src/app.ts';
 import { initBooks } from '../src/lib/bible.ts';
+
+setDefaultTimeout(DB_TEST_TIMEOUT_MS);
 
 const app = createApp();
 

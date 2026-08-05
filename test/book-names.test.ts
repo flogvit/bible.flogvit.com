@@ -14,13 +14,16 @@
 // dette: engelsk på en fransk side er ikke norsk tekst, og det er ingen
 // manglende ordboksnøkkel — navnet er data, ikke en nøkkel.
 
-import { beforeAll, describe, expect, test } from 'bun:test';
+import { beforeAll, describe, expect, setDefaultTimeout, test } from 'bun:test';
+import { DB_TEST_TIMEOUT_MS } from './db-timeout.ts';
 import { createApp } from '../src/app.ts';
 import { initBooks } from '../src/lib/bible.ts';
 import { LOCALES, type Locale } from '../src/lib/i18n.ts';
 import { localeToContentLanguage } from '../src/lib/lang.ts';
 import { booksData, bookName, bookAbbr, type BookInfo } from '../src/lib/books-data.ts';
 import { BOOK_NAMES, BOOK_ABBRS } from '../src/lib/book-names.ts';
+
+setDefaultTimeout(DB_TEST_TIMEOUT_MS);
 
 const app = createApp();
 

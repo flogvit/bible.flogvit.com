@@ -5,10 +5,13 @@
 // importeres. Strukturelt ugyldige referanser (kapittel > bokas antall) skal
 // fortsatt 404-e. Krever lokal DB (DBngin :3312) med importert innhold.
 
-import { describe, expect, test } from 'bun:test';
+import { describe, expect, setDefaultTimeout, test } from 'bun:test';
+import { DB_TEST_TIMEOUT_MS } from './db-timeout.ts';
 import { createApp } from '../src/app.ts';
 import { readableBibleCandidates } from '../src/lib/bible.ts';
 import { loadChapterWithFallback } from '../src/routes/pages/reading.tsx';
+
+setDefaultTimeout(DB_TEST_TIMEOUT_MS);
 
 const app = createApp();
 

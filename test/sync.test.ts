@@ -1,10 +1,13 @@
 // Integrasjonstester for sync-API-et: ekte lokal MySQL (DBngin :3312, .env) +
 // mock-konto for sesjonen. Bruker en egen test-bruker-id og rydder etter seg.
 
-import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
+import { afterAll, beforeAll, describe, expect, setDefaultTimeout, test } from 'bun:test';
+import { DB_TEST_TIMEOUT_MS } from './db-timeout.ts';
 import { createApp } from '../src/app.ts';
 import { getSql, closeSql } from '../src/lib/db.ts';
 import { ensureSchema } from '../src/lib/schema.ts';
+
+setDefaultTimeout(DB_TEST_TIMEOUT_MS);
 
 const TEST_USER_ID = 990001;
 let mock: ReturnType<typeof Bun.serve>;

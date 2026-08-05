@@ -13,12 +13,15 @@
 //      værende i minnet (93 MB heap, 409 MB RSS målt) for en liste som bare
 //      trenger navn og antall oppføringer.
 
-import { describe, expect, test } from 'bun:test';
+import { describe, expect, setDefaultTimeout, test } from 'bun:test';
+import { DB_TEST_TIMEOUT_MS } from './db-timeout.ts';
 import {
   getAvailableMappings,
   getKvnMappingData,
   getKvnMappingRaw,
 } from '../src/lib/verse-mapper.ts';
+
+setDefaultTimeout(DB_TEST_TIMEOUT_MS);
 
 describe('mapping-filene leses én gang', () => {
   test('getAvailableMappings gir SAMME liste tilbake', () => {

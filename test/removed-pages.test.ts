@@ -21,7 +21,8 @@
 // stående foreldreløs igjen — for et hvilket som helst innholdsslag — er en
 // annen invariant, og den bor i `content-sources.test.ts`.
 
-import { beforeAll, describe, expect, test } from 'bun:test';
+import { beforeAll, describe, expect, setDefaultTimeout, test } from 'bun:test';
+import { DB_TEST_TIMEOUT_MS } from './db-timeout.ts';
 import { readFileSync, readdirSync } from 'fs';
 import { join } from 'path';
 import { createApp } from '../src/app.ts';
@@ -32,6 +33,8 @@ import { STATIC_PATHS } from '../src/lib/sitemap-paths.ts';
 import { DICTIONARIES } from '../src/lib/dictionaries.ts';
 import { LOCALES, href } from '../src/lib/i18n.ts';
 import { PAGES } from './pages.ts';
+
+setDefaultTimeout(DB_TEST_TIMEOUT_MS);
 
 const app = createApp();
 

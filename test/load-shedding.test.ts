@@ -18,7 +18,8 @@
 // ingen sti-liste: de leser rutetabellen og katalogen, så en ny SEO-rute eller
 // en ny fil i public/ er dekket uten at noen har ført den opp.
 
-import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
+import { afterAll, beforeAll, describe, expect, setDefaultTimeout, test } from 'bun:test';
+import { DB_TEST_TIMEOUT_MS } from './db-timeout.ts';
 import { readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { createApp } from '../src/app.ts';
@@ -27,6 +28,8 @@ import { seoRoutes } from '../src/routes/seo.ts';
 import { sitemapPaths } from '../src/lib/sitemap-paths.ts';
 import { PAGES } from './pages.ts';
 import { L } from './paths.ts';
+
+setDefaultTimeout(DB_TEST_TIMEOUT_MS);
 
 const app = createApp();
 

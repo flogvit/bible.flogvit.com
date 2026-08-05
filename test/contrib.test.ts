@@ -2,11 +2,14 @@
 // (DBngin :3312, .env) + mock-konto. Bidrag krever innlogging men IKKE plus —
 // testene kjører derfor som gratis-bruker. Rydder etter seg på user_id.
 
-import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
+import { afterAll, beforeAll, describe, expect, setDefaultTimeout, test } from 'bun:test';
+import { DB_TEST_TIMEOUT_MS } from './db-timeout.ts';
 import { createApp } from '../src/app.ts';
 import { getSql, closeSql } from '../src/lib/db.ts';
 import { ensureSchema } from '../src/lib/schema.ts';
 import { L } from './paths.ts';
+
+setDefaultTimeout(DB_TEST_TIMEOUT_MS);
 
 const TEST_USER_ID = 990101;
 let mock: ReturnType<typeof Bun.serve>;

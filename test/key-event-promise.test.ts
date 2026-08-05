@@ -22,12 +22,15 @@
 // Samme klasse hull som #45, #65 og #69: siden svarer 200 og skriver ingen
 // loggrad. Bare en vakt formulert på KONTRAKTEN finner den.
 
-import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
+import { afterAll, beforeAll, describe, expect, setDefaultTimeout, test } from 'bun:test';
+import { DB_TEST_TIMEOUT_MS } from './db-timeout.ts';
 import { createApp } from '../src/app.ts';
 import { getAllPersonsData, initBooks, type PersonData } from '../src/lib/bible.ts';
 import { closeSql } from '../src/lib/db.ts';
 import { KeyEventList } from '../src/views/verse-display.tsx';
 import { Chrome, type Page } from './chrome-cdp.ts';
+
+setDefaultTimeout(DB_TEST_TIMEOUT_MS);
 
 /** Klassen som trekker løftet tilbake. Kjent av BÅDE markupen og stilarket. */
 const MARKER = 'event-no-verses';

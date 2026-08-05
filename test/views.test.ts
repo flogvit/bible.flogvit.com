@@ -3,7 +3,8 @@
 // Komponentene kalles som funksjoner (fila er .ts, ikke .tsx) — hono/jsx-
 // elementer kan rendres direkte via c.html().
 
-import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
+import { afterAll, beforeAll, describe, expect, setDefaultTimeout, test } from 'bun:test';
+import { DB_TEST_TIMEOUT_MS } from './db-timeout.ts';
 import { Hono } from 'hono';
 import { contextStorage } from 'hono/context-storage';
 import { initBooks } from '../src/lib/bible.ts';
@@ -12,6 +13,8 @@ import { Footnotes } from '../src/views/footnotes.tsx';
 import { InlineRefs, hasInlineRefs } from '../src/views/inline-refs.tsx';
 import { KeyEventList, VerseRefList } from '../src/views/verse-display.tsx';
 import { ItemTagging } from '../src/views/item-tagging.tsx';
+
+setDefaultTimeout(DB_TEST_TIMEOUT_MS);
 
 const app = new Hono();
 

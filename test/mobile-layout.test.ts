@@ -20,7 +20,8 @@
 // testnivåene kan ikke se dette — `page-contract.test.ts` leser SSR-HTML, og
 // happy-dom har ingen layout-motor (`getBoundingClientRect()` gir nuller).
 
-import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
+import { afterAll, beforeAll, describe, expect, setDefaultTimeout, test } from 'bun:test';
+import { DB_TEST_TIMEOUT_MS } from './db-timeout.ts';
 import { createApp } from '../src/app.ts';
 import { initBooks } from '../src/lib/bible.ts';
 import { bookAbbr, bookName, booksData } from '../src/lib/books-data.ts';
@@ -28,6 +29,8 @@ import { DEFAULT_LOCALE, href, LOCALES, type Locale } from '../src/lib/i18n.ts';
 import { localeToContentLanguage } from '../src/lib/lang.ts';
 import { Chrome, type Page } from './chrome-cdp.ts';
 import { PAGES } from './pages.ts';
+
+setDefaultTimeout(DB_TEST_TIMEOUT_MS);
 
 /**
  * 320 px dekker iPhone SE OG iOS' «Display Zoom», som krymper det logiske

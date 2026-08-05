@@ -11,11 +11,14 @@
 //     tilbake» ville bekreftet at tokenet en gang var gyldig.
 //   - Å opprette krever plus (husking=plus); å lese er gratis.
 
-import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
+import { afterAll, beforeAll, describe, expect, setDefaultTimeout, test } from 'bun:test';
+import { DB_TEST_TIMEOUT_MS } from './db-timeout.ts';
 import { createApp } from '../src/app.ts';
 import { getSql, closeSql } from '../src/lib/db.ts';
 import { ensureSchema } from '../src/lib/schema.ts';
 import { L } from './paths.ts';
+
+setDefaultTimeout(DB_TEST_TIMEOUT_MS);
 
 const PLUS_USER = 990201;
 const FREE_USER = 990202;

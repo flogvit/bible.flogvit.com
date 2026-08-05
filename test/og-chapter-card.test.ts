@@ -10,7 +10,8 @@
 // Det finnes bare UTENFOR produktet, hos noen som ennå ikke har klikket.
 // Derfor er vakta formulert på KONTRAKTEN — ikke på et tilfelle.
 
-import { describe, expect, test } from 'bun:test';
+import { describe, expect, setDefaultTimeout, test } from 'bun:test';
+import { DB_TEST_TIMEOUT_MS } from './db-timeout.ts';
 import { createApp } from '../src/app.ts';
 import { initBooks } from '../src/lib/bible.ts';
 import { booksData } from '../src/lib/books-data.ts';
@@ -23,6 +24,8 @@ import {
   renderCardPng,
 } from '../src/lib/og-card.ts';
 import { chapterShareCard, shareCard } from '../src/lib/share-card.ts';
+
+setDefaultTimeout(DB_TEST_TIMEOUT_MS);
 
 const app = createApp();
 await initBooks();

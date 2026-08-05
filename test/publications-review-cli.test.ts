@@ -12,12 +12,15 @@
 // Kommandoene kjøres derfor som EKTE underprosesser mot en EKTE lyttende
 // server, slik runbooken beskriver dem — ikke som funksjonskall.
 
-import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
+import { afterAll, beforeAll, describe, expect, setDefaultTimeout, test } from 'bun:test';
+import { DB_TEST_TIMEOUT_MS } from './db-timeout.ts';
 import { createApp } from '../src/app.ts';
 import { getSql, closeSql } from '../src/lib/db.ts';
 import { ensureSchema } from '../src/lib/schema.ts';
 import { reportPublication, submitPublication } from '../src/lib/publications.ts';
 import { L } from './paths.ts';
+
+setDefaultTimeout(DB_TEST_TIMEOUT_MS);
 
 const USER = 990401;
 const ITEM_ID = 'dev-review-cli-test';
@@ -96,7 +99,7 @@ beforeAll(async () => {
   await cleanup();
   await seedDevotional();
   slug = await submit();
-}, 30_000);
+});
 
 afterAll(async () => {
   await cleanup();

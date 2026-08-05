@@ -21,7 +21,8 @@
 //   3. SIDA    — det målte tilfellet: den rendrede `/matt/1` lenker ikke til en
 //                person som ikke finnes. Det er den leseren faktisk klikker på.
 
-import { beforeAll, describe, expect, test } from 'bun:test';
+import { beforeAll, describe, expect, setDefaultTimeout, test } from 'bun:test';
+import { DB_TEST_TIMEOUT_MS } from './db-timeout.ts';
 import { getSql } from '../src/lib/db.ts';
 import {
   CONTENT_SOURCES,
@@ -35,6 +36,8 @@ import {
 import { TABLES } from '../src/lib/schema.ts';
 import { initBooks } from '../src/lib/bible.ts';
 import { createApp } from '../src/app.ts';
+
+setDefaultTimeout(DB_TEST_TIMEOUT_MS);
 
 // Poolen hentes PER KALL, aldri på modulnivå — `closeSql()` i en annen testfil
 // nuller den ut, og en referanse tatt ved import ville da vært død her.

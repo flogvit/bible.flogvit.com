@@ -2,10 +2,13 @@
 // ekte readingProgress-rader og vise dem som tall og varmekart. Gratisbrukere
 // får siden, men uten data (husking = plus).
 
-import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
+import { afterAll, beforeAll, describe, expect, setDefaultTimeout, test } from 'bun:test';
+import { DB_TEST_TIMEOUT_MS } from './db-timeout.ts';
 import { createApp } from '../src/app.ts';
 import { getSql, closeSql } from '../src/lib/db.ts';
 import { ensureSchema } from '../src/lib/schema.ts';
+
+setDefaultTimeout(DB_TEST_TIMEOUT_MS);
 
 const TEST_USER_ID = 990002;
 let mock: ReturnType<typeof Bun.serve>;
