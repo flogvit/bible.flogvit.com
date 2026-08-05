@@ -624,6 +624,51 @@ lag som begge kan svikte stille.
   liggende for alltid. Den pinner også at `vis` gir HELE teksten der køen bare
   gir 100 tegn; det er der en innsending som vil noe annet, plasserer det.
 
+#### Et TAK på lista er en oppføring ingen kan finne (#75)
+
+`listCatalog()` hentet `LIMIT 100` og siden viste det den fikk. Det fantes ingen
+side 2, og enkeltoppføringene ligger med vilje ikke i sitemapen (over) — så
+oppføring nummer 101 var **godkjent, publisert og uoppdagbar**: forfatteren så
+«Publisert» med en lenke som virket, og ingen leser hadde en vei dit. Sorteringen
+er nyeste først, altså faller de ELDSTE ut — de som har stått lengst. Utslaget er
+stille (200, ingen loggrad, ingen 404), som #45, #60, #65 og #69.
+
+- **Paginering på STI, ikke på query.** `/manuskripter/katalog/side/2`. En URL
+  med query er en HANDLING som verken følges eller indekseres (#60), så `?side=2`
+  ville gjort side 2 like uoppdagbar som oppføringene den skulle vise. To
+  segmenter kolliderer heller ikke med `:slug`.
+- **Tallet er sidelengden, ikke et tak.** `CATALOG_PAGE_SIZE` (50) sier hvor
+  lang én side er; `pageCount` sier at det finnes en til. Alternativet «behold
+  100, men si det» ble vraket fordi det ikke løser at oppføringen er *borte* —
+  og «vis alt» fordi lista da vokser uten grense på en flate som står helt
+  utenfor mikrocachen.
+- **Sorteringen må være TOTAL.** `decided_at DESC, submitted_at DESC` alene har
+  ingen innbyrdes rekkefølge for to rader godkjent i samme millisekund — og en
+  reviewer som går gjennom køen godkjenner nettopp flere i samme millisekund. En
+  slik rad kan havne på begge sider av et sideskille, altså listes to ganger
+  eller ingen. `p.slug ASC` til slutt gjør ordenen entydig. Dette er det ene
+  punktet her som IKKE lot seg mutasjonsteste: MySQL leverer tilfeldigvis stabil
+  rekkefølge for denne spørringen lokalt, så vakta ble grønn uten leddet.
+- **Side 1 har ÉN adresse, den korte.** `/side/1` er 301 dit; det er den som
+  ligger i sitemapen og som canonical peker på. Dypere sider står ikke i
+  sitemapen — de kommer og går med review, og «neste side»-lenka ER
+  oppdagelsesveien.
+- **Et sidetall forbi siste side er 404**, ikke en tom liste med 200. En side som
+  svarer 200 uansett tall er en uendelig flate for en crawler.
+- **Vakta er `test/catalog-pagination.test.ts`, og den er formulert på
+  USYNLIGHETEN — ikke på tallet 100.** Den seeder flere oppføringer enn én side
+  rommer (målt i `CATALOG_PAGE_SIZE`, ikke i et tall), GÅR katalogen slik en
+  leser og en crawler gjør — fra rot-adressen, via «neste side»-lenka — og
+  krever at hver eneste godkjente oppføring dukker opp underveis, ingen to
+  ganger, og at siste side ikke lenker videre. Da består en fiks som flytter
+  taket like gjerne som en som paginerer, så lenge ingenting er usynlig; og et
+  tak uten vei videre stryker uansett hvor det står. Fem mutasjoner kjørt (tak
+  uten side 2, pager uten neste-lenke, query framfor sti, 200 framfor 404 forbi
+  siste side, ingen 301 fra `/side/1`).
+- **Sida ligger ikke i `PAGES`**, og det er samme grunn som lesedagene i #45: den
+  finnes bare når katalogen er stor nok, og 404-er ellers. Rot-adressen står der
+  som før.
+
 ### En URL med QUERY er en handling, ikke en side (#60)
 
 12 × 503 på én time. Ikke nedetid — lastvernet under gjorde jobben sin. Det som

@@ -64,8 +64,11 @@ async function seed() {
     await sql`
       INSERT INTO devotional_publications
         (slug, user_id, item_id, author_name, title, content, status, submitted_at, decided_at)
+      -- SAMME tidspunkt på alle: en reviewer som går gjennom køen godkjenner
+      -- flere i samme millisekund, og da er det bare en TOTAL sortering som
+      -- holder radene på hver sin side av sideskillet.
       VALUES (${slug}, ${USER}, ${itemId}, 'Testforfatter', ${`Manuskript nummer ${i}`},
-              ${`# Manuskript ${i}`}, 'approved', ${now - i}, ${now - i})
+              ${`# Manuskript ${i}`}, 'approved', ${now}, ${now})
     `;
     slugs.push(slug);
   }
