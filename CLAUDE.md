@@ -977,6 +977,39 @@ Feilmeldingen navngir det bredeste elementet OG lange tekstnoder, og hopper over
 alt som ligger i en egen scroll-boks — ellers peker vakta på det som skyves
 framfor på det som skyver.
 
+### En vakt som bare måler basespråket, måler de KORTESTE strengene (#70)
+
+Sveipen over kjørte hele `PAGES` på `DEFAULT_LOCALE`, og engelsk er nettopp det
+språket som gir de korteste strengene vi har. Tysk setter sammen ord, finsk
+bøyer med lange endelser, svensk har «Tillgänglighetsredogörelse» — og ingen av
+de sju andre flatene hadde noen gang vært målt. Seks av dem var for brede på
+320 px, og `/nb/tilgjengelighet` allerede ved **100 %** tekst. Samme klasse hull
+som #45, #65 og #69: en side som er for bred svarer 200 og skriver ingen
+loggrad, så skaden er bare synlig for den som holder telefonen.
+
+- **Alle 41 sidene × sju språk er 287 målinger**, altså minutter i ekte Chrome.
+  Sidene velges derfor av DATAENE: for hvert språk måles de tre sidene der
+  SPRÅKET SELV er mest utsatt, rangert etter det lengste ordet siden har på det
+  språket og IKKE på basespråket — altså nettopp det oversettelsen legger til.
+  Fordi valget følger dataene, flytter en ny eller nyoversatt streng målingen
+  dit selv.
+- **Løpende bokstaver, ikke «ord» mellom mellomrom.** Nettleseren bryter etter
+  en bindestrek, så `bok-kapittel-versstart` er ikke én bred klump — den ville
+  ellers vunnet på hvert eneste språk og skjøvet de ekte sammensetningene ut av
+  utvalget.
+- **Ord basespråket OGSÅ har teller ikke** (URL-er, hebraisk, id-er, egennavn
+  fra dataene): de er like brede på alle åtte flatene og er alt målt av sveipen.
+- **Fiksen er å la `overflow-wrap` ARVES fra `body`.** #50 førte opp de
+  tekstbærende taggene (`p`, `li`, `td`, …), og den lista holdt bare fordi den
+  ble målt på engelsk: hvert språk som setter sammen ord fant et sted den ikke
+  dekket — en `h1` på `/tilgjengelighet`, en `span` i en toggle-etikett på
+  `/innstillinger`. Unntaket lista skulle verne trengs ikke: chrome som må stå i
+  ett stykke er `white-space: nowrap`, og der gjør `overflow-wrap` ingenting.
+  Regelen slår heller aldri inn på et ord som får plass.
+- **Kjøretid er en del av regelen, ikke en unnskyldning for å la være.**
+  Utvalget koster ~25 s (41 sider × 8 språk SSR, fire om gangen, og 21
+  Chrome-målinger) på toppen av de ~30 s sveipen alt brukte.
+
 ### Toppen av skjermen har ÉN eier på mobil (#55)
 
 Samme dobbelteierskap som sideinnrykket, på den loddrette aksen: `.site-main`

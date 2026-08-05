@@ -34,14 +34,23 @@
 /* Et langt ord kan ikke krympes, bare BRYTES. En URL i brødteksten på /om
    («github.com/flogvit/bible.flogvit.com») satte gulvet for hele siden ved
    150 % tekst. Gjelder tekstbærende blokker, ikke chrome der en etikett skal
-   få stå i ett stykke. */
-p,
-li,
-dd,
-figcaption,
-blockquote,
-td,
-th {
+   få stå i ett stykke.
+
+   #70 flyttet regelen fra en LISTE over tekstbærende tagger til `body`, der den
+   arves av alt. Lista var en liste over det noen hadde kommet på, og den holdt
+   bare fordi den ble målt på engelsk: hvert språk som setter sammen ord fant et
+   sted den ikke dekket. «Tilgjengelighetserklæring» i en `h1` gjorde
+   /tilgjengelighet 55 px for bred på 320 px allerede ved 100 % tekst, og
+   «Kapitelzusammenfassung» i en `span` på /innstillinger 22 px for bred på tysk.
+   Sml. «Tillgänglighetsredogörelse» (sv), «Bibelübersetzungen» (de),
+   «Raamatunkäännökset» (fi).
+
+   Unntaket lista skulle verne — chrome der en etikett må stå i ett stykke —
+   trenger den ikke: wordmarket og konto-chippen er `white-space: nowrap`, og
+   under `nowrap` gjør `overflow-wrap` ingenting. Regelen slår heller aldri inn
+   på et ord som FÅR plass, så alt som rendres riktig i dag rendres likt.
+   Vakt: test/mobile-layout.test.ts (#50, #70). */
+body {
   overflow-wrap: break-word;
 }
 
