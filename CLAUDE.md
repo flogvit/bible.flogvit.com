@@ -1271,6 +1271,38 @@ Den halvdelen kjenner ingen klassenavn, så en HELT ny sidecontainer blir målt
 uten at noen har ført den opp — og den dekker også sider uten brødsmule
 (forsiden, 404), der avstandsmålet ikke har noe å måle mot.
 
+### En LAYOUT er ikke en spalte — den får headerens bredde (#78)
+
+`--maxw` (1120 px) er en LESEBREDDE: den finnes for at én tekstkolonne ikke skal
+bli for lang å følge. Kapittelsida er noe annet — den deler bredden på tre
+(innholdsfortegnelse, tekst, studiepanel) — så taket traff feil del, og
+tekstdelen betalte for alle tre: **448 px lesbar tekst på en 1440 px skjerm**,
+mens headeren rett over strakte seg 1192 px og margen tok 180 px på HVER side.
+Utslaget er stille som i #45, #65 og #70: sida svarer 200 og ser riktig ut, og
+bare den som sitter foran den ser at teksten er trang mens plassen står tom.
+
+- **`wide` på `Layout`** gir `.site-main-wide`, altså `--maxw-wide` framfor
+  `--maxw`. Utelatt = lesebredden, som er riktig for alt som ER én spalte.
+  Regelen er hva sida GJØR med bredden, ikke hvilken rute det er.
+- **Boksen OG innrykket er headerens** — `--maxw-wide` og `--chrome-pad`, brukt
+  begge steder. Deler de ikke innrykk, ligger kantene 4 px fra hverandre, og da
+  ser sida ut som to sider oppå hverandre framfor som én bredde. Ett tall er
+  dessuten det eneste som hindrer at de driver fra hverandre senere.
+- **Mobil beholder sine 20 px.** Det er #50s avgjørelse, tatt for at
+  lesekolonnen ikke skal stå unødig langt inn på en 390 px-skjerm — og under
+  768 px biter taket uansett ikke, så bare innrykket ville endret seg.
+- **Vakta er `test/reading-width.test.ts`**, i ekte Chrome på to desktop-bredder
+  (1280 og 1440, så et hardkodet tall ikke består). Den har to halvdeler:
+  KANTENE (de tre delene spenner nøyaktig headerens innhold, verken smalere
+  eller bredere) og TEKSTEN (hele gevinsten havner i tekstdelen, og den lesbare
+  kolonnen er over 500 px). Den andre finnes fordi den første alene ville
+  bestått både av et tak på `.chapter-content` — sida brer seg ut, pikslene går
+  til margen, leseren merker ingenting — og av å krympe HEADEREN i stedet. Fire
+  mutasjoner kjørt.
+- Motsatt akse av `mobile-layout.test.ts`, som måler at ingenting er for BREDT
+  for skjermen. Denne feilen er bare synlig der det er plass til overs, altså
+  aldri på en telefon.
+
 ## Lenker og lokale vakter
 
 **Alle interne lenker skal bruke `lhref(path)`** (`lib/i18n.ts`), aldri `href="/…"` rått.
