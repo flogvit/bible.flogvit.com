@@ -3,6 +3,13 @@
 What actually reached readers, newest first. Dates, not version numbers — we
 deploy continuously.
 
+## 2026-08-06 — Shared links keep their preview image, even in apps that trim the URL
+
+**Polish**
+- Sharing a chapter or a verse into a chat app, a forum or a messaging client now brings the preview card with it far more reliably. The address behind that card is built from plain ASCII only, so clients that quietly cut a link at the first unfamiliar character no longer end up requesting a truncated address — and no longer fall back to a bare, image-less link.
+
+**Behind the scenes**
+- Tests that hold the card address to plain ASCII and pin down how it is encoded, plus notes on what the automated watch checks for.
 ## 2026-08-05 — Shared links survive special characters, and nothing sits stuck in the review queue
 
 **Bug fixes**
