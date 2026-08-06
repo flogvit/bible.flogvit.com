@@ -1231,6 +1231,51 @@ gjør dette automatisk og avbryter ved rødt.
 `PAGES` bor i `test/pages.ts` og deles av nivå 2 og 4 — én oppføring gir en ny
 side dekning under begge sveipene.
 
+### Sandkassen er den ene grunnen til å starte Chrome på nytt (#85)
+
+De tre filene som måler i ekte Chrome — `mobile-layout`, `reading-width`,
+`key-event-promise` — feilet ALLE i en ubetjent agentkjøring, med
+`CDP-tidsavbrudd: Page.enable` etter 30 s. Chrome starter, DevTools-endepunktet
+svarer, `Target.createTarget` og `Target.attachToTarget` gir svar — men
+rendrerprosessen kommer aldri opp, fordi Chromes EGEN sandkasse ikke får starte
+under den profilen (`sandbox initialization failed: Operation not permitted`).
+`bun run test` var dermed rødt (818 pass, 3 fail) uansett hva branchen endret,
+og det er merge-porten: en fiks som ellers er grønn blir ikke merget.
+
+- **Porten må skille «layouten er brutt» fra «nettleseren fikk ikke starte».**
+  Begge var rødt, og et menneske måtte lese stacktracen for å vite hvilket.
+- **`test/chrome-cdp.ts` leser stderr HELE veien**, ikke bare til
+  DevTools-adressen. Linja om sandkassen står FØR adressen, i den samme
+  strømmen — den gamle lesingen slapp taket ett hakk for tidlig og kastet det
+  eneste sporet som forklarte tidsavbruddet.
+- **Den spør etter en RENDRER før den lover en nettleser.** Helsesjekken er de
+  samme tre kallene `open()` gjør, med en kort frist (10 s), så en rendrer som
+  blir borte uten å si hvorfor ikke blir et nytt 30-sekunders tidsavbrudd.
+- **Bare sandkassen gir et nytt forsøk.** `launchWithSandboxFallback` prøver med
+  sandkasse, og på nytt med `--no-sandbox` KUN når stderr meldte at den ikke lot
+  seg starte. Alt annet — Chrome som ikke finnes, en WebSocket som ikke kobler,
+  et tidsavbrudd med en annen årsak — bæres videre uendret. **Ser du
+  «CDP-tidsavbrudd» nå, er det ikke sandkassen: den navngir seg selv.**
+- **Avveiningen er tatt, ikke ramlet ut av et flagg.** Å slå av sandkassen for en
+  LESER er noe helt annet: denne nettleseren starter på `about:blank`, laster
+  bare våre egne bytes fra en localhost-server vi selv startet, kjører bare
+  uttrykk vi selv skriver, og lever i sekunder i en testprosess. Fiendtlig
+  innhold fra nettet — det sandkassen verner mot — finnes ikke her. Den sier det
+  høyt hver gang den måler uten (`SANDBOX_WARNING`, og `chrome.sandboxDisabled`).
+- **Regelen er formulert på INITIALISERINGEN, ikke på ordet «sandbox».** Chrome
+  advarer selv mot flagget vi nettopp satte («unsupported command-line flag:
+  --no-sandbox»); kjente vi den igjen som en feil, ville forsøk nummer to blitt
+  meldt mislykket mens alt virket.
+- **Vakta er `test/chrome-sandbox.test.ts`, og den består BEGGE steder** — hjemme
+  der sandkassen starter, og ubetjent der den ikke gjør det. Fire halvdeler:
+  REGELEN (linja kjennes igjen, og bare den — målt på ordrett stderr fra begge
+  oppstartene), ORKESTRERINGEN (fire utfall, der «en annen feil» er en ekte feil
+  uten nytt forsøk), FLATA (en ekte Chrome MÅLER, og sier fra om den måler uten
+  sandkassen) og INGEN STILLE SKIP. Seks mutasjoner kjørt.
+- **Å la vaktene hoppe over seg selv er IKKE svaret**, og det er den siste
+  halvdelens jobb å hindre: da står #50, #55, #70, #73 og #78 uten port, og
+  suiten melder grønt for en layout ingen har målt.
+
 **Velg sider etter KOMPONENT, ikke etter URL.** 1 Mos 1 har ingen personer, så
 studieblokka for personer rendres ikke der — en uprefikset lenke i den blokka slapp
 gjennom kontrakten helt til mutasjonstesting avslørte det. Derfor ligger `/1mos/12`

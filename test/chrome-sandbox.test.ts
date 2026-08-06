@@ -67,6 +67,17 @@ describe('REGELEN: linja i stderr kjennes igjen (#85)', () => {
       ),
     ).toBe(false);
   });
+
+  // Chromes egen advarsel om flagget vi selv nettopp satte. Kjente vi den igjen,
+  // ville forsøk nummer to blitt meldt som en sandkassefeil, og vakta stått
+  // igjen med «fikk aldri opp en rendrer» der alt faktisk virket.
+  test('advarselen om selve flagget er ikke en sandkassefeil', () => {
+    expect(
+      isSandboxInitFailure(
+        'You are using an unsupported command-line flag: --no-sandbox. Stability and security will suffer.\n',
+      ),
+    ).toBe(false);
+  });
 });
 
 describe('ORKESTRERINGEN: retten til å prøve igjen gjelder BARE sandkassen (#85)', () => {
