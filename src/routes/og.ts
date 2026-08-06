@@ -21,9 +21,8 @@
 
 import { readFileSync } from 'node:fs';
 import { Hono } from 'hono';
-import { getBookInfoBySlug } from '../lib/books-data.ts';
 import { isLocale } from '../lib/i18n.ts';
-import { renderChapterCard } from '../lib/og-card.ts';
+import { bookByCardSlug, renderChapterCard } from '../lib/og-card.ts';
 
 export const ogRoutes = new Hono();
 
@@ -46,7 +45,9 @@ ogRoutes.get('/og/:locale/:file', async (c) => {
   const match = /^(.+)-(\d+)\.png$/.exec(file);
   if (!isLocale(locale) || !match) return c.notFound();
 
-  const book = getBookInfoBySlug(match[1]!);
+  // BEGGE formene av bokleddet: den ASCII-rene vi publiserer nå (#84), og den
+  // prosentkodede som ligger i delte lenker og skrapernes indeks fra før.
+  const book = bookByCardSlug(match[1]!);
   const chapter = Number(match[2]);
   // Et kapittel som ikke finnes skal ikke få et kort som lover en side: da
   // ville en delt lenke til en 404 sett riktig ut i forhåndsvisningen.

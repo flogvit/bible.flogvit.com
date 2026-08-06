@@ -23,6 +23,7 @@ import { createApp } from '../src/app.ts';
 import { initBooks } from '../src/lib/bible.ts';
 import { booksData } from '../src/lib/books-data.ts';
 import { LOCALES, type Locale } from '../src/lib/i18n.ts';
+import { chapterCardPath } from '../src/lib/og-card.ts';
 import { toUrlSlug } from '../src/lib/url-utils.ts';
 
 setDefaultTimeout(DB_TEST_TIMEOUT_MS);
@@ -96,9 +97,16 @@ describe('publiserte adresser (#80)', () => {
     }
   });
 
-  // Kodingen skal være en KODING, ikke en omskriving: adressen må dekode
-  // tilbake til stien sida faktisk svarer på. `1kron-15.png` ville bestått
-  // ASCII-kravet over og pekt på noe annet.
+  // Kodingen skal være en KODING, ikke en omskriving: SIDAS EGEN adresse må
+  // dekode tilbake til stien den faktisk svarer på. En canonical som stavet
+  // boka `1kron` ville bestått ASCII-kravet over og pekt på noe annet.
+  //
+  // Kortstien er unntaket, og det er en avgjørelse, ikke en glipp (#84):
+  // prosentkodingen fjernet ikke kuttet, den flyttet det til første `%`, så
+  // den adressen er translitterert og har ingenting å kutte ved. Den er en
+  // maskinadresse ingen leser; sidas egen er menneskelesbar og røres ikke.
+  // `og-card-ascii-path.test.ts` er vakta på at kortet fortsatt peker på
+  // RIKTIG bok, altså det denne halvdelen vernet om.
   test('den kodede adressen dekoder tilbake til sidas egen sti', async () => {
     for (const book of NON_ASCII_BOOKS) {
       const slug = toUrlSlug(book.short_name);
@@ -113,7 +121,7 @@ describe('publiserte adresser (#80)', () => {
           slug,
           locale,
           canonical: `${SITE}/${locale}/${slug}/1`,
-          card: `${SITE}/og/${locale}/${slug}-1.png`,
+          card: `${SITE}${chapterCardPath(book.id, 1, locale)}`,
         });
       }
     }

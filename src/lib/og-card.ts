@@ -34,7 +34,7 @@
 
 import { readFileSync } from 'node:fs';
 import { deflateSync, gunzipSync } from 'node:zlib';
-import { bookNameById, getBookInfoById } from './books-data.ts';
+import { type BookInfo, bookNameById, booksData, getBookInfoById, getBookInfoBySlug } from './books-data.ts';
 import { makeT, type Locale } from './i18n.ts';
 import { localeToContentLanguage } from './lang.ts';
 import { toUrlSlug } from './url-utils.ts';
@@ -341,6 +341,46 @@ export function chapterCardText(bookId: number, chapter: number, locale: Locale)
 }
 
 /**
+ * Bokas ledd i KORTSTIEN, og den er ASCII-ren med vilje (#84).
+ *
+ * #80 gjorde adressen prosentkodet, og det var riktig — men det fjernet ikke
+ * feilen, det flyttet den: Amazonbot kuttet fortsatt stien, nå ved første `%`
+ * i stedet for ved første rå ikke-ASCII-byte, i 4,7 % av hentingene mot de
+ * fire bøkene med `ø`/`å` i slugen. Hvert kutt er én delt lenke uten
+ * forhåndsvisning FOR GODT — en skraper prøver bare én gang. Er det ingen `%`
+ * der, har klienten ingenting å kutte ved.
+ *
+ * **Dette gjelder BARE kortstien.** Sidas egen adresse (`/nb/2krøn/8`) er
+ * menneskelesbar, og der er `ø` et bevisst valg som ikke skal translittereres
+ * bort — den 404-er heller ikke. Kortstien leses av en maskin, aldri av en
+ * leser, så den kan betale den prisen sida ikke skal betale.
+ *
+ * Translittereringen er porteføljens egen (`normalizePersonId`, #61, som er
+ * free-bibles `nameToId`): `æ`→`ae`, `ø`→`o`, `å`→`a`. Å finne på en ny
+ * omskriving her ville vært en tredje stavemåte for de samme bøkene.
+ */
+export function cardBookSlug(shortName: string): string {
+  return toUrlSlug(shortName)
+    .replace(/æ/g, 'ae')
+    .replace(/ø/g, 'o')
+    .replace(/å/g, 'a');
+}
+
+/**
+ * Boka en kortsti peker på — BEGGE formene.
+ *
+ * Den prosentkodede formen (`2kr%C3%B8n`, altså `2krøn` etter dekoding) ligger
+ * i delte lenker og i skrapernes indeks fra før #84, og en delt lenke lever
+ * lenger enn en deploy. Den skal fortsatt svare 200; det er bare det vi
+ * PUBLISERER som er nytt.
+ */
+export function bookByCardSlug(slug: string): BookInfo | undefined {
+  const normalized = slug.toLowerCase();
+  for (const book of booksData) if (cardBookSlug(book.short_name) === normalized) return book;
+  return getBookInfoBySlug(normalized);
+}
+
+/**
  * Adressen kortet serveres på.
  *
  * Boka adresseres med SLUGEN sida bruker (`matt`), ikke med rad-id-en: en
@@ -351,7 +391,7 @@ export function chapterCardText(bookId: number, chapter: number, locale: Locale)
  */
 export function chapterCardPath(bookId: number, chapter: number, locale: Locale): string {
   const book = getBookInfoById(bookId);
-  return `/og/${locale}/${book ? toUrlSlug(book.short_name) : bookId}-${chapter}.png`;
+  return `/og/${locale}/${book ? cardBookSlug(book.short_name) : bookId}-${chapter}.png`;
 }
 
 export function renderChapterCard(bookId: number, chapter: number, locale: Locale): Uint8Array | null {
