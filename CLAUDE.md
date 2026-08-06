@@ -1017,6 +1017,52 @@ i samme vindu. 760 delekort- og 760 canonical-URL-er sto slik.
   ikke-ASCII i dag er en kapittelside, og den sender sin EGEN canonical. Det er
   den strukturelle halvdelen og typesjekkeren som holder den, ikke sveipen.
 
+#### Kortstien er ASCII-REN — prosentkoding flyttet kuttet, den fjernet det ikke (#84)
+
+#80 er ute og virker: alle fire bøkene sender kodet form i `og:image`,
+`canonical` og hreflang. Symptomet overlevde likevel, **målt med samme nevner**
+— 4,4 % avkortede før fiksen, 4,7 % etter, og null forespørsler med rå
+ikke-ASCII i etter-vinduet. Amazonbot kutter nå ved første `%` i stedet for ved
+første rå ikke-ASCII-byte (`GET /og/de/2kr` av `/og/de/2kr%C3%B8n-<n>.png`), og
+en ny form kom til: `åp` gir `/og/<språk>/`, en sti uten filsegment, som faller
+ut av `/og/`-ruta og videre i locale-forhandlingen til 404.
+
+- **Er det ingen `%` der, har klienten ingenting å kutte ved.**
+  `cardBookSlug()` i `og-card.ts` translittererer bokleddet: `1kron`, `2kron`,
+  `hoys`, `ap`. Regelen er porteføljens egen (`normalizePersonId`, #61, altså
+  free-bibles `nameToId`): `æ`→`ae`, `ø`→`o`, `å`→`a`. En ny omskriving her
+  ville vært en tredje stavemåte for de samme bøkene.
+- **Bare KORTSTIEN.** Sidas egen adresse (`/nb/2krøn/8`) er menneskelesbar, og
+  der er `ø` et bevisst valg som ikke skal translittereres bort — den 404-er
+  heller ikke. #80s krav om at den kodede adressen DEKODER tilbake til sidas
+  egen sti står derfor uendret for canonical og hreflang; kortstien er unntaket,
+  og den leses av en maskin, aldri av en leser.
+- **Ruta tar imot BEGGE formene.** Den prosentkodede ligger i delte lenker og i
+  skrapernes indeks fra før, og en delt lenke lever lenger enn en deploy.
+  `bookByCardSlug()` prøver kortslugen først og faller tilbake på
+  `getBookInfoBySlug()`. Å lene seg på ALIAS-tabellen alene holdt ikke: den har
+  `1kron`, `2kron` og `ap`, men ikke `hoys` — den er skrevet for
+  referanseparsing, ikke for denne adressen.
+- **Katalog-linja i `server/vakt-kjent.tsv` demper klassen** og forutsatte at
+  #80 ville fjerne den. Tallet sto høyt etterpå, og det ble fanget av en
+  tilfeldighet (den fjerde formen bommet på regexen), ikke av porten. Linja
+  peker nå hit; den skal FJERNES når dette er deployet og verifisert — står
+  tallet fortsatt høyt, er også denne fiksen ufullstendig. Den ligger i et annet
+  repo (`flogvit-com-server`).
+- **Vakta er `test/og-card-ascii-path.test.ts`, formulert på TEGNET og ikke på
+  `ø`**, med sidene valgt av DATAENE (som i #69, #70 og #80). Seks halvdeler:
+  ingen kortsti for noen bok på noe språk bærer noe `encodeURI` må røre; den
+  adressen SIDA publiserer har ingen prosentkode (funksjonen alene beviser ikke
+  hva som står i `og:image`); adressen leverer kortet for RIKTIG bok målt på
+  BYTENE (ellers ville «fjern ø-en» bestått — det er innvendingen #80 reiste mot
+  en omskriving); den gamle kodede formen svarer fortsatt med samme kort; ingen
+  kortslug skygger for en annen bok eller kolliderer med en annen kortslug; og
+  en egen test krever at det FINNES en slik slug, ellers måler de andre
+  ingenting. Sju mutasjoner kjørt. Den ene som IKKE ble rød er å STRIPPE `å`
+  framfor å translitterere den (`åp` → `p`) — og det er riktig: den formen er
+  fortsatt ASCII-ren, entydig og peker på samme bok, altså ikke defekten. Er
+  den derimot en annen boks slug eller en annen boks kortslug, er den rød.
+
 ## Lastvern (anonyme sidevisninger)
 
 `src/lib/page-cache.ts` er både mikrocache OG lastavvisning (#4, #14): anonyme
