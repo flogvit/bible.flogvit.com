@@ -7,6 +7,23 @@
 //
 // Chrome finnes ikke overalt. Den SKAL feile høyt om den mangler: en
 // layout-vakt som stille hopper over seg selv er ingen vakt.
+//
+// Ett unntak fra «feil høyt», og det er en AVVEINING, ikke et flagg (#85):
+// Chromes EGEN sandkasse får ikke starte under profilen en ubetjent
+// agentkjøring ligger i. Nettleseren starter, DevTools-endepunktet svarer, men
+// rendrerprosessen kommer aldri opp — og `Page.enable` går på tidsavbrudd etter
+// 30 s. Porten kunne da ikke skille «layouten er brutt» fra «nettleseren fikk
+// ikke starte»: begge var rødt, og et menneske måtte lese stacktracen.
+//
+// Vi starter derfor på nytt med `--no-sandbox`, og sier det høyt. Det er en
+// annen avveining enn å slå sandkassen av for en LESER: denne nettleseren
+// starter på `about:blank`, laster bare våre egne bytes fra en localhost-server
+// vi selv nettopp startet, kjører bare uttrykk vi selv skriver, og lever i
+// sekunder i en testprosess. Angrepsflaten sandkassen verner mot — fiendtlig
+// innhold fra nettet — finnes ikke her.
+//
+// Alt ANNET som feiler er fortsatt en ekte feil. Ser du «CDP-tidsavbrudd» nå,
+// er det ikke sandkassen: den navngir seg selv.
 
 const CANDIDATES = [
   process.env.CHROME_BIN,
@@ -38,17 +55,77 @@ export interface Viewport {
   mobile?: boolean;
 }
 
+/**
+ * Kjenner Chrome igjen når dens EGEN sandkasse ikke lot seg starte.
+ *
+ * Begge linjene er ordrett Chromes egne, og de kommer FØR DevTools-adressen —
+ * altså mens stderr uansett leses for å finne den. Regelen er formulert på
+ * initialiseringen, ikke på ordet «sandbox» alene: en oppstart MED
+ * `--no-sandbox` sier ingenting av dette, og kjente vi den igjen som en feil,
+ * ville forsøk nummer to blitt meldt som mislykket selv om det virket.
+ */
+export function isSandboxInitFailure(stderr: string): boolean {
+  return /sandbox initialization failed|failed to initialize sandbox/i.test(stderr);
+}
+
+const SANDBOX_WARNING =
+  '⚠︎ Chromes egen sandkasse fikk ikke starte under denne profilen — rendreren kom aldri opp.\n' +
+  '  Måler layouten på nytt med --no-sandbox. Nettleseren laster bare våre egne bytes fra\n' +
+  '  localhost og lever i sekunder i denne testprosessen, så den avveiningen er tatt (#85).';
+
+/** Utfallet av ETT forsøk på å starte nettleseren. */
+export type LaunchAttempt<T> = { chrome: T } | { sandboxBroken: true };
+
+/**
+ * Prøv med sandkasse, og bare ved en SANDKASSEFEIL på nytt uten.
+ *
+ * Alt annet — en Chrome som ikke finnes, et tidsavbrudd med en annen årsak, en
+ * WebSocket som ikke kobler — bæres videre uendret. Det er hele poenget med
+ * saken: porten skal kunne skille de to tilstandene, ikke gjøre begge grønne.
+ */
+export async function launchWithSandboxFallback<T>(
+  attempt: (noSandbox: boolean) => Promise<LaunchAttempt<T>>,
+  warn: (msg: string) => void = (msg) => console.warn(msg),
+): Promise<T> {
+  const first = await attempt(false);
+  if ('chrome' in first) return first.chrome;
+
+  warn(SANDBOX_WARNING);
+  const second = await attempt(true);
+  if ('chrome' in second) return second.chrome;
+
+  throw new Error(
+    'Chrome fikk aldri opp en rendrerprosess, heller ikke med --no-sandbox. ' +
+      'Da er dette ikke sandkassen, og layout-vakta har ingen nettleser å måle i.',
+  );
+}
+
+/**
+ * Hvor lenge helsesjekken venter på at rendreren kommer opp.
+ *
+ * Kort med vilje: den skal ikke være et nytt 30-sekunders tidsavbrudd. I den
+ * kjente feilen svarer stderr uansett først, så fristen brukes bare hvis
+ * rendreren blir borte uten å si hvorfor.
+ */
+const RENDERER_PROBE_MS = 10_000;
+
 export class Chrome {
   private constructor(
     private proc: Bun.Subprocess,
     private ws: WebSocket,
     private userDataDir: string,
+    /** Måler vi UTEN Chromes egen sandkasse? Se `SANDBOX_WARNING` og #85. */
+    readonly sandboxDisabled: boolean,
   ) {}
 
   private nextId = 0;
   private pending = new Map<number, (msg: any) => void>();
 
-  static async launch(): Promise<Chrome> {
+  static launch(): Promise<Chrome> {
+    return launchWithSandboxFallback((noSandbox) => Chrome.attemptLaunch(noSandbox));
+  }
+
+  private static async attemptLaunch(noSandbox: boolean): Promise<LaunchAttempt<Chrome>> {
     const bin = await findChrome();
     const userDataDir = `${process.env.TMPDIR ?? '/tmp'}/bibel-layout-${process.pid}-${Bun.nanoseconds()}`;
     const proc = Bun.spawn(
@@ -63,21 +140,53 @@ export class Chrome {
         // Overlay-scrollbarer: uten dette stjeler en klassisk scrollbar 15 px
         // av clientWidth, og målingen ville vært systematisk feil.
         '--hide-scrollbars',
+        ...(noSandbox ? ['--no-sandbox'] : []),
         'about:blank',
       ],
       { stdout: 'ignore', stderr: 'pipe' },
     );
 
-    const wsUrl = await readDevToolsUrl(proc);
+    const stderr = new StderrWatcher(proc);
+    const wsUrl = await stderr.devToolsUrl();
     const ws = new WebSocket(wsUrl);
     await new Promise<void>((res, rej) => {
       ws.onopen = () => res();
       ws.onerror = () => rej(new Error(`Fikk ikke koblet til Chrome på ${wsUrl}`));
     });
 
-    const chrome = new Chrome(proc, ws, userDataDir);
+    const chrome = new Chrome(proc, ws, userDataDir, noSandbox);
     ws.onmessage = (e) => chrome.onMessage(String(e.data));
-    return chrome;
+
+    // DevTools-endepunktet svarer selv om rendreren er død — `Target.createTarget`
+    // og `Target.attachToTarget` gir svar, og det er `Page.enable` som blir
+    // stående. Derfor spør vi ETTER en rendrer før vi lover en nettleser.
+    let probeError: unknown;
+    const probe = chrome.probeRenderer().then(
+      () => 'oppe' as const,
+      (err) => {
+        probeError = err;
+        return 'nede' as const;
+      },
+    );
+    const utfall = await Promise.race([probe, stderr.sandboxFailed.then(() => 'sandkasse' as const)]);
+
+    if (utfall === 'oppe') return { chrome };
+    await chrome.close();
+    if (utfall === 'sandkasse' || stderr.sawSandboxFailure) return { sandboxBroken: true };
+    throw probeError;
+  }
+
+  /** Kommer rendreren opp i det hele tatt? Samme tre kallene som `open()`. */
+  private async probeRenderer(): Promise<void> {
+    const { targetId } = await this.send('Target.createTarget', { url: 'about:blank' }, undefined, RENDERER_PROBE_MS);
+    const { sessionId } = await this.send(
+      'Target.attachToTarget',
+      { targetId, flatten: true },
+      undefined,
+      RENDERER_PROBE_MS,
+    );
+    await this.send('Page.enable', {}, sessionId, RENDERER_PROBE_MS);
+    await this.send('Target.closeTarget', { targetId }, sessionId, RENDERER_PROBE_MS).catch(() => {});
   }
 
   private onMessage(raw: string) {
@@ -88,10 +197,10 @@ export class Chrome {
     }
   }
 
-  private send(method: string, params: unknown = {}, sessionId?: string): Promise<any> {
+  private send(method: string, params: unknown = {}, sessionId?: string, timeoutMs = 30_000): Promise<any> {
     const id = ++this.nextId;
     return new Promise((res, rej) => {
-      const timer = setTimeout(() => rej(new Error(`CDP-tidsavbrudd: ${method}`)), 30_000);
+      const timer = setTimeout(() => rej(new Error(`CDP-tidsavbrudd: ${method}`)), timeoutMs);
       this.pending.set(id, (msg) => {
         clearTimeout(timer);
         if (msg.error) rej(new Error(`CDP ${method}: ${msg.error.message}`));
@@ -228,20 +337,56 @@ export class Page {
   }
 }
 
-async function readDevToolsUrl(proc: Bun.Subprocess): Promise<string> {
-  const reader = (proc.stderr as ReadableStream<Uint8Array>).getReader();
-  const dec = new TextDecoder();
-  let buf = '';
-  const deadline = Date.now() + 30_000;
-  while (Date.now() < deadline) {
-    const { value, done } = await reader.read();
-    if (done) break;
-    buf += dec.decode(value, { stream: true });
-    const m = buf.match(/ws:\/\/\S+/);
-    if (m) {
-      reader.releaseLock();
-      return m[0];
-    }
+/**
+ * Leser Chromes stderr HELE veien, ikke bare til DevTools-adressen dukker opp.
+ *
+ * Den gamle utgaven slapp taket idet adressen var funnet, og da var linja som
+ * forklarer hvorfor rendreren aldri kom opp (#85) noe ingen leste — selv om den
+ * sto der, ett hakk lenger opp i den samme strømmen.
+ */
+class StderrWatcher {
+  /** Halen av det Chrome har sagt. Nok til å lete i, uten å vokse i det uendelige. */
+  private tail = '';
+  private waiters: Array<() => void> = [];
+  sawSandboxFailure = false;
+  private signalSandbox!: () => void;
+  /** Løser seg NÅR sandkassen melder at den ikke lot seg starte — aldri ellers. */
+  readonly sandboxFailed = new Promise<void>((res) => {
+    this.signalSandbox = res;
+  });
+
+  constructor(proc: Bun.Subprocess) {
+    void this.pump(proc);
   }
-  throw new Error(`Chrome annonserte aldri en DevTools-adresse. stderr:\n${buf}`);
+
+  private async pump(proc: Bun.Subprocess) {
+    const reader = (proc.stderr as ReadableStream<Uint8Array>).getReader();
+    const dec = new TextDecoder();
+    try {
+      for (;;) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        this.tail = (this.tail + dec.decode(value, { stream: true })).slice(-65_536);
+        if (!this.sawSandboxFailure && isSandboxInitFailure(this.tail)) {
+          this.sawSandboxFailure = true;
+          this.signalSandbox();
+        }
+        for (const w of this.waiters.splice(0)) w();
+      }
+    } catch {
+      // Prosessen er borte; fristene under gir feilmeldingen.
+    }
+    for (const w of this.waiters.splice(0)) w();
+  }
+
+  async devToolsUrl(): Promise<string> {
+    const deadline = Date.now() + 30_000;
+    for (;;) {
+      const m = this.tail.match(/ws:\/\/\S+/);
+      if (m) return m[0];
+      if (Date.now() >= deadline) break;
+      await Promise.race([new Promise<void>((res) => this.waiters.push(res)), Bun.sleep(100)]);
+    }
+    throw new Error(`Chrome annonserte aldri en DevTools-adresse. stderr:\n${this.tail}`);
+  }
 }
