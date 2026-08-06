@@ -3,6 +3,11 @@
 What actually reached readers, newest first. Dates, not version numbers — we
 deploy continuously.
 
+## 2026-08-06 — Nothing new to see; the checks that guard the layout got sturdier
+
+**Behind the scenes**
+
+- The automated layout checks now restart the test browser on their own when it fails to start, so a tooling hiccup can no longer hide a real layout problem from us.
 ## 2026-08-06 — Shared links keep their preview image, even in apps that trim the URL
 
 **Polish**
