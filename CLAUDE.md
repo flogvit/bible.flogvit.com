@@ -375,6 +375,57 @@ et menneske SKRIVER inn.
   fra `.no` til `.com` ville vært verdt: av de 1120 døde id-ene vakten talte,
   var 11 slike som bare manglet translittereringen.
 
+#### Skrivemåten KOLLASJONEN godtar er ikke adressen (#49)
+
+`persons.name` og `stories.slug` har kollasjonen `utf8mb4_danish_ci`, altså både
+case- og aksent-insensitiv, mens alt annet i ruta behandler id-en som eksakt små
+bokstaver. To utslag med samme rot, og fiksen er den samme:
+
+```
+200  /fr/personer/Oholibama   <link rel="canonical" href="…/fr/personer/Oholibama"/>
+404  /fr/personer/Korah-Esaus-snn-med-oholibama   (den små formen 301-er)
+```
+
+- **Duplikatene SELV-kanonikaliserte**, og det er det som gjør dem dyre: 339
+  unike slike URL-er i ett døgn, hentet av Amazonbot, GPTBot og Googlebot, hver
+  med beskjed om at den er en selvstendig side. Rangeringssignalene splittes
+  mellom dem. **Det er ikke våre lenker** — 2029 `/personer/`-hrefs på
+  `/en/personer`, null med stor bokstav — men så lenge vi svarer 200 og
+  selv-kanonikaliserer, BEKREFTER vi adressen uansett hvor crawleren har den fra.
+- **Asymmetrien er verre enn duplikatene.** `PERSON_ID_ALIASES` er et
+  JS-objektoppslag, altså case-SENSITIVT, mens basen rett under er
+  case-insensitiv: en versal variant av en VANLIG person svarte 200, en versal
+  variant av en ALIAS-id 404-et. Det er nøyaktig de 66 adressene kartet ble
+  skrevet for å redde (#61), og før id-rettingen (free-bible#25) svarte de 200.
+- **Sannheten er RADEN, ikke en omskriving.** Vi normaliserer ikke adressen i JS
+  for å gjette hva leseren mente: basen har alt slått opp raden, og raden bærer
+  sin egen skrivemåte — `persons.name`, kolonnen #61 utpekte. Er den forespurte
+  en annen, sendes leseren dit. Da kan en redirect per konstruksjon aldri peke
+  på en 404, og vi trenger ingen kopi av MySQLs kollasjonsregler for å svare
+  riktig.
+- **`foldId()` finnes bare til det ene stedet basen IKKE har slått opp noe** —
+  alias-kartet. Den folder som `danish_ci`: case og latinske aksenter, mens
+  `æ`, `ø` og `å` blir stående, fordi de er EGNE bokstaver i dansk sortering.
+  Det er samme skillet #61 måtte håndtere med en egen translitterering, og den
+  grenen (`normalizedPersonId`) står uendret ved siden av.
+- **Regelen bor i `src/lib/canonical-id.ts` (`resolveId`) og deles av alle fire
+  flatene.** Historiene har samme kollasjon uten å ha et alias-kart, og BEGGE
+  personflatene må ha den: at kartet lå på bare den ene var nettopp defekten
+  «samme adresse, samme app, to svar» i #61.
+- **Vakta er `test/canonical-id-case.test.ts`, og adressene velges av DATAENE**
+  (som #70, #80 og #84): en skrivemåte er bare med når basen FAKTISK svarer på
+  den, så vakta måler kollasjonen framfor en liste noen kom på. Seks halvdeler:
+  REGELEN (foldingen speiler kollasjonen), DUPLIKATENE (hver slik skrivemåte
+  301-er til radens egen), CANONICAL (ingen fremmed skrivemåte svarer 200 med
+  sin egen canonical — symptomet ordrett), ALIASENE (en versal alias-id ender
+  der den lille ender, målt mot HVERANDRE framfor mot en fasit, for hver eneste
+  oppføring i kartet), FLATENE (API-et svarer som sida, med `?lang=` i behold)
+  og GJETTER ALDRI (den kanoniske skrivemåten redirecter aldri, ingen redirect
+  ender i en 404, og en adresse vi ikke har er fortsatt død). Seks mutasjoner
+  kjørt — den som er verdt å nevne er «301 til lowercase alltid»: den blir rød,
+  fordi en fiks som redirecter den kanoniske adressen til seg selv er en
+  uendelig omvei, ikke én adresse.
+
 ### En innholdstabell hvis KILDE er borte skal ikke bli stående (#58)
 
 Samme klasse som #46 og #61, men én etasje opp: der handler det om en ADRESSE
