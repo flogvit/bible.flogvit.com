@@ -51,6 +51,24 @@ export const SHARE_CARD_HEIGHT = 630;
 export const DELEKORT = {
   bucket: 'bibel',
   region: 'fr-par',
+  /**
+   * Scaleway-PROSJEKTET bøtta hører i (#87) — like mye en del av adressen som
+   * bøttenavnet, og det eneste leddet som ikke kan rettes etterpå: en bøtte
+   * kan ikke flyttes mellom prosjekter i Scaleway.
+   *
+   * Det står her fordi `scw object bucket create` **ikke har noen
+   * `project-id`-arg** (målt på scw 2.50.0: `name`, `tags`,
+   * `enable-versioning`, `acl`, `region`). Bøtta havner altså i det prosjektet
+   * maskinens `scw`-profil tilfeldigvis peker på, og en kommandolinje som bare
+   * bærer navn og region SER ut som den uttrykker hele avgjørelsen. Det var
+   * nettopp den lesingen som la soulsupport-bøttene i prosjektet «Bibel»
+   * 2026-07-29 (`~/.claude/CLAUDE.md` → «Skyressurser»).
+   *
+   * Verdien er PROSJEKTNAVNET, ikke id-en: dette repoet er offentlig, og
+   * navnet er nok til at den som oppretter bøtta kan sammenligne med
+   * `scw config get default-project-id`.
+   */
+  project: 'flogvit',
   key: 'system/delekort/bibel-1200x630.png',
   width: SHARE_CARD_WIDTH,
   height: SHARE_CARD_HEIGHT,

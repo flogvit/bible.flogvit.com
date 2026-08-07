@@ -178,6 +178,46 @@ describe('flyttelasset for delekortet', () => {
     expect(putter.length).toBe(0);
   });
 
+  // PROSJEKTET er halve avgjørelsen (#87), og det er det ENESTE leddet som
+  // ikke kan rettes etterpå — en bøtte kan ikke flyttes mellom prosjekter i
+  // Scaleway. `scw object bucket create` har ingen `project-id`, så en
+  // kommandolinje med bare navn og region havner der maskinens scw-profil
+  // tilfeldigvis peker, samtidig som den SER ut som den uttrykker hele
+  // avgjørelsen. Det var nettopp den lesingen som la soulsupport-bøttene i
+  // prosjektet «Bibel» 2026-07-29.
+  test('kommandoen for å opprette bøtta navngir PROSJEKTET, ikke bare navn og region', async () => {
+    bøtter = new Set();
+    const { err } = await kjør();
+    expect(err).toContain(DELEKORT.project);
+    expect(err).toContain('default-project-id');
+  });
+
+  // `sjekk` skal kunne stå i deploy-kjeden FØR avgjørelsen er tatt — det er
+  // hele grunnen til at bibel har kommandoen (#66), siden opplastingen her
+  // ikke ligger i deployen. En bøtte som ikke finnes er da ikke et avvik: det
+  // er tilstanden vi ER i, og sidemalen serverer kortet fra vårt eget opphav.
+  // Felte den, ville hver eneste deploy vært rød for noe som er riktig — og
+  // «legg den i deployen» ville derfor aldri blitt gjort.
+  test('sjekk er grønn før flyttingen — en bøtte som ikke finnes er ikke et avvik', async () => {
+    bøtter = new Set();
+    const { code, out, err } = await kjør(['sjekk']);
+    expect({ code, err }).toEqual({ code: 0, err: '' });
+    expect(out).toContain('public/og.png');
+    expect(out).toContain(DELEKORT.bucket);
+  });
+
+  // Den andre halvdelen av samme skille (#81): med `OG_IMAGE_URL` satt PÅSTÅR
+  // miljøet at kortet ligger i objektlagringen. Er bøtta da borte, får delte
+  // lenker ingen forhåndsvisning i det hele tatt — dårligere enn før
+  // flyttingen — og det skal felle. Uten denne halvdelen ville «alltid grønn»
+  // bestått testen over.
+  test('men en satt OG_IMAGE_URL mot en bøtte som ikke finnes er et brudd', async () => {
+    bøtter = new Set();
+    const { code, err } = await kjør(['sjekk'], { OG_IMAGE_URL: `${BASE}/${STI}` });
+    expect(code).not.toBe(0);
+    expect(err).toContain('OG_IMAGE_URL');
+  });
+
   // Legitimasjonskjeden er env → `~/.config/scw/config.yaml`. Finnes ingen av
   // delene, skal den stoppe FØR den later som den lastet opp.
   test('uten nøkler stopper den før den later som den lastet opp', async () => {

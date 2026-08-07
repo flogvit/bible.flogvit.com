@@ -981,7 +981,43 @@ samtidig «ingen kodeendring».
   høylytt stopp; og uten nøkler (heller ikke i `~/.config/scw/config.yaml`)
   stopper den før den later som den lastet opp.
 - **Det som gjenstår er ÉN avgjørelse, ikke tre steg.** Opprett bøtta, kjør
-  skriptet, lim inn linja det skriver ut.
+  skriptet, lim inn linja det skriver ut. Avgjørelsen er `#87`.
+
+##### Kommandoen kan ikke si hvilket PROSJEKT bøtta havner i (#87)
+
+Avgjørelsen er «prosjekt `flogvit`, region fr-par», men
+`scw object bucket create` har **ingen `project-id`-arg** (målt på scw 2.50.0:
+`name`, `tags`, `enable-versioning`, `acl`, `region`). Bøtta havner altså i det
+prosjektet maskinens `scw`-profil tilfeldigvis peker på, mens kommandolinja
+`name=bibel region=fr-par` SER ut som den uttrykker hele avgjørelsen. Det var
+nettopp den lesingen som la soulsupport-bøttene i prosjektet «Bibel»
+2026-07-29, og en bøtte kan ikke flyttes mellom prosjekter i Scaleway.
+
+- **`DELEKORT.project` er prosjektet**, ved siden av bøtte, region og nøkkel —
+  det leddet som ikke kan rettes etterpå hører i samme sannhet som de andre.
+  Verdien er NAVNET, ikke id-en: repoet er offentlig, og navnet er nok til å
+  sammenligne med `scw config get default-project-id`.
+- **Skriptets stopp-melding er runbooken i det øyeblikket handlingen skjer**,
+  så den navngir prosjektet og sjekk-kommandoen framfor bare create-linja.
+- **Målt 2026-08-07:** navnet `bibel` er ledig globalt
+  (`https://bibel.s3.fr-par.scw.cloud/` → `NoSuchBucket`), og maskinens
+  `default-project-id` er `flogvit`. `flogvit-`-prefikset trengs altså ikke.
+
+##### `sjekk` må kunne stå i deploy-kjeden FØR bøtta finnes (#87)
+
+Restansen fra #66 er at `server/deploy-bibel-hono.sh` (i driftsrepoet) skal
+kjøre `bun scripts/upload-og-card.ts sjekk` etter deploy. Den kunne ikke wires:
+kommandoen felte på `NoSuchBucket`, altså hadde HVER deploy vært rød fram til
+avgjørelsen var tatt — så linja ville aldri blitt lagt inn, og guarden hadde
+kommet nøyaktig når den ikke lenger var gratis.
+
+**«Bøtta finnes ikke» betyr to ulike ting**, som 404 gjør for review-køa (#81):
+uten `OG_IMAGE_URL` er flyttingen bare ikke gjort, sidemalen serverer
+`public/og.png` fra vårt eget opphav, og det er RIKTIG — kommandoen sier det og
+avslutter med 0. Med `OG_IMAGE_URL` satt påstår miljøet at kortet ligger i
+objektlagringen, og da er en manglende bøtte delte lenker uten forhåndsvisning
+i det hele tatt — dårligere enn før flyttingen — og den avslutter med 1.
+Guarden armerer seg altså selv i det øyeblikket variabelen settes.
 
 ### Kortet skal si HVILKET kapittel lenken peker på (#68)
 

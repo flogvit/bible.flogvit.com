@@ -88,15 +88,27 @@ flyttes mellom prosjekter i Scaleway — feil plassering er gratis å rette mens
 den er tom, og en migrering etterpå. Resten er kodet:
 
 ```bash
+scw config get default-project-id                     # MÅ være prosjektet «flogvit»
 scw object bucket create name=bibel region=fr-par     # <- avgjørelsen, tas én gang
 bun scripts/upload-og-card.ts                         # laster opp og bekrefter
 # skriptet skriver ut linja: OG_IMAGE_URL=… -> bibel.env, restart
 ```
 
+**Første linje er ikke pynt.** `scw object bucket create` har ingen
+`project-id`-arg (målt på scw 2.50.0), så bøtta havner i det prosjektet
+maskinens `scw`-profil peker på — og en bøtte kan ikke flyttes mellom
+prosjekter i Scaleway. En kommandolinje med bare navn og region ser ut som den
+uttrykker hele avgjørelsen, og det var nettopp den lesingen som la
+soulsupport-bøttene i prosjektet «Bibel» 2026-07-29. Prosjektet står som
+`DELEKORT.project` i `src/lib/share-card.ts`; vil du pinne det for ett kall
+framfor å stole på profilen, sett `SCW_DEFAULT_PROJECT_ID`.
+
 S3-navnerommet deles med alle Scaleway-kunder. Er `bibel` opptatt (409
 `BucketAlreadyExists`), følger porteføljen `flogvit-lab`-presedensen og
 prefikser med `flogvit-`; da endres `DELEKORT.bucket` i
-`src/lib/share-card.ts`, og adressen følger med.
+`src/lib/share-card.ts`, og adressen følger med. (Målt anonymt 2026-08-07:
+`https://bibel.s3.fr-par.scw.cloud/` svarer `NoSuchBucket`, altså er navnet
+ledig.)
 
 Legitimasjon er env `S3_ACCESS_KEY`/`S3_SECRET_KEY` (porteføljens navn, fra
 `soulsupport.env`), ellers `~/.config/scw/config.yaml` — samme kjede som
@@ -118,7 +130,12 @@ opplastingen et program og ikke et punkt i denne lista:
   avgjør om delingen virker.
 - `bun scripts/upload-og-card.ts sjekk` svarer på om den PUBLISERTE adressen
   (`OG_IMAGE_URL`, når den er satt) fortsatt er lik kilden. Den skriver ingenting
-  og trenger ingen nøkler, så den kan kjøres etter hver deploy.
+  og trenger ingen nøkler, så den kan kjøres etter hver deploy — **også før
+  bøtta finnes.** «Bøtta finnes ikke» betyr to ulike ting: uten `OG_IMAGE_URL`
+  er flyttingen bare ikke gjort ennå, og kommandoen sier det og avslutter med
+  0; med variabelen satt er det en påstand som er brutt, og da avslutter den
+  med 1. Ellers ville «legg den i deploy-kjeden» felt hver eneste deploy fram
+  til avgjørelsen er tatt — altså aldri blitt gjort.
 
 **Endrer kortet MOTIV, bytt filnavnet i `DELEKORT`.** Skraperne cacher per URL,
 så en overskrevet fil viser det gamle motivet i ukevis uten at noe sier fra.

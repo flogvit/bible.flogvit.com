@@ -74,10 +74,35 @@ const lokale = new Uint8Array(await fil.arrayBuffer());
 // kortet fra. Kommandoen skriver ingenting og trenger ingen nøkler, så den kan
 // kjøres etter hver deploy av hvem som helst.
 if (kommando === 'sjekk') {
-  const url = process.env.OG_IMAGE_URL || PUBLISERT;
+  const publisert = process.env.OG_IMAGE_URL;
+  const url = publisert || PUBLISERT;
   const { status, bytes, kode } = await hent(url);
+  // «Bøtta finnes ikke» betyr TO ULIKE TING, som 404 gjør for review-køa (#81),
+  // og bare det ene er et avvik:
+  //
+  //   uten OG_IMAGE_URL — flyttingen (#87) er ikke gjort ennå. Sidemalen peker
+  //     på vårt eget opphav, delte lenker får kortet sitt, og ingenting er
+  //     galt. Skal `sjekk` kunne stå i deploy-kjeden FØR avgjørelsen er tatt —
+  //     som er hele poenget med at bibel har kommandoen (#66) — kan den ikke
+  //     felle hver eneste deploy for en tilstand som er riktig.
+  //   med OG_IMAGE_URL — variabelen PÅSTÅR at kortet ligger i objektlagringen,
+  //     og påstanden er brutt. Da er delte lenker uten forhåndsvisning i det
+  //     hele tatt, altså dårligere enn før flyttingen.
   if (status === 404 && kode === 'NoSuchBucket') {
-    stopp(`Bøtta «${DELEKORT.bucket}» finnes ikke (${ENDPOINT}). Kortet er ikke flyttet — se #66.`);
+    if (!publisert) {
+      console.log(
+        `Kortet er ikke flyttet til objektlagring ennå: bøtta «${DELEKORT.bucket}» finnes ikke, og ` +
+          'OG_IMAGE_URL er ikke satt.\n' +
+          `Sidemalen serverer public/og.png (${lokale.length} byte) fra vårt eget opphav, og det er ` +
+          'riktig inntil bøtta er opprettet (#87).',
+      );
+      process.exit(0);
+    }
+    stopp(
+      `OG_IMAGE_URL peker på ${url}, men bøtta «${DELEKORT.bucket}» finnes ikke (${ENDPOINT}).\n` +
+        'Delte lenker får da INGEN forhåndsvisning — dårligere enn før flyttingen. Fjern ' +
+        'variabelen, eller opprett bøtta og last opp: bun scripts/upload-og-card.ts',
+    );
   }
   if (status === 404) stopp(`${url} → 404. Kortet er ikke lastet opp; kjør skriptet uten «sjekk».`);
   if (status === 403) stopp(`${url} → 403. Objektet er ikke public-read, og ingen skraper når det.`);
@@ -138,8 +163,13 @@ if (før.status === 404 && før.kode === 'NoSuchBucket') {
     `Bøtta «${DELEKORT.bucket}» finnes ikke på ${ENDPOINT}.\n` +
       'Å opprette den er en beslutning om skyprosjekt, region og kostnad — ikke noe dette\n' +
       'skriptet tar — og en bøtte kan ikke flyttes mellom prosjekter i Scaleway etterpå.\n' +
-      `Når avgjørelsen er tatt (#66):\n` +
+      `PROSJEKTET er halve avgjørelsen (#87), og kommandoen kan ikke uttrykke det selv:\n` +
+      '`scw object bucket create` har ingen `project-id`, så bøtta havner i prosjektet\n' +
+      'maskinens scw-profil tilfeldigvis peker på. Sjekk det FØR du oppretter — det var\n' +
+      'nettopp den lesingen som la soulsupport-bøttene i feil prosjekt 2026-07-29:\n' +
+      `  scw config get default-project-id     # skal være prosjektet «${DELEKORT.project}»\n` +
       `  scw object bucket create name=${DELEKORT.bucket} region=${DELEKORT.region}\n` +
+      `  # eller pin det for kallet: SCW_DEFAULT_PROJECT_ID=<id-en til «${DELEKORT.project}»> scw object bucket create …\n` +
       'Merk at S3-navnerommet deles med alle Scaleway-kunder: er navnet opptatt (409),\n' +
       'følger porteføljen `flogvit-lab`-presedensen og prefikser med `flogvit-`.',
   );
