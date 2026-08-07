@@ -5,6 +5,7 @@
 import { Hono } from 'hono';
 import type { AppEnv } from '../../lib/session.ts';
 import { Layout } from '../../views/layout.tsx';
+import { resolveId } from '../../lib/canonical-id.ts';
 import { Breadcrumbs } from '../../views/breadcrumbs.tsx';
 import { InlineRefs } from '../../views/inline-refs.tsx';
 import { Footnotes } from '../../views/footnotes.tsx';
@@ -216,8 +217,19 @@ r.get('/historier', async (c) => {
 
 r.get('/historier/:slug', async (c) => {
   const t = tFor(c);
-  const story = await getStoryBySlug(c.req.param('slug'));
-  if (!story) return c.notFound();
+  const requested = c.req.param('slug');
+
+  // `stories.slug` har samme kollasjon som `persons.name`, altså case- og
+  // aksent-insensitiv: `/historier/Josef-Moter-Brodrene` svarte 200 med sin
+  // EGEN canonical, og ble en selvstendig side i indeksen (#49). Slugen i raden
+  // er adressen; en annen skrivemåte er et duplikat og sendes dit.
+  const resolved = await resolveId(requested, {
+    lookup: (slug) => getStoryBySlug(slug),
+    idOf: (row) => row.slug,
+  });
+  if (resolved.kind === 'redirect') return c.redirect(lhref(`/historier/${resolved.to}`), 301);
+  if (resolved.kind === 'missing') return c.notFound();
+  const story = resolved.row;
   let data: StoryData;
   try {
     data = JSON.parse(story.content) as StoryData;

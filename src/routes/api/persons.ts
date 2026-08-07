@@ -1,11 +1,14 @@
 import { Hono } from 'hono';
 import {
   getAllPersonsData,
+  getPersonByName,
   getPersonData,
   getPersonsByEra,
   getPersonsByRole,
+  parsePersonContent,
 } from '../../lib/bible.ts';
 import { PERSON_ID_ALIASES, normalizedPersonId } from '../../lib/person-id-aliases.ts';
+import { resolveId } from '../../lib/canonical-id.ts';
 import { NO_CACHE } from './util.ts';
 
 const r = new Hono();
@@ -31,23 +34,26 @@ r.get('/', async (c) => {
 r.get('/:id', async (c) => {
   const requested = c.req.param('id');
 
-  // Rettede id-er 301-er, akkurat som `/personer/:personId` gjør (#61).
-  // Kartet lå bare på sida, så samme adresse fikk to svar fra samme app: en
-  // leser ble sendt videre, en klient som hentet den over API-et fikk 404. Det
-  // er symptomet saken er meldt på — API-et 404-er en id appen selv honorerer.
-  //
-  // Oppslaget kommer FØRST av samme grunn som på sida: en gammel id finnes
-  // ikke i basen lenger, så uten dette faller den rett til 404.
-  const alias = PERSON_ID_ALIASES[requested];
-  if (alias) {
-    // Queryen bæres over — `?lang=` avgjør språket svaret kommer på (#24), og
-    // en redirect som mistet den ville sendt klienten til gulvspråket.
-    const query = new URL(c.req.url).search;
-    return c.redirect(`/api/persons/${alias}${query}`, 301);
-  }
-
   try {
-    const person = await getPersonData(requested);
+    // Rettede id-er 301-er, akkurat som `/personer/:personId` gjør (#61) — og
+    // en skrivemåte basen godtok uten at den ER id-en gjør det samme (#49).
+    // Kartet lå bare på sida, så samme adresse fikk to svar fra samme app: en
+    // leser ble sendt videre, en klient som hentet den over API-et fikk 404.
+    // Samme regel må derfor ligge på begge flatene, ellers er det den defekten
+    // gjort på nytt.
+    const resolved = await resolveId(requested, {
+      aliases: PERSON_ID_ALIASES,
+      lookup: (id) => getPersonByName(id),
+      idOf: (row) => row.name,
+    });
+    if (resolved.kind === 'redirect') {
+      // Queryen bæres over — `?lang=` avgjør språket svaret kommer på (#24), og
+      // en redirect som mistet den ville sendt klienten til gulvspråket.
+      const query = new URL(c.req.url).search;
+      return c.redirect(`/api/persons/${resolved.to}${query}`, 301);
+    }
+
+    const person = resolved.kind === 'found' ? parsePersonContent(resolved.row.content) : null;
     if (!person) {
       // Adressen kan bære et ordrett ø/æ/å der basen har den translittererte
       // id-en (`jisreel-hoseas-sønn` → `jisreel-hoseas-sonn`) — sakens egen
