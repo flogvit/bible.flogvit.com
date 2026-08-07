@@ -26,6 +26,9 @@ import type { Context, Next } from 'hono';
 const MAX_TOTAL_BYTES = 48 * 1024 * 1024;
 const MAX_ENTRY_BYTES = 1.5 * 1024 * 1024;
 
+/** Taket, lest én gang: køens standardlengde er det samme tallet (under). */
+const MAX_CONCURRENT_RENDERS = Number(process.env.RENDER_MAX_CONCURRENT || 6);
+
 /**
  * Verdiene modulen STARTER i — altså det lastvernet vi faktisk ruller ut.
  *
@@ -44,7 +47,11 @@ export const PAGE_CACHE_DEFAULTS = Object.freeze({
   // 24 samtidige render på én delt vCPU ga 8–29 sekunders svar framfor raske
   // 503-er: semaforen beskyttet mot kollaps, men taket var satt for høyt til å
   // beskytte RESPONSTIDEN. 1,8 req/s holdt til å velte siden (#19).
-  maxConcurrentRenders: Number(process.env.RENDER_MAX_CONCURRENT || 6),
+  maxConcurrentRenders: MAX_CONCURRENT_RENDERS,
+  // Hvor mange som får VENTE på en plass. Uten en lengde er køen et løfte vi
+  // ikke kan holde: hver forespørsel over taket parkerte hele `queueWaitMs` før
+  // den fikk høre nei, selv om vi visste det med en gang (#19).
+  maxQueuedRenders: Number(process.env.RENDER_QUEUE_MAX || MAX_CONCURRENT_RENDERS),
   queueWaitMs: Number(process.env.RENDER_QUEUE_WAIT_MS || 3000),
   /** Hvor sjelden innholdsversjonen sjekkes (én liten spørring per intervall). */
   versionCheckMs: Number(process.env.PAGE_CACHE_VERSION_CHECK_MS || 30 * 1000),
@@ -116,8 +123,30 @@ export function clearPageCache(): void {
   totalBytes = 0;
 }
 
-// Semafor for samtidige anonyme render. Venterne får plass i FIFO-rekkefølge;
-// den som ikke får plass innen queueWaitMs får false (→ stale eller 503).
+// Semafor for samtidige anonyme render. Køen er BEGRENSET og betjenes med den
+// FERSKESTE først; den som verken får plass eller kø-plass får false med en
+// gang (→ stale eller 503), og den som venter forgjeves gir opp etter
+// queueWaitMs.
+//
+// Begge delene er samme lærdom fra #19, målt 2026-08-05 med taket allerede nede
+// på 6: bare 2 forespørsler fikk 503 — men 12 fikk 3–9 sekunder, og de to
+// 503-ene kom etter nøyaktig 3,003 s. «Raske 503-er til noen få» var hele
+// poenget med taket, og det var ikke det som skjedde.
+//
+// UBEGRENSET KØ er det ene: over taket vet vi med en gang at vi ikke kan
+// betjene alle, og brukte likevel opp hele fristen før vi sa nei. Verre for den
+// som spurte om en side vi HAR en utløpt kopi av — den lå i minnet mens leseren
+// ventet tre sekunder på å få høre at vi var opptatt. Køen er derfor like lang
+// som taket: står du bakerst i en lengre kø, rekker du uansett ikke fram innen
+// fristen når rendrene er trege, og da er ventingen bare ventetid.
+//
+// FIFO er det andre: plassen gikk til den som hadde ventet LENGST, altså den
+// som er nærmest å gi opp — og køtiden ble dermed lagt oppå rendertiden for
+// alle. Med den ferskeste først får den som nettopp klikket svar på rendertiden
+// sin, framfor å stille bakerst i en byge fra én crawler. Antallet vi rekker å
+// betjene er det samme; det er fordelingen av ventetid som endres, og under
+// overlast er det den som er problemet. Er det ikke overlast, er køen tom eller
+// én lang, og de to rekkefølgene er samme sak.
 let active = 0;
 const waiters: Array<(ok: boolean) => void> = [];
 
@@ -126,6 +155,7 @@ function acquireRenderSlot(): Promise<boolean> {
     active++;
     return Promise.resolve(true);
   }
+  if (waiters.length >= config.maxQueuedRenders) return Promise.resolve(false);
   return new Promise((resolve) => {
     const waiter = (ok: boolean) => {
       clearTimeout(timer);
@@ -141,7 +171,7 @@ function acquireRenderSlot(): Promise<boolean> {
 }
 
 function releaseRenderSlot(): void {
-  const next = waiters.shift();
+  const next = waiters.pop(); // ferskest først, se begrunnelsen over
   if (next) {
     next(true); // plassen går videre, active står
   } else if (active > 0) {
