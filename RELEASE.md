@@ -3,6 +3,15 @@
 What actually reached readers, newest first. Dates, not version numbers — we
 deploy continuously.
 
+## 2026-08-07 — Heavy crawlers asked to slow down, so reading stays fast
+
+**Polish**
+
+- When an AI crawler pulls hard at the site, it is now asked to pace itself instead of fetching as fast as it can. That keeps chapters and searches responsive for the people actually reading them. Nothing a crawler was already forbidden to fetch became allowed — the limits are the same, only the tempo is.
+
+**Behind the scenes**
+
+- Internal notes and test tooling were tidied up, including tests that failed on machines whose file paths contain non-English letters.
 ## 2026-08-06 — Nothing new to see; the checks that guard the layout got sturdier
 
 **Behind the scenes**
