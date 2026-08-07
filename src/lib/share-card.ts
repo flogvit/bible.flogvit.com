@@ -31,6 +31,45 @@ import { absoluteUrl } from './site-url.ts';
 export const SHARE_CARD_WIDTH = 1200;
 export const SHARE_CARD_HEIGHT = 630;
 
+/**
+ * Kortets plass i objektlagringen (#66) — ÉN sannhet for opplastingen,
+ * runbooken og den dagen sidemalen peker rett hit.
+ *
+ * Samme form som `books`, `lab` og `puzzles` (`src/lib/delekort.ts` i hvert av
+ * dem): bøtta ligger i Scaleway-prosjektet `flogvit`, region fr-par, og er
+ * PRIVAT — bare dette objektet får `public-read`, så en framtidig
+ * brukeropplasting ikke blir offentlig av en bøtte-default.
+ *
+ * `system/` er første nøkkelsegment fordi `<uid>/` er obligatorisk for
+ * BRUKER-innhold (KONVENSJONER.md → «Objektlagring»); delekortet har ingen
+ * bruker, og `system/` holder de to fra å blande seg i lagringsregnskapet.
+ *
+ * **Filnavnet bærer målene, og skal BYTTES når kortet endrer MOTIV.** Skraperne
+ * cacher per URL, så en overskrevet fil viser det gamle motivet i ukevis uten at
+ * noen feilmelding sier fra.
+ */
+export const DELEKORT = {
+  bucket: 'bibel',
+  region: 'fr-par',
+  key: 'system/delekort/bibel-1200x630.png',
+  width: SHARE_CARD_WIDTH,
+  height: SHARE_CARD_HEIGHT,
+} as const;
+
+/**
+ * Adressen er ABSOLUTT og hardkodet mot bøtta, aldri utledet av vår egen
+ * origin: kortet ligger ikke på flata i det hele tatt.
+ *
+ * Virtual-hosted, som resten av porteføljen. `base` finnes bare for at
+ * mekanismen skal kunne måles mot en lokal stubb — den har ingen wildcard-DNS —
+ * og den kan ikke lyve: opplastingen henter objektet tilbake fra nettopp denne
+ * adressen og krever bit-identiske byte.
+ */
+export const objektUrl = (base?: string) =>
+  base
+    ? `${base.replace(/\/$/, '')}/${DELEKORT.bucket}/${DELEKORT.key}`
+    : `https://${DELEKORT.bucket}.s3.${DELEKORT.region}.scw.cloud/${DELEKORT.key}`;
+
 export interface ShareCard {
   url: string;
   width: number;
@@ -45,10 +84,19 @@ export interface ShareCard {
  * Bilder hører i objektlagring, også systeminnhold (KONVENSJONER.md →
  * «Objektlagring»). Bøtta `bibel` finnes ikke ennå, og en bøtte er en
  * beslutning om et skyprosjekt, ikke noe en kodeendring kan ta. Kortet
- * serveres derfor fra vårt eget opphav inntil den finnes — og `OG_IMAGE_URL`
- * er flyttelasset: last opp bildet, sett variabelen i `bibel.env`, ferdig.
- * Ingen kodeendring, og `share-card.test.ts` holder knappen i live så den
- * faktisk virker den dagen den brukes.
+ * serveres derfor fra vårt eget opphav inntil den finnes.
+ *
+ * `OG_IMAGE_URL` flytter ADRESSEN. Selve flyttingen — opplasting, verifisering
+ * og at bøttekopien ikke driver fra `public/og.png` — er
+ * `scripts/upload-og-card.ts` (#66), som skriver ut nøyaktig den linja som skal
+ * i `bibel.env`. Variabelen settes altså aldri for hånd, og adressen den bærer
+ * er bevist før den skrives.
+ *
+ * Variabelen er MIDLERTIDIG. `books`, `lab` og `puzzles` peker sidemalen rett
+ * på `objektUrl()` og har ingen slik bryter; det kan bibel også den dagen bøtta
+ * finnes og kortet er lastet opp. Bryteren finnes bare fordi en `og:image` mot
+ * en bøtte som ikke finnes gir INGEN forhåndsvisning — altså dårligere enn i
+ * dag.
  *
  * Leses per kall framfor ved import, så testen kan sette den uten å laste
  * modulen på nytt. Det er ett oppslag i et map per sidevisning.

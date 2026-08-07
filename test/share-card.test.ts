@@ -20,7 +20,7 @@ import { DB_TEST_TIMEOUT_MS } from './db-timeout.ts';
 import { createApp } from '../src/app.ts';
 import { initBooks } from '../src/lib/bible.ts';
 import { LOCALES } from '../src/lib/i18n.ts';
-import { shareCard } from '../src/lib/share-card.ts';
+import { objektUrl, shareCard } from '../src/lib/share-card.ts';
 
 setDefaultTimeout(DB_TEST_TIMEOUT_MS);
 
@@ -75,11 +75,18 @@ describe('delekortet', () => {
   // kortet serveres fra vårt eget opphav inntil videre. `OG_IMAGE_URL` er
   // flyttelasset: når bøtta finnes, er dette ett miljøoppslag — ikke en
   // kodeendring — og da må knappen faktisk virke.
+  //
+  // Verdien er `objektUrl()` — nøyaktig linja `scripts/upload-og-card.ts`
+  // skriver ut (#66) — framfor en literal, så repoet har ÉN representasjon av
+  // adressen og ikke to som kan drive fra hverandre. At bildet KOMMER dit, og
+  // blir liggende likt kilden, er `og-card-upload.test.ts` sin jobb; her holdes
+  // bare knappen i live.
   test('OG_IMAGE_URL flytter kortet uten en kodeendring', () => {
     const før = process.env.OG_IMAGE_URL;
     try {
-      process.env.OG_IMAGE_URL = 'https://bibel.s3.fr-par.scw.cloud/og.png';
-      expect(shareCard().url).toBe('https://bibel.s3.fr-par.scw.cloud/og.png');
+      process.env.OG_IMAGE_URL = objektUrl();
+      expect(shareCard().url).toBe(objektUrl());
+      expect(objektUrl()).toMatch(/^https:\/\/\S+\.scw\.cloud\/\S+\.png$/);
     } finally {
       if (før === undefined) delete process.env.OG_IMAGE_URL;
       else process.env.OG_IMAGE_URL = før;
