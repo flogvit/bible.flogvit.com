@@ -20,6 +20,7 @@ hvorfor kapittelkortet ikke ligger som ferdige filer, står i `../../CLAUDE.md`
 bun scripts/generate-og-card.ts        # card.html -> public/og.png + generated/
 bun test test/share-card.test.ts test/og-chapter-card.test.ts
 git add public/og.png assets/og/generated && git commit
+bun scripts/upload-og-card.ts          # BARE når kortet ligger i objektlagring
 ```
 
 Skriptet krever Chrome — samme som layout-vakta. Finner det ingen, sier det
@@ -74,16 +75,53 @@ Begge er **SIL Open Font License 1.1**: Schibsted Grotesk (Schibsted) og IBM
 Plex Mono (IBM). Lisensen tillater videredistribusjon; fontene kan ikke
 videreselges alene eller distribueres modifisert under samme navn.
 
-## Flytt til objektlagring
+## Flytt til objektlagring (#66)
 
 Porteføljeregelen er at bilder hører i objektlagring, også systeminnhold
 (`flogvit.com/docs/KONVENSJONER.md` → «Objektlagring»). Bøtta `bibel` finnes
 ikke ennå, så kortet serveres fra vårt eget opphav inntil den gjør det.
 
-Når bøtta finnes:
+**Det som gjenstår er ÉN avgjørelse, ikke tre steg.** Å opprette bøtta er en
+beslutning om skyprosjekt, region og kostnad
+(`flogvit.com/docs/KONVENSJONER.md` → «Objektlagring»), og en bøtte kan ikke
+flyttes mellom prosjekter i Scaleway — feil plassering er gratis å rette mens
+den er tom, og en migrering etterpå. Resten er kodet:
 
-1. Last opp `public/og.png` (public-read).
-2. Sett `OG_IMAGE_URL=<absolutt URL>` i `bibel.env` og restart.
+```bash
+scw object bucket create name=bibel region=fr-par     # <- avgjørelsen, tas én gang
+bun scripts/upload-og-card.ts                         # laster opp og bekrefter
+# skriptet skriver ut linja: OG_IMAGE_URL=… -> bibel.env, restart
+```
 
-Det er hele flyttingen — ingen kodeendring. `share-card.test.ts` holder
-knappen i live, så den virker den dagen den brukes.
+S3-navnerommet deles med alle Scaleway-kunder. Er `bibel` opptatt (409
+`BucketAlreadyExists`), følger porteføljen `flogvit-lab`-presedensen og
+prefikser med `flogvit-`; da endres `DELEKORT.bucket` i
+`src/lib/share-card.ts`, og adressen følger med.
+
+Legitimasjon er env `S3_ACCESS_KEY`/`S3_SECRET_KEY` (porteføljens navn, fra
+`soulsupport.env`), ellers `~/.config/scw/config.yaml` — samme kjede som
+`books`, `lab` og `puzzles`. Adressen og nøkkelen bor i `DELEKORT` i
+`src/lib/share-card.ts`, som opplastingen, runbooken og sidemalen deler.
+
+### De to kopiene får ikke drive fra hverandre
+
+`public/og.png` ligger i git og rulles ut med imaget; bøttekopien er en KOPI.
+Lager du kortet på nytt uten å laste det opp, serverer prod det gamle kortet
+for alltid — 200, ingen loggrad, synlig bare for den som fikk lenken. Derfor er
+opplastingen et program og ikke et punkt i denne lista:
+
+- Kortet **skrives hver gang**, som i `books`. Det koster en håndfull kilobyte
+  og fjerner hele klassen «bildet forsvant fordi noen ryddet i bøtta».
+- Den **verifiserer før den skriver ut adressen**, og gjør det ANONYMT: den
+  henter objektet tilbake og krever bit-identiske byte. Skrivingen kan lykkes
+  uten at objektet kan leses utenfra — det er ACL-en, ikke opplastingen, som
+  avgjør om delingen virker.
+- `bun scripts/upload-og-card.ts sjekk` svarer på om den PUBLISERTE adressen
+  (`OG_IMAGE_URL`, når den er satt) fortsatt er lik kilden. Den skriver ingenting
+  og trenger ingen nøkler, så den kan kjøres etter hver deploy.
+
+**Endrer kortet MOTIV, bytt filnavnet i `DELEKORT`.** Skraperne cacher per URL,
+så en overskrevet fil viser det gamle motivet i ukevis uten at noe sier fra.
+Målene i filnavnet er der av samme grunn.
+
+Vakta er `test/og-card-upload.test.ts`.

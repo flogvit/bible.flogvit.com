@@ -334,6 +334,10 @@ try {
     `Skrev assets/og/generated/ — bakgrunn ${(bakgrunn.rgb.length / 1024).toFixed(0)} kB rå, ` +
       `atlas ${(atlas.length / 1024).toFixed(0)} kB rå (begge gzippet på disk)`,
   );
+  // Ligger kortet i objektlagring (#66), er bøttekopien nettopp nå blitt
+  // gammel. Den drar ingen loggrad med seg — bare et gammelt bilde hos den som
+  // fikk lenken.
+  console.log('Ligger kortet i en bøtte? Last det opp på nytt: bun scripts/upload-og-card.ts');
 } finally {
   await chrome.close();
 }

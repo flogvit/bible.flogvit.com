@@ -904,9 +904,8 @@ Tverrgående sak med målingen for alle åtte flatene: `flogvit-com#74`.
   ikke et valg.** Porteføljeregelen er at bilder hører i objektlagring, også
   systeminnhold. Bøtta `bibel` finnes ikke, og en bøtte er en beslutning om
   skyprosjekt, region og kostnad (`flogvit.com/CLAUDE.md`), ikke noe en
-  kodeendring kan ta. `OG_IMAGE_URL` er flyttelasset: last opp bildet, sett
-  variabelen i `bibel.env`, ferdig. Ingen kodeendring — og testen holder
-  knappen i live så den virker den dagen den brukes.
+  kodeendring kan ta. `OG_IMAGE_URL` er flyttelasset, og det er **kodet** —
+  `scripts/upload-og-card.ts`, se #66 under.
 - **Per-side-kort er et eget og senere steg** — tatt i #68 under, for
   kapittelsidene. Sidemalens kort er fortsatt standarden for alt annet.
 
@@ -918,6 +917,71 @@ målene sidemalen deklarerer (lest ut av IHDR-chunken, ikke antatt), at appen
 serverer det med validator, og at `OG_IMAGE_URL` faktisk flytter det. Alt-testen
 er strukturell som brødsmulevakta i #63 — en hardkodet literal rendres ordrett
 likt på fire ubeslektede språk. Alle vaktene er mutasjonstestet.
+
+#### Flyttelasset flytter adressen — noe må flytte BILDET (#66)
+
+«`OG_IMAGE_URL` er flyttelasset: last opp bildet, sett variabelen, ferdig —
+ingen kodeendring» var halve flyttingen sagt som hele. Variabelen flytter
+ADRESSEN. Ingenting flyttet bildet, og ingenting holdt de to kopiene like:
+`public/og.png` ligger i git og rulles ut med imaget, mens bøttekopien måtte
+lastes opp for hånd. Runbooken har TRE grunner til å lage kortet på nytt
+(`card.html`, identiteten i `portal/STYLE.md`, en ny bokstav i et boknavn) og sa
+ingenting om å laste det opp igjen. Fra dagen variabelen er satt, ville prod da
+servert et gammelt kort for alltid — 200, ingen loggrad, synlig bare for den som
+fikk lenken. Nøyaktig hullet #65 handlet om, én etasje ned. Sakens egen
+«ferdig» krevde dette («ikke to kopier som driver fra hverandre») og kalte det
+samtidig «ingen kodeendring».
+
+- **`scripts/upload-og-card.ts` er PORTET, ikke funnet opp.** `books`, `lab` og
+  `puzzles` har samme skript (`scripts/last-opp-delekort.ts`) mot samme
+  `Bun.S3Client`, med samme legitimasjonskjede (env → `~/.config/scw/config.yaml`)
+  og samme «bekreft anonymt etterpå». Å skrive en fjerde variant her ville vært
+  en ny måte å gjøre det samme på — spørsmålet var HVORDAN den bæres over, ikke
+  OM. Avviket er `sjekk`-kommandoen, som finnes fordi bibels opplasting IKKE
+  ligger i deploy-kjeden: den bor i driftsrepoet.
+- **Kortet skrives HVER gang**, som i `books`: det koster en håndfull kilobyte
+  og fjerner hele klassen «bildet forsvant fordi noen ryddet i bøtta».
+  `bun scripts/upload-og-card.ts sjekk` svarer på om den PUBLISERTE adressen
+  fortsatt er lik kilden — den skriver ingenting og trenger ingen nøkler, så den
+  kan kjøres etter hver deploy.
+- **Den verifiserer FØR den skriver ut adressen, og gjør det ANONYMT.**
+  Skrivingen kan lykkes uten at objektet kan leses utenfra — det er ACL-en, ikke
+  opplastingen, som avgjør om delingen virker. En adresse vi ikke har bevist er
+  nettopp løgnen saken handler om: den ser riktig ut i env-fila, og gir et
+  gammelt eller tomt kort hos den som fikk lenken.
+- **`sjekk` måler `OG_IMAGE_URL` når den er satt**, ikke den utledede adressen.
+  Å måle en adresse ingen leser henter kortet fra er å måle ingenting.
+- **Skriptet oppretter ALDRI bøtta.** Det er en beslutning om skyprosjekt,
+  region og kostnad (KONVENSJONER.md → «Objektlagring»), og en bøtte kan ikke
+  flyttes mellom prosjekter i Scaleway. Mangler den, stopper skriptet høylytt og
+  navngir avgjørelsen — et stille «ferdig» ville fått en maskin uten bøtte til å
+  se ferdig ut. Samme lærdom som «(tom) framfor høylytt stopp» i CLI-vakta for
+  review-køen. Meldingen nevner også at S3-navnerommet deles med alle
+  Scaleway-kunder: `lab` var opptatt og måtte bli `flogvit-lab`.
+- **`DELEKORT` i `share-card.ts` er ÉN sannhet** — bøtte, region, nøkkel og mål
+  — delt av opplastingen, runbooken og `share-card.test.ts`, som bruker
+  `objektUrl()` framfor en literal. Nøkkelen er
+  `system/delekort/bibel-1200x630.png`, samme form som de tre andre produktene:
+  `<uid>/` er obligatorisk første segment for BRUKER-innhold, og `system/`
+  holder systeminnhold utenfor lagringsregnskapet framfor å late som om det er
+  noens. **Filnavnet bærer målene og skal BYTTES når kortet endrer MOTIV** —
+  skraperne cacher per URL, så en overskrevet fil viser det gamle motivet i
+  ukevis uten at noe sier fra.
+- **`OG_IMAGE_URL` er MIDLERTIDIG.** De tre andre produktene peker sidemalen
+  rett på `objektUrl()` og har ingen slik bryter. Den finnes her bare fordi en
+  `og:image` mot en bøtte som ikke finnes gir INGEN forhåndsvisning — altså
+  dårligere enn i dag.
+- **Vakta er `test/og-card-upload.test.ts`, og den er formulert på ADRESSEN —
+  ikke på at en PUT ble sendt.** Skriptet kjøres som et ekte underprosess mot en
+  ekte lyttende S3-flate (en egen søm, som CLI-vakta), og adressen det SKRIVER
+  UT må servere nøyaktig bytene i `public/og.png`. Sju halvdeler: adressen
+  virker; kortet skrives hver gang; en bøttekopi som har drevet fra kilden sier
+  fra og lar seg rette; `sjekk` måler `OG_IMAGE_URL`; en PUT som svarer 200 uten
+  at objektet blir lesbart skriver INGEN adresse; en bøtte som ikke finnes gir
+  høylytt stopp; og uten nøkler (heller ikke i `~/.config/scw/config.yaml`)
+  stopper den før den later som den lastet opp.
+- **Det som gjenstår er ÉN avgjørelse, ikke tre steg.** Opprett bøtta, kjør
+  skriptet, lim inn linja det skriver ut.
 
 ### Kortet skal si HVILKET kapittel lenken peker på (#68)
 
