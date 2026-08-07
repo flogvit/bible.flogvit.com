@@ -17,10 +17,17 @@
 // det et sted å kutte. Sidene velges av DATAENE (som i #69, #70 og #80), så en
 // ny bok med et slikt tegn arver vakta uten at noen fører den opp.
 //
-// Sidas EGEN adresse (`/nb/2krøn/8`) er en annen sak og røres ikke: den er
-// menneskelesbar, `ø` er et bevisst valg der, og den 404-er ikke. Kravet i
-// #80 — at den kodede adressen DEKODER tilbake til sidas egen sti — står
-// derfor uendret for canonical og hreflang i `published-url-encoding.test.ts`.
+// Sidas EGEN adresse (`/nb/2krøn/8`) er en annen sak og røres ikke — men den
+// går IKKE fri: samme klient kutter den på samme sted, målt 0,038 % mot
+// kortstiens 4,6 %. Der finnes ingen ASCII-form å bytte til; `ø`-en ER
+// adressen, og en omskriving av den er et valg om adresseskjemaet framfor en
+// feilretting. Kravet i #80 — at den kodede adressen DEKODER tilbake til sidas
+// egen sti — står derfor uendret for canonical og hreflang i
+// `published-url-encoding.test.ts`.
+//
+// ANDRE HALVDEL: hva vi svarer den som ALT har kuttet. Å gjøre adressen
+// ASCII-ren hindrer nye kutt; den hindrer ikke de avkortede formene som
+// allerede ligger i skrapernes indeks. Se det siste describet.
 
 import { describe, expect, setDefaultTimeout, test } from 'bun:test';
 import { DB_TEST_TIMEOUT_MS } from './db-timeout.ts';
@@ -127,5 +134,95 @@ describe('kortstien er ASCII-ren (#84)', () => {
     }));
     expect(treff.filter((t) => t.peker !== t.bok)).toEqual([]);
     expect(new Set(treff.map((t) => t.slug)).size).toBe(booksData.length);
+  });
+});
+
+// EN AVKORTET KORTADRESSE ER IKKE EN SIDE (#84)
+//
+// ASCII-stien over hindrer NYE kutt. Den hindrer ikke de avkortede formene som
+// alt ligger i skrapernes indeks — 18 målte i saken — og de blir hentet igjen.
+// Saken sier hva som er galt med svaret de får: «Skraperen får `text/html` der
+// den ventet en PNG.» Det gjelder BEGGE formene den målte:
+//
+//   /og/de/2kr   ->  404, men med en hel HTML-404-side i kroppen
+//   /og/fr/      ->  302 /en/og/fr/  ->  301 /en/og/fr  ->  404
+//
+// Den andre er verst, og den er ny i denne saken. `/og/<språk>/` har ingen
+// filsegment, faller derfor ut av kortruta og videre i locale-forhandlingen —
+// altså inn i SIDE-navnerommet. To hopp for et bilde som ikke finnes, og det
+// siste hoppet er en adresse (`/en/og/fr`) som ikke fantes før vi fant den
+// opp. Det er nøyaktig klassen #46 og #60 stenger: vi skal ikke lage døde
+// adresser til en crawler.
+//
+// Prisen er dessuten en RENDER-PLASS. `NOT_A_PAGE` (#64) kjenner en fil på
+// punktumet, og en avkortet kortadresse har ikke lenger noe punktum — så den
+// står i køen bak semaforen og rendrer en HTML-side ingen skraper leser, i
+// nøyaktig det øyeblikket kapasiteten er knapp (#19, #86).
+//
+// Vakta er formulert på ADRESSEN, ikke på de fire målte formene: INGEN prefiks
+// av en kortadresse får svare som en side. Prefiksene utledes av de publiserte
+// adressene, i BEGGE formene, så en ny bok med et slikt tegn arver vakta.
+describe('en avkortet kortadresse er ikke en side (#84)', () => {
+  /** Alle stedene en klient kan ha kuttet — `/og/` er selv et prefiks. */
+  const truncations = (path: string): string[] => {
+    const out: string[] = [];
+    for (let i = '/og/'.length; i < path.length; i++) out.push(path.slice(0, i));
+    return out;
+  };
+
+  /**
+   * Begge formene, for hver bok saken gjelder og hvert språk: den ASCII-rene
+   * vi publiserer nå, og den prosentkodede som ligger i indeksene fra før.
+   */
+  const published = NON_ASCII_BOOKS.flatMap((book) =>
+    LOCALES.flatMap((locale) => [
+      chapterCardPath(book.id, 1, locale),
+      encodeURI(`/og/${locale}/${toUrlSlug(book.short_name)}-1.png`),
+    ]),
+  );
+
+  // Selve saken. Et kutt er et kutt — vi kan ikke hindre klienten i å gjøre
+  // det, men vi kan la være å svare som om prefikset var en side.
+  test('ingen avkortet kortadresse redirecter eller svarer med HTML', async () => {
+    const feil: unknown[] = [];
+    for (const path of new Set(published.flatMap(truncations))) {
+      const res = await app.request(path, { redirect: 'manual' });
+      const svar = {
+        path,
+        status: res.status,
+        videre: res.headers.get('location'),
+        html: (res.headers.get('content-type') ?? '').includes('text/html'),
+      };
+      if (svar.status !== 404 || svar.videre || svar.html) feil.push(svar);
+    }
+    expect(feil).toEqual([]);
+  });
+
+  // De fire formene saken faktisk MÅLTE, ordrett — så en fiks som dekker
+  // regelen uten å dekke tilfellet ikke kan bestå i stillhet.
+  test('de målte formene svarer 404 uten en eneste omvei', async () => {
+    for (const path of ['/og/de/2kr', '/og/es/1kr', '/og/fi/h', '/og/fr/', '/og/fr']) {
+      const res = await app.request(path, { redirect: 'manual' });
+      expect({ path, status: res.status, videre: res.headers.get('location') }).toEqual({
+        path,
+        status: 404,
+        videre: null,
+      });
+    }
+  });
+
+  // «Svar 404 på alt under /og/» ville bestått de to over og tatt kortet med
+  // seg. De andre halvdelene i fila måler kortet; denne står her fordi den er
+  // det som skiller en port fra en mur.
+  test('den hele adressen leverer fortsatt kortet', async () => {
+    for (const book of NON_ASCII_BOOKS) {
+      const path = chapterCardPath(book.id, 1, 'de');
+      expect({ path, ...(await card(path)) }).toEqual({
+        path,
+        status: 200,
+        type: 'image/png',
+        hash: hash(renderChapterCard(book.id, 1, 'de')!),
+      });
+    }
   });
 });
