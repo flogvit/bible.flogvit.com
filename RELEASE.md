@@ -3,6 +3,13 @@
 What actually reached readers, newest first. Dates, not version numbers — we
 deploy continuously.
 
+## 2026-08-07 — Links with æ, ø and å now lead to the person, not a 404
+
+**Bug fixes**
+- A person's page now opens from the address spelled the way the name is actually written. Until now only the stripped spelling worked, so a link containing æ, ø or å ended in a 404 — both spellings now reach the same person, and links already shared keep working.
+
+**Behind the scenes**
+- These release notes can name the letters æ, ø and å without the English-only check mistaking the page for Norwegian; the address rules gained test coverage, and the reasoning behind them — a tidied identifier is not a tidied address — is written down for whoever touches them next.
 ## 2026-08-07 — Links to people with æ, ø or å in their names now lead somewhere
 
 **Bug fixes**
