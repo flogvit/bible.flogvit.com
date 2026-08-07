@@ -74,6 +74,14 @@ async function fetchPage(locale: string, path: string) {
 
 const attrs = (html: string, re: RegExp) => [...html.matchAll(re)].map((m) => m[1]!);
 
+/** Klyngen som HTML-en faktisk annonserer: hreflang → sti uten domenet. */
+function hreflangCluster(html: string): { lang: string; path: string }[] {
+  return [...html.matchAll(/hreflang="([^"]+)" href="([^"]+)"/g)].map((m) => ({
+    lang: m[1]!,
+    path: m[2]!.replace(SITE, ''),
+  }));
+}
+
 describe('sidekontrakt', () => {
   // Full matrise på ett språk som IKKE er basespråket — da avsløres alt som er
   // hardkodet til engelsk. Basespråket ville skjult nettopp de feilene.
@@ -187,6 +195,27 @@ describe('sidekontrakt', () => {
           alt: 'satt',
           twitter: 'summary_large_image',
         });
+
+        // 9. Hver adresse klyngen annonserer svarer DET SAMME som siden selv
+        //    (#45). Invariant 3 over ser bare FORMEN — at åtte språk og
+        //    `x-default` STÅR der. Om adressene FINNES kan den per konstruksjon
+        //    ikke se, og det var nettopp hullet: hver lesedag annonserte sju
+        //    404-er, og `x-default` — adressen Google velger når ingen
+        //    språkvariant passer — pekte på en av dem.
+        //
+        //    Fiksen ble vaktet av tre HÅNDPLUKKEDE sider, så de 36 andre i
+        //    matrisen var aldri sjekket. Som sveip fanger den neste
+        //    innholdsslag som mangler et språk, uten at noen må huske saken.
+        //
+        //    Målt mot sidens EGEN status framfor mot 200: da holdes 404-siden
+        //    og 410-siden i matrisen til samme regel framfor å bli unntak, og
+        //    «annonser bare det som finnes» gjelder også dem.
+        const døde: string[] = [];
+        for (const alt of hreflangCluster(html)) {
+          const status = (await app.request(alt.path)).status;
+          if (status !== expectStatus) døde.push(`${alt.lang} → ${alt.path} (${status})`);
+        }
+        expect({ side: page.path, døde }).toEqual({ side: page.path, døde: [] });
       });
     }
   });
@@ -609,35 +638,20 @@ describe('sidekontrakt', () => {
   // ingen språkvariant passer, pekte på en av dem. Feilloggen i prod gikk fra
   // ~50 rader i timen til 1542, hvorav 1228 var nettopp disse.
   //
-  // Vakta sjekker det som faktisk er invarianten: hver annonserte URL svarer
-  // 200. Derfor fanger den også neste innholdsslag som mangler et språk, uten at
-  // noen må huske denne saken.
+  // SVEIPEN er invariant 9 over: hver side i matrisen, hver adresse klyngen
+  // annonserer. Her står bare det sveipen IKKE kan se — lesedagen, som per
+  // konstruksjon ikke kan ligge i `PAGES`: den 404-er under `/de/`, og det er
+  // hele poenget med saken.
   describe('hreflang peker bare på sider som svarer 200', () => {
-    /** Klyngen som HTML-en faktisk annonserer: hreflang → sti uten domenet. */
-    function cluster(html: string): { lang: string; path: string }[] {
-      return [...html.matchAll(/hreflang="([^"]+)" href="([^"]+)"/g)].map((m) => ({
-        lang: m[1]!,
-        path: m[2]!.replace(SITE, ''),
-      }));
-    }
-
     async function expectAllAlive(locale: string, path: string) {
       const { html } = await fetchPage(locale, path);
       const døde: string[] = [];
-      for (const alt of cluster(html)) {
+      for (const alt of hreflangCluster(html)) {
         const res = await app.request(alt.path);
         if (res.status !== 200) døde.push(`${alt.lang} → ${alt.path} (${res.status})`);
       }
       expect({ side: path, døde }).toEqual({ side: path, døde: [] });
     }
-
-    test('kapittelsiden — alle åtte finnes', async () => {
-      await expectAllAlive('de', '/1mos/1');
-    });
-
-    test('lesetekst-oversikten — 200 på alle åtte, også der lista er tom', async () => {
-      await expectAllAlive('de', '/lesetekster');
-    });
 
     test('lesedagen oppgir BARE nb + nn, og x-default peker dit', async () => {
       // Datoen hentes fra basen framfor å hardkodes: settet importeres på nytt
@@ -649,7 +663,7 @@ describe('sidekontrakt', () => {
       const { res, html } = await fetchPage('nb', `/lesetekster/${date}`);
       expect(res.status).toBe(200);
 
-      const klynge = cluster(html);
+      const klynge = hreflangCluster(html);
       expect(klynge.map((a) => a.lang)).toEqual(['nb', 'nn', 'x-default']);
       // x-default må ligge INNENFOR settet — engelsk er 404 for denne siden.
       expect(klynge.find((a) => a.lang === 'x-default')!.path).toBe(`/nb/lesetekster/${date}`);
