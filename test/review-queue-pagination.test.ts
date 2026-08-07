@@ -42,7 +42,11 @@ let server: ReturnType<typeof Bun.serve>;
 let base: string;
 const slugs: string[] = [];
 
-const ROOT = new URL('..', import.meta.url).pathname;
+// `.pathname` er PROSENTKODET (#80, én etasje ned): i et arbeidstre under
+// `trær/` blir katalogen `tr%C3%A6r`, som ikke finnes — og `Bun.spawn` melder
+// da ENOENT på «bun», ikke på cwd-en som mangler. Hele filen ble rød uansett
+// hva branchen endret, altså samme merge-port som #85.
+const ROOT = Bun.fileURLToPath(new URL('..', import.meta.url));
 
 /** Kommandoen slik den står i REVIEW.md — eget program, ekte HTTP. */
 async function cli(...args: string[]): Promise<{ code: number; out: string; err: string }> {
