@@ -1087,6 +1087,59 @@ med jevne mellomrom gjennom en INJISERT leser (`setContentVersionReader`, satt i
 selv når versjonen endres. Feiler spørringen, BEHOLDES cachen: den er det eneste
 som fortsatt kan svare.
 
+### En byge kommer fra ÉN aktør — og den kan være nåbar (#86)
+
+60 × 503 i vaktvinduet 2026-08-07, og **alle 60 lå innenfor 32,7 sekunder** av
+11,4 timer. Det er ikke et utfall, det er én byge, og hver avvisning tok
+nøyaktig 3,00 s (= `RENDER_QUEUE_WAIT_MS`) — lastvernet gjorde altså jobben
+sin. PerplexityBot sto for 92 av 117 ankomster i bygen og 47 av de 60
+avvisningene, med toppfart målt til **7 req/s** fra sju sammenhengende
+adresser. Over hele vinduet er den 1,1 % av volumet: den er ikke stor, den er
+rask, og med taket på 6 holder én slik aktør til å fylle semaforen alene.
+
+- **Håndtaket er `Crawl-delay` i robots.txt, og det koster null kollateral.**
+  Aktøren henter fila og gikk 0 av 204 ganger mot en `Disallow`-sti — vi hadde
+  bare aldri BEDT den om noe: robots.txt hadde ingen agent-seksjon i det hele
+  tatt. Det er motsatt av den udeklarerte farmen (`flogvit-com-server#12`),
+  der 1 213 IP-er og roterende Chrome-UA-er gjør at ingen signatur når fram og
+  eneste håndtak er et `/16`-område med uttalt kollateral. **Blokkering er
+  ikke foreslått**: aktøren gjør ingenting galt, den er bare raskere enn én
+  delt vCPU tåler.
+- **En navngitt gruppe ERSTATTER `*` (RFC 9309 §2.2.1) — den arver
+  ingenting.** Det er fella, og den er stille: en `User-agent:
+  PerplexityBot`-seksjon med bare en `Crawl-delay` ville opphevet alle
+  `Disallow`-ene fra #60 for nettopp den crawleren som går fortest, altså
+  åpnet 498 672 adresser samtidig som fila ser mer forsiktig ut. `group()` i
+  `seo.ts` gjentar derfor forbudene i hver seksjon, og `CRAWL_DELAYS` er
+  kartet — en ny aktør arver forbudene gratis.
+- **Tallet er en fart, ikke pynt.** `Crawl-delay: 2` = 0,5 req/s, under en
+  tredel av de 1,8 req/s `#19` målte at velter siden, så de øvrige aktørene
+  deler resten. Heltall: desimaler tolkes ulikt fra crawler til crawler.
+- **Ikke i `*`-gruppa.** En generell brems treffer Applebot og SERanking (som
+  ikke er problemet), bommer på Amazonbot og farmen (som ikke leser fila) og
+  ignoreres av Googlebot uansett — `Crawl-delay` står ikke i RFC 9309 og er en
+  anmodning, ikke en garanti. Håndtaket er verdt noe nettopp fordi det er rettet
+  mot en aktør som beviselig leser og følger fila.
+- **Neste håndtak ligger i et ANNET repo.** En UA-basert rate-limit i Caddy
+  (`flogvit-com-server`, mønsteret `@metacrawl` alt bruker på
+  `meta-externalagent`) er dyrere og koster synlighet i Perplexitys svar. Måles
+  bygen på nytt og `bygesum sekunder` fortsatt er > 0, står det valget igjen —
+  og det er Vegards, ikke vaktens.
+- **Ikke lukk saken på at volumet falt.** 85 % av forespørslene kan forsvinne
+  uten at ett eneste bygesekund gjør det (`flogvit-com-server#13`).
+  Nullmålingen å sammenlikne mot er `bygesum 26 60 100 18 18.0 27 7`.
+- **Vakta er `test/crawl-delay.test.ts`**, og halvdelene er formulert på hva en
+  crawler FÅR LOV TIL, ikke på linjene i fila. REGELEN (ren logikk: en seksjon
+  med bare `Crawl-delay` åpner det `*` stengte — halvdelen finnes for å bevise
+  at matcheren ser fella). AKTØREN (bygeaktøren er navngitt, med produkt-tokenet
+  slik det står i den målte User-Agent-strengen; «Perplexity» matcher ingen
+  gruppe og er en stille no-op). FORBUDENE (hver navngitt seksjon stenger alt
+  `*` stenger, og ingen sitemap-URL er forbudt for den — begge veier, ellers
+  ville «`Disallow: /` for den ene» bestått). FARTEN (delayen finnes, er et
+  heltall og gir høyst 0,5 req/s). `test/robots.ts` ble gruppebevisst i samme
+  slengen: `parseRobots(txt, agent)` velger gruppe som RFC-en, `namedAgents()`
+  og `crawlDelayFor()` leser resten. Åtte mutasjoner kjørt.
+
 ### Taket verner RENDEREN — ikke alt som passerer middlewaren (#64)
 
 `withPageCache` er montert på `*`, så `/robots.txt` sto bak semaforen som alle
@@ -1293,6 +1346,14 @@ getSql()` øverst i en testfil tar vare på instansen som fantes ved import;
 `closeSql()` i en HELT ANNEN testfil nuller den ut, og den første fila feiler da
 med «Connection closed» — i to filer som ikke har med saken å gjøre. Bruk
 `getSql()` inne i hver test/hook, og la de filene som allerede lukker, lukke.
+
+**En test som starter et EGET PROGRAM må DEKODE stien til repoet.**
+`new URL('..', import.meta.url).pathname` er prosentkodet — samme
+representasjonsfelle som #80, én etasje ned. Arbeidstrærne bor under
+`.flogvit-orkester/trær/`, så cwd-en blir `tr%C3%A6r`, som ikke finnes, og
+`Bun.spawn` melder da **ENOENT på «bun»** framfor på katalogen som mangler.
+Utslaget er merge-porten: begge CLI-vaktene feilet komplett i ethvert
+arbeidstre uansett hva branchen endret (som #85). Bruk `Bun.fileURLToPath()`.
 
 **En DB-testfil oppgir taket sitt selv: `setDefaultTimeout(DB_TEST_TIMEOUT_MS)`
 (#74).** Buns standard er 5000 ms, og det tallet er valgt for en test som enten
