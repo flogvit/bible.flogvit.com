@@ -6,6 +6,7 @@
 import { Hono } from 'hono';
 import type { AppEnv } from '../../lib/session.ts';
 import { PERSON_ID_ALIASES, normalizedPersonId } from '../../lib/person-id-aliases.ts';
+import { resolveId } from '../../lib/canonical-id.ts';
 import { Layout } from '../../views/layout.tsx';
 import { Breadcrumbs } from '../../views/breadcrumbs.tsx';
 import { InlineRefs } from '../../views/inline-refs.tsx';
@@ -13,7 +14,9 @@ import { ItemTagging } from '../../views/item-tagging.tsx';
 import { KeyEventList } from '../../views/verse-display.tsx';
 import {
   getAllPersonsData,
+  getPersonByName,
   getPersonData,
+  parsePersonContent,
   getBookById,
   getBookUrlSlug,
   type PersonData,
@@ -157,13 +160,19 @@ r.get('/personer/:personId', async (c) => {
   const t = tFor(c);
   const requested = c.req.param('personId');
 
-  // Rettede id-er 301-er til den nye adressen (free-bible#25). Oppslaget kommer
-  // FØRST: en gammel id finnes ikke i basen lenger, så uten dette ville den
-  // falt til notFound() og bokmerket vært dødt.
-  const alias = PERSON_ID_ALIASES[requested];
-  if (alias) return c.redirect(lhref(`/personer/${alias}`), 301);
+  // Rettede id-er 301-er til den nye adressen (free-bible#25), og en skrivemåte
+  // basen godtok uten at den ER id-en 301-er til radens egen (#49). Begge
+  // ligger i `resolveId`, som slår kartet opp på den FOLDEDE nøkkelen: uten det
+  // svarte basen case-insensitivt mens kartet svarte case-sensitivt, og en
+  // versal alias-id 404-et der en versal vanlig id ga 200.
+  const resolved = await resolveId(requested, {
+    aliases: PERSON_ID_ALIASES,
+    lookup: (id) => getPersonByName(id),
+    idOf: (row) => row.name,
+  });
+  if (resolved.kind === 'redirect') return c.redirect(lhref(`/personer/${resolved.to}`), 301);
 
-  const person = await getPersonData(requested);
+  const person = resolved.kind === 'found' ? parsePersonContent(resolved.row.content) : null;
   if (!person) {
     // Samme regel som over API-et: en adresse med et ordrett ø/æ/å fører til
     // personen den staver, når den translittererte id-en finnes EKSAKT.
