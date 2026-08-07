@@ -496,6 +496,37 @@ crawler trenger ingen lenke når `<link rel="alternate">` sier at siden finnes.
   Klyngen er uendret av det — hreflang skal peke på adressen som ER siden, ikke
   på en som viser videre til den.
 
+#### Detaljsidene er der klyngen KAN lyve (#45)
+
+Invariant 9 sveiper `PAGES`, og `PAGES` er parameterløse sider. **Sidene saken
+handlet om kan per konstruksjon ikke ligge der:** matrisen rendres under `/de/`,
+og en side som ikke finnes på tysk er nettopp den som ikke svarer 200 der.
+Sveipen dekket altså alt UNNTATT klassen defekten tilhørte, og lesedagen sto
+igjen som ÉN håndplukket test — den ene adressen noen visste om.
+
+- **Vakta er `test/hreflang-detail-pages.test.ts`, og invarianten går BEGGE
+  veier:** klyngen er nøyaktig de locale-ene adressen svarer 200 på. Bare den
+  ene retningen ville bestått av å oppgi én locale på hver side — det tar sju
+  ekte adresser ut av søk, altså den motsatte skaden av samme slag.
+- **Sidene velges av DATAENE** (som #70 og #80): for hver innholdstype måles
+  oppføringen med SMALEST språkakse (`COUNT(DISTINCT language)` stigende), altså
+  den som først blir en lesedag om igjen. En hardkodet `/personer/abaddon` ville
+  målt en person som finnes på alle språk, altså ingenting — og en ny
+  innholdsrunde flytter målingen selv. Sveipen er grønn overalt i dag: ingen
+  enkeltrad i noen innholdstabell mangler et språk de andre har.
+- **Den strukturelle halvdelen leser RUTENE**, ikke en liste: hver
+  parameteriserte siderute må enten måles eller stå i `IKKE_MÅLT` med en grunn,
+  og en oppføring som ikke lenger er en rute er rød. `sitemap-coverage.test.ts`
+  trekker grensa si ved de parameterløse rutene og sier at detaljsidene «er en
+  egen beslutning som fortjener sitt eget svar» — dette er det svaret.
+- **En adresse som ikke svarer 200 på NOEN locale gir rødt**, ikke en stille
+  bestått test. En tom tabell eller en omlagt rute ville ellers gjort halvdelen
+  til pynt.
+- Seks mutasjoner kjørt: `locales` fjernet fra lesedagen (klyngen for bred),
+  klyngen for smal (`['nb']`, altså `nn` skjult), `x-default` valgt utenfor
+  settet, en uklassifisert detaljrute, en død oppføring i kartet, og en
+  måladresse som ikke finnes.
+
 #### Norsk-spesifikt innhold skal ikke bli en blindvei på de sju andre (#76)
 
 `reading_texts` ligger bare på `nb`, og det er riktig (#26). Men leseren møtte
