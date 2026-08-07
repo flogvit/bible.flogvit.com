@@ -1166,6 +1166,36 @@ rask, og med taket på 6 holder én slik aktør til å fylle semaforen alene.
 - **Ikke lukk saken på at volumet falt.** 85 % av forespørslene kan forsvinne
   uten at ett eneste bygesekund gjør det (`flogvit-com-server#13`).
   Nullmålingen å sammenlikne mot er `bygesum 26 60 100 18 18.0 27 7`.
+- **UMÅLT ER IKKE GRØNT — og det er ikke en formalitet her.** Fiksen er ute
+  (deploy-tagg `20260807-070417-3eb0735`, containeren oppe 2026-08-07T07:05:15Z),
+  men aktøren har ikke vært innom siden: 0 forespørsler, 0 × 503. Begge
+  robots.txt-hentingene i loggvinduet (02:34:09Z og 06:34:09Z) ligger FØR
+  utrullingen, så de 7 req/s er målt før vi ba den senke farten og sier
+  ingenting om etterlevelse. Den henter fila hver fjerde time; første ærlige
+  måling kan tidligst gjøres etter neste henting.
+- **Verifiseringen må kreve at aktøren ER SETT etter utrullingen.** Feltet i
+  saken (`grep PerplexityBot | grep -c '"status":503'` over hele
+  `access.log`) tar feil begge veier: det leser den samme loggen som fortsatt
+  bærer bygen fra FØR fiksen (svarte 47 kl. 09:06Z, uansett hvor godt fiksen
+  virker), og i det øyeblikket loggen roterer forbi 05:51Z blir det **grønt av
+  stillhet** — en aktør som ikke har vært innom har heller ingen 503-er. Målingen
+  er derfor tidsavgrenset til utrullingen, og `sett=0` gir exit 1:
+
+  ```sh
+  ssh flogvit-vm 'docker exec server-caddy-1 sh -c "cat /var/log/caddy/access.log"' \
+   | LC_ALL=C awk -v fra=1786086316 '
+     /PerplexityBot/ {
+       match($0,/"ts":[0-9.]+/); t=substr($0,RSTART+5,RLENGTH-5)+0
+       if (t < fra) next
+       sett++; if ($0 ~ /"status":503/) avvist++
+     }
+     END { print "sett=" sett+0, "503=" avvist+0; exit !(sett>0 && avvist==0) }'
+  ```
+
+  `fra` er utrullingen. Kommandoen krever VM-tilgang og ligger bak
+  prod-grensen — den er for etterkontrollen eller for et menneske, aldri for
+  smia. Er svaret `sett>0` og `503>0`, ignorerer aktøren anmodningen, og da er
+  det håndtak 2 over som står igjen.
 - **Vakta er `test/crawl-delay.test.ts`**, og halvdelene er formulert på hva en
   crawler FÅR LOV TIL, ikke på linjene i fila. REGELEN (ren logikk: en seksjon
   med bare `Crawl-delay` åpner det `*` stengte — halvdelen finnes for å bevise
