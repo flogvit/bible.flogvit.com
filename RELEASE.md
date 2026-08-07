@@ -3,6 +3,19 @@
 What actually reached readers, newest first. Dates, not version numbers — we
 deploy continuously.
 
+## 2026-08-07 — Shared links show their card, and busy moments answer quickly
+
+**Polish**
+
+- A link to a chapter or verse now brings its preview card along wherever you paste it. The card image is served from object storage, so the social network or chat app fetching it gets a picture instead of an empty box.
+
+**Bug fixes**
+
+- When the site is under load, a page request now either renders or comes back quickly, instead of sitting in a queue long past the point where your browser has given up. The line of waiting requests is no longer allowed to grow longer than the number of pages that can actually be rendered at once, and a free slot goes to the freshest request rather than to one whose reader left minutes ago.
+
+**Behind the scenes**
+
+- Preview cards are uploaded by a script that names the storage project it is writing to and reports plainly when the bucket is missing; new tests cover both the upload path and the render queue, and the runbook now records how a card reaches the bucket, why the render cap alone did not produce fast rejections, and that a crawler fix does not count as verified until it has been measured.
 ## 2026-08-07 — Heavy crawlers asked to slow down, so reading stays fast
 
 **Polish**
