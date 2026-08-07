@@ -54,19 +54,45 @@ beforeAll(async () => {
  * Er alt komplett (som i dag), er svaret vilkårlig og målingen er en vakt mot
  * det neste tilfellet; blir én person liggende igjen på bare `nb` etter en
  * import, er det NØYAKTIG den sida som måles.
+ *
+ * **Spørringen står SKREVET UT per rute, ikke satt sammen av et tabell- og et
+ * kolonnenavn.** Et identifikatornavn kan ikke være en parameter, så et
+ * variabelt tabellnavn måtte vært flettet inn i en rå spørringsstreng — og da
+ * er «den faste lista» uansett dette kartet. Her ER kartet lista, og hver
+ * spørring er en literal sql-tagg uten et eneste innsatt tegn.
  */
-const SMALEST_FØRST: Record<string, { sti: (nøkkel: string) => string; tabell: string; nøkkel: string }> = {
-  '/personer/:personId': { sti: (k) => `/personer/${k}`, tabell: 'persons', nøkkel: 'name' },
-  '/temaer/:tema': { sti: (k) => `/temaer/${k}`, tabell: 'themes', nøkkel: 'name' },
-  '/historier/:slug': { sti: (k) => `/historier/${k}`, tabell: 'stories', nøkkel: 'slug' },
-  '/tall/:number': { sti: (k) => `/tall/${k}`, tabell: 'number_symbolism', nøkkel: 'number' },
-  '/dager/:dayId': { sti: (k) => `/dager/${k}`, tabell: 'days', nøkkel: 'id' },
+const SMALEST_FØRST: Record<string, { sti: (nøkkel: string) => string; smalest: () => PromiseLike<unknown> }> = {
+  '/personer/:personId': {
+    sti: (k) => `/personer/${k}`,
+    smalest: () =>
+      getSql()`SELECT name k FROM persons GROUP BY name ORDER BY COUNT(DISTINCT language) ASC, name ASC LIMIT 1`,
+  },
+  '/temaer/:tema': {
+    sti: (k) => `/temaer/${k}`,
+    smalest: () =>
+      getSql()`SELECT name k FROM themes GROUP BY name ORDER BY COUNT(DISTINCT language) ASC, name ASC LIMIT 1`,
+  },
+  '/historier/:slug': {
+    sti: (k) => `/historier/${k}`,
+    smalest: () =>
+      getSql()`SELECT slug k FROM stories GROUP BY slug ORDER BY COUNT(DISTINCT language) ASC, slug ASC LIMIT 1`,
+  },
+  '/tall/:number': {
+    sti: (k) => `/tall/${k}`,
+    smalest: () =>
+      getSql()`SELECT number k FROM number_symbolism GROUP BY number ORDER BY COUNT(DISTINCT language) ASC, number ASC LIMIT 1`,
+  },
+  '/dager/:dayId': {
+    sti: (k) => `/dager/${k}`,
+    smalest: () =>
+      getSql()`SELECT id k FROM days GROUP BY id ORDER BY COUNT(DISTINCT language) ASC, id ASC LIMIT 1`,
+  },
   // Lesedagen — sakens egen side. Datoen er adressen (#40), og settet importeres
   // på nytt ved hver innholdsoppdatering, så den hentes ut av basen som resten.
   '/lesetekster/:date{[0-9]{4}-[0-9]{2}-[0-9]{2}}': {
     sti: (k) => `/lesetekster/${k}`,
-    tabell: 'reading_texts',
-    nøkkel: 'date',
+    smalest: () =>
+      getSql()`SELECT date k FROM reading_texts GROUP BY date ORDER BY COUNT(DISTINCT language) ASC, date ASC LIMIT 1`,
   },
 };
 
@@ -114,11 +140,8 @@ function detaljruter(): string[] {
 async function måltAdresse(rute: string): Promise<string> {
   const fast = FAST_ADRESSE[rute];
   if (fast) return fast;
-  const { sti, tabell, nøkkel } = SMALEST_FØRST[rute]!;
-  const sql = getSql();
-  const rader = (await sql.unsafe(
-    `SELECT ${nøkkel} k FROM ${tabell} GROUP BY ${nøkkel} ORDER BY COUNT(DISTINCT language) ASC, ${nøkkel} ASC LIMIT 1`,
-  )) as { k: string }[];
+  const { sti, smalest } = SMALEST_FØRST[rute]!;
+  const rader = (await smalest()) as { k: string }[];
   expect({ rute, rader: rader.length }).toEqual({ rute, rader: 1 });
   return sti(String(rader[0]!.k));
 }
