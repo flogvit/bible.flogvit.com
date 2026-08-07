@@ -23,13 +23,16 @@ const toRegExp = (pattern: string): RegExp => {
   return new RegExp(`^${escaped}${anchored ? '$' : ''}`);
 };
 
-/**
- * Reglene som gjelder `User-agent: *`. Andre grupper er uinteressante her:
- * vaktene spør hva en vilkårlig crawler får lov til, ikke hva en navngitt får.
- */
-export function parseRobots(txt: string): (url: string) => boolean {
-  const rules: Rule[] = [];
-  let inStarGroup = false;
+/** Én gruppe: sammenhengende `User-agent`-linjer, og reglene som følger dem. */
+export interface RobotsGroup {
+  agents: string[];
+  rules: Rule[];
+  crawlDelay?: number;
+}
+
+export function parseGroups(txt: string): RobotsGroup[] {
+  const groups: RobotsGroup[] = [];
+  let current: RobotsGroup | undefined;
   let seenRuleInGroup = false;
 
   for (const line of txt.split('\n')) {
@@ -42,18 +45,59 @@ export function parseRobots(txt: string): (url: string) => boolean {
     if (field === 'user-agent') {
       // En ny user-agent-linje etter en regel starter en NY gruppe;
       // sammenhengende user-agent-linjer deler gruppe.
-      if (seenRuleInGroup) {
-        inStarGroup = false;
+      if (!current || seenRuleInGroup) {
+        current = { agents: [], rules: [] };
+        groups.push(current);
         seenRuleInGroup = false;
       }
-      if (value === '*') inStarGroup = true;
+      if (value) current.agents.push(value);
       continue;
     }
-    if (field !== 'allow' && field !== 'disallow') continue;
-    seenRuleInGroup = true;
-    if (!inStarGroup || !value) continue;
-    rules.push({ allow: field === 'allow', pattern: value, re: toRegExp(value) });
+    if (!current) continue; // `Sitemap:` o.l. står utenfor gruppene
+    if (field === 'allow' || field === 'disallow') {
+      seenRuleInGroup = true;
+      if (!value) continue;
+      current.rules.push({ allow: field === 'allow', pattern: value, re: toRegExp(value) });
+      continue;
+    }
+    if (field === 'crawl-delay') {
+      seenRuleInGroup = true;
+      const n = Number(value);
+      if (Number.isFinite(n)) current.crawlDelay = n;
+    }
   }
+  return groups;
+}
+
+/**
+ * Gruppa en gitt crawler skal følge (RFC 9309 §2.2.1): den navngitte gruppa
+ * hvis produkt-tokenet står der, ELLERS `*` — og BARE den ene, aldri begge.
+ *
+ * Det er hele fella i #86: en `User-agent: PerplexityBot`-gruppe som bare
+ * bærer en `Crawl-delay` OPPHEVER `Disallow`-ene i `*` for nettopp den
+ * crawleren, altså åpner handlingsflata fra #60 for den som går fortest.
+ */
+export function groupFor(txt: string, agent = '*'): RobotsGroup | undefined {
+  const groups = parseGroups(txt);
+  const named = groups.find((g) => g.agents.some((a) => a.toLowerCase() === agent.toLowerCase()));
+  return named ?? groups.find((g) => g.agents.includes('*'));
+}
+
+/** Produkt-tokenene som har sin EGEN gruppe — alt annet enn `*`. */
+export function namedAgents(txt: string): string[] {
+  return [...new Set(parseGroups(txt).flatMap((g) => g.agents).filter((a) => a !== '*'))];
+}
+
+export function crawlDelayFor(txt: string, agent: string): number | undefined {
+  return groupFor(txt, agent)?.crawlDelay;
+}
+
+/**
+ * Sier robots.txt ja til denne URL-en for denne crawleren? Uten `agent` er
+ * spørsmålet hva en VILKÅRLIG crawler får lov til, altså `*`-gruppa.
+ */
+export function parseRobots(txt: string, agent = '*'): (url: string) => boolean {
+  const rules = groupFor(txt, agent)?.rules ?? [];
 
   return (url: string) => {
     // Matchingen går mot sti + query — det er `?vers=` som skiller en handling

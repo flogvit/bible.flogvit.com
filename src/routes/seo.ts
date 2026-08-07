@@ -68,12 +68,52 @@ const CRAWL_BLOCKED_PARAMS = ['vers', 'kap', 'bok', 'ref', 'bible', 'secondary',
 // Samme felle på den andre siden: `Disallow: /*manuskripter/ny` er prefiksmatch
 // og stenger `/manuskripter/nytt-liv-a1b2c3` — en publisert tekst i den åpne
 // katalogen (#15). Editoren holdes ute av `noindex`, ikke av robots.
-const ROBOTS = [
-  'User-agent: *',
-  'Allow: /',
+const DISALLOW = [
   ...CRAWL_BLOCKED_PARAMS.map((p) => `Disallow: /*?${p}=`),
   ...CRAWL_BLOCKED_PARAMS.map((p) => `Disallow: /*&${p}=`),
-  '',
+];
+
+/**
+ * Crawlere vi ber om å gå SAKTERE, og sekundene de skal vente mellom hver
+ * forespørsel (#86).
+ *
+ * 60 × 503 fra lastvernet i vaktvinduet 2026-08-07 — alle 60 innenfor 32,7
+ * sekunder, altså ÉN byge. PerplexityBot sto for 79 % av ankomstene i bygen og
+ * fikk 78 % av avvisningene, med toppfart målt til 7 req/s fra sju adresser.
+ * Over hele vinduet er den 1,1 % av volumet: den er ikke stor, den er rask, og
+ * med `RENDER_MAX_CONCURRENT` på 6 holder 7 req/s fra én aktør til å fylle
+ * semaforen alene.
+ *
+ * Den henter robots.txt og gikk 0 av 204 ganger mot en `Disallow`-sti — vi har
+ * bare aldri BEDT den om noe. Håndtaket koster derfor null kollateral: ingen
+ * IP-regel, ingen blokkering, ingen tapt synlighet. Motsatt av den udeklarerte
+ * farmen i flogvit-com-server#12, som aldri henter robots.txt og som ingen
+ * signatur når.
+ *
+ * `Crawl-delay` står ikke i RFC 9309 — den er en anmodning, ikke en garanti,
+ * og Google ignorerer den. Derfor er dette et håndtak mot en NAVNGITT aktør
+ * som viser at den leser fila, ikke en generell brems: en `Crawl-delay` i
+ * `*`-gruppa ville truffet Applebot og SERanking (som ikke er problemet),
+ * bommet på Amazonbot og farmen (som ikke leser fila), og blitt ignorert av
+ * den ene vi helst vil ha inn. Hjelper det ikke, er neste håndtak en
+ * UA-basert rate-limit i Caddy (flogvit-com-server) — et dyrere valg, og et
+ * som koster synlighet.
+ */
+const CRAWL_DELAYS: Record<string, number> = { PerplexityBot: 2 };
+
+/**
+ * En navngitt gruppe ERSTATTER `*`-gruppa for den crawleren (RFC 9309
+ * §2.2.1) — den arver ingenting. Forbudene må derfor GJENTAS i hver seksjon:
+ * en `User-agent: PerplexityBot`-seksjon med bare en `Crawl-delay` ville åpnet
+ * hele handlingsflata fra #60 for nettopp den som går fortest, og robots.txt
+ * ville sett mer forsiktig ut mens flata ble større. `test/crawl-delay.test.ts`
+ * er vakta.
+ */
+const group = (agent: string, extra: string[] = []) => [`User-agent: ${agent}`, 'Allow: /', ...DISALLOW, ...extra, ''];
+
+const ROBOTS = [
+  ...group('*'),
+  ...Object.entries(CRAWL_DELAYS).flatMap(([agent, delay]) => group(agent, [`Crawl-delay: ${delay}`])),
   `Sitemap: ${absoluteUrl('/sitemap.xml')}`,
   '',
 ].join('\n');
