@@ -20,7 +20,7 @@
 //     som er hele poenget (#60 forbyr HANDLINGS-URL-er, ikke dette).
 
 import { readFileSync } from 'node:fs';
-import { Hono } from 'hono';
+import { Hono, type Context } from 'hono';
 import { isLocale } from '../lib/i18n.ts';
 import { bookByCardSlug, renderChapterCard } from '../lib/og-card.ts';
 
@@ -40,10 +40,33 @@ function remember(key: string, png: Uint8Array): Uint8Array {
   return png;
 }
 
+/**
+ * Svaret til en klient som ALT har kuttet adressen (#84).
+ *
+ * Å gjøre kortstien ASCII-ren hindrer NYE kutt. Den hindrer ikke de avkortede
+ * formene som allerede ligger i skrapernes indeks — 18 målte i saken — og de
+ * blir hentet igjen. Saken sier hva som er galt med svaret de fikk:
+ * «Skraperen får `text/html` der den ventet en PNG.»
+ *
+ * Så under `/og/` svarer vi aldri som en side: ingen HTML-kropp, og ingen
+ * omvei. `/og/<språk>/` har ikke lenger et filsegment, falt derfor ut av
+ * kortruta og videre i locale-forhandlingen — `302 /en/og/fr/` → `301
+ * /en/og/fr` → `404` — altså to hopp for et bilde som ikke finnes, der det
+ * siste er en adresse i SIDE-navnerommet som ikke fantes før vi fant den opp.
+ * Det er klassen #46 og #60 stenger: vi lager ikke døde adresser til en
+ * crawler.
+ *
+ * Prisen er dessuten en RENDER-PLASS. `NOT_A_PAGE` (#64) kjenner en fil på
+ * punktumet, og en avkortet kortadresse har ikke lenger noe punktum — så den
+ * sto i køen bak semaforen og rendret en HTML-side ingen skraper leser, i
+ * nøyaktig det øyeblikket kapasiteten er knapp (#19, #86).
+ */
+const avkortet = (c: Context) => c.body(null, 404);
+
 ogRoutes.get('/og/:locale/:file', async (c) => {
   const { locale, file } = c.req.param();
   const match = /^(.+)-(\d+)\.png$/.exec(file);
-  if (!isLocale(locale) || !match) return c.notFound();
+  if (!isLocale(locale) || !match) return avkortet(c);
 
   // BEGGE formene av bokleddet: den ASCII-rene vi publiserer nå (#84), og den
   // prosentkodede som ligger i delte lenker og skrapernes indeks fra før.
@@ -52,7 +75,7 @@ ogRoutes.get('/og/:locale/:file', async (c) => {
   // Et kapittel som ikke finnes skal ikke få et kort som lover en side: da
   // ville en delt lenke til en 404 sett riktig ut i forhåndsvisningen.
   // `books-data.ts` er ÉNE sannheten om kapittelantall (#46, bifunn).
-  if (!book || chapter < 1 || chapter > book.chapters) return c.notFound();
+  if (!book || chapter < 1 || chapter > book.chapters) return avkortet(c);
 
   const key = `${locale}/${book.id}-${chapter}`;
   const png = cache.get(key) ?? remember(key, renderChapterCard(book.id, chapter, locale) ?? generic());
@@ -63,6 +86,12 @@ ogRoutes.get('/og/:locale/:file', async (c) => {
     ETag: `"${Bun.hash(png).toString(16)}"`,
   });
 });
+
+// Alt annet under `/og/` — også `/og/<språk>` og `/og/<språk>/`, som ikke har
+// noe filsegment igjen å matche på. Den står SIST, så en hel adresse fortsatt
+// vinner; den er ikke en mur, den er enden på et kutt.
+ogRoutes.all('/og', avkortet);
+ogRoutes.all('/og/*', avkortet);
 
 /**
  * Nødutgangen: mangler malen en bokstav, eller er artefaktene ikke med i
