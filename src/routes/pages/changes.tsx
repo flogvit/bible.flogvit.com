@@ -91,17 +91,52 @@ export function parseReleaseNotes(markdown: string): Entry[] {
  * `**fet**` og `*kursiv*` inne i et punkt. Uten dette rendres stjernene
  * bokstavelig — «links to *your* chapter» sto med stjerner på sida.
  */
+/**
+ * En bokstav som blir NEVNT, ikke brukt, er SITERT NORSK.
+ *
+ * Loggen er engelsk, men den beskriver et produkt der norske bokstaver i
+ * adresser er en tilbakevendende sak (#46, #61, #80, #84). En ærlig post om dem
+ * må kunne skrive hvilken bokstav det gjelder — «Links to people with æ, ø or å
+ * in their names» — og norsk-vakta (invariant 2) leser hvert slikt token som
+ * norsk tekst på `/en/`. Deployen sto derfor stille: testporten er merge- og
+ * deploy-porten, og fire kort lå bak den. Se #88.
+ *
+ * `NORDIC_PROPER` er feil sted — den er for EGENNAVN, og `æ` er ikke et
+ * egennavn. Riktig mekanisme er repoets egen, dokumentert i CLAUDE.md: unntaket
+ * uttrykkes I HTML-EN, ikke i testen, med `lang="nb"` for sitert norsk.
+ *
+ * REGELEN ER TOKENET, IKKE TEGNET. Bare en bokstav som står ALENE — omgitt av
+ * ikke-bokstaver — merkes. Et norsk ORD har flere bokstaver og fanges som før,
+ * så vakta er like sterk mot det den finnes for. Merk at `å` også ER et norsk
+ * ord (infinitivsmerket); i en engelsk setning står det aldri alene som ord, og
+ * en glemt oversettelse ville uansett dratt med seg ordene rundt.
+ */
+export function namedLetterParts(text: string): unknown[] {
+  const out: unknown[] = [];
+  const re = /(?<!\p{L})([æøåÆØÅ])(?!\p{L})/gu;
+  let last = 0;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(text))) {
+    if (m.index > last) out.push(text.slice(last, m.index));
+    out.push(<span lang="nb">{m[1]}</span>);
+    last = re.lastIndex;
+  }
+  if (last < text.length) out.push(text.slice(last));
+  return out;
+}
+
 function Inline({ text }: { text: string }) {
   const parts: unknown[] = [];
   let last = 0;
   const re = /\*\*([^*]+)\*\*|\*([^*]+)\*/g;
   let m: RegExpExecArray | null;
   while ((m = re.exec(text))) {
-    if (m.index > last) parts.push(text.slice(last, m.index));
-    parts.push(m[1] ? <strong>{m[1]}</strong> : <em>{m[2]}</em>);
+    if (m.index > last) parts.push(...namedLetterParts(text.slice(last, m.index)));
+    const inner = namedLetterParts(m[1] ?? m[2] ?? '') as never;
+    parts.push(m[1] ? <strong>{inner}</strong> : <em>{inner}</em>);
     last = re.lastIndex;
   }
-  if (last < text.length) parts.push(text.slice(last));
+  if (last < text.length) parts.push(...namedLetterParts(text.slice(last)));
   return <>{parts as never}</>;
 }
 
@@ -156,7 +191,7 @@ r.get('/changes', async (c) => {
                 <article class="changes-entry">
                   <header class="changes-entry-head">
                     <time class="changes-date" datetime={entry.date}>{formatDate(entry.date)}</time>
-                    <h2 lang="en">{entry.title}</h2>
+                    <h2 lang="en">{namedLetterParts(entry.title) as never}</h2>
                   </header>
                   {entry.sections.map((section) => (
                     <section class="changes-section">

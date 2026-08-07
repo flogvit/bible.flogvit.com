@@ -3,6 +3,13 @@
 What actually reached readers, newest first. Dates, not version numbers — we
 deploy continuously.
 
+## 2026-08-07 — Links to people with æ, ø or å in their names now lead somewhere
+
+**Bug fixes**
+- Following a link to a person whose name contains æ, ø or å now opens that person's page instead of a dead end.
+
+**Behind the scenes**
+- Internal notes and the changelog were brought up to date.
 ## 2026-08-07 — Addresses with Norwegian letters lead to the person, not a dead end
 
 **Bug fixes**
