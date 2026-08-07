@@ -108,3 +108,28 @@ export function normalizePersonId(id: string): string {
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '');
 }
+
+/**
+ * Adressen en person-id skal PRØVES som når den ikke slår opp — eller `null`
+ * når det ikke finnes noen annen form å prøve.
+ *
+ * `PERSON_ID_ALIASES` over er et ENDELIG kart over 68 håndverifiserte former.
+ * Det dekker ikke klassen saken er meldt på: en adresse som bærer et ordrett
+ * `ø`/`æ`/`å` der basen har den translittererte id-en
+ * (`jisreel-hoseas-sønn` → `jisreel-hoseas-sonn`, `johannes-døperen` →
+ * `johannes-doperen`). De adressene er publisert — `.no` lenker dem fra 1184 av
+ * sine personsider, og `johannes-døperen` er dessuten formen et menneske
+ * skriver — så de skal 301-e, ikke 404-e. Samme argument kartet selv står på.
+ *
+ * `null` når id-en alt er kanonisk: uten det ville hvert oppslag hatt en
+ * kandidat å prøve, og «finnes ikke» blitt en runde til mot basen for ingenting.
+ *
+ * **Den gjetter aldri.** Kandidaten er én deterministisk omstaving, og kalleren
+ * skal kreve et EKSAKT treff i `persons` før den sender leseren dit — samme
+ * krav `personResolverFrom()` stiller i ryddingen. `josef` normaliserer til seg
+ * selv, og blir derfor aldri til en av de elleve `josef-*`.
+ */
+export function normalizedPersonId(id: string): string | null {
+  const normalized = normalizePersonId(id);
+  return normalized !== '' && normalized !== id ? normalized : null;
+}

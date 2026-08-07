@@ -5,7 +5,7 @@ import {
   getPersonsByEra,
   getPersonsByRole,
 } from '../../lib/bible.ts';
-import { PERSON_ID_ALIASES } from '../../lib/person-id-aliases.ts';
+import { PERSON_ID_ALIASES, normalizedPersonId } from '../../lib/person-id-aliases.ts';
 import { NO_CACHE } from './util.ts';
 
 const r = new Hono();
@@ -48,7 +48,18 @@ r.get('/:id', async (c) => {
 
   try {
     const person = await getPersonData(requested);
-    if (!person) return c.json({ error: 'Person not found' }, 404);
+    if (!person) {
+      // Adressen kan bære et ordrett ø/æ/å der basen har den translittererte
+      // id-en (`jisreel-hoseas-sønn` → `jisreel-hoseas-sonn`) — sakens egen
+      // overskrift. Kandidaten krever et EKSAKT treff, så vi sender aldri
+      // leseren til en 404 og gjetter aldri på hvem hen mente.
+      const normalized = normalizedPersonId(requested);
+      if (normalized && (await getPersonData(normalized))) {
+        const query = new URL(c.req.url).search;
+        return c.redirect(`/api/persons/${normalized}${query}`, 301);
+      }
+      return c.json({ error: 'Person not found' }, 404);
+    }
     return c.json(person, 200, NO_CACHE);
   } catch (error) {
     console.error('Error fetching person:', error);

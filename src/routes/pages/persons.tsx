@@ -5,7 +5,7 @@
 
 import { Hono } from 'hono';
 import type { AppEnv } from '../../lib/session.ts';
-import { PERSON_ID_ALIASES } from '../../lib/person-id-aliases.ts';
+import { PERSON_ID_ALIASES, normalizedPersonId } from '../../lib/person-id-aliases.ts';
 import { Layout } from '../../views/layout.tsx';
 import { Breadcrumbs } from '../../views/breadcrumbs.tsx';
 import { InlineRefs } from '../../views/inline-refs.tsx';
@@ -164,7 +164,17 @@ r.get('/personer/:personId', async (c) => {
   if (alias) return c.redirect(lhref(`/personer/${alias}`), 301);
 
   const person = await getPersonData(requested);
-  if (!person) return c.notFound();
+  if (!person) {
+    // Samme regel som over API-et: en adresse med et ordrett ø/æ/å fører til
+    // personen den staver, når den translittererte id-en finnes EKSAKT.
+    // `johannes-døperen` er ikke en gammel maskinskrevet id — det er formen et
+    // menneske skriver inn.
+    const normalized = normalizedPersonId(requested);
+    if (normalized && (await getPersonData(normalized))) {
+      return c.redirect(lhref(`/personer/${normalized}`), 301);
+    }
+    return c.notFound();
+  }
 
   async function lookup(
     id: string | null | undefined,
