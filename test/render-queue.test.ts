@@ -55,7 +55,10 @@ function buildGatedApp() {
 }
 
 /** Åpner porter til alle påbegynte render er ferdige, så ingen plass blir stående. */
-async function drain(gates: Array<() => void>, pending: Array<Promise<Response>>): Promise<void> {
+async function drain(
+  gates: Array<() => void>,
+  pending: Array<Response | Promise<Response>>,
+): Promise<void> {
   while (pending.length) {
     while (gates.length) gates.shift()!();
     await pending.shift();

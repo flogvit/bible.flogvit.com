@@ -1068,7 +1068,8 @@ ut av `/og/`-ruta og videre i locale-forhandlingen til 404.
 `src/lib/page-cache.ts` er både mikrocache OG lastavvisning (#4, #14): anonyme
 GET-HTML-sider caches, og render over semafor-taket får utløpt cache-innhold
 (stale) eller 503 + `Retry-After: 30` etter kort kø. Innloggede går alltid
-utenom. Env: `RENDER_MAX_CONCURRENT` (6), `RENDER_QUEUE_WAIT_MS` (3000),
+utenom. Env: `RENDER_MAX_CONCURRENT` (6), `RENDER_QUEUE_MAX` (samme tall som
+taket), `RENDER_QUEUE_WAIT_MS` (3000),
 `PAGE_CACHE_TTL_MS` (1 time), `PAGE_CACHE_VERSION_CHECK_MS` (30 s) og
 `DB_POOL_MAX` (default 5 — sett den etter hva databasen din tåler; en for liten
 pool var nettopp det som ga 502 under samtidighet).
@@ -1078,6 +1079,43 @@ render på én delt vCPU betyr at hver enkelt tar 24× så lang tid: natt til
 2026-07-29 svarte vanlige kapittelsider på 8–29 sekunder mens semaforen «holdt».
 Riktig utfall under overlast er raske 503-er til noen få, ikke 20-sekunders svar
 til alle. Standarden er derfor lav og skal MÅLES, ikke gjettes oppover.
+
+### Men taket alene ga ikke raske 503-er — det gjorde KØEN (#19)
+
+Med taket nede på 6 i prod ble episoden 2026-08-05 målt på nytt: bare **2**
+forespørsler fikk 503, altså det taket ble bedt om. Men **12 fikk 3–9 sekunder**,
+og begge 503-ene kom etter nøyaktig **3,003 s** — som er `RENDER_QUEUE_WAIT_MS`.
+«Raske 503-er til noen få» var hele poenget, og det var ikke det som skjedde. Å
+senke taket videre flytter grensen, det fjerner den ikke: mekanismen sitter i
+køen bak semaforen, ikke i tallet foran den.
+
+- **Køen er like lang som taket** (`RENDER_QUEUE_MAX`, default =
+  `RENDER_MAX_CONCURRENT`). Uten en lengde er den et løfte vi ikke kan holde:
+  over taket VET vi med en gang at vi ikke kan betjene alle, og brukte likevel
+  opp hele fristen før vi sa nei. Er køen full, svarer forespørselen straks —
+  stale om vi har en utløpt kopi, ellers 503. Verst var nettopp stale-veien: en
+  kopi vi hadde liggende i minnet ble holdt tilbake i tre sekunder mens leseren
+  ventet på å få høre at vi var opptatt.
+- **Lengden er ikke et nytt gjettet tall.** Står du bakerst i en kø som er
+  lengre enn taket, rekker du uansett ikke fram innen fristen når rendrene er
+  trege — da er plassen i køen bare ventetid med et nei i enden. Senkes taket,
+  følger køen med.
+- **Plassen går til den FERSKESTE, ikke til den som har ventet lengst.** FIFO ga
+  den ledige plassen til den som var nærmest å gi opp, og la dermed køtiden oppå
+  rendertiden for alle — det er den formen de 12 svarene på 3–9 s har. Antallet
+  vi rekker å betjene er det samme uansett rekkefølge; det er fordelingen av
+  ventetid som endres, og under overlast er det den som er problemet. Er det
+  ikke overlast, er køen tom eller én lang, og de to rekkefølgene er samme sak.
+- **Vakta er `test/render-queue.test.ts`, formulert på TIDEN og på HVEM som blir
+  betjent** — ikke på tallene i konfigurasjonen, så en fiks som løser det på en
+  annen måte består like gjerne. Fire halvdeler: et nei kommer straks framfor
+  etter fristen, en stale kopi vi HAR holdes ikke tilbake, køen slipper fortsatt
+  til når en plass blir ledig (ellers ville «avvis alt» bestått de to første), og
+  den ferskeste får plassen. Fire mutasjoner kjørt (ubegrenset kø, `shift()`
+  framfor `pop()`, ingen kø i det hele tatt, kølengde løsrevet fra taket).
+- **Ikke gjort:** `RENDER_QUEUE_WAIT_MS` er urørt. Med en begrenset kø er den et
+  tak på hvor lenge noen kan vente forgjeves, ikke lenger prisen alle betaler —
+  og å flytte den uten en ny måling ville vært et gjett.
 
 **TTL-en er en time, med invalidering på innholdsversjon.** Innholdet endres bare
 ved import, og en crawler går gjennom samme URL flere ganger i timen (5289
