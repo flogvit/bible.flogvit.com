@@ -350,10 +350,15 @@ export function chapterCardText(bookId: number, chapter: number, locale: Locale)
  * forhåndsvisning FOR GODT — en skraper prøver bare én gang. Er det ingen `%`
  * der, har klienten ingenting å kutte ved.
  *
- * **Dette gjelder BARE kortstien.** Sidas egen adresse (`/nb/2krøn/8`) er
- * menneskelesbar, og der er `ø` et bevisst valg som ikke skal translittereres
- * bort — den 404-er heller ikke. Kortstien leses av en maskin, aldri av en
- * leser, så den kan betale den prisen sida ikke skal betale.
+ * **Dette gjelder BARE kortstien — men ikke fordi sidas egen adresse går
+ * fri.** Den kuttes av samme klient på nøyaktig samme sted (`GET /de/2kr` av
+ * `/de/2krøn/26`, Amazonbot 2026-08-06T12:32Z), bare ~120 ganger sjeldnere:
+ * 0,038 % av 2638 hentinger mot 4,6 % av 366 på kortstien, målt over 98 timer
+ * mot de samme fire bøkene. Forskjellen er at det ikke finnes noen ASCII-form
+ * å bytte til der — `ø`-en ER adressen, og den leses av et menneske. Å skrive
+ * den om er en avgjørelse om adresseskjemaet, ikke en feilretting, og den
+ * bæres ikke av 0,038 %. Kortstien leses av en maskin, aldri av en leser, så
+ * den kan betale en pris sida ikke skal betale.
  *
  * Translittereringen er porteføljens egen (`normalizePersonId`, #61, som er
  * free-bibles `nameToId`): `æ`→`ae`, `ø`→`o`, `å`→`a`. Å finne på en ny

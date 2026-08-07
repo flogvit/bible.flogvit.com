@@ -1171,11 +1171,19 @@ ut av `/og/`-ruta og videre i locale-forhandlingen til 404.
   `hoys`, `ap`. Regelen er porteføljens egen (`normalizePersonId`, #61, altså
   free-bibles `nameToId`): `æ`→`ae`, `ø`→`o`, `å`→`a`. En ny omskriving her
   ville vært en tredje stavemåte for de samme bøkene.
-- **Bare KORTSTIEN.** Sidas egen adresse (`/nb/2krøn/8`) er menneskelesbar, og
-  der er `ø` et bevisst valg som ikke skal translittereres bort — den 404-er
-  heller ikke. #80s krav om at den kodede adressen DEKODER tilbake til sidas
-  egen sti står derfor uendret for canonical og hreflang; kortstien er unntaket,
-  og den leses av en maskin, aldri av en leser.
+- **Bare KORTSTIEN — men ikke fordi sidas egen adresse går fri.** Den kuttes av
+  samme klient på nøyaktig samme sted (`GET /de/2kr` av `/de/2krøn/26`,
+  Amazonbot 2026-08-06T12:32Z), bare ~120 ganger sjeldnere: 0,038 % av 2638
+  hentinger mot 4,6 % av 366 på kortstien, målt over 98 timer mot de samme fire
+  bøkene. Forskjellen er at det ikke finnes noen ASCII-form å bytte til der —
+  `ø`-en ER adressen, og den leses av et menneske. Å skrive den om er en
+  avgjørelse om adresseskjemaet, ikke en feilretting, og den bæres ikke av
+  0,038 %. #80s krav om at den kodede adressen DEKODER tilbake til sidas egen
+  sti står derfor uendret for canonical og hreflang; kortstien er unntaket, og
+  den leses av en maskin, aldri av en leser. **Innholdsformen har sin egen
+  katalog-linje** (`flogvit-com-server@f9a5a01`, terskel 5 ≈ 500× dagens nivå),
+  og den skal BLI STÅENDE når søsterlinja under fjernes — ellers mister nettopp
+  den formen fiksen ikke rører all dekning i samme slengen.
 - **Ruta tar imot BEGGE formene.** Den prosentkodede ligger i delte lenker og i
   skrapernes indeks fra før, og en delt lenke lever lenger enn en deploy.
   `bookByCardSlug()` prøver kortslugen først og faller tilbake på
@@ -1201,6 +1209,33 @@ ut av `/og/`-ruta og videre i locale-forhandlingen til 404.
   framfor å translitterere den (`åp` → `p`) — og det er riktig: den formen er
   fortsatt ASCII-ren, entydig og peker på samme bok, altså ikke defekten. Er
   den derimot en annen boks slug eller en annen boks kortslug, er den rød.
+
+##### Og en AVKORTET adresse skal ikke svares som en side (#84, andre halvdel)
+
+En ASCII-ren sti hindrer NYE kutt. Den hindrer ikke de 18 avkortede formene som
+alt ligger i skrapernes indeks, og de blir hentet igjen. Saken sier selv hva som
+er galt med svaret de fikk: «Skraperen får `text/html` der den ventet en PNG.»
+
+- **`/og/<språk>/` hadde ikke lenger et filsegment**, falt derfor ut av kortruta
+  og videre i locale-forhandlingen: `302 /en/og/fr/` → `301 /en/og/fr` → `404`.
+  To hopp for et bilde som ikke finnes, der det siste er en adresse i
+  SIDE-navnerommet som ikke fantes før vi fant den opp — nøyaktig klassen #46 og
+  #60 stenger.
+- **Prisen var en RENDER-PLASS.** `NOT_A_PAGE` (#64) kjenner en fil på
+  punktumet, og et kutt fjerner nettopp punktumet. En avkortet kortadresse sto
+  dermed i køen bak semaforen og rendret en HTML-side ingen skraper leser, i det
+  øyeblikket kapasiteten er knapp (#19, #86).
+- **Under `/og/` svares det aldri som en side:** ingen HTML-kropp, ingen omvei.
+  `avkortet()` i `routes/og.ts` er ett svar for alle tre stedene — ugyldig
+  språk/filnavn, ukjent bok/kapittel, og catch-allen. **Catch-allen står SIST**,
+  så en hel adresse fortsatt vinner; den er enden på et kutt, ikke en mur.
+- **Vakta ligger i samme fil og er formulert på ADRESSEN, ikke på de fire målte
+  formene:** ingen PREFIKS av en publisert kortadresse — i begge formene, for
+  hver bok og hvert språk — får redirecte eller svare med HTML. En egen halvdel
+  holder de fire målte formene ordrett, og en tredje krever at den HELE adressen
+  fortsatt leverer kortet, ellers ville «404 på alt under `/og/`» bestått. Fire
+  mutasjoner kjørt (ingen catch-all, `c.notFound()` tilbake i kortruta,
+  catch-all FØRST, og en smal fiks som bare tar `/og/<språk>`).
 
 ## Lastvern (anonyme sidevisninger)
 
