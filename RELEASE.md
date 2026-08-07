@@ -3,6 +3,16 @@
 What actually reached readers, newest first. Dates, not version numbers — we
 deploy continuously.
 
+## 2026-08-07 — Share cards that read correctly, and an honest answer for cut-off links
+
+**Polish**
+- Share previews now show titles the way they are actually written — accents and non-Latin letters included — instead of being flattened to plain ASCII on the way into the card.
+
+**Bug fixes**
+- A card address that arrives cut short — clipped by a chat app, an email client or a stray copy — now answers plainly that there is nothing there, instead of serving a card for a page that does not exist.
+
+**Behind the scenes**
+- Language-link coverage is now checked on real detail pages chosen from the content itself, and the internal runbook records where that coverage can look right while being wrong.
 ## 2026-08-07 — Shared links show their card, and busy moments answer quickly
 
 **Polish**
