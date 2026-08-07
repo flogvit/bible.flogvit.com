@@ -3,6 +3,13 @@
 What actually reached readers, newest first. Dates, not version numbers — we
 deploy continuously.
 
+## 2026-08-07 — Addresses with Norwegian letters lead to the person, not a dead end
+
+**Bug fixes**
+- Links to people whose names contain ø, æ or å now open that person's page instead of a "not found" error. Old bookmarks, links shared with you, hand-typed addresses and search-engine results all land where you expect, whichever spelling of the name the address uses.
+
+**Behind the scenes**
+- Person identifiers now resolve through an alias layer covered by a regression suite, and the rule for how a tidied-up link relates to its address is written down so the two cannot drift apart again.
 ## 2026-08-07 — Share cards that read correctly, and an honest answer for cut-off links
 
 **Polish**
