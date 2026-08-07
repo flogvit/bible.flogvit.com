@@ -68,23 +68,37 @@ setDefaultTimeout(DB_TEST_TIMEOUT_MS);
 const app = createApp();
 const db = () => getSql();
 
+/** En rad slik de to spørringene under gir den: id-en, uansett hva kolonnen heter. */
+type IdRow = { id: string };
+
 /**
  * De to flatene saken gjelder. `historier` har ingen alias-tabell — der finnes
  * bare duplikatene — men kollasjonen er den samme, og fiksen skal ligge et sted
  * begge deler.
+ *
+ * Flata bærer SPØRRINGENE sine, ikke tabell- og kolonnenavnet. Et navn i et
+ * felt måtte vært flettet inn i en rå streng for å bli en spørring, og et
+ * identifikatorledd kan ikke være en parameter — da er «den faste lista» uansett
+ * dette kartet, og her ER kartet lista: hver spørring er en literal `sql`-tagg
+ * der bare VERDIEN er satt inn, og den som parameter. Samme grep som
+ * `hreflang-detail-pages.test.ts` bruker for samme grunn.
  */
 const SURFACES = [
   {
     name: 'personer',
-    table: 'persons',
-    column: 'name',
+    /** Alle id-ene på flata, i en fast orden, så utvalget under er determinsitisk. */
+    ids: () => db()`SELECT name AS id FROM persons WHERE language = 'nb' ORDER BY name` as Promise<IdRow[]>,
+    /** Svarer basen på DENNE skrivemåten? Kollasjonen avgjør, ikke vi. */
+    matches: (spelling: string) =>
+      db()`SELECT name AS id FROM persons WHERE name = ${spelling} AND language = 'nb' LIMIT 1` as Promise<IdRow[]>,
     page: (id: string) => `/personer/${id}`,
     api: (id: string) => `/api/persons/${id}`,
   },
   {
     name: 'historier',
-    table: 'stories',
-    column: 'slug',
+    ids: () => db()`SELECT slug AS id FROM stories WHERE language = 'nb' ORDER BY slug` as Promise<IdRow[]>,
+    matches: (spelling: string) =>
+      db()`SELECT slug AS id FROM stories WHERE slug = ${spelling} AND language = 'nb' LIMIT 1` as Promise<IdRow[]>,
     page: (id: string) => `/historier/${id}`,
     api: (id: string) => `/api/stories/${id}`,
   },
@@ -127,10 +141,7 @@ beforeAll(async () => {
   await initBooks();
 
   for (const surface of SURFACES) {
-    const rows = (await db().unsafe(
-      `SELECT ${surface.column} AS id FROM ${surface.table} WHERE language = 'nb' ORDER BY ${surface.column}`,
-    )) as { id: string }[];
-    const ids = [...new Set(rows.map((r) => r.id))];
+    const ids = [...new Set((await surface.ids()).map((r) => r.id))];
     if (ids.length === 0) continue;
 
     const step = Math.max(1, Math.floor(ids.length / SAMPLE));
@@ -140,10 +151,7 @@ beforeAll(async () => {
       for (const spelling of spellings(canonical)) {
         // Bare skrivemåter basen FAKTISK svarer på. En variant kollasjonen
         // avviser er ikke et duplikat, og skal fortsatt 404-e.
-        const hit = (await db().unsafe(
-          `SELECT ${surface.column} AS id FROM ${surface.table} WHERE ${surface.column} = ? AND language = 'nb' LIMIT 1`,
-          [spelling],
-        )) as { id: string }[];
+        const hit = await surface.matches(spelling);
         if (hit[0]?.id === canonical) duplicates.push({ surface, canonical, spelling });
       }
     }
