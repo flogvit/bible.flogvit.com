@@ -326,6 +326,55 @@ tettest personlenkede sidene vi har.
 > merket `beslutning` sammen med søskensakene #48 og #49. **Lukk den ikke fra
 > en commit på `main`.**
 
+#### Ryddingen rettet PEKERNE — adressene var alt delt ut (#61)
+
+Sveipen over eier dataene våre, og prod-vakten målte dem rene 2026-08-04: 0 døde
+mål i 2029 personer på `.com`. Sakens EGEN overskrift sto likevel igjen, målt
+på `.com` og ikke på `.no`:
+
+```
+GET /api/persons/jisreel-hoseas-s%C3%B8nn   404
+GET /api/persons/jisreel-hoseas-sonn        200
+```
+
+`prunePersonRefs()` retter pekerne VÅRE. Den kan ikke røre en adresse som alt er
+publisert — og de er publisert: `.no` lenker dem fra 1184 av sine 1771
+personsider, de ligger i søkeindeksene, og `johannes-døperen` er dessuten formen
+et menneske SKRIVER inn.
+
+- **Saken stilte spørsmålet, og dataene svarer.** «Avklar om ø/æ/å i person-id er
+  ment å finnes i det hele tatt» → nei: ingen av de 4058 radene i `persons` har
+  et tegn utenfor `[a-z0-9-]`, og free-bibles `nameToId` translittererer nå før
+  NFD. Da er feilen i OPPSLAGET for det som alt er delt ut, og svaret er **301,
+  ikke 404** — ordrett samme argument `PERSON_ID_ALIASES` selv står på.
+- **`PERSON_ID_ALIASES` kunne ikke dekke det.** Kartet er ENDELIG (68
+  håndverifiserte former fra free-bible#25) og skal aldri vokse. Klassen her er
+  ikke en gammel id, men den samme id-en stavet med bokstaven i behold, og den
+  er utledbar — 95 adresser i dagens base.
+- **`normalizedPersonId()` er kandidaten, ikke svaret.** Kalleren krever et
+  EKSAKT treff i `persons` før den sender leseren videre, samme krav
+  `personResolverFrom()` stiller i ryddingen. Uten det ville en 301 kunne peke på
+  en 404. Og den gjetter aldri: `josef` normaliserer til seg selv, så de elleve
+  `josef-*` er fortsatt ingen av dem — #61s egen avgjørelse, uendret.
+- **Begge personflatene, som sist.** `/personer/:personId` og
+  `/api/persons/:id`. At kartet lå på bare den ene var nettopp defekten «samme
+  adresse, samme app, to svar»; en ny regel på bare den ene ville vært den
+  samme feilen gjort på nytt.
+- **Vakta er `test/person-id-normalized.test.ts`, og adressene velges av
+  DATAENE** (som #70, #80 og #84): for hver person bygges formen kilden ville
+  gitt UTEN translitterering — visningsnavnet med æ/ø/å i behold — og bare der
+  den normaliserer tilbake til nettopp denne personen. Fire halvdeler: REGELEN
+  (ren logikk, og ingen kandidat for en id som alt er kanonisk), DATA (ingen av
+  de 95 404-er, og måladressen svarer faktisk 200 — en 301 til en 404 er ingen
+  fiks), FLATENE (sida og API-et gir samme svar, med locale og `?lang=` i
+  behold) og GJETTER ALDRI. Seks mutasjoner kjørt. Den ene som er verdt å nevne
+  er å STRIPPE `ø` framfor å translitterere den: den blir rød, fordi DATA måler
+  at adressen fører til den RIKTIGE personen — samme innvending #84 reiste.
+- **Dette flytter fortsatt ikke `.no`.** Symptomet saken er meldt på lever på
+  `bibel.flogvit.no`, som serveres fra `bibel-no`. Men det flytter hva en 301
+  fra `.no` til `.com` ville vært verdt: av de 1120 døde id-ene vakten talte,
+  var 11 slike som bare manglet translittereringen.
+
 ### En innholdstabell hvis KILDE er borte skal ikke bli stående (#58)
 
 Samme klasse som #46 og #61, men én etasje opp: der handler det om en ADRESSE
