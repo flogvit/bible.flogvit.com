@@ -56,10 +56,12 @@ function remember(key: string, png: Uint8Array): Uint8Array {
  * Det er klassen #46 og #60 stenger: vi lager ikke døde adresser til en
  * crawler.
  *
- * Prisen er dessuten en RENDER-PLASS. `NOT_A_PAGE` (#64) kjenner en fil på
- * punktumet, og en avkortet kortadresse har ikke lenger noe punktum — så den
- * sto i køen bak semaforen og rendret en HTML-side ingen skraper leser, i
- * nøyaktig det øyeblikket kapasiteten er knapp (#19, #86).
+ * Prisen var dessuten en HEL SSR-RENDER. `NOT_A_PAGE` (#64) kjenner en fil på
+ * punktumet, og et kutt fjerner nettopp punktumet — så en avkortet
+ * kortadresse gikk gjennom lastvernet og rendret 404-SIDA, i nøyaktig det
+ * øyeblikket kapasiteten er knapp (#19, #86). Den står fortsatt bak semaforen
+ * (`NOT_A_PAGE` er et FILNAVN, ikke en liste over ruter, og det skillet er
+ * #64s med vilje), men plassen holdes nå i mikrosekunder framfor en render.
  */
 const avkortet = (c: Context) => c.body(null, 404);
 
