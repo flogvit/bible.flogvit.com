@@ -375,6 +375,57 @@ et menneske SKRIVER inn.
   fra `.no` til `.com` ville vært verdt: av de 1120 døde id-ene vakten talte,
   var 11 slike som bare manglet translittereringen.
 
+#### En RAD-ID delt ut som om den var en adresse (#61)
+
+Sakens tabell har tre former, ikke én. Persongrafen og ø/æ/å-adressene er tatt
+over. Den tredje er `/api/reading-texts/165` fra `/lesetekster/165` — en
+auto_increment-id delt ut som en adresse. #40 tok den formen ut av URL-ene
+våre; den sto igjen i API-svarene, og der var den fortsatt på `.com`:
+
+```
+GET /api/stories              -> [{ "id": 6453, "slug": "abimelek-…", … }]
+GET /api/stories/6453         -> 404      (adressen er `slug`)
+GET /api/themes/70            -> 404      (adressen er `name`)
+GET /api/number-symbolism/351 -> 404      (adressen er `number`)
+```
+
+- **Tre ruter gjorde `SELECT *`** og sendte raden ut som den lå, mens
+  `/api/persons`, `/api/days`, `/api/reading-plans` og `/api/parallels` i samme
+  API deler ut nettopp adressen som `id`. Samme felt, to betydninger — og en
+  klient som gjør det åpenbare (`GET /api/<samling>/<element.id>`) får 404 på
+  hvert eneste element.
+- **Verre enn 404: id-en RENUMMERERES ved hver innholdsimport** (#40 — importen
+  sletter og setter inn på nytt), så en klient som lagret den peker på en annen
+  historie etter neste innholdsrunde. En død adresse er synlig; en som stille
+  bytter innhold er ikke det.
+- **`src/lib/api-ids.ts` eier samlingene og regelen.** `API_COLLECTIONS` er ett
+  sted, brukt både av rutene og av vakta — hadde hver rute hatt sin egen
+  literal, ville vakta målt at ruta er enig med seg selv. `withApiId()` KASTER
+  når raden mangler adressefeltet: stille ville den blitt til `id: undefined`,
+  altså den samme døde adressen uten et tall å kjenne den igjen på.
+- **Rad-id-en blir ikke liggende ved siden av adressen.** Den finnes bare i vår
+  egen base, den er ustabil, og en klient som ser to id-lignende felter velger
+  før eller siden feil.
+- **To samlinger er deklarert med et NOTAT framfor en endring.**
+  `/api/parallels` deler også ut `sections[].id`, men det er en
+  grupperingsnøkkel (`parallels[].section_id`) uten detaljrute — ingen adresse.
+  `/api/reading-texts` beholder rad-id-en fordi flere lesetekster kan dele dato
+  (#40), så datoen adresserer DAGEN og ikke raden; `date` ligger i lista ved
+  siden av, og at rad-id-en er ustabil er #40s sak.
+- **Vakta er `test/api-id-graph.test.ts`, formulert på KONTRAKTEN og ikke på de
+  tre samlingene.** Fem halvdeler: REGELEN (ren logikk; en udeklarert samling
+  kaster framfor å gjette), FORMEN (leser RUTETABELLEN — hver rute med både
+  liste og bar detaljrute må være deklarert eller stå i `UNADDRESSED_ROUTES`
+  med en grunn, og en deklarasjon uten rute er rød), DATA (hver eneste
+  oppføring bærer adressen som `id`, og et data-valgt utvalg hentes faktisk og
+  gir RIKTIG oppføring — bare status hadde bestått av «server hva som helst»),
+  DETALJEN (detaljsvarets egen id svarer selv 200) og GRAFEN (hver person-id
+  API-et deler ut i `family`/`relatedPersons` finnes i API-ets egen indeks —
+  sakens eget bevis, målt på flata framfor i basen som `person-refs`). Utvalget
+  velges av DATAENE: formene som ikke er en ren `[a-z0-9-]`-slug, pluss begge
+  ender av lista. Sju mutasjoner kjørt.
+- **Dette flytter fortsatt ikke `.no`**, av samme grunn som avsnittet over.
+
 ### En innholdstabell hvis KILDE er borte skal ikke bli stående (#58)
 
 Samme klasse som #46 og #61, men én etasje opp: der handler det om en ADRESSE
