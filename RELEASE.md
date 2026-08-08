@@ -3,6 +3,13 @@
 What actually reached readers, newest first. Dates, not version numbers — we
 deploy continuously.
 
+## 2026-08-08 — Every id the API hands out is an address the API answers
+
+**Bug fixes**
+- An id you read out of a list from the API now fetches that same entry back. Stories, themes and number symbolism were handing out an internal row number where the address belonged, so a story the list had just described came back as "not found" the moment you asked for it by the id the list gave you. Worse than the dead end: those row numbers are reassigned every time content is imported, so an id stored in your app last month could quietly have started pointing at a different story. The id is now the address itself — the story's slug, the theme's name, the number — and it survives the next import.
+
+**Behind the scenes**
+- The API's collections are now described in one place that both the routes and a new test read, so a collection added later has to say how it is addressed before it can ship. The test walks every id a list returns, fetches it, and checks the right entry comes back — and the rule behind it, that a row id is not an address, is written down for whoever touches the API next.
 ## 2026-08-07 — Links with æ, ø and å now lead to the person, not a 404
 
 **Bug fixes**
