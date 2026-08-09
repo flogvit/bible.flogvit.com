@@ -29,6 +29,8 @@ import {
 } from '../../lib/bible.ts';
 import { getBookInfoById, bookName } from '../../lib/books-data.ts';
 import { toUrlSlug } from '../../lib/url-utils.ts';
+// @ts-expect-error — delt klient-modul uten typer (formen bor ett sted, se #91)
+import { verseHash } from '../../../public/js/verse-hash.js';
 import { layoutProps, tFor, lhref, currentIntlTag, tEnum, type Translator } from '../../lib/i18n.ts';
 import { tCtx } from '../../lib/i18n.ts';
 
@@ -324,9 +326,9 @@ r.get('/tall/:number', async (c) => {
     return c.notFound();
   }
 
-  function refUrl(ref: { bookId: number; chapterId: number; fromVerseId: number }): string {
+  function refUrl(ref: { bookId: number; chapterId: number; fromVerseId: number; toVerseId: number }): string {
     const book = getBookInfoById(ref.bookId);
-    return `/${book ? toUrlSlug(book.short_name) : ''}/${ref.chapterId}#v${ref.fromVerseId}`;
+    return `/${book ? toUrlSlug(book.short_name) : ''}/${ref.chapterId}${verseHash(ref.fromVerseId, ref.toVerseId)}`;
   }
   function refLabel(ref: { bookId: number; chapterId: number; fromVerseId: number; toVerseId: number }): string {
     const book = getBookInfoById(ref.bookId);
@@ -470,7 +472,7 @@ r.get('/dager/:dayId', async (c) => {
 
   function refUrl(ref: DayReference): string {
     const book = getBookInfoById(ref.bookId);
-    return `/${book ? toUrlSlug(book.short_name) : ''}/${ref.chapterId}#v${ref.fromVerseId}`;
+    return `/${book ? toUrlSlug(book.short_name) : ''}/${ref.chapterId}${verseHash(ref.fromVerseId, ref.toVerseId)}`;
   }
   function refLabel(ref: DayReference): string {
     const book = getBookInfoById(ref.bookId);

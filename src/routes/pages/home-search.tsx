@@ -35,6 +35,8 @@ import {
   booksData, getBookInfoById, bookName, bookNameById, bookNameByShort, bookAbbrById, type BookInfo,
 } from '../../lib/books-data.ts';
 import { toUrlSlug } from '../../lib/url-utils.ts';
+// @ts-expect-error — delt klient-modul uten typer (formen bor ett sted, se #91)
+import { verseHash } from '../../../public/js/verse-hash.js';
 import { layoutProps, tFor, type Translator, lhref, islandStrings, tEnum } from '../../lib/i18n.ts';
 import { tCtx } from '../../lib/i18n.ts';
 
@@ -114,7 +116,7 @@ function dayRefLabel(ref: DayReference): string {
 
 function dayRefUrl(ref: DayReference): string {
   const book = getBookInfoById(ref.bookId);
-  return `/${book ? toUrlSlug(book.short_name) : ''}/${ref.chapterId}#v${ref.fromVerseId}`;
+  return `/${book ? toUrlSlug(book.short_name) : ''}/${ref.chapterId}${verseHash(ref.fromVerseId, ref.toVerseId)}`;
 }
 
 /** Kompakt referanse for en lesetekst-del: «Jer 1:17-19». */
@@ -126,7 +128,7 @@ function rangeLabel(range: VerseRange): string {
 
 function rangeUrl(range: VerseRange): string {
   const book = getBookInfoById(range.book_id);
-  return `/${book ? toUrlSlug(book.short_name) : ''}/${range.chapter}#v${range.verse_start}`;
+  return `/${book ? toUrlSlug(book.short_name) : ''}/${range.chapter}${verseHash(range.verse_start, range.verse_end)}`;
 }
 
 /** Strengene forside-øya bygger DOM med. Serveren oversetter, øya substituerer. */
@@ -185,7 +187,7 @@ r.get('/', async (c) => {
                   </div>
                   <div class="home-vod-foot">
                     <div class="home-vod-ref">
-                      <a href={lhref(`/${toUrlSlug(verse.shortName)}/${verse.chapter}#v${verse.verseStart}`)}>
+                      <a href={lhref(`/${toUrlSlug(verse.shortName)}/${verse.chapter}${verseHash(verse.verseStart, verse.verseEnd)}`)}>
                         {bookNameByShort(verse.shortName)} {verse.chapter}:{verseRange}
                       </a>
                       {verse.note && <span class="home-vod-note"> · {verse.note}</span>}

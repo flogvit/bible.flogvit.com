@@ -25,6 +25,8 @@ import { VerseView } from '../../views/verse-display.tsx';
 import { booksData, getBookInfoBySlug, getBookInfoById, bookName, bookNameById, bookAbbr, bookAbbrById } from '../../lib/books-data.ts';
 import type { BookInfo } from '../../lib/books-data.ts';
 import { toUrlSlug } from '../../lib/url-utils.ts';
+// @ts-expect-error — delt klient-modul uten typer (formen bor ett sted, se #91)
+import { verseHash } from '../../../public/js/verse-hash.js';
 import { parseStandardRef, refSegmentToUrl } from '../../lib/standard-ref-parser.ts';
 import { parseVerseTemplate } from '../../lib/verse-template.ts';
 import { tCtx, tEnum } from '../../lib/i18n.ts';
@@ -678,7 +680,7 @@ const GOSPEL_COLORS: Record<Gospel, string> = {
 const BOOK_ID_TO_GOSPEL: Record<number, Gospel> = { 40: 'matthew', 41: 'mark', 42: 'luke', 43: 'john' };
 
 function passageUrl(passage: GospelParallelPassage): string {
-  return `/${toUrlSlug(passage.book_short_name || '')}/${passage.chapter}#v${passage.verse_start}`;
+  return `/${toUrlSlug(passage.book_short_name || '')}/${passage.chapter}${verseHash(passage.verse_start, passage.verse_end)}`;
 }
 
 async function GospelColumn({
@@ -991,7 +993,7 @@ function VerseDetailPanel({
             {data.references.length > 0 ? (
               data.references.map((ref) => (
                 <a
-                  href={lhref(`/${toUrlSlug(ref.book_short_name || '')}/${ref.to_chapter}#v${ref.to_verse_start}`)}
+                  href={lhref(`/${toUrlSlug(ref.book_short_name || '')}/${ref.to_chapter}${verseHash(ref.to_verse_start, ref.to_verse_end)}`)}
                   class="vd-reference"
                 >
                   <span class="vd-ref-link">{formatReference(ref)}</span>
@@ -1499,7 +1501,7 @@ function PanelTimeline({ t, events, bookId, chapter }: { t: Translator; events: 
                   ref.verse_start === ref.verse_end ? `${ref.verse_start}` : `${ref.verse_start}-${ref.verse_end}`;
                 return (
                   <a
-                    href={lhref(`/${toUrlSlug(ref.book_short_name || '')}/${ref.chapter}#v${ref.verse_start}`)}
+                    href={lhref(`/${toUrlSlug(ref.book_short_name || '')}/${ref.chapter}${verseHash(ref.verse_start, ref.verse_end)}`)}
                     class={`pt-ref-link ${isCurrent ? 'is-current' : ''}`}
                   >
                     {bookAbbrById(ref.book_id)} {ref.chapter}:{range}
@@ -2171,7 +2173,7 @@ r.get('/tekst', async (c) => {
                 const firstVerse = group.verses[0]?.verse.verse;
                 const lastVerse = group.verses[group.verses.length - 1]?.verse.verse;
                 const verseRange = firstVerse === lastVerse ? `${firstVerse}` : `${firstVerse}-${lastVerse}`;
-                const contextUrl = `/${toUrlSlug(group.bookShortName)}/${group.chapter}#v${firstVerse}`;
+                const contextUrl = `/${toUrlSlug(group.bookShortName)}/${group.chapter}${verseHash(firstVerse, lastVerse)}`;
                 return (
                   <div class="text-passage">
                     <div class="text-passage-header">

@@ -7,6 +7,8 @@
 import { getVersesWithOriginal, getBookUrlSlug, getBookById, defaultBibleForLanguage } from '../lib/bible.ts';
 import type { PersonKeyEvent, VerseRef, VerseWithOriginal } from '../lib/bible.ts';
 import { toUrlSlug } from '../lib/url-utils.ts';
+// @ts-expect-error — delt klient-modul uten typer (formen bor ett sted, se #91)
+import { verseHash } from '../../public/js/verse-hash.js';
 import { InlineRefs } from './inline-refs.tsx';
 import { Footnotes } from './footnotes.tsx';
 import { lhref } from '../lib/i18n.ts';
@@ -113,5 +115,6 @@ export function verseRefUrl(ref: VerseRef): string {
   const book = getBookById(ref.bookId);
   if (!book) return '#';
   const first = ref.verses?.[0] ?? ref.verse;
-  return `/${getBookUrlSlug(book)}/${ref.chapter}${first ? `#v${first}` : ''}`;
+  const last = ref.verses?.[ref.verses.length - 1] ?? ref.verse;
+  return `/${getBookUrlSlug(book)}/${ref.chapter}${first ? verseHash(first, last) : ''}`;
 }

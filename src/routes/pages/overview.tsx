@@ -36,6 +36,8 @@ import {
 import { GonePage } from './misc.tsx';
 import { enrichWithVerseText, readingTypeKey } from '../../lib/reading-text-enrich.ts';
 import { toUrlSlug } from '../../lib/url-utils.ts';
+// @ts-expect-error — delt klient-modul uten typer (formen bor ett sted, se #91)
+import { verseHash } from '../../../public/js/verse-hash.js';
 import { absoluteUrl } from '../../lib/site-url.ts';
 import { layoutProps, tFor, lhref, href, currentIntlTag, langName, scriptName, type Locale } from '../../lib/i18n.ts';
 import { tCtx, tEnum } from '../../lib/i18n.ts';
@@ -50,7 +52,7 @@ function toVerseRef(ref: ProphecyReference): VerseRef {
   return { bookId: ref.book_id, chapter: ref.chapter, verses };
 }
 function prophecyRefUrl(ref: ProphecyReference): string {
-  return `/${toUrlSlug(ref.book_short_name || '')}/${ref.chapter}#v${ref.verse_start}`;
+  return `/${toUrlSlug(ref.book_short_name || '')}/${ref.chapter}${verseHash(ref.verse_start, ref.verse_end)}`;
 }
 
 // ---------- /oversettelser/:id (info per oversettelse) ----------
@@ -748,7 +750,7 @@ r.get('/paralleller', async (c) => {
                           {passage ? (
                             <>
                               <a
-                                href={lhref(`/${toUrlSlug(passage.book_short_name || '')}/${passage.chapter}#v${passage.verse_start}`)}
+                                href={lhref(`/${toUrlSlug(passage.book_short_name || '')}/${passage.chapter}${verseHash(passage.verse_start, passage.verse_end)}`)}
                                 class="parallel-passage-ref"
                               >
                                 {passage.reference}
@@ -842,7 +844,7 @@ r.get('/tidslinje', async (c) => {
                         <div class="timeline-event-refs">
                           {e.references.map((ref) => (
                             <a
-                              href={lhref(`/${toUrlSlug(ref.book_short_name || '')}/${ref.chapter}#v${ref.verse_start}`)}
+                              href={lhref(`/${toUrlSlug(ref.book_short_name || '')}/${ref.chapter}${verseHash(ref.verse_start, ref.verse_end)}`)}
                               class="person-ref-chip"
                             >
                               {bookAbbrByShort(ref.book_short_name)} {ref.chapter}:{ref.verse_start}
