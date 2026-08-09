@@ -136,39 +136,107 @@ const MARKUP = '[ref:Jes 64,6b-65,2@dnb2024]';
 let seededId = 0;
 let heltId = 0;
 
-async function seedDefekten(): Promise<number> {
+/** Én lesningsrad, slik importen skriver den. */
+interface SeedRef {
+  slot: number;
+  tittel: string;
+  markup: string;
+  bookId: number;
+  chapter: number;
+  verseStart: number;
+  verseEnd: number | null;
+  sortOrder: number;
+}
+
+/**
+ * Seedingen går gjennom disse tre, og hver verdi står som en PARAMETER på egen
+ * linje. Ikke bare pynt: en spørring satt sammen med `${…}` inne i teksten kan
+ * ikke skilles fra en injeksjon utenfra av den som leser diffen, og det gjelder
+ * en testfil like mye som en rute — porten er formulert på formen, ikke på hvem
+ * som skrev den.
+ */
+async function slettLesedag(dato: string): Promise<void> {
   const sql = getSql();
-  await sql`DELETE FROM reading_texts WHERE date = ${DATO}`;
+  // Barna først: `reading_text_refs` har ingen FK, så en foreldreløs rad ville
+  // blitt liggende og forurenset sveipene over hele basen.
   await sql`
-    INSERT INTO reading_texts (date, name, series, language)
-    VALUES (${DATO}, ${'#92-vakt'}, ${'I'}, ${'nb'})
+    DELETE r
+    FROM reading_text_refs r
+    JOIN reading_texts t ON t.id = r.reading_text_id
+    WHERE t.date = ${dato}
+  `;
+  await sql`
+    DELETE
+    FROM reading_texts
+    WHERE date = ${dato}
+  `;
+}
+
+async function seedLesedag(dato: string, navn: string): Promise<number> {
+  const sql = getSql();
+  await slettLesedag(dato);
+  await sql`
+    INSERT INTO reading_texts
+      (date, name, series, language)
+    VALUES (
+      ${dato}, ${navn}, ${'I'}, ${'nb'}
+    )
   `;
   const [row] = (await sql`
-    SELECT id FROM reading_texts WHERE date = ${DATO} AND language = 'nb'
+    SELECT id
+    FROM reading_texts
+    WHERE date = ${dato}
+      AND language = ${'nb'}
   `) as unknown as { id: number }[];
-  const id = row!.id;
-  // Nøyaktig raden den gamle importen skrev: hele kapittelet, ett vers.
-  await sql`
-    INSERT INTO reading_text_refs (reading_text_id, slot_index, option_index, part_index, title, display_ref, book_id, chapter, verse_start, verse_end, part_start, part_end, sort_order)
-    VALUES (${id}, 0, 0, 0, ${'Kan du rolig se på dette, Herre?'}, ${MARKUP}, 23, 63, 1, ${null}, ${null}, ${null}, 0)
+  return row!.id;
+}
+
+async function seedRef(readingTextId: number, r: SeedRef): Promise<void> {
+  await getSql()`
+    INSERT INTO reading_text_refs
+      (reading_text_id, slot_index, option_index, part_index, title, display_ref,
+       book_id, chapter, verse_start, verse_end, part_start, part_end, sort_order)
+    VALUES (
+      ${readingTextId}, ${r.slot}, 0, 0, ${r.tittel}, ${r.markup},
+      ${r.bookId}, ${r.chapter}, ${r.verseStart}, ${r.verseEnd}, ${null}, ${null}, ${r.sortOrder}
+    )
   `;
+}
+
+async function seedDefekten(): Promise<number> {
+  const id = await seedLesedag(DATO, '#92-vakt');
+  // Nøyaktig raden den gamle importen skrev: hele kapittelet, ett vers.
+  await seedRef(id, {
+    slot: 0,
+    tittel: 'Kan du rolig se på dette, Herre?',
+    markup: MARKUP,
+    bookId: 23,
+    chapter: 63,
+    verseStart: 1,
+    verseEnd: null,
+    sortOrder: 0,
+  });
   // Og nabotilfellet, som står riktig og skal FORTSETTE å gjøre det: to
   // atskilte lesninger i samme del. En etikett som slo dem sammen ville lovet
   // «Rom 9,2-10,4», altså 28 vers vi ikke viser.
   for (const [i, r] of [[9, 2, 5], [10, 1, 4]].entries()) {
-    await sql`
-      INSERT INTO reading_text_refs (reading_text_id, slot_index, option_index, part_index, title, display_ref, book_id, chapter, verse_start, verse_end, part_start, part_end, sort_order)
-      VALUES (${id}, 1, 0, 0, ${'Guds gaver til Israel'}, ${`[ref:Rom ${r[0]},${r[1]}-${r[2]}@dnb2024]`}, 45, ${r[0]}, ${r[1]}, ${r[2]}, ${null}, ${null}, ${10 + i})
-    `;
+    await seedRef(id, {
+      slot: 1,
+      tittel: 'Guds gaver til Israel',
+      markup: `[ref:Rom ${r[0]},${r[1]}-${r[2]}@dnb2024]`,
+      bookId: 45,
+      chapter: r[0]!,
+      verseStart: r[1]!,
+      verseEnd: r[2]!,
+      sortOrder: 10 + i,
+    });
   }
   return id;
 }
 
 afterAll(async () => {
-  const sql = getSql();
-  if (seededId) await sql`DELETE FROM reading_text_refs WHERE reading_text_id = ${seededId}`;
-  if (heltId) await sql`DELETE FROM reading_text_refs WHERE reading_text_id = ${heltId}`;
-  await sql`DELETE FROM reading_texts WHERE date IN (${DATO}, ${DATO_HELT})`;
+  await slettLesedag(DATO);
+  await slettLesedag(DATO_HELT);
 });
 
 describe('REPARASJONEN: raden som alt ligger i basen rettes ved deploy', () => {
@@ -180,8 +248,11 @@ describe('REPARASJONEN: raden som alt ligger i basen rettes ved deploy', () => {
     expect(report.repaired.some((r) => r.displayRef === MARKUP)).toBe(true);
 
     const rows = (await sql`
-      SELECT chapter, verse_start, verse_end, part_start FROM reading_text_refs
-      WHERE reading_text_id = ${seededId} AND slot_index = 0 ORDER BY sort_order
+      SELECT chapter, verse_start, verse_end, part_start
+      FROM reading_text_refs
+      WHERE reading_text_id = ${seededId}
+        AND slot_index = 0
+      ORDER BY sort_order
     `) as unknown as { chapter: number; verse_start: number; verse_end: number | null; part_start: string | null }[];
     expect(rows.map((r) => [r.chapter, r.verse_start, r.verse_end, r.part_start])).toEqual([
       [64, 6, 11, 'b'],
@@ -194,20 +265,25 @@ describe('REPARASJONEN: raden som alt ligger i basen rettes ved deploy', () => {
     // regel som skrev om alt med `verse_end IS NULL` ville meldt den som rettet
     // ved hver eneste deploy — og churnet raden i det uendelige.
     const sql = getSql();
-    await sql`DELETE FROM reading_texts WHERE date = ${DATO_HELT}`;
-    await sql`INSERT INTO reading_texts (date, name, series, language) VALUES (${DATO_HELT}, ${'#92-vakt-helt'}, ${'I'}, ${'nb'})`;
-    const [row] = (await sql`SELECT id FROM reading_texts WHERE date = ${DATO_HELT} AND language = 'nb'`) as unknown as { id: number }[];
-    heltId = row!.id;
-    await sql`
-      INSERT INTO reading_text_refs (reading_text_id, slot_index, option_index, part_index, title, display_ref, book_id, chapter, verse_start, verse_end, part_start, part_end, sort_order)
-      VALUES (${heltId}, 0, 0, 0, ${'Herren er min hyrde'}, ${'[ref:Sal 23@dnb2024]'}, 19, 23, 1, ${null}, ${null}, ${null}, 0)
-    `;
+    heltId = await seedLesedag(DATO_HELT, '#92-vakt-helt');
+    await seedRef(heltId, {
+      slot: 0,
+      tittel: 'Herren er min hyrde',
+      markup: '[ref:Sal 23@dnb2024]',
+      bookId: 19,
+      chapter: 23,
+      verseStart: 1,
+      verseEnd: null,
+      sortOrder: 0,
+    });
 
     const report = await repairWholeChapterReadingRefs(sql);
     expect(report.repaired.filter((r) => r.displayRef === '[ref:Sal 23@dnb2024]')).toEqual([]);
 
     const etter = (await sql`
-      SELECT chapter, verse_start, verse_end FROM reading_text_refs WHERE reading_text_id = ${heltId}
+      SELECT chapter, verse_start, verse_end
+      FROM reading_text_refs
+      WHERE reading_text_id = ${heltId}
     `) as unknown as { chapter: number; verse_start: number; verse_end: number | null }[];
     expect(etter).toEqual([{ chapter: 23, verse_start: 1, verse_end: null }]);
   });
