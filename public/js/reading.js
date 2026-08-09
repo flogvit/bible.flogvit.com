@@ -15,6 +15,7 @@ import {
   emptyProgress,
 } from './reading-progress.js';
 import { readStrings, intlLocale, localeHref } from './locale.js';
+import { parseVerseHash } from './verse-hash.js';
 
 const t = readStrings(document.body);
 
@@ -592,10 +593,18 @@ if (rootPage) {
     e.preventDefault();
   });
 
-  // ── Hopp til vers fra hash + åpne detalj ved behov ───────────────
-  if (location.hash) {
-    const m = location.hash.match(/^#v(\d+)$/);
-    const target = m && document.getElementById(`v${m[1]}`);
-    if (target) setTimeout(() => target.scrollIntoView({ block: 'center' }), 50);
+  // ── Hopp til vers fra hash + marker versene hoppet gjaldt (#91) ──
+  //
+  // Uten merket landet leseren midt i kapittelet uten spor av hvilke vers
+  // referansen gjaldt: «Romerne 12:14-15» ser ut som tretti andre linjer når
+  // man først står der. Rekka kommer fra ADRESSEN (`#v14-15`) — hele kjeden fra
+  // etiketten til markeringen går gjennom `verse-hash.js`.
+  const jump = parseVerseHash(location.hash);
+  const jumpTarget = jump && document.getElementById(`v${jump.start}`);
+  if (jumpTarget) {
+    for (let n = jump.start; n <= jump.end; n++) {
+      document.getElementById(`v${n}`)?.classList.add('is-jump-target');
+    }
+    setTimeout(() => jumpTarget.scrollIntoView({ block: 'center' }), 50);
   }
 }

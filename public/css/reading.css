@@ -335,6 +335,21 @@
   line-height: 1.75;
 }
 
+/* Versene hoppet gjaldt (#91). Merket er SUBTILT med vilje — dette er ikke en
+   overstreking leseren har laget, bare et spor etter hvor lenka pekte, og det
+   skal ikke konkurrere med teksten. Det negative venstremarget spiser nøyaktig
+   kantlinja + innrykket, så merkede og umerkede vers står på samme grunnlinje;
+   uten det ville halve kapittelet flyttet seg 12 px når man kom fra en lenke.
+   `.chapter-content` har 56 px innrykk på desktop og `.site-main` 20 px på
+   mobil, så de 12 har plass begge steder. */
+.verse.is-jump-target {
+  background: var(--gold-bg);
+  border-left: 2px solid var(--gold-soft);
+  border-radius: 0 4px 4px 0;
+  padding: 4px 8px 4px 10px;
+  margin-left: -12px;
+}
+
 .verse-number {
   display: inline-block;
   font-family: inherit;
