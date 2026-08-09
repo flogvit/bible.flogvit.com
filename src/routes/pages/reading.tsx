@@ -1998,7 +1998,8 @@ r.get('/:book/:chapter', async (c) => {
               data-sidebar-resize
               title={t('rd.resizeHint')}
             ></div>
-            <div class="panel-tabbar" role="tablist" aria-label={tCtx()('rd.panelTabsAria')}>
+            {/* studium.js flytter fanerada med inn i mobil-overlegget (#94) */}
+            <div class="panel-tabbar" role="tablist" data-panel-tabbar aria-label={tCtx()('rd.panelTabsAria')}>
               <button type="button" class="panel-tab is-active" data-panel-tab="1">
                 {t('rd.study')}
               </button>

@@ -442,6 +442,20 @@
   height: auto;
   padding: 0;
 }
+/* Fanerada er skjult i sidebaren (den vises bare i panelmodus på desktop), men
+   inne i overlegget er den den ENESTE veien til tidslinje, paralleller og
+   innsikt: på mobil er sidebaren borte, så uten fanene ser leseren én av fire
+   seksjoner og aldri de tre andre (#94). `flex-wrap` fordi fire faner ikke får
+   plass på én linje ved stor tekst, og en rad som ikke brytes gjør flata
+   bredere enn skjermen (#50). */
+.studium-overlay-content .panel-tabbar {
+  display: flex;
+  flex-wrap: wrap;
+  top: 0;
+  margin: -14px -14px 12px;
+  padding: 8px 14px 0;
+}
+
 /* Item-tagging (emner-fanen i versdetaljen) */
 .item-tagging .topics-list {
   display: flex;

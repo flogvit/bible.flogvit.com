@@ -48,11 +48,14 @@ if (sidebar) {
   });
 
   // ── Panelfaner (1-4) ─────────────────────────────────────────────
+  // Oppslaget går på DOKUMENTET, ikke på sidebaren: mobil-overlegget FLYTTER
+  // fanene og seksjonene ut av den (#94), og en fane som ikke lenger ligger i
+  // sidebaren ville da sluttet å bytte seksjon uten å se annerledes ut.
   function activateTab(n) {
-    sidebar.querySelectorAll('[data-panel-tab]').forEach((t) => {
+    document.querySelectorAll('[data-panel-tab]').forEach((t) => {
       t.classList.toggle('is-active', t.dataset.panelTab === String(n));
     });
-    sidebar.querySelectorAll('[data-panel-section]').forEach((s) => {
+    document.querySelectorAll('[data-panel-section]').forEach((s) => {
       const active = s.dataset.panelSection === String(n);
       s.hidden = !active;
       s.classList.toggle('is-active', active);
@@ -186,11 +189,15 @@ if (toolbar) {
   toolbar.querySelector('[data-open-tools]')?.addEventListener('click', () => open(toolsOverlay));
 
   // Studium-overlegget viser sidebar-innholdet: flytt nodene inn og tilbake.
+  // FANERADA er med: på mobil er sidebaren skjult, så overlegget er eneste vei
+  // inn — og uten fanene ville tre av fire seksjoner vært utilgjengelige (#94).
   const overlayContent = document.querySelector('[data-studium-overlay-content]');
   const sidebarContent = document.querySelector('[data-sidebar-content]');
+  const tabbar = document.querySelector('[data-panel-tabbar]');
   let moved = false;
   function restoreSidebarContent() {
     if (moved && sidebarContent && overlayContent) {
+      if (tabbar && sidebarContent.parentNode) sidebarContent.parentNode.insertBefore(tabbar, sidebarContent);
       while (overlayContent.firstChild) sidebarContent.appendChild(overlayContent.firstChild);
       moved = false;
     }
@@ -198,6 +205,7 @@ if (toolbar) {
   toolbar.querySelector('[data-open-studium]')?.addEventListener('click', () => {
     open(studiumOverlay);
     if (sidebarContent && overlayContent && !moved) {
+      if (tabbar) overlayContent.appendChild(tabbar);
       while (sidebarContent.firstChild) overlayContent.appendChild(sidebarContent.firstChild);
       moved = true;
     }
