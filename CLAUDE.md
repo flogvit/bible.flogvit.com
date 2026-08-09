@@ -495,6 +495,60 @@ innholdsoppdatering, så den alene ville latt prod ligge med feil tall).
 `verses` — til hverandre, og sjekker at det genererte `verse-counts.ts` ikke
 har drevet fra basen.
 
+### En lesning som KRYSSER et kapittelskille er ikke to halve (#92)
+
+`/nb/lesetekster/2026-08-09` sa «Jes 64,6b-65,2@dnb2024» og viste ETT vers —
+Jes 63,1, «Hvem er dette som kommer fra Edom». Versparseren i importen leste
+bare endepunkter UTEN kapittel, så «6b-65:2» ga null spenn, og fallbacken «ingen
+versspesifikasjon = hele kapittelet» slo inn og satte inn vers 1 av kapittelet
+startverset havnet i. **11 lesedager sto slik**, blant dem hele
+lidelsesfortellingen langfredag (Matt 26,30-27,50, Mark 14,26-15,37,
+Joh 18,1-19,42). Utslaget er stille som i #45, #65 og #73: sida svarer 200,
+blokka er full av tekst, ingen loggrad — bare den som slår opp i tekstrekka ser
+at det er FEIL tekst.
+
+- **`src/lib/reading-ref.ts` eier adressen.** Den lå i `import-bible.ts`, som
+  EKSEKVERER og derfor ikke kan importeres av en test (samme grunn som
+  `content-sources.ts`, #58) — og den samme regelen trengs to steder til.
+- **REGELEN har to former, og det er ikke pynt.** Innenfor ETT kapittel
+  oversettes lesningen VERS FOR VERS som før: en mapping kan flytte enkeltvers
+  ulikt inne i et kapittel, og en utgave som bare oversatte ENDENE ga et annet
+  svar for 4 av de 626 lesningene — Rom 9,20-24 krympet fra fem vers til ett.
+  KRYSSER den et kapittelskille, kan den ikke telles vers for vers: vi vet ikke
+  hvor KILDENS kapittel slutter, bare vårt eget. Da oversettes endene, og
+  spennet fylles ut mot `verse-counts.ts`, altså den kanoniske versifiseringen
+  `pruneDanglingRefs()` alt klipper mot (#46).
+- **Reparasjonen kjøres fra `ensureSchema()`**, altså hver deploy — samme
+  plassering og samme grunn som #46 og #61. En fiks bare i importen ville aldri
+  nådd leseren: `reading_texts` importeres på nytt bare når KILDEFILENE endrer
+  seg, og tekstrekkene ligger fast i årevis.
+- **Den er SMAL med vilje:** bare rader som bærer fallbacken (`verse_end IS
+  NULL`) mens adressen NAVNGIR vers. En bredere regel — «skriv om alt som ikke
+  stemmer med dagens mapping» — ville i tillegg flyttet seks lesninger som er
+  importert med en eldre mappingfil, og det er et annet spørsmål enn dette.
+- **Etiketten bygges av VERSENE, ikke av markupen.** Referanselinja sto som
+  `Jes 64,6b-65,2@dnb2024`: mapping-id-en er en intern nøkkel leseren verken
+  trenger eller kan tolke. Å bare STRIPPE den ville gjort etiketten pen og
+  fortsatt gal — versene rendres i leserens valgte nummerering, så en etikett i
+  kildens lover et annet sted enn blokka viser. `formatVerseRefLabel()` bygger
+  den av de samme versene som står under den, og kan da ikke lyve (#73).
+  Kapittelskillet slås sammen bare når forrige vers ER kapittelets siste, ellers
+  ville «Rom 9,2-5» + «Rom 10,1-4» blitt til «Rom 9,2-10,4».
+- **Vakta er `test/reading-ref-cross-chapter.test.ts` og har fire halvdeler.**
+  REGELEN (adressene leses ut av BASEN som i #70 og #80: ingen adresse som
+  navngir vers får falle til «hele kapittelet», og en kryssende må dekke begge
+  kapitlene uten hull). REPARASJONEN (defekten seedes og rettes, den er
+  idempotent, og en adresse som VIRKELIG er hele kapittelet røres ikke). SIDA
+  (sveip over hver lesningsblokk: etiketten bærer ingen `@`, og den navngir
+  nøyaktig det første og siste verset blokka leverer — lest som ADRESSER, ikke
+  som delstrenger, siden «10,1-4» ikke inneholder teksten «10,4»). DEPLOYEN
+  (`runMigrations` kaller reparasjonen — ellers kjøres den aldri i prod, og
+  fiksen er usynlig for leseren uten at noe blir rødt). Åtte mutasjoner kjørt.
+- **En RESTANSE, ikke løst her:** `sliceVersePart` gir tom streng for 8 av 29
+  del-adresser (`64,6b`, `Matt 1,20b`, `Rom 10,8b` …), og verset forsvinner da
+  stille fra lesningen. Derfor begynner denne lesningen på 64,7 og ikke på 64,6b.
+  Det gjelder også lesninger innenfor ett kapittel og er en egen sak.
+
 ### En offentlig URL skal ALDRI bære en auto_increment-id (#40)
 
 Importen sletter og setter inn på nytt, og MySQL fortsetter tellingen der den
