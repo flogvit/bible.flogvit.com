@@ -2013,6 +2013,39 @@ lesesida: etiketten lovte to vers, og hashen kunne bare uttrykke ett.
   320 px — `mobile-layout.test.ts` måler uten hash og ser aldri merkede vers.
   Sju mutasjoner kjørt.
 
+### EN BREKKET linje eier ikke lenger høyrekanten (#93)
+
+Den faste legal-raden (portal/FOOTER.md) er merke · Vilkår · Personvern · Konto ·
+© år. På desktop får alt plass på én linje, og `margin-left: auto` holder
+copyright-en til høyre — det er et bevisst oppsett. På en telefon får den ikke
+plass, og da skjøv det samme margen den helt ut til høyre på sin EGEN linje:
+innrykket fra alt annet i footeren, under høyre ende av lenkene. Målt før
+fiksen: venstrekant 239 av en 350 px rad på 390 px, 169 av 280 på 320 px.
+
+- **`margin-left: auto` kan ikke skille de to tilfellene.** Den betyr «ta all
+  ledig plass til venstre», og på en linje der posten er alene er det hele linja.
+  Merke og lenker er derfor ÉN flex-post (`.site-footer-legal-main`), så raden
+  har nøyaktig to, og `justify-content: space-between` fordeler PER LINJE: deler
+  copyright-en linje, står den til høyre; brekkes den ned, er den alene og
+  havner på venstrekanten sammen med alt annet.
+- **Ikke et `@media`-brekkpunkt i px.** Raden brekkes tidligere når leseren
+  forstørrer teksten, og et px-brekkpunkt kjenner ikke skriftstørrelsen — samme
+  felle som i #50. Mutasjonstestet: fiksen bak `max-width: 768px` blir rød på
+  800 px ved 200 % tekst.
+- **Å hindre brekkingen er ikke fiksen.** `nowrap` her ville gjort sida bredere
+  enn skjermen, altså byttet #93 mot #50. Vakta avviser den.
+- **Vakta er `test/footer-legal-wrap.test.ts`, formulert på LINJENE:** hver
+  linje i raden begynner på radens venstrekant, uansett hvor mange linjer den
+  ble. Linjene grupperes ved loddrett OVERLAPP, ikke ved eksakt `top` — postene
+  er grunnlinjejustert, så merket og lenkene står på ulik `top` på samme linje —
+  og halvdelen kjenner ingen klassenavn utover raden selv, så et nytt ledd i den
+  faste raden måles gratis. Språket velges av ORDBØKENE (som #70: engelsk
+  skriver raden kortest), i tillegg til `nb` som saken er meldt på. DESKTOP
+  krever at copyright-en fortsatt står til høyre OG at lenkene står inntil
+  merket; uten den andre ville «venstrestill alltid» og «dropp grupperingen»
+  rettet telefonen ved å legge om desktop. ROLLENE og «raden brekkes faktisk»
+  finnes for at de tre andre ikke skal måle ingenting. Seks mutasjoner kjørt.
+
 ## Lenker og lokale vakter
 
 **Alle interne lenker skal bruke `lhref(path)`** (`lib/i18n.ts`), aldri `href="/…"` rått.
