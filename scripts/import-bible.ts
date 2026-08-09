@@ -33,9 +33,7 @@ import {
 } from '../src/lib/verse-refs.ts';
 import { prunePersonRefs, personPruneReportIsEmpty, formatPersonPruneReport } from '../src/lib/person-refs.ts';
 import { CONTENT_TABLES, CONTENT_SOURCES, contentSourceReport } from '../src/lib/content-sources.ts';
-import { parseRefMarkup } from '@free-bible/kvn/ref';
-import { BOOK_IDS } from '@free-bible/kvn/types';
-import { UkvnMapper, loadUkvnMapping, ukvnEncode, ukvnDecode, resolveMappingId } from '@free-bible/kvn';
+import { parseReadingRefMarkup } from '../src/lib/reading-ref.ts';
 import { IMPORTED_BIBLES } from '../src/lib/editions.ts';
 
 // Kilde for bibelinnhold. Standard: ../free-bible relativt til cwd (som er en
@@ -1872,72 +1870,6 @@ for (const lang of contentLanguages('days')) {
 // Importer lesetekster (DNK)
 console.log('Importerer lesetekster...');
 
-// Cache UkvnMappers for converting translation→osmain
-const kvnMapperCache = new Map<string, UkvnMapper>();
-function getKvnMapper(mappingId: string): UkvnMapper {
-  if (!kvnMapperCache.has(mappingId)) {
-    kvnMapperCache.set(mappingId, new UkvnMapper(loadUkvnMapping(mappingId)));
-  }
-  return kvnMapperCache.get(mappingId)!;
-}
-
-/**
- * Normalize comma notation (Sal 24,1-10) to colon notation (Sal 24:1-10)
- * in the ref part of a [ref:...] markup. Replaces every chapter,verse comma
- * (needed for cross-chapter ranges like "1 Mos 1,26-2,2").
- */
-function normalizeRefComma(markup: string): string {
-  return markup.replace(/\[ref:([^|@\]]+)/, (_, refPart: string) => {
-    const normalized = refPart.replace(/(\d+),(\d)/g, '$1:$2');
-    return '[ref:' + normalized;
-  });
-}
-
-/**
- * Parse a verseSpec like "1-10", "1a.2.6-7", "13-15a.17-18" into ranges.
- * Dot separates discontinuous ranges. Each range has start, end, and part suffixes.
- * "1a" means part 'a' of verse 1. "15a" means up to part 'a' of verse 15.
- */
-function parseVerseRanges(verseSpec: string): { start: number; end: number; partStart: string | null; partEnd: string | null }[] {
-  if (!verseSpec) return [];
-  // Normalize en-dash (–) and em-dash (—) to hyphen
-  const normalized = verseSpec.replace(/[–—]/g, '-');
-  const parts = normalized.split('.');
-  return parts.map((part) => {
-    const dashIdx = part.indexOf('-');
-    if (dashIdx === -1) {
-      // Single verse or verse with part: "2" or "1a"
-      const partMatch = part.match(/^(\d+)([a-c])?$/);
-      if (!partMatch) return null;
-      const v = parseInt(partMatch[1]!, 10);
-      const p = partMatch[2] || null;
-      return { start: v, end: v, partStart: p, partEnd: p };
-    }
-    const startStr = part.slice(0, dashIdx);
-    const endStr = part.slice(dashIdx + 1);
-    const startMatch = startStr.match(/^(\d+)([a-c])?$/);
-    const endMatch = endStr.match(/^(\d+)([a-c])?$/);
-    if (!startMatch || !endMatch) return null;
-    return {
-      start: parseInt(startMatch[1]!, 10),
-      end: parseInt(endMatch[1]!, 10),
-      partStart: startMatch[2] || null,
-      partEnd: endMatch[2] || null,
-    };
-  }).filter((r): r is NonNullable<typeof r> => r !== null && !isNaN(r.start));
-}
-
-/**
- * Convert a verse number from a translation system to osmain coordinates.
- */
-function toOsmain(bookId: number, chapter: number, verse: number, mappingId: string): { chapter: number; verse: number } {
-  const mapper = getKvnMapper(mappingId);
-  const tkvn = ukvnEncode(bookId, chapter, verse);
-  const osmainKvn = mapper.toKvn(tkvn);
-  const decoded = ukvnDecode(osmainKvn);
-  return { chapter: decoded.chapter, verse: decoded.verse };
-}
-
 const leseteksterPath = path.join(GENERATE_PATH, 'dnk_lesetekster');
 if (fs.existsSync(leseteksterPath)) {
   // Sortert: kildefilene overlapper ved kirkeårsskiftet, og ved lik naturlig
@@ -1969,76 +1901,24 @@ if (fs.existsSync(leseteksterPath)) {
       ): Promise<number> {
         const displayRef = refMarkup;
         try {
-          const normalized = normalizeRefComma(refMarkup);
-          let parsed: { book: string; chapter: number; verseSpec: string; system?: string; displayText?: string };
-          try {
-            parsed = parseRefMarkup(normalized);
-          } catch {
-            const match = normalized.match(/^\[ref:([^\]]+)\]$/);
-            if (!match) throw new Error(`Invalid ref: ${refMarkup}`);
-            let refPart = match[1]!.trim();
-            let system: string | undefined;
-            const atIdx = refPart.lastIndexOf('@');
-            if (atIdx !== -1) {
-              system = refPart.slice(atIdx + 1).trim();
-              refPart = refPart.slice(0, atIdx).trim();
-            }
-            const bookMatch = refPart.match(/^(.+?)\s+(\d.*)$/);
-            if (!bookMatch) throw new Error(`Invalid ref: ${refMarkup}`);
-            const book = bookMatch[1]!.trim();
-            const chapterVerse = bookMatch[2]!.trim();
-            const colonIdx = chapterVerse.indexOf(':');
-            if (colonIdx === -1) {
-              parsed = { book, chapter: parseInt(chapterVerse, 10), verseSpec: '', system, displayText: refPart };
-            } else {
-              parsed = { book, chapter: parseInt(chapterVerse.slice(0, colonIdx), 10), verseSpec: chapterVerse.slice(colonIdx + 1).trim(), system, displayText: refPart };
-            }
-          }
-          const bookId = BOOK_IDS[parsed.book];
-          if (bookId === undefined) {
-            console.warn(`  Ukjent bok: ${parsed.book} i ${refMarkup}`);
+          // Adressen tolkes ETT sted (`src/lib/reading-ref.ts`, #92). Den lå her,
+          // og en lesning som krysset et kapittelskille falt da ut av
+          // versparsingen og ble satt inn som «hele kapittelet» — altså ett
+          // vilkårlig vers. Regelen er dessuten den samme reparasjonen ved hver
+          // deploy trenger, og et skript kan ikke importeres av en test.
+          const parsed = parseReadingRefMarkup(refMarkup);
+          if (!parsed) {
+            console.warn(`  Kunne ikke lese referanse: ${refMarkup}`);
             return 0;
           }
-          const mappingId = parsed.system ? (resolveMappingId(parsed.system) || parsed.system) : 'osnb';
-          const ranges = parseVerseRanges(parsed.verseSpec);
-
           let inserted = 0;
-          if (ranges.length === 0) {
-            const osmain = toOsmain(bookId, parsed.chapter, 1, mappingId);
+          for (let i = 0; i < parsed.rows.length; i++) {
+            const r = parsed.rows[i]!;
             await tx`
               INSERT INTO reading_text_refs (reading_text_id, slot_index, option_index, part_index, title, display_ref, book_id, chapter, verse_start, verse_end, part_start, part_end, sort_order)
-              VALUES (${readingTextId}, ${slotIdx}, ${optionIdx}, ${partIdx}, ${title}, ${displayRef}, ${bookId}, ${osmain.chapter}, ${1}, ${null}, ${null}, ${null}, ${sortOrderBase})
+              VALUES (${readingTextId}, ${slotIdx}, ${optionIdx}, ${partIdx}, ${title}, ${displayRef}, ${parsed.bookId}, ${r.chapter}, ${r.verseStart}, ${r.verseEnd}, ${r.partStart}, ${r.partEnd}, ${sortOrderBase + i})
             `;
             inserted++;
-          } else {
-            for (let rangeIdx = 0; rangeIdx < ranges.length; rangeIdx++) {
-              const range = ranges[rangeIdx]!;
-              const mappedVerses: { chapter: number; verse: number }[] = [];
-              for (let v = range.start; v <= range.end; v++) {
-                mappedVerses.push(toOsmain(bookId, parsed.chapter, v, mappingId));
-              }
-              const groups: { chapter: number; verseStart: number; verseEnd: number; isFirst: boolean; isLast: boolean }[] = [];
-              let currentGroup: typeof groups[0] | null = null;
-              for (let vi = 0; vi < mappedVerses.length; vi++) {
-                const mv = mappedVerses[vi]!;
-                if (!currentGroup || mv.chapter !== currentGroup.chapter || mv.verse !== currentGroup.verseEnd + 1) {
-                  if (currentGroup) groups.push(currentGroup);
-                  currentGroup = { chapter: mv.chapter, verseStart: mv.verse, verseEnd: mv.verse, isFirst: vi === 0, isLast: vi === mappedVerses.length - 1 };
-                } else {
-                  currentGroup.verseEnd = mv.verse;
-                  currentGroup.isLast = vi === mappedVerses.length - 1;
-                }
-              }
-              if (currentGroup) groups.push(currentGroup);
-              for (let gi = 0; gi < groups.length; gi++) {
-                const g = groups[gi]!;
-                await tx`
-                  INSERT INTO reading_text_refs (reading_text_id, slot_index, option_index, part_index, title, display_ref, book_id, chapter, verse_start, verse_end, part_start, part_end, sort_order)
-                  VALUES (${readingTextId}, ${slotIdx}, ${optionIdx}, ${partIdx}, ${title}, ${displayRef}, ${bookId}, ${g.chapter}, ${g.verseStart}, ${g.verseEnd}, ${g.isFirst ? range.partStart : null}, ${g.isLast ? range.partEnd : null}, ${sortOrderBase + rangeIdx * 10 + gi})
-                `;
-                inserted++;
-              }
-            }
           }
           return inserted;
         } catch (e) {

@@ -41,6 +41,11 @@ import {
   formatJsonPruneReport,
 } from './verse-refs.ts';
 import { prunePersonRefs, personPruneReportIsEmpty, formatPersonPruneReport } from './person-refs.ts';
+import {
+  repairWholeChapterReadingRefs,
+  readingRefRepairIsEmpty,
+  formatReadingRefRepair,
+} from './reading-ref.ts';
 import { booksData } from './books-data.ts';
 
 const CS = 'CHARACTER SET utf8mb4 COLLATE utf8mb4_danish_ci';
@@ -986,6 +991,14 @@ async function runMigrations(sql: SQL): Promise<void> {
   // ryddes ved hver deploy, ikke bare ved neste innholdsimport.
   const persons = await prunePersonRefs(sql);
   if (!personPruneReportIsEmpty(persons)) console.log(formatPersonPruneReport(persons));
+
+  // Samme plassering, tredje invariant (#92): en lesning som KRYSSER et
+  // kapittelskille ble lagret som «hele kapittelet», altså ett vilkårlig vers —
+  // Jes 63,1 der teksten skulle vært Jes 64,6b-65,2. Fiksen i importen alene
+  // ville aldri nådd leseren: `reading_texts` importeres bare når kildefilene
+  // endrer seg, og tekstrekkene ligger fast i årevis.
+  const readingRefs = await repairWholeChapterReadingRefs(sql);
+  if (!readingRefRepairIsEmpty(readingRefs)) console.log(formatReadingRefRepair(readingRefs));
 }
 
 /** Oppretter alle tabeller og kjører migreringene (idempotent). */
