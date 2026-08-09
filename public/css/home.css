@@ -22,9 +22,17 @@
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-sm);
 }
+/* Gløden er DEKOR, og den skal ligge BAK innholdet. Både den og barna er
+   posisjonert uten z-index, og da avgjør DOM-rekkefølgen — et pseudo-element
+   som `::after` er sist, altså ØVERST. Den er ugjennomsiktig i midten
+   (`--gold-soft` er en blandet farge, ikke en alfa), så den la et slør over
+   teksten fra høyre hjørne og nedover: på mobil dekker sirkelen nesten hele
+   kortet, og «Start med 1. Mosebok 1» ble knapt lesbar (#90). z-index gjør
+   rekkefølgen eksplisitt framfor å arve den fra hvor i markupen dekoren står. */
 .home-continue::after {
   content: '';
   position: absolute;
+  z-index: 0;
   top: -110px;
   right: -90px;
   width: 380px;
@@ -34,7 +42,7 @@
   opacity: 0.85;
   pointer-events: none;
 }
-.home-continue > * { position: relative; }
+.home-continue > * { position: relative; z-index: 1; }
 .home-continue-verse {
   margin-top: 12px;
   font-family: var(--font-serif);

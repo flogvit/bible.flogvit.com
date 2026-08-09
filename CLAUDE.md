@@ -1891,6 +1891,41 @@ bare den som sitter foran den ser at teksten er trang mens plassen står tom.
   for skjermen. Denne feilen er bare synlig der det er plass til overs, altså
   aldri på en telefon.
 
+### DEKOR ligger bak innholdet — rekkefølgen i markupen er ikke en avgjørelse (#90)
+
+Velkommenboksen på forsiden har en gyllen glød i hjørnet
+(`.home-continue::after`). Både gløden og innholdet er posisjonert UTEN
+`z-index`, og da avgjør DOM-rekkefølgen hva som havner øverst — et
+pseudo-element er sist, altså over alt annet. Gløden er dessuten ugjennomsiktig
+i midten (`--gold-soft` er en BLANDET farge, ikke en alfa), så den la et slør
+over teksten fra høyre hjørne og nedover. Målt: 73 kanaltrinn på
+`.home-continue-sub`, og «Start med 1. Mosebok 1» på den gylne knappen var knapt
+lesbar.
+
+- **Mobil er verst, men feilen er ikke mobilens.** Sirkelen er 380 px bred; på
+  390 px viewport er kortet ~350 px, altså dekker dekoren nesten hele boksen. På
+  1280 px traff den fortsatt undertittelen. En fiks bak et brekkpunkt ville latt
+  halve feilen stå — den er mutasjonstestet nettopp slik.
+- **Fiksen er å gjøre lagdelingen eksplisitt** (`z-index: 0` på gløden, `1` på
+  barna), ikke å krympe eller fjerne dekoren. Kortet er den første flata en ny
+  leser ser, og en glød som er borte er ikke en penere glød.
+- **Utslaget er stille, som #45, #65 og #70:** sida svarer 200, ingen loggrad, og
+  bare den som ser på skjermen merker at teksten er blass. `mobile-layout`
+  måler BREDDE og kunne per konstruksjon ikke se det.
+- **Vakta er `test/welcome-box-glow.test.ts`, og den er formulert på UTFALLET:**
+  ikke ett piksel som ER tekst blir farget om av dekoren. Den måler i ekte
+  Chrome, tar to skjermbilder av samme flate (med dekoren og uten), og
+  sammenligner bare GLYFKJERNENE — piksler som uten dekoren treffer elementets
+  egen `color`. Kantutjevning holdes utenfor: et kantpiksel er blandet med
+  bakgrunnen og SKAL endre seg når en glød ligger bak det; det er nettopp
+  forskjellen på «bak» og «over». Elementene velges av SIDA (alle i boksen som
+  bærer en tekstnode), så et nytt element arver målingen. PNG-en dekodes i
+  sidas eget canvas framfor i en egen dekoder. Andre halvdel krever at gløden
+  fortsatt MALER kortet, ellers ville «slett dekoren» bestått; en tredje at det
+  finnes glyfkjerner å måle, ellers ville en for streng terskel gjort de to
+  andre til tom påstand. Fire mutasjoner kjørt (dekoren fjernet, fiks bare
+  under 768 px, tom måling, og feilen gjeninnført med `z-index: auto`).
+
 ## Lenker og lokale vakter
 
 **Alle interne lenker skal bruke `lhref(path)`** (`lib/i18n.ts`), aldri `href="/…"` rått.
