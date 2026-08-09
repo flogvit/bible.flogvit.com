@@ -5,6 +5,8 @@
 
 import { getVerse, type ReadingTextWithSlots, type VerseRange } from './bible.ts';
 import { UkvnMapper, loadUkvnMapping, ukvnEncode, ukvnDecode, sliceVersePart, resolveMappingId } from '@free-bible/kvn';
+import { bookAbbrById } from './books-data.ts';
+import { getChapterVerseCount } from './verse-counts.ts';
 
 const mapperCache = new Map<string, UkvnMapper>();
 function getCachedMapper(mappingId: string): UkvnMapper {
@@ -106,4 +108,55 @@ export function readingTypeKey(bookId: number):
   if (bookId >= 40 && bookId <= 43) return 'rt.gospel';
   if (bookId === 66) return 'rt.revelation';
   return 'rt.epistle';
+}
+
+/**
+ * Referanselinja leseren ser — bygget av VERSENE som faktisk vises (#92).
+ *
+ * Den sto som `Jes 64,6b-65,2@dnb2024`: rå markup med mapping-id-en i behold.
+ * `@dnb2024` er en intern nøkkel — den sier hvilken utgaves nummerering
+ * adressen er skrevet i — og leseren har verken bruk for den eller mulighet til
+ * å tolke den. Å bare STRIPPE den ville gjort etiketten pen og fortsatt gal:
+ * versene rendres i leserens valgte nummerering, så en etikett i kildens
+ * nummerering lover et annet sted enn blokka viser. Etiketten bygges derfor av
+ * de samme versene som står under den, og kan da ikke lyve.
+ *
+ * Kapittelskillet slås sammen bare når forrige vers ER kapittelets siste — ellers
+ * ville «Rom 9,2-5» + «Rom 10,1-4» blitt til «Rom 9,2-10,4», altså to lesninger
+ * slått sammen til én sammenhengende som ikke finnes.
+ */
+export function formatVerseRefLabel(bookId: number, verses: EnrichedVerse[]): string {
+  if (verses.length === 0) return '';
+  interface Run { fromCh: number; from: number; fromPart?: string; toCh: number; to: number; toPart?: string }
+  const runs: Run[] = [];
+  for (const v of verses) {
+    const last = runs[runs.length - 1];
+    const contiguous =
+      last &&
+      ((v.chapter === last.toCh && v.verse === last.to + 1) ||
+        (v.chapter === last.toCh + 1 && v.verse === 1 && last.to === getChapterVerseCount(bookId, last.toCh)));
+    if (contiguous) {
+      last!.toCh = v.chapter;
+      last!.to = v.verse;
+      last!.toPart = v.part;
+    } else {
+      runs.push({ fromCh: v.chapter, from: v.verse, fromPart: v.part, toCh: v.chapter, to: v.verse, toPart: v.part });
+    }
+  }
+  const spans = runs.map((r) => {
+    const start = `${r.fromCh},${r.from}${r.fromPart ?? ''}`;
+    if (r.fromCh === r.toCh && r.from === r.to) return start;
+    const end = r.toCh === r.fromCh ? `${r.to}${r.toPart ?? ''}` : `${r.toCh},${r.to}${r.toPart ?? ''}`;
+    return `${start}-${end}`;
+  });
+  return `${bookAbbrById(bookId)} ${spans.join('; ')}`;
+}
+
+/**
+ * Reserveetiketten når vi ikke har ett eneste vers å bygge den av — mapping-id-en
+ * fjernes, for den er intern uansett hvorfor teksten mangler.
+ */
+export function refTextWithoutSystem(ref: string): string {
+  const atIdx = ref.lastIndexOf('@');
+  return atIdx === -1 ? ref : ref.slice(0, atIdx).trim();
 }
