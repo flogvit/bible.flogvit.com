@@ -2046,6 +2046,54 @@ fiksen: venstrekant 239 av en 350 px rad på 390 px, 169 av 280 på 320 px.
   rettet telefonen ved å legge om desktop. ROLLENE og «raden brekkes faktisk»
   finnes for at de tre andre ikke skal måle ingenting. Seks mutasjoner kjørt.
 
+### HJELPEMIDLENE ER ENTEN EN KOLONNE ELLER ÉN TAPP UNNA (#94)
+
+Studiepanelet (oppslag, sammendrag, personer, viktige ord, tidslinje) er en
+kolonne i `.chapter-layout` på desktop. Under 1100 px har grid-en to spor og
+tre barn, så panelet falt ned UNDER teksten: 792 px hjelpemidler 4632 px nede
+på en 390 px-skjerm, altså etter hele kapittelet. ▥ i bunnlinja åpnet det
+samme innholdet i et overlegg — som lå under headeren og ikke lot seg lukke.
+
+- **Regelen som skulle skjult panelet sto der fra før og VIRKET IKKE.**
+  `@media (max-width: 1100px) { .reading-sidebar { display: none } }` i
+  `reading.css` har samme spesifisitet som `.reading-sidebar { display: flex }`
+  i `studium.css`, og studium.css lastes ETTERPÅ — altså taper den på
+  REKKEFØLGE. Media-spørringen legger ikke til spesifisitet. Kvalifisert med
+  forelderen (`.chapter-layout .reading-sidebar`) vinner den. Ordrett samme
+  felle som #55, og den er stille: regelen ser riktig ut i stilarket.
+- **Verktøylinja tar over ved NØYAKTIG samme bredde.** Den sto på 768 px mens
+  panelet forsvant på 1100, så mellom 769 og 1100 fantes verken kolonnen eller
+  knappen — hjelpemidlene lå bare som en klump under teksten. De to
+  brekkpunktene er én avgjørelse: er panelet ute av layouten, ER ▥ veien inn.
+- **Overlegget dekker sida, altså også chromen.** `z-index: 80` mot headerens
+  klebende `500` gjorde at headeren la seg over overleggets øverste 53 px —
+  nettopp der tittelen og ✕ står. Målt med treffprøve: fingeren på ✕ traff
+  headerens hamburgermeny. Panelet lot seg åpne og ikke lukke, som saken sier.
+  Laget er nå 900, samme som hurtigtast-hjelpen, under kommandopaletten (2000).
+- **Fanerada blir med inn i overlegget.** Den er skjult i sidebaren (vises bare
+  i panelmodus på desktop), og når sidebaren er borte på mobil er overlegget
+  eneste vei inn — uten fanene ser leseren studium-seksjonen og ALDRI
+  tidslinje, paralleller eller innsikt. Tre av fire seksjoner var rendret og
+  uoppnåelige på telefon. `activateTab` slår derfor opp i DOKUMENTET framfor i
+  sidebaren: en fane som er flyttet ut ville ellers sluttet å bytte seksjon
+  uten å se annerledes ut.
+- **Fanerada leveres tilbake PÅ SIN PLASS**, som søsken før `[data-sidebar-content]`
+  og ikke inni det: inne i det rullende innholdet mister den plassen sin over
+  seksjonene i panelmodus på desktop. Målt som egen mutasjon.
+- **⚙-arket er urørt.** Det er bunnforankret, så ✕ ligger godt under headeren —
+  målt treffbar på 320 og 390 px ved 100 % og 150 % tekst, også på en 500 px høy
+  skjerm. Samme z-index-klasse, men ingen målt defekt, og vi retter ikke noe vi
+  ikke har målt.
+- **Vakta er `test/study-panel-mobile.test.ts`, i ekte Chrome** — SSR-HTML og
+  happy-dom har ingen layout-motor og kan per konstruksjon verken se plassering
+  eller overlapping. Tre halvdeler: VEIEN (ved 320/390/900 er panelet ute av
+  flyten OG åpneren synlig; ved 1280 er panelet fortsatt en kolonne ved siden av
+  teksten, ellers ville «slett panelet» bestått), FLATA (treffprøve med
+  `elementFromPoint` på ✕ og på overleggets header — et `z-index`-tall sier
+  ingenting om hva fingeren treffer, #55-fella) og INNHOLDET (hver fane viser
+  sin egen seksjon, og innholdet er tilbake på sin plass etter lukking). Åtte
+  mutasjoner kjørt.
+
 ## Lenker og lokale vakter
 
 **Alle interne lenker skal bruke `lhref(path)`** (`lib/i18n.ts`), aldri `href="/…"` rått.
