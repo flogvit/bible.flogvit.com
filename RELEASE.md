@@ -3,6 +3,16 @@
 What actually reached readers, newest first. Dates, not version numbers — we
 deploy continuously.
 
+## 2026-08-09 — The study panel stops fighting mobile screens
+
+**Bug fixes**
+
+- On mobile, opening the study panel no longer wrecks the page: it now lays over the chrome instead of sliding underneath it, keeps its tabs when it opens, and the side panel no longer drops below the verse text.
+
+**Behind the scenes**
+
+- Added a guard test confirming the study panel's tools stay reachable, visible, and closable on mobile, so this class of bug is caught before it ships again.
+- Wrote up why an earlier rule meant to prevent this kind of bug existed in CLAUDE.md but didn't actually stop it.
 ## 2026-08-09 — Reading plans crossing a chapter boundary now work
 
 **Bug fixes**
