@@ -3,6 +3,16 @@
 What actually reached readers, newest first. Dates, not version numbers — we
 deploy continuously.
 
+## 2026-08-09 — Reading plans crossing a chapter boundary now work
+
+**Bug fixes**
+- Fixed reading references that span a chapter boundary — previously the whole reading failed to load; now the full passage displays, with a label that correctly names the verses shown.
+
+**Polish**
+- The footer's copyright line now stays aligned to the left when it wraps onto its own line.
+
+**Behind the scenes**
+- Added regression tests for chapter-crossing readings and footer text wrapping.
 ## 2026-08-09 — Verse links now take you straight to the verse
 
 **New features**
