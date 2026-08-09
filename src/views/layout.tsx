@@ -413,19 +413,26 @@ function Footer({ t, u }: { t: Translator; u: (p: string) => string }) {
         {/* Fast legal-rad (portal/FOOTER.md): FLOGVIT.bible · Vilkår · Personvern ·
             Konto · © år. Ingen Refusjon — bibel tar ikke betaling. */}
         <div class="site-footer-legal">
-          <span class="fv-wordmark">
-            <a class="fv-brand" href="https://flogvit.com" aria-label={t('chrome.menuAria')}>
-              FLOGVIT
-            </a>
-            <a class="fv-product" href={lhref('/')} aria-label={t('chrome.homeAria')}>
-              <span class="fv-dot">.</span>bible
-            </a>
-          </span>
-          <nav class="site-footer-legalnav" aria-label={t('chrome.legalAria')}>
-            <a href="https://flogvit.com/vilkar">{t('foot.terms')}</a>
-            <a href="https://flogvit.com/personvern">{t('foot.privacy')}</a>
-            <a href="https://flogvit.com/konto/">{t('foot.account')}</a>
-          </nav>
+          {/* Merke + lenker er ÉN gruppe, så copyright-en er den eneste andre
+              flex-posten i raden. Da kan `space-between` holde den til høyre så
+              lenge den deler linje — og gi den venstrekanten når den brekkes
+              ned på egen linje (#93), uten et px-brekkpunkt som ikke kjenner
+              leserens tekststørrelse. */}
+          <div class="site-footer-legal-main">
+            <span class="fv-wordmark">
+              <a class="fv-brand" href="https://flogvit.com" aria-label={t('chrome.menuAria')}>
+                FLOGVIT
+              </a>
+              <a class="fv-product" href={lhref('/')} aria-label={t('chrome.homeAria')}>
+                <span class="fv-dot">.</span>bible
+              </a>
+            </span>
+            <nav class="site-footer-legalnav" aria-label={t('chrome.legalAria')}>
+              <a href="https://flogvit.com/vilkar">{t('foot.terms')}</a>
+              <a href="https://flogvit.com/personvern">{t('foot.privacy')}</a>
+              <a href="https://flogvit.com/konto/">{t('foot.account')}</a>
+            </nav>
+          </div>
           <p class="site-footer-note">© {new Date().getFullYear()} FLOGVIT</p>
         </div>
       </div>

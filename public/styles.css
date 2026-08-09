@@ -754,9 +754,21 @@ a.fvmenu-item:hover { background: color-mix(in oklab, var(--ink) 6%, var(--surfa
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
+  justify-content: space-between;
   gap: 12px 20px;
   padding-top: 16px;
   border-top: 1px solid var(--line);
+}
+/* Merke + lenker som ÉN post, så raden har nøyaktig to. `space-between`
+   fordeler PER LINJE: deler copyright-en linje med resten, står den til høyre;
+   brekkes den ned, er den alene på linja og havner på venstrekanten sammen med
+   alt annet (#93). Et `margin-left: auto` kan ikke skille de to tilfellene, og
+   et `@media`-brekkpunkt i px kjenner ikke leserens tekststørrelse. */
+.site-footer-legal-main {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 12px 20px;
 }
 .site-footer-legalnav {
   display: flex;
@@ -772,7 +784,6 @@ a.fvmenu-item:hover { background: color-mix(in oklab, var(--ink) 6%, var(--surfa
   color: var(--accent);
   text-decoration: underline;
 }
-.site-footer-legal .site-footer-note { margin-left: auto; }
 .site-footer-note { color: var(--ink-2); font-size: 14px; }
 
 /* ---------- innholdscontainere (redesignets globale klasser) ---------- */
