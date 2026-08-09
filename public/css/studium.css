@@ -405,10 +405,16 @@
 
 /* ── Studium-overlegg (mobil) ── */
 
+/* Overlegget DEKKER sida, altså også chromen. På `z-index: 80` lå det under
+   den klebende `.site-header` (`z-index: 500`), og headeren la seg over
+   overleggets øverste 53 px — nettopp der tittelen og ✕ står. Målt med
+   treffprøve: fingeren på ✕ traff headerens hamburgermeny, så panelet lot seg
+   åpne og ikke lukke (#94). Laget er det samme som de andre heldekkende
+   flatene våre (hurtigtast-hjelpen, 900), og under kommandopaletten (2000). */
 .studium-overlay {
   position: fixed;
   inset: 0;
-  z-index: 80;
+  z-index: 900;
   background: var(--paper);
   display: flex;
   flex-direction: column;
@@ -436,7 +442,6 @@
   height: auto;
   padding: 0;
 }
-
 /* Item-tagging (emner-fanen i versdetaljen) */
 .item-tagging .topics-list {
   display: flex;
