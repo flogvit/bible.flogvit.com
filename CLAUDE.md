@@ -1926,6 +1926,39 @@ lesbar.
   andre til tom påstand. Fire mutasjoner kjørt (dekoren fjernet, fiks bare
   under 768 px, tom måling, og feilen gjeninnført med `z-index: auto`).
 
+### ADRESSEN bærer rekka — ellers kan sida ikke markere den (#91)
+
+«Romerne 12:14-15» i Dagens vers pekte på `/nb/rom/12#v14`. Leseren ble scrollet
+ned midt i kapittelet og satt igjen uten noe som sa hvilke vers referansen
+gjaldt — verset man kom for er ett av tretti like linjer. Feilen lå ikke i
+lesesida: etiketten lovte to vers, og hashen kunne bare uttrykke ett.
+
+- **`public/js/verse-hash.js` eier FORMEN**, delt av serveren (link-byggerne) og
+  lesesida — samme grep som `reading-progress.js`. Bygger og leser i hver sin
+  fil ville vært to representasjoner av samme adresse, altså to steder å drive
+  fra hverandre.
+- **Sluttverset utelates når det ikke legger til noe.** En adresse skal ikke
+  påstå en rekke den ikke har, og byggere som bare HAR ett vers (personchips,
+  søketreff) arver dermed regelen uten en egen gren.
+- **Den gamle formen (`#v14`) leses fortsatt.** Den ligger i delte lenker,
+  bokmerker og søkeindekser, og en delt lenke lever lenger enn en deploy.
+- **Merket er subtilt med vilje** — gyllen tone og en tynn kantlinje, ikke en
+  overstreking leseren selv har laget. Det negative venstremarget spiser
+  kantlinja + innrykket, så merkede og umerkede vers står på samme grunnlinje;
+  uten det ville halve kapittelet flyttet seg 12 px når man kom fra en lenke.
+- **Vakta er `test/verse-jump-marker.test.ts`**, og den følger kjeden i tre
+  trinn. REGELEN (ren logikk: bygg og les er hverandres motstykke, og en hash vi
+  ikke kjenner gir null framfor et halvt svar). LENKENE er en SVEIP over rendret
+  HTML, ikke en liste over kallsteder: hver etikett som viser `<kap>:<fra>-<til>`
+  for kapittelet lenka peker på, må adressere nøyaktig den rekka — så en ny
+  referanseblokk måles uten at noen fører den opp, og en sveip uten treff er
+  rød. FLATA måler i ekte Chrome at merket VIRKER (#55-fella: en klasse
+  stilarket ikke honorerer): hele rekka merkes og ingenting utenfor, merket er
+  synlig mot et umerket vers, den gamle formen merker fortsatt ett vers, uten
+  hash er ingenting merket, og merket gjør ikke sida bredere enn skjermen på
+  320 px — `mobile-layout.test.ts` måler uten hash og ser aldri merkede vers.
+  Sju mutasjoner kjørt.
+
 ## Lenker og lokale vakter
 
 **Alle interne lenker skal bruke `lhref(path)`** (`lib/i18n.ts`), aldri `href="/…"` rått.
