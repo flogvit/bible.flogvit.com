@@ -34,7 +34,7 @@ import {
   defaultBibleForLanguage,
 } from '../../lib/bible.ts';
 import { GonePage } from './misc.tsx';
-import { enrichWithVerseText, readingTypeKey } from '../../lib/reading-text-enrich.ts';
+import { enrichWithVerseText, readingTypeKey, formatVerseRefLabel, refTextWithoutSystem } from '../../lib/reading-text-enrich.ts';
 import { toUrlSlug } from '../../lib/url-utils.ts';
 // @ts-expect-error — delt klient-modul uten typer (formen bor ett sted, se #91)
 import { verseHash } from '../../../public/js/verse-hash.js';
@@ -521,11 +521,21 @@ r.get('/lesetekster/:date{[0-9]{4}-[0-9]{2}-[0-9]{2}}', async (c) => {
                           const type =
                             part.ranges.length > 0 ? t(readingTypeKey(part.ranges[0]!.book_id)) : '';
                           const verses = text.verses[part.display_ref] || [];
+                          // Etiketten bygges av versene som faktisk vises, så
+                          // mapping-id-en (`@dnb2024`) verken lekker ut eller
+                          // lover et annet sted enn blokka under (#92). Bare
+                          // når vi ikke har ett eneste vers — eller når delen
+                          // spenner over flere bøker — faller vi tilbake på
+                          // kildens egen tekst, uten id-en.
+                          const books = new Set(part.ranges.map((r) => r.book_id));
+                          const refLine =
+                            (books.size === 1 && formatVerseRefLabel(part.ranges[0]!.book_id, verses)) ||
+                            part.refs.map(refTextWithoutSystem).join('; ');
                           return (
                             <div class="reading-text-part">
                               {type && <div class="reading-text-type">{type}</div>}
-                              <h3>{part.title || part.refs.join('; ')}</h3>
-                              <p class="reading-text-ref-line">{part.refs.join('; ')}</p>
+                              <h3>{part.title || refLine}</h3>
+                              <p class="reading-text-ref-line">{refLine}</p>
                               {verses.length > 0 ? (
                                 <div class="reading-text-verses">
                                   {verses.map((v, vi) => {
