@@ -1566,8 +1566,22 @@ a.ins-hero-name:hover {
   .chapter-layout {
     grid-template-columns: 200px minmax(0, 1fr);
   }
-  .reading-sidebar {
+  /* Her er sidepanelet ikke lenger en KOLONNE: grid-en har to spor og tre barn,
+     så panelet legger seg under teksten framfor ved siden av den — 792 px med
+     oppslag, sammendrag og personer 4632 px nede på en 390 px-skjerm, altså
+     etter hele kapittelet (#94).
+     Regelen sto her fra før og VIRKET IKKE: studium.css lastes etter reading.css
+     og setter `display: flex` på `.reading-sidebar` med samme spesifisitet, så
+     en uspesifisert regel taper på REKKEFØLGE — den ser riktig ut uten å gjøre
+     noe (samme felle som #55). Forelderen kvalifiserer den.
+     Bunnlinja tar over ved NØYAKTIG samme bredde: er panelet ute av layouten,
+     er ▥ den eneste veien til hjelpemidlene, og en bredde der verken panelet
+     eller knappen finnes ville gjort dem uoppnåelige. */
+  .chapter-layout .reading-sidebar {
     display: none;
+  }
+  .mobile-toolbar {
+    display: flex;
   }
 }
 
@@ -1611,9 +1625,6 @@ a.ins-hero-name:hover {
      duplikat av noe. */
   .chapter-rail {
     display: none;
-  }
-  .mobile-toolbar {
-    display: flex;
   }
   .chapter-page.panel-mode .chapter-layout {
     grid-template-columns: 1fr;
