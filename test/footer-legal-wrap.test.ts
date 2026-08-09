@@ -67,6 +67,9 @@ interface RowMeasurement {
   wordmarkLine: number;
   legalLinks: number;
   noteText: string;
+  /** Avstanden fra merkets høyre kant til første legal-lenke, og radens gap. */
+  wordmarkToLinks: number | null;
+  columnGap: number;
 }
 
 let server: ReturnType<typeof Bun.serve>;
@@ -137,6 +140,9 @@ function measureRow(): RowMeasurement | null {
     if (b.wordmark) wordmarkLine = i;
   }
 
+  const wordmark = row.querySelector('.fv-wordmark');
+  const links = row.querySelector('.site-footer-legalnav');
+
   return {
     rowLeft: rr.left + parseFloat(cs.paddingLeft),
     rowRight: rr.right - parseFloat(cs.paddingRight),
@@ -145,6 +151,11 @@ function measureRow(): RowMeasurement | null {
     wordmarkLine,
     legalLinks: row.querySelectorAll('.site-footer-legalnav a').length,
     noteText: row.querySelector('.site-footer-note')?.textContent?.trim() ?? '',
+    wordmarkToLinks:
+      wordmark && links
+        ? links.getBoundingClientRect().left - wordmark.getBoundingClientRect().right
+        : null,
+    columnGap: parseFloat(cs.columnGap) || 0,
   };
 }
 
@@ -207,6 +218,25 @@ describe('legal-raden i footeren brekkes ikke skjevt (#93)', () => {
     expect(m.noteLine).not.toBe(m.wordmarkLine);
   });
 
+  // BREDDEN ER IKKE AKSEN — TEKSTSTØRRELSEN ER. En bred skjerm med stor tekst
+  // brekker raden like godt, og der ville en fiks bak `@media (max-width: 768px)`
+  // latt copyright-en henge til høyre igjen. 200 % er dessuten den forstørrelsen
+  // WCAG 1.4.4 krever at innholdet tåler.
+  test('på 800 px ved 200 % tekst er ingen linje innrykket', async () => {
+    await page.setViewport({ width: 800, height: 900, mobile: false });
+    await page.navigate(`http://localhost:${server.port}/nb/`);
+    await page.evaluate(scaleText, 2);
+    const m = (await page.evaluate(measureRow))!;
+    expect(m).not.toBeNull();
+    expect(m.lines.length, 'raden skulle brekkes ved denne tekststørrelsen').toBeGreaterThan(1);
+    for (const line of m.lines) {
+      expect(
+        line.left - m.rowLeft,
+        `linja «${line.texts.join(' · ')}» begynner ${Math.round(line.left - m.rowLeft)} px inne i raden`,
+      ).toBeLessThanOrEqual(TOLERANCE);
+    }
+  });
+
   // DESKTOP: deler copyright-en linje med resten, står den fortsatt til HØYRE.
   // Uten denne halvdelen ville «venstrestill den alltid» bestått, og da hadde
   // vi byttet bort et bevisst desktop-oppsett for å rette en telefon.
@@ -219,6 +249,14 @@ describe('legal-raden i footeren brekkes ikke skjevt (#93)', () => {
       expect(m).not.toBeNull();
       expect(m.noteLine, 'copyright-en skal dele linje med merket på desktop').toBe(m.wordmarkLine);
       expect(Math.abs(m.lines[m.noteLine]!.right - m.rowRight)).toBeLessThanOrEqual(TOLERANCE);
+      // Og lenkene står fortsatt INNTIL merket. Uten grupperingen ville
+      // `space-between` spredt de tre postene utover hele bredden, altså rettet
+      // telefonen ved å legge om desktop — en annen endring enn den saken ber om.
+      expect(
+        Math.abs(m.wordmarkToLinks! - m.columnGap),
+        `legal-lenkene står ${Math.round(m.wordmarkToLinks!)} px fra merket, ` +
+          `ikke radens ${m.columnGap} px`,
+      ).toBeLessThanOrEqual(TOLERANCE);
     });
   }
 });
