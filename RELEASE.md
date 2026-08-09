@@ -3,6 +3,16 @@
 What actually reached readers, newest first. Dates, not version numbers — we
 deploy continuously.
 
+## 2026-08-09 — Verse links now take you straight to the verse
+
+**New features**
+- Following a verse link — from search, the overview, a theme page, or the reading page itself — now lands you on that exact verse, marked so you can spot it right away instead of scanning the chapter.
+
+**Bug fixes**
+- The decorative glow behind the homepage welcome message no longer sits on top of the text, so it's easier to read.
+
+**Behind the scenes**
+- Added regression tests guarding the new verse marker and the welcome box glow layering.
 ## 2026-08-08 — Every id the API hands out is an address the API answers
 
 **Bug fixes**
