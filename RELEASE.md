@@ -3,6 +3,13 @@
 What actually reached readers, newest first. Dates, not version numbers — we
 deploy continuously.
 
+## 2026-08-15 — Directory-like paths under static assets now fail cleanly
+
+**Bug fixes**
+- Visiting a folder path inside a static asset area — with or without a trailing slash, including the top-level assets folder itself — now shows a normal "not found" page instead of a server error.
+
+**Behind the scenes**
+- Documented the recurring EISDIR crash and why these paths are treated as missing pages rather than server errors.
 ## 2026-08-09 — The study panel stops fighting mobile screens
 
 **Bug fixes**
