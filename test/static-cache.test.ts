@@ -6,9 +6,12 @@
 // i logg eller røyktest sa fra, fordi begge svarte 200.
 
 import { beforeAll, describe, expect, it, setDefaultTimeout } from 'bun:test';
+import { readdir } from 'node:fs/promises';
+import { Hono } from 'hono';
 import { DB_TEST_TIMEOUT_MS } from './db-timeout.ts';
 import { createApp } from '../src/app.ts';
 import { initBooks } from '../src/lib/bible.ts';
+import { STATIC_MOUNTS, staticCache } from '../src/lib/static-cache.ts';
 
 setDefaultTimeout(DB_TEST_TIMEOUT_MS);
 
@@ -58,6 +61,60 @@ describe('statiske filer', () => {
     // dessuten satt en ETag.
     expect(res.headers.get('cache-control')).toContain('stale-while-revalidate');
     expect(res.headers.get('etag')).toBeNull();
+  });
+});
+
+// En KATALOG under en statisk montering er ikke en fil og ikke en side (#95).
+// `etagFor()` stat-et den uten å klage og kastet EISDIR på lesingen, så `/js/`
+// og `/css/` svarte 500 — en 5xx-rad i `usage_errors` som eskalerer i
+// vaktbriefen, vekket av en hvilken som helst skanner som sonderer
+// katalogindekser. Ingen av våre egne lenker peker på en monteringsrot, så
+// hverken regresjonssveipene eller røyktesten spurte noen gang om den.
+describe('kataloger under en statisk montering', () => {
+  const DIRS = STATIC_MOUNTS.filter((m) => m.endsWith('/'));
+
+  it('det FINNES en katalogmontering å måle', () => {
+    expect(DIRS.length).toBeGreaterThan(0);
+  });
+
+  // REGELEN: middlewaren alene. En katalog skal falle gjennom til `next()`
+  // framfor å kaste — men en ekte fil skal fortsatt merkes, ellers ville
+  // «returner alltid null» bestått.
+  for (const dir of DIRS) {
+    it(`${dir} faller gjennom til neste handler`, async () => {
+      const app = new Hono();
+      app.use('/*', staticCache(STATIC_MOUNTS));
+      app.all('/*', (c) => c.text('videre', 404));
+      const res = await app.request(`http://x${dir}`);
+      expect(res.status).toBe(404);
+      expect(await res.text()).toBe('videre');
+      expect(res.headers.get('etag')).toBeNull();
+    });
+  }
+
+  it('en ekte fil merkes fortsatt', async () => {
+    const app = new Hono();
+    app.use('/*', staticCache(STATIC_MOUNTS));
+    app.all('/*', (c) => c.text('videre', 404));
+    const res = await app.request('http://x/css/home.css');
+    expect(res.headers.get('etag')).toMatch(/^"[0-9a-f]+"$/);
+  });
+
+  // FLATA: katalogene velges av DATAENE — hver katalog under `public/`, så en
+  // ny underkatalog måles uten at noen fører den opp. Ingen av dem får svares
+  // som en side: `/js/` er ingen adresse i side-navnerommet, og en
+  // locale-forhandling ville lovet `/en/js/`, som heller ikke finnes.
+  it('hver katalog under public/ svarer 404, uten omvei', async () => {
+    const entries = await readdir('./public', { withFileTypes: true, recursive: true });
+    const dirs = entries
+      .filter((e) => e.isDirectory())
+      .map((e) => `${e.parentPath.replace(/^\.?\/?public/, '')}/${e.name}/`);
+    expect(dirs.length).toBeGreaterThan(0);
+    for (const dir of dirs) {
+      const res = await app.request(dir);
+      expect(`${dir} -> ${res.status}`).toBe(`${dir} -> 404`);
+      expect(res.headers.get('content-type') ?? '').not.toContain('html');
+    }
   });
 });
 

@@ -5,7 +5,7 @@
 
 import { Hono } from 'hono';
 import { serveStatic } from 'hono/bun';
-import { staticCache } from './lib/static-cache.ts';
+import { STATIC_MOUNTS, staticCache, staticMountNotFound } from './lib/static-cache.ts';
 import { contextStorage } from 'hono/context-storage';
 import type { AppEnv } from './lib/session.ts';
 import { ACCOUNT_URL, withSession } from './lib/session.ts';
@@ -122,8 +122,11 @@ export function createApp() {
   // så etter en deploy satt leseren igjen med gammel CSS til ny HTML.
   // `/og.png` er delekortet (#65). Det hentes av skrapere, ikke av nettlesere,
   // og uten en validator laster hver av dem hele bildet på nytt hver gang.
-  app.use('/*', staticCache(['/css/', '/js/', '/styles.css', '/og.png']));
+  app.use('/*', staticCache(STATIC_MOUNTS));
   app.use('/*', serveStatic({ root: './public' }));
+  // Fant serveStatic ingen fil under en statisk montering, er svaret 404 her —
+  // ikke en locale-forhandling videre inn i side-navnerommet (#95).
+  app.use('/*', staticMountNotFound(STATIC_MOUNTS));
 
   // Én montering per språk (I18N.md §2). Locale settes av monteringen, ikke av
   // cookie: URL-en vinner, ellers ville en delt lenke vist mottakerens språk.

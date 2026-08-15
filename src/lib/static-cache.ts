@@ -34,7 +34,10 @@ const etags = new Map<string, Entry>();
 async function etagFor(path: string): Promise<string | null> {
   const file = Bun.file(path);
   const stat = await file.stat().catch(() => null);
-  if (!stat) return null;
+  // En KATALOG stat-er helt fint — det er `arrayBuffer()` under som kaster
+  // EISDIR, altså forbi et `!stat`-vern (#95). `isFile()` er det som skiller
+  // dem, og alt som ikke er en vanlig fil har ingen ETag å gi.
+  if (!stat || !stat.isFile()) return null;
 
   const cached = etags.get(path);
   if (cached && cached.mtimeMs === stat.mtimeMs && cached.size === stat.size) return cached.etag;
@@ -79,6 +82,29 @@ export function assetUrl(path: string): string {
   }
   versioned.set(path, url);
   return url;
+}
+
+/**
+ * Stiene appen serverer fra `public/`. ÉN sannhet, delt av cache-middlewaren,
+ * fall-gjennom-svaret under og vakta — to lister ville vært to steder å glemme
+ * en ny montering.
+ */
+export const STATIC_MOUNTS = ['/css/', '/js/', '/styles.css', '/og.png'] as const;
+
+/**
+ * Legges ETTER `serveStatic`: under en statisk montering svares det aldri som
+ * en SIDE. `/js/` er ingen adresse i side-navnerommet, så locale-forhandlingen
+ * lovte `/en/js/` — som heller ikke finnes (302 → 301 → 404), altså to hopp og
+ * en render-plass for et svar som uansett er «her er ingenting». Samme regel
+ * som under `/og/` (#84). Bare KATALOG-monteringene: en fil-montering som
+ * mangler (`/og.png`) har alt punktum i stien og 404-er av seg selv.
+ */
+export function staticMountNotFound(prefixes: readonly string[]): MiddlewareHandler {
+  const dirs = prefixes.filter((p) => p.endsWith('/'));
+  return async (c, next) => {
+    if (!dirs.some((p) => c.req.path.startsWith(p))) return next();
+    return c.text('Not Found', 404);
+  };
 }
 
 export function staticCache(prefixes: readonly string[]): MiddlewareHandler {
