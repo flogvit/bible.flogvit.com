@@ -98,11 +98,21 @@ export const STATIC_MOUNTS = ['/css/', '/js/', '/styles.css', '/og.png'] as cons
  * en render-plass for et svar som uansett er «her er ingenting». Samme regel
  * som under `/og/` (#84). Bare KATALOG-monteringene: en fil-montering som
  * mangler (`/og.png`) har alt punktum i stien og 404-er av seg selv.
+ *
+ * Roten teller BEGGE veier (#96): `/js` uten skråstrek er formen en skanner —
+ * og et menneske — faktisk skriver, og `startsWith('/js/')` ser den ikke.
+ * Stien har heller ikke punktum, så `NOT_A_PAGE` (#64) ser ingen fil, og den
+ * gikk dermed videre i locale-forhandlingen til `/en/js`: 302 → 404-SIDE,
+ * altså den samme omveien og den samme render-plassen bak semaforen. Roten
+ * matches EKSAKT, ellers ville en sideadresse som bare deler bokstavene
+ * (`/jsonfil`) blitt slukt av monteringen.
  */
 export function staticMountNotFound(prefixes: readonly string[]): MiddlewareHandler {
   const dirs = prefixes.filter((p) => p.endsWith('/'));
+  const roots = dirs.map((p) => p.slice(0, -1));
   return async (c, next) => {
-    if (!dirs.some((p) => c.req.path.startsWith(p))) return next();
+    const path = c.req.path;
+    if (!dirs.some((p) => path.startsWith(p)) && !roots.includes(path)) return next();
     return c.text('Not Found', 404);
   };
 }

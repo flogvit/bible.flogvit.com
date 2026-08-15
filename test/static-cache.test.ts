@@ -11,7 +11,7 @@ import { Hono } from 'hono';
 import { DB_TEST_TIMEOUT_MS } from './db-timeout.ts';
 import { createApp } from '../src/app.ts';
 import { initBooks } from '../src/lib/bible.ts';
-import { STATIC_MOUNTS, staticCache } from '../src/lib/static-cache.ts';
+import { STATIC_MOUNTS, staticCache, staticMountNotFound } from '../src/lib/static-cache.ts';
 
 setDefaultTimeout(DB_TEST_TIMEOUT_MS);
 
@@ -115,6 +115,40 @@ describe('kataloger under en statisk montering', () => {
       expect(`${dir} -> ${res.status}`).toBe(`${dir} -> 404`);
       expect(res.headers.get('content-type') ?? '').not.toContain('html');
     }
+  });
+
+  // MONTERINGSROTEN UTEN SKRÅSTREK (#96). `/js` er formen en skanner — og et
+  // menneske — faktisk skriver, og den falt utenfor `startsWith('/js/')`.
+  // Stien har ikke punktum, så `NOT_A_PAGE` (#64) ser ingen fil:
+  // locale-forhandlingen lovte `/en/js`, altså 302 → 404-SIDE. Det er de to
+  // samme prisene #95 tok bort for `/js/` — en omvei og en render-plass bak
+  // semaforen — for et svar som uansett er «her er ingenting».
+  for (const dir of DIRS) {
+    const root = dir.slice(0, -1);
+    it(`${root} svarer 404 uten omvei`, async () => {
+      const res = await app.request(root);
+      expect(`${root} -> ${res.status}`).toBe(`${root} -> 404`);
+      expect(res.headers.get('location')).toBeNull();
+      expect(res.headers.get('content-type') ?? '').not.toContain('html');
+    });
+  }
+
+  // REGELEN: middlewaren alene. Roten svares her, men en adresse som bare
+  // BEGYNNER med den er en helt annen sti og skal gå videre — ellers ville
+  // «404 på alt» bestått, og en side kunne blitt slukt av en montering.
+  it('REGELEN: roten svares, en sideadresse går videre', async () => {
+    const mw = new Hono();
+    mw.use('/*', staticMountNotFound(STATIC_MOUNTS));
+    mw.all('/*', (c) => c.text('side', 200));
+    for (const dir of DIRS) {
+      expect((await mw.request(`http://x${dir}`)).status).toBe(404);
+      expect((await mw.request(`http://x${dir.slice(0, -1)}`)).status).toBe(404);
+      // `/jsonfil` deler bare bokstavene med `/js` — den er en sideadresse.
+      const nabo = await mw.request(`http://x${dir.slice(0, -1)}onfil`);
+      expect(`${dir.slice(0, -1)}onfil -> ${nabo.status}`).toBe(`${dir.slice(0, -1)}onfil -> 200`);
+    }
+    const page = await mw.request('http://x/nb/matt/5');
+    expect(await page.text()).toBe('side');
   });
 });
 
