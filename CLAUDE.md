@@ -1623,6 +1623,29 @@ ble ubehandlet.
   stacktrace og 500 — samme mangel som felte puzzles ved en DB-blipp
   (`flogvit-com-puzzles#59`). Egen sak.
 
+##### Og roten UTEN skråstrek er den formen som faktisk skrives (#96)
+
+EISDIR-en over ble meldt på nytt, men loggvinduet (05:05–06:15Z) ligger i sin
+helhet FØR fiksen ble merget (06:40Z), og bibel-hono ble ikke rullet ut i det
+vinduet i det hele tatt — taggen `20260815-061507-cce4c54` er `server`-repoet.
+De seks hendelsene er altså førfiks. Det som fortsatt var galt, var samme regel
+én bokstav unna: `startsWith('/js/')` ser ikke `/js`.
+
+- **Formen uten skråstrek er den en skanner — og et menneske — skriver.** Den
+  har ikke punktum, så `NOT_A_PAGE` (#64) ser ingen fil, og den gikk videre i
+  locale-forhandlingen til `/en/js`: 302 og så en 404-SIDE. Det er de to samme
+  prisene #95 tok bort for `/js/` — en omvei og en render-plass bak semaforen
+  (#19) — for et svar som uansett er «her er ingenting».
+- **Roten matches EKSAKT.** Som prefiks ville monteringen slukt enhver
+  sideadresse som deler bokstavene (`/jsonfil`), altså byttet et billig 404 mot
+  en side som forsvinner. Vakta måler nettopp den nabostien.
+- **Vakta er de to nye halvdelene i `test/static-cache.test.ts`:** hver
+  monteringsrot (fra `STATIC_MOUNTS`, ikke en egen liste) svarer 404 uten
+  `Location` og uten HTML-kropp, og REGELEN krever i tillegg at nabostien går
+  videre — ellers ville «404 på alt» bestått. Fem mutasjoner kjørt: feilen
+  gjeninnført, roten som prefiks, 404 på alt, redirect framfor 404, og den
+  smale fiksen som bare tar `/js`.
+
 ### Kapasitet: profilér før du skrur på tak (#19)
 
 En CPU-profil av kapittelrenderen (`bun --cpu-prof --cpu-prof-md`) viste at **85 %
