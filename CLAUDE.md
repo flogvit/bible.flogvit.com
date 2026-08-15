@@ -1584,6 +1584,45 @@ fjerde importerer `NOT_A_PAGE` og krever at ingen sti i sitemapen eller i `PAGES
 ser ut som en fil. Alle fire er mutasjonstestet, også mot den smale fiksen som
 bare slipper `/robots.txt` gjennom.
 
+#### En KATALOG under en montering er hverken fil eller side (#95)
+
+`/js/` og `/css/` svarte **500** der de ni andre flatene svarer 404. `etagFor()`
+i `static-cache.ts` stat-et `./public/js/` uten å klage — en katalog stat-er
+helt fint — og kastet så EISDIR på `arrayBuffer()`, altså FORBI vernet
+`if (!stat) return null`. `catch`-en dekket `stat()`, ikke lesingen, og kastet
+ble ubehandlet.
+
+- **Ingen leser møter det:** layout lenker aldri en monteringsrot, så
+  regresjonssveipene og røyktesten spurte aldri om `/js/`. Det som treffer den
+  er skannere som sonderer katalogindekser, og prisen ligger der: en 5xx-rad i
+  `usage_errors` eskalerer i vaktbriefen hver time uten at `vakt-kjent.tsv` kan
+  dempe den. Én skanner vekker altså en ubetjent kjøring.
+- **`isFile()` er skillet.** Alt som ikke er en vanlig fil har ingen ETag å gi,
+  så middlewaren faller gjennom framfor å lese.
+- **Å falle gjennom holdt ikke alene.** serveStatic finner ingen fil, og stien
+  har ikke punktum, så locale-forhandlingen tok over og lovte `/en/js/` — som
+  heller ikke finnes: 302 → 301 → 404, to hopp og en **render-plass** (#64
+  kjenner en fil på punktumet, og en katalogsti har ikke det) for et svar som
+  uansett er «her er ingenting». `staticMountNotFound` svarer derfor 404 rett
+  under monteringene, uten HTML-kropp og uten omvei — ordrett samme regel som
+  under `/og/` (#84). Bare KATALOGENE: en manglende fil-montering (`/og.png`)
+  har alt punktum i stien og 404-er av seg selv.
+- **`STATIC_MOUNTS` er én sannhet**, delt av begge middlewarene og av vakta —
+  lista lå som en literal i `app.ts`, og en ny montering ville ellers vært to
+  steder å huske.
+- **Vakta ligger i `test/static-cache.test.ts` og har tre halvdeler.** REGELEN
+  (middlewaren alene: hver katalogmontering faller gjennom til neste handler
+  framfor å kaste, mens en ekte fil fortsatt merkes — ellers ville «returner
+  alltid null» bestått). FLATA (hver katalog under `public/` svarer 404, uten
+  omvei og uten HTML-kropp; katalogene velges av DATAENE, så en ny
+  underkatalog måles uten at noen fører den opp). Og det må FINNES en
+  katalogmontering, ellers måler de to andre ingenting. Fem mutasjoner kjørt,
+  inkludert den smale fiksen som bare slipper `/js/` gjennom.
+- **Restanse, meldt i saken og ikke fikset her:** appen har ingen
+  `app.onError`, så et hvilket som helst ubehandlet kast i en handler blir en
+  stacktrace og 500 — samme mangel som felte puzzles ved en DB-blipp
+  (`flogvit-com-puzzles#59`). Egen sak.
+
 ### Kapasitet: profilér før du skrur på tak (#19)
 
 En CPU-profil av kapittelrenderen (`bun --cpu-prof --cpu-prof-md`) viste at **85 %
