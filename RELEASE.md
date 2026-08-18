@@ -1,5 +1,16 @@
 # Release notes
 
+## 2026-08-18 — Security update to the web framework
+
+**Behind the scenes**
+
+- Updated Hono, the web framework behind this site, from 4.12.32 to 4.12.34. The
+  release closes four advisories published on 3 August. None of them could be
+  reached from this site — the most serious, a cross-user data leak in server-side
+  rendering, requires a caching helper this codebase does not use — but running a
+  version with known advisories is not a state worth keeping. Nothing changes for
+  you.
+
 What actually reached readers, newest first. Dates, not version numbers — we
 deploy continuously.
 
