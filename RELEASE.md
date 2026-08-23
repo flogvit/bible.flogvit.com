@@ -1,5 +1,9 @@
 # Release notes
 
+## 2026-08-23 — Security maintenance
+
+**Behind the scenes**
+- Updated the Hono web framework, closing four security advisories.
 ## 2026-08-18 — Security update to the web framework
 
 **Behind the scenes**
