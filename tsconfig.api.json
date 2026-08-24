@@ -15,5 +15,5 @@
     "baseUrl": "."
   },
   "include": ["api/**/*.ts", "src/lib/**/*.ts"],
-  "exclude": ["node_modules", "dist", "dist-api"]
+  "exclude": ["node_modules", "dist", "dist-api", "**/*.test.ts"]
 }

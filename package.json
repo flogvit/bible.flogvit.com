@@ -19,6 +19,7 @@
     "build": "vite build",
     "build:api": "tsc -p tsconfig.api.json",
     "build:all": "npm run build && npm run build:api",
+    "test": "bun test api",
     "start": "tsx api/server.ts",
     "start:prod": "tsx api/server.ts",
     "preview": "vite preview",

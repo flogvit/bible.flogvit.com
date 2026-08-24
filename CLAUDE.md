@@ -7,6 +7,36 @@ En norsk bibel-nettside med oppslagsverk og verktøy for bibellesning. Vite-fron
 - **`bibel-no`** (denne): gammel app (Vite+React+Express+SQLite), serverer **bibel.flogvit.no** — fryst, beholdes som den er inntil videre. Deploy til .no må skje fra en checkout av DENNE branchen (`server/deploy-bibel.sh` i flogvit.com/server/).
 - **`main`**: Bun+Hono+hono/jsx+Bun.sql mot MySQL — kjører på **bibel.flogvit.com** (parallelt med .no). Plan og status i `ISSUES.md` der.
 
+## `osnb2` er BIBEL-id-en. Nummereringen heter `osnb` (#101)
+
+To akser deler en streng, og det er ikke samme verdi:
+
+- **Bibel-id** — `verses.bible`, `?bible=`, brukerens lagrede innstillinger.
+  Heter fortsatt `osnb2`/`osnn1` i basen denne flata leser, og skal STÅ. `main`
+  migrerte sin base til `osnb`/`osnn`; det er en annen base og en annen flate.
+- **Mapping-id** — filnavnet i `kvn-package/mappings/`. free-bible døpte om
+  `osnb2.ukvn.json` → `osnb.ukvn.json` 2026-07-26. `OSNB_MAPPING_ID` i
+  `api/lib/verse-mapper.ts` er den ene sannheten; skriv den aldri som literal.
+
+Prisen da de to ble blandet: `loadUkvnMapping` gjør `readFileSync` uten
+fallback, så HVER forespørsel med `mapping=` kastet ENOENT og ble en 500 —
+17 av 17 mot `/api/chapter`, mot 468 av 468 grønne uten. Samme linje tømte de
+~250 lesetekst-sidene (#98/#99). Uten `mapping=` røres fila aldri, og det er
+derfor bare parallellnummereringen døde: appen så frisk ut for alle andre.
+
+**Vakta er `api/lib/verse-mapper.test.ts`**, kjørt med `npm test`
+(= `bun test api`). Den er formulert på KATALOGEN av mappingfiler og ikke på
+strengen «osnb», så neste omdøping i kilden blir rød her framfor en 500 hos en
+leser. Tre halvdeler: BASEN (id-en kryssmapperen går gjennom står i
+`listUkvnMappings()`), FLATA (`mapChapter` kaster ikke for id-ene appen SELV
+tilbyr — valgt av dataene) og FORMEN (ingen mapping-id som literal i `api/`,
+sveipen må finne begge kallformene, og bibel-id-en `osnb2` må fortsatt finnes,
+så «søk og erstatt» ikke består). Sju mutasjoner kjørt.
+
+**Branchen har ellers ingen testrigg.** `bun test` er valgt fordi den ikke
+krever noe installert utover `npm ci`; `tsconfig.api.json` holder `*.test.ts`
+utenfor `build:api`.
+
 ## Datakilder
 All bibeldata hentes fra `../free-bible/generate/`:
 
