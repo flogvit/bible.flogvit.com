@@ -1,5 +1,14 @@
 # Release notes
 
+## 2026-08-24 — The reference API now answers in your language
+
+**New features**
+
+- Looking up a Bible reference through `/api/reference` now returns results — and error messages, when a reference can't be resolved — in the language you called it in, instead of switching to a different language partway through.
+
+**Behind the scenes**
+
+- Documented that error branches are user-facing text too, so translations don't get skipped when new failure cases are added.
 ## 2026-08-23 — Security maintenance
 
 **Behind the scenes**
