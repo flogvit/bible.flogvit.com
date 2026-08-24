@@ -180,7 +180,9 @@ describe('DEPLOYEN: én ulesbar adresse feller ikke ensureSchema()', () => {
 
     const tekst = formatReadingRefRepair(rapport);
     expect(tekst).toContain(MARKUP_UKJENT);
-    expect(tekst).toContain(DØD_ID);
+    // Systemet må navngis UTENFOR adressen: «osnb2» står alt inne i markupen,
+    // så en melding som bare gjentar den sier ikke hva som må rettes.
+    expect(tekst.split(MARKUP_UKJENT).join('')).toContain(DØD_ID);
   });
 });
 
