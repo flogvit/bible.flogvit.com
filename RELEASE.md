@@ -1,5 +1,12 @@
 # Release notes
 
+## 2026-08-24 — Looking up a verse in an unfamiliar numbering scheme no longer breaks the page
+
+**Bug fixes**
+- A verse reference that uses a numbering scheme not available for the requested translation now correctly shows as not found, instead of failing with an error.
+
+**Behind the scenes**
+- Added safeguards so this class of bug is caught by tests before it can reach the live site again.
 ## 2026-08-24 — The reference API now answers in your language
 
 **New features**
