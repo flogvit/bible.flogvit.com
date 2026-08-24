@@ -28,7 +28,7 @@
 // `bible = 'osnb'`, #46) som `pruneDanglingRefs()` alt klipper mot.
 
 import type { SQL } from 'bun';
-import { UkvnMapper, loadUkvnMapping, ukvnEncode, ukvnDecode, resolveMappingId } from '@free-bible/kvn';
+import { UkvnMapper, loadUkvnMapping, listUkvnMappings, ukvnEncode, ukvnDecode, resolveMappingId } from '@free-bible/kvn';
 import { BOOK_IDS } from '@free-bible/kvn/types';
 import { getChapterVerseCount } from './verse-counts.ts';
 
@@ -47,6 +47,46 @@ export interface ParsedReadingRef {
   /** Mapping-id-en adressen er skrevet i, oppløst (`dnb2024` → `dnb2024_nb`). */
   mappingId: string;
   rows: ReadingRefRow[];
+}
+
+/**
+ * Har vi en mappingfil for denne id-en? (#100)
+ *
+ * `loadUkvnMapping()` gjør `readFileSync` uten fallback, så en id vi ikke har
+ * blir et ubehandlet ENOENT-kast midt i parsingen. Systemnavnet kommer fra
+ * KILDEN — `@dnb2024` i markupen — og kildens id-er endrer seg: free-bible
+ * omdøpte `osnb2`→`osnb` 2026-07-26, og det er nettopp den omdøpingen som
+ * feller hvert kall på `bibel.flogvit.no` i dag.
+ *
+ * Kastet er dyrest i `repairWholeChapterReadingRefs()`, som kjøres fra
+ * `ensureSchema()` ved HVER deploy (#92): én slik rad feller `init-db`, og da
+ * står hele appen uten utrulling til noen finner den.
+ *
+ * Katalogen leses ÉN gang (1158 filnavn, 1,5 ms målt) — ikke filene, bare
+ * navnene, så dette er ikke `getAvailableMappings()`-fella fra #19.
+ */
+let mappingIdsOnDisk: Set<string> | null = null;
+function haveMappingFile(mappingId: string): boolean {
+  mappingIdsOnDisk ??= new Set(listUkvnMappings());
+  return mappingIdsOnDisk.has(mappingId);
+}
+
+/**
+ * Nummereringen adressen er skrevet i, NÅR det er den vi mangler.
+ *
+ * `parseReadingRefMarkup()` gir null av flere grunner (ukjent bok, markup som
+ * ikke lar seg lese), og en rapport som ikke skiller dem sier ikke hva som må
+ * rettes. Returnerer systemnavnet slik KILDEN skrev det, så meldingen kan
+ * navngi det free-bible må rette.
+ */
+export function unknownMappingSystem(markup: string): string | null {
+  const m = markup.trim().match(/^\[ref:([^\]]+)\]$/);
+  if (!m) return null;
+  const refPart = m[1]!.split('|')[0]!.trim();
+  const atIdx = refPart.lastIndexOf('@');
+  if (atIdx === -1) return null;
+  const system = refPart.slice(atIdx + 1).trim();
+  return haveMappingFile(resolveMappingId(system) || system) ? null : system;
 }
 
 const mappers = new Map<string, UkvnMapper>();
@@ -201,6 +241,10 @@ export function parseReadingRefMarkup(markup: string): ParsedReadingRef | null {
   const spec = colonIdx === -1 ? '' : chapterVerse.slice(colonIdx + 1).trim();
 
   const mappingId = system ? (resolveMappingId(system) || system) : 'osnb';
+  // En nummerering vi ikke har en fil for er en markup vi ikke kan lese: hvert
+  // vers måtte oversettes gjennom nettopp den mappingen, så alternativet til
+  // null er å gjette (#61) — eller, slik det sto, å kaste ENOENT (#100).
+  if (!haveMappingFile(mappingId)) return null;
   const ranges = parseVerseSpec(spec, chapter);
 
   if (ranges.length === 0) {
@@ -235,18 +279,35 @@ export function parseReadingRefMarkup(markup: string): ParsedReadingRef | null {
 export interface ReadingRefRepairReport {
   /** Én oppføring per rad som ble skrevet om, med hva den ble til. */
   repaired: { displayRef: string; rows: number }[];
+  /**
+   * Rader vi lot stå fordi adressen er skrevet i en nummerering vi ikke har
+   * (#100). En stille skip her ser ut som «ingenting å rette», og da er
+   * omdøpingen i kilden usynlig helt til lesningen står uten vers — samme
+   * regel som «importen rapporterer alltid det den kaster» (#46).
+   */
+  unreadable: { displayRef: string; system: string }[];
 }
 
 export function readingRefRepairIsEmpty(report: ReadingRefRepairReport): boolean {
-  return report.repaired.length === 0;
+  return report.repaired.length === 0 && report.unreadable.length === 0;
 }
 
 export function formatReadingRefRepair(report: ReadingRefRepairReport): string {
-  const lines = report.repaired.map((r) => `  ${r.displayRef} → ${r.rows} versspenn`);
-  return [
-    `Rettet ${report.repaired.length} lesetekst-referanse(r) som sto som «hele kapittelet» (#92):`,
-    ...lines,
-  ].join('\n');
+  const deler: string[] = [];
+  if (report.repaired.length > 0) {
+    deler.push(
+      `Rettet ${report.repaired.length} lesetekst-referanse(r) som sto som «hele kapittelet» (#92):`,
+      ...report.repaired.map((r) => `  ${r.displayRef} → ${r.rows} versspenn`),
+    );
+  }
+  if (report.unreadable.length > 0) {
+    deler.push(
+      `${report.unreadable.length} lesetekst-referanse(r) står i en nummerering vi ikke har (#100) — lesningen viser ingen vers:`,
+      ...report.unreadable.map((r) => `  ${r.displayRef} → ukjent system «${r.system}»`),
+      '  Mappingen er trolig omdøpt eller fjernet i free-bible; adressen må rettes der.',
+    );
+  }
+  return deler.join('\n');
 }
 
 interface FallbackRow {
@@ -260,7 +321,7 @@ interface FallbackRow {
 }
 
 export async function repairWholeChapterReadingRefs(sql: SQL): Promise<ReadingRefRepairReport> {
-  const report: ReadingRefRepairReport = { repaired: [] };
+  const report: ReadingRefRepairReport = { repaired: [], unreadable: [] };
 
   const rows = (await sql`
     SELECT reading_text_id, slot_index, option_index, part_index, title, display_ref, sort_order
@@ -271,7 +332,15 @@ export async function repairWholeChapterReadingRefs(sql: SQL): Promise<ReadingRe
     const parsed = parseReadingRefMarkup(row.display_ref);
     // Ingen adresse å lese, eller adressen NAVNGIR virkelig et helt kapittel:
     // raden står som den skal, og reparasjonen gjetter ikke.
-    if (!parsed || parsed.rows.length === 0) continue;
+    if (!parsed || parsed.rows.length === 0) {
+      // …men er grunnen at nummereringen er borte fra kilden, er det ikke en
+      // rad som «står som den skal» — den er et hull ingen ser (#100).
+      const system = unknownMappingSystem(row.display_ref);
+      if (system && !report.unreadable.some((u) => u.displayRef === row.display_ref)) {
+        report.unreadable.push({ displayRef: row.display_ref, system });
+      }
+      continue;
+    }
     if (parsed.rows.length === 1 && parsed.rows[0]!.verseEnd === null) continue;
 
     await sql`

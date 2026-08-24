@@ -33,7 +33,7 @@ import {
 } from '../src/lib/verse-refs.ts';
 import { prunePersonRefs, personPruneReportIsEmpty, formatPersonPruneReport } from '../src/lib/person-refs.ts';
 import { CONTENT_TABLES, CONTENT_SOURCES, contentSourceReport } from '../src/lib/content-sources.ts';
-import { parseReadingRefMarkup } from '../src/lib/reading-ref.ts';
+import { parseReadingRefMarkup, unknownMappingSystem } from '../src/lib/reading-ref.ts';
 import { IMPORTED_BIBLES } from '../src/lib/editions.ts';
 
 // Kilde for bibelinnhold. Standard: ../free-bible relativt til cwd (som er en
@@ -1908,7 +1908,14 @@ if (fs.existsSync(leseteksterPath)) {
           // deploy trenger, og et skript kan ikke importeres av en test.
           const parsed = parseReadingRefMarkup(refMarkup);
           if (!parsed) {
-            console.warn(`  Kunne ikke lese referanse: ${refMarkup}`);
+            // Er nummereringen borte fra kilden, er det DEN som må rettes —
+            // «kunne ikke lese» alene peker på markupen (#100).
+            const system = unknownMappingSystem(refMarkup);
+            console.warn(
+              system
+                ? `  Ukjent nummerering «${system}» — ingen mappingfil: ${refMarkup}`
+                : `  Kunne ikke lese referanse: ${refMarkup}`,
+            );
             return 0;
           }
           let inserted = 0;
