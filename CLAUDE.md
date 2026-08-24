@@ -549,6 +549,42 @@ at det er FEIL tekst.
   stille fra lesningen. Derfor begynner denne lesningen på 64,7 og ikke på 64,6b.
   Det gjelder også lesninger innenfor ett kapittel og er en egen sak.
 
+#### En nummerering vi ikke HAR feller ikke deployen (#100)
+
+`parseReadingRefMarkup()` gjorde `resolveMappingId(system) || system` og rakte
+systemnavnet fra kilden rått videre til `loadUkvnMapping()`, som er
+`readFileSync` uten fallback. En id vi ikke har en fil for ble derfor et
+ubehandlet ENOENT-kast midt i parsingen — ordrett signaturen saken er meldt på,
+`open '<sti>/mappings/osnb2.ukvn.json'`.
+
+- **Prisen er en DEPLOY, ikke en side.** `repairWholeChapterReadingRefs()`
+  kjøres fra `ensureSchema()` ved hver deploy (#92) og har ingen `try`. Én slik
+  rad feller `bun scripts/init-db.ts`, som deployen kjører fra det nye imaget
+  FØR restart — da står hele appen uten utrulling til noen finner raden.
+  Importen fanger sitt eget kast per referanse, så der er prisen bare at
+  lesningen mister versene sine.
+- **Triggeren er en omdøping i KILDEN.** free-bible døpte `osnb2`→`osnb`
+  2026-07-26 (se «Bibel-ID-er»); `main` fulgte med for bibel-id-ene, men
+  systemnavnet i `display_ref` leses fortsatt rått. Den neste omdøpingen
+  trenger ingen kodeendring hos oss for å bli et kast.
+- **Null, ikke en gjetning.** Fila lover selv null når markupen ikke lar seg
+  lese (#61), og en nummerering vi ikke har ER en markup vi ikke kan lese:
+  hvert vers måtte oversettes gjennom nettopp den mappingen.
+- **Katalogen leses ÉN gang** (1158 filnavn, 1,5 ms) — bare navnene, ikke
+  filene, så dette er ikke `getAvailableMappings()`-fella fra #19.
+- **Reparasjonen RAPPORTERER det den lot stå**, med systemnavnet, og importen
+  navngir det samme. En stille skip ser ut som «ingenting å rette», og da er
+  omdøpingen usynlig til lesningen står uten vers — samme regel som i #46.
+- **Vakta er `test/reading-ref-unknown-mapping.test.ts`** og har tre halvdeler.
+  REGELEN (id-ene velges av FILKATALOGEN, ikke av strengen «osnb2», og en id vi
+  HAR leses fortsatt — ellers ville «alltid null» bestått). DEPLOYEN
+  (reparasjonen kaster ikke, lar raden stå, retter fortsatt den ekte, og
+  rapporten navngir systemet UTENFOR adressen). DATA (ingen `display_ref` i
+  basen peker på en mappingfil som ikke finnes). Sju mutasjoner kjørt.
+- **Dette flytter ikke `.no`.** Symptomet i saken er målt på
+  `bibel.flogvit.no`, som serveres fra `bibel-no` — der står `osnb2` hardkodet i
+  ~20 filer, og hva flata skal være er avgjørelsen i #98.
+
 ### En offentlig URL skal ALDRI bære en auto_increment-id (#40)
 
 Importen sletter og setter inn på nytt, og MySQL fortsetter tellingen der den
