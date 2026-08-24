@@ -2,6 +2,7 @@ import type { Book } from './bible.ts';
 import { getAllBooks, getBookById, getBookUrlSlug } from './bible.ts';
 import { bookAliases } from './book-aliases.ts';
 import { bookNameById } from './books-data.ts';
+import type { MessageKey, Translator } from './i18n.ts';
 
 export interface ParsedReference {
   book: Book;
@@ -16,15 +17,51 @@ export interface BookSuggestion {
   matchedAlias: string;
 }
 
+/**
+ * En feil fra parseren, som NØKKEL og parametre — aldri som ferdig tekst (#71).
+ *
+ * `parseReference()` er ren logikk uten request-kontekst, så den kan ikke vite
+ * hvilket språk kallet kom på. Sto teksten her, sto den på ett språk for alle
+ * åtte: «Salmene har 150 kapitler» svarte også på `?lang=fr`. Oversettelsen
+ * hører derfor der locale-en finnes — i ruta, gjennom `referenceErrorText()`.
+ */
+export interface ReferenceError {
+  key: MessageKey;
+  params?: Record<string, string | number>;
+  /**
+   * Boka meldingen navngir. Navnet er VISNING og hentes med `bookNameById()`
+   * ved oversettingen, aldri lagt i `params` som `name_no` — nøkkelen ga
+   * «Salmene» på alle åtte språk, samme feil som #69 gjorde i paletten.
+   */
+  bookId?: number;
+}
+
 export interface ParseResult {
   success: boolean;
   reference?: ParsedReference;
   suggestions?: BookSuggestion[];
-  error?: string;
+  error?: ReferenceError;
   partial?: {
     book?: Book;
     chapter?: number;
   };
+}
+
+/**
+ * Feilen som tekst på forespørselens språk. Ett sted, delt av begge grenene i
+ * `/api/reference` — ruta har alt riktig locale (`apiLocale`, #24), og
+ * `bookNameById()` leser den fra contextStorage som resten av visningen.
+ *
+ * Faller boknavnet bort (en bok-id vi ikke har i den statiske tabellen), brukes
+ * nøkkelen som ligger i `params.book` — som i `formatParsedReference()` er den
+ * bedre enn en tom streng midt i en setning.
+ */
+export function referenceErrorText(t: Translator, error: ReferenceError): string {
+  const params = { ...error.params };
+  if (error.bookId !== undefined) {
+    params.book = bookNameById(error.bookId) || String(params.book ?? '');
+  }
+  return t(error.key, params);
 }
 
 /**
@@ -107,7 +144,7 @@ export function getBookSuggestions(input: string): BookSuggestion[] {
 export function parseReference(input: string): ParseResult {
   const normalized = normalizeInput(input);
   if (!normalized) {
-    return { success: false, error: 'Tom input' };
+    return { success: false, error: { key: 'ref.err.empty' } };
   }
 
   // Pattern to match book name (with optional number prefix) and chapter/verse
@@ -125,7 +162,7 @@ export function parseReference(input: string): ParseResult {
         partial: { book: suggestions[0]!.book }
       };
     }
-    return { success: false, error: 'Ugyldig format' };
+    return { success: false, error: { key: 'ref.err.format' } };
   }
 
   const [, bookPart, chapterStr, verseStartStr, verseEndStr] = match;
@@ -135,10 +172,11 @@ export function parseReference(input: string): ParseResult {
 
   if (!book) {
     const suggestions = getBookSuggestions(bookPart!.trim());
+    const error: ReferenceError = { key: 'ref.err.bookNotFound' };
     if (suggestions.length > 0) {
-      return { success: false, suggestions, error: 'Fant ikke bok' };
+      return { success: false, suggestions, error };
     }
-    return { success: false, error: 'Fant ikke bok' };
+    return { success: false, error };
   }
 
   // If no chapter specified, return partial result
@@ -146,7 +184,7 @@ export function parseReference(input: string): ParseResult {
     return {
       success: false,
       partial: { book },
-      error: 'Mangler kapittel'
+      error: { key: 'ref.err.missingChapter' }
     };
   }
 
@@ -157,7 +195,11 @@ export function parseReference(input: string): ParseResult {
     return {
       success: false,
       partial: { book },
-      error: `${book.name_no} har ${book.chapters} kapitler`
+      error: {
+        key: 'ref.err.chapterCount',
+        bookId: book.id,
+        params: { book: book.name_no, count: book.chapters },
+      }
     };
   }
 

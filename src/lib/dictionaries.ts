@@ -1043,6 +1043,16 @@ const en = {
   "ch.empty": "No release notes yet.",
   "ch.englishOnly": "The release notes are written in English.",
   "foot.changes": "What’s new",
+  // Feilene fra /api/reference (#71). Boknavnet er `{book}` og settes inn med
+  // `bookNameById()` — aldri med `name_no`, som er NØKKELEN (#69).
+  "ref.err.missingQuery": "Missing search parameter",
+  "ref.err.notReference": "Not a Bible reference",
+  "ref.err.empty": "Empty input",
+  "ref.err.format": "Invalid format",
+  "ref.err.bookNotFound": "Book not found",
+  "ref.err.missingChapter": "Missing chapter",
+  "ref.err.chapterCount": "{book} has {count} chapters",
+  "ref.err.verseCount": "{book} {chapter} has {count} verses",
 };
 
 type Dict = Record<keyof typeof en, string>;
@@ -2084,6 +2094,14 @@ const nb: Dict = {
   "ch.empty": "Ingen endringslogg ennå.",
   "ch.englishOnly": "Endringsloggen er skrevet på engelsk.",
   "foot.changes": "Hva er nytt",
+  "ref.err.missingQuery": "Mangler søkeparameter",
+  "ref.err.notReference": "Ikke en bibelreferanse",
+  "ref.err.empty": "Tom input",
+  "ref.err.format": "Ugyldig format",
+  "ref.err.bookNotFound": "Fant ikke boka",
+  "ref.err.missingChapter": "Mangler kapittel",
+  "ref.err.chapterCount": "{book} har {count} kapitler",
+  "ref.err.verseCount": "{book} {chapter} har {count} vers",
 };
 
 const nn: Dict = {
@@ -3123,6 +3141,14 @@ const nn: Dict = {
   "ch.empty": "Ingen endringslogg enno.",
   "ch.englishOnly": "Endringsloggen er skriven på engelsk.",
   "foot.changes": "Kva er nytt",
+  "ref.err.missingQuery": "Manglar søkjeparameter",
+  "ref.err.notReference": "Ikkje ein bibelreferanse",
+  "ref.err.empty": "Tomt søk",
+  "ref.err.format": "Ugyldig format",
+  "ref.err.bookNotFound": "Fann ikkje boka",
+  "ref.err.missingChapter": "Manglar kapittel",
+  "ref.err.chapterCount": "{book} har {count} kapittel",
+  "ref.err.verseCount": "{book} {chapter} har {count} vers",
 };
 
 const sv: Dict = {
@@ -4162,6 +4188,14 @@ const sv: Dict = {
   "ch.empty": "Ingen ändringslogg än.",
   "ch.englishOnly": "Ändringsloggen är skriven på engelska.",
   "foot.changes": "Vad är nytt",
+  "ref.err.missingQuery": "Sökparameter saknas",
+  "ref.err.notReference": "Inte en bibelhänvisning",
+  "ref.err.empty": "Tom sökning",
+  "ref.err.format": "Ogiltigt format",
+  "ref.err.bookNotFound": "Boken hittades inte",
+  "ref.err.missingChapter": "Kapitel saknas",
+  "ref.err.chapterCount": "{book} har {count} kapitel",
+  "ref.err.verseCount": "{book} {chapter} har {count} verser",
 };
 
 const fr: Dict = {
@@ -5201,6 +5235,14 @@ const fr: Dict = {
   "ch.empty": "Pas encore de notes de version.",
   "ch.englishOnly": "Les notes de version sont rédigées en anglais.",
   "foot.changes": "Nouveautés",
+  "ref.err.missingQuery": "Paramètre de recherche manquant",
+  "ref.err.notReference": "Ce n’est pas une référence biblique",
+  "ref.err.empty": "Recherche vide",
+  "ref.err.format": "Format non valide",
+  "ref.err.bookNotFound": "Livre introuvable",
+  "ref.err.missingChapter": "Chapitre manquant",
+  "ref.err.chapterCount": "{book} compte {count} chapitres",
+  "ref.err.verseCount": "{book} {chapter} compte {count} versets",
 };
 
 const es: Dict = {
@@ -6240,6 +6282,14 @@ const es: Dict = {
   "ch.empty": "Todavía no hay notas de versión.",
   "ch.englishOnly": "Las notas de versión están escritas en inglés.",
   "foot.changes": "Novedades",
+  "ref.err.missingQuery": "Falta el parámetro de búsqueda",
+  "ref.err.notReference": "No es una referencia bíblica",
+  "ref.err.empty": "Búsqueda vacía",
+  "ref.err.format": "Formato no válido",
+  "ref.err.bookNotFound": "Libro no encontrado",
+  "ref.err.missingChapter": "Falta el capítulo",
+  "ref.err.chapterCount": "{book} tiene {count} capítulos",
+  "ref.err.verseCount": "{book} {chapter} tiene {count} versículos",
 };
 
 const fi: Dict = {
@@ -7279,6 +7329,16 @@ const fi: Dict = {
   "ch.empty": "Ei vielä muutoslokia.",
   "ch.englishOnly": "Muutosloki on kirjoitettu englanniksi.",
   "foot.changes": "Mitä uutta",
+  "ref.err.missingQuery": "Hakuparametri puuttuu",
+  "ref.err.notReference": "Ei ole raamatunviite",
+  "ref.err.empty": "Tyhjä haku",
+  "ref.err.format": "Virheellinen muoto",
+  "ref.err.bookNotFound": "Kirjaa ei löytynyt",
+  "ref.err.missingChapter": "Luku puuttuu",
+  // Boknavnet kan ikke bøyes trygt (det kommer fra dataene), så tallet står
+  // etter kolon framfor i en setning som ville krevd genitiv av «{book}».
+  "ref.err.chapterCount": "{book}: {count} lukua",
+  "ref.err.verseCount": "{book} {chapter}: {count} jaetta",
 };
 
 const de: Dict = {
@@ -8318,6 +8378,14 @@ const de: Dict = {
   "ch.empty": "Noch kein Änderungsprotokoll.",
   "ch.englishOnly": "Das Änderungsprotokoll ist auf Englisch verfasst.",
   "foot.changes": "Was ist neu",
+  "ref.err.missingQuery": "Suchparameter fehlt",
+  "ref.err.notReference": "Keine Bibelstelle",
+  "ref.err.empty": "Leere Suche",
+  "ref.err.format": "Ungültiges Format",
+  "ref.err.bookNotFound": "Buch nicht gefunden",
+  "ref.err.missingChapter": "Kapitel fehlt",
+  "ref.err.chapterCount": "{book} hat {count} Kapitel",
+  "ref.err.verseCount": "{book} {chapter} hat {count} Verse",
 };
 
 export const DICTIONARIES = { en, nb, nn, sv, fr, es, fi, de };
