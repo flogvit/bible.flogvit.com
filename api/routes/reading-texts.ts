@@ -7,6 +7,7 @@ import {
 } from '../../src/lib/bible';
 import type { ReadingTextWithSlots, VerseRange } from '../../src/lib/bible';
 import { UkvnMapper, loadUkvnMapping, ukvnEncode, ukvnDecode, sliceVersePart, resolveMappingId } from '@free-bible/kvn';
+import { OSNB_MAPPING_ID } from '../lib/verse-mapper';
 
 export const readingTextsRouter = Router();
 
@@ -41,7 +42,7 @@ function rangeToVerses(range: VerseRange, bible: string, displayMapping: string)
   const out: EnrichedVerse[] = [];
   const end = range.verse_end ?? range.verse_start;
   for (let v = range.verse_start; v <= end; v++) {
-    const osnb2 = osmainTo(range.book_id, range.chapter, v, 'osnb2');
+    const osnb2 = osmainTo(range.book_id, range.chapter, v, OSNB_MAPPING_ID);
     const verse = getVerse(range.book_id, osnb2.chapter, osnb2.verse, bible);
     if (!verse) continue;
 
@@ -80,7 +81,7 @@ function enrichWithVerseText(
   mapping: string,
 ): ReadingTextWithSlots & { verses: Record<string, EnrichedVerse[]> } {
   const verses: Record<string, EnrichedVerse[]> = {};
-  const resolvedMapping = resolveMappingId(mapping) || 'osnb2';
+  const resolvedMapping = resolveMappingId(mapping) || OSNB_MAPPING_ID;
 
   for (const slot of text.slots) {
     for (const option of slot.options) {

@@ -14,6 +14,23 @@ import type { Verse } from '../../src/lib/bible';
 
 export { MAPPING_META, resolveMappingId } from '@free-bible/kvn';
 
+/**
+ * KVN-id-en for grunntekstens EGEN versnummerering — mappingfila hver
+ * kryssmapping går gjennom.
+ *
+ * Dette er IKKE bibel-id-en. `verses.bible` heter fortsatt `osnb2`/`osnn1` i
+ * basen denne flata leser, og de strengene skal stå. free-bible døpte om selve
+ * NUMMERERINGSFILA `osnb2.ukvn.json` → `osnb.ukvn.json` 2026-07-26, og de to
+ * navnene var like fram til den dagen — derfor ble den gamle stående her.
+ * `loadUkvnMapping` gjør `readFileSync` uten fallback, så hver forespørsel med
+ * `mapping=` kastet ENOENT og ble en 500 (#101). Uten `mapping=` rører vi
+ * aldri fila, og det er derfor bare parallellnummereringen døde.
+ *
+ * Skriv den ALDRI som en literal ved siden av: da er det to steder å glemme
+ * neste omdøping, og `verse-mapper.test.ts` er vakta som holder på det.
+ */
+export const OSNB_MAPPING_ID = 'osnb';
+
 export interface MappedVerse {
   displayChapter: number;
   displayVerse: number;
@@ -54,12 +71,12 @@ function getMapper(mappingId: string): UkvnMapper {
 }
 
 function getCrossMapper(mappingId: string): CrossMapper {
-  const key = `osnb2->${mappingId}`;
+  const key = `${OSNB_MAPPING_ID}->${mappingId}`;
   let cross = crossMappers.get(key);
   if (!cross) {
-    const osnb2Mapper = getMapper('osnb2');
+    const osnbMapper = getMapper(OSNB_MAPPING_ID);
     const targetMapper = getMapper(mappingId);
-    cross = new CrossMapper(osnb2Mapper, targetMapper);
+    cross = new CrossMapper(osnbMapper, targetMapper);
     crossMappers.set(key, cross);
   }
   return cross;
@@ -119,7 +136,7 @@ export function getKvnMappingData(mappingId: string): { id: string; name: string
   // then the target mapper converts osmain->target.
   // We iterate the osnb2 mapping entries and the target mapping entries
   // to find all verses that differ.
-  const osnb2File = loadUkvnMapping('osnb2');
+  const osnb2File = loadUkvnMapping(OSNB_MAPPING_ID);
 
   // Collect all book IDs that have any mapping entries
   const allEntries = [...osnb2File.map, ...file.map];
@@ -162,7 +179,7 @@ export function mapChapter(
   mappingId: string,
   bible = 'osnb2',
 ): MappedVerse[] {
-  if (mappingId === 'osnb2') {
+  if (mappingId === OSNB_MAPPING_ID) {
     // Identity — no mapping needed
     const verses = getVerses(bookId, targetChapter, bible);
     return verses.map(v => ({
