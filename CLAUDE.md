@@ -2311,6 +2311,42 @@ ligger utenfor det vaktene var formulert på.
   med lengst navn, og den med lengst forkortelse) og måler lesesida, forsida og
   lesekartet på 320/390 px ved 100/150 % tekst.
 
+#### FEILGRENEN er også brukervendt tekst (#71)
+
+`bookName()` fikset det leseren ser når alt går bra. `/api/reference` svarte
+fortsatt hardkodet norsk på alle åtte språk — «Mangler søkeparameter», «Ugyldig
+format», og de to tellemeldingene bygget av `book.name_no`, altså NØKKELEN:
+`?q=sal 200&lang=fr` ga «Salmene har 150 kapitler».
+
+- **Hullet er LATENT, og det er grunnen til at det sto åpent.** Ingen klient
+  viser feltet i dag — `cmdk.js` og `studium.js` leser bare `data.reference` og
+  faller til null ved feil. Det gir verken 404, 5xx eller en loggrad, så ingen
+  sveip kunne se det; den dagen noen viser `data.error` (den åpenbare
+  forbedringen når leseren skriver «sal 200» og ikke får svar) er teksten norsk
+  på sju språk. Samme klasse som #45, #65 og #69.
+- **`parseReference()` returnerer en NØKKEL, ikke tekst.** Den er ren logikk
+  uten request-kontekst og kan derfor ikke vite hvilket språk kallet kom på —
+  sto teksten der, sto den på ett språk for alle åtte. `ReferenceError` er
+  `{ key, params, bookId }`, og `referenceErrorText(t, err)` oversetter ett sted,
+  delt av begge grenene i ruta. Ruta har alt riktig locale (`apiLocale`, #24).
+- **Boknavnet er `{book}`, satt inn med `bookNameById()`.** `params.book` bærer
+  `name_no` bare som siste utvei for en bok-id den statiske tabellen ikke har —
+  samme avveining `formatParsedReference()` alt gjør. Lå navnet i params som
+  nøkkelen, ville malen vært fransk og boka norsk, altså #69 om igjen.
+- **Vakta er `test/api-reference-errors.test.ts`, formulert på UTFALLET og ikke
+  på de sju målte inputene:** hver feil endepunktet svarer med må være en
+  RENDRING av en `ref.err.*`-verdi i ordboka for språket i kallet (malen leses
+  ut av ordboka, `{plassholder}` blir `.+`), så en ny feilgren med hardkodet
+  tekst matcher ingen nøkkel og blir rød uten at noen fører den opp. Tre
+  halvdeler til: REGELEN (parseren gir en nøkkel som FINNES, og engelsk sier noe
+  annet enn norsk), tellemeldingene navngir boka gjennom `bookName()`, og
+  nøklene finnes på alle åtte språk — ellers ville sveipen lett i en tom liste
+  og aldri fått noe å matche. Fem mutasjoner kjørt.
+- **De fire språkene uten in-house kilde (de, fr, sv, fi) bør leses over**, som
+  boknavnene i #69: vakta ser at teksten går gjennom ordboka, ikke at den er
+  riktig. Den finske tellemeldingen står som «{book}: {count} lukua» — boknavnet
+  kommer fra dataene og kan ikke bøyes trygt.
+
 ### En oversatt etikett ser FORSKJELLIG ut på to språk (#63)
 
 Siste brødsmuleledd på kapittelsiden sto som «Kap. 1» på alle åtte språk —
