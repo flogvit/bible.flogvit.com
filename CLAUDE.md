@@ -1510,9 +1510,26 @@ flater aldri ut» nøyaktig hva en helt vanlig oppfylling ser ut som.
   virkeligheten er byttet mot et tall som ER virkeligheten. En treffende
   forespørsel slipper dessuten å kode strengen til byte på nytt, og en bom
   slipper å dekode dem til en streng bare for å telle dem.
-- **Målt på den ekte crawlen, 600 unike kapittelsider:** RSS 548 → 445 MB, heap
-  142 → 90 MB, og den flater ut etter ~200 sider i stedet for å klatre. Tallet
-  48 MB står uendret — det betyr nå det det alltid sa.
+- **Målt på PLATÅET, ikke på stigningen — for begge former plateauer.** Fire
+  runder à 300 unike sider mot samme budsjett (48 MB), samme syntetiske
+  kapittelmarkup, samme maskin:
+
+  ```
+  tegn:  runde 1  280 MB RSS / 156 MB heap  …  runde 4  444 / 247
+  byte:  runde 1  202 MB RSS /  93 MB heap  …  runde 4  298 / 141
+  ```
+
+  Begge flater ut i runde 3. Forskjellen er ikke om de flater ut, men på
+  HVILKET NIVÅ — og det gamle nivået lå over containerens tak, så prosessen
+  ble drept før den kom dit. Beholdt heap faller 247 → 141 MB, altså ~106 MB,
+  som er nettopp de 48 MB ekstra tegnene lagret i to byte hver. Tallet 48 MB
+  står uendret — det betyr nå det det alltid sa.
+- **Marginen er ikke stor, og det skal sies høyt.** Prod-tallene i saken
+  (149,2 MiB etter 3 min, 181,1 etter 5) ekstrapolerer til ~102 MiB grunnlast,
+  altså ~186 MiB å gå på under 288. 48 MB beholdt cache pluss allokatorens
+  høyvannsmerke fra rendringen får plass der, men ikke med mye klaring — er
+  drapene fortsatt der etter utrulling, er `PAGE_CACHE_MAX_BYTES` knappen, og
+  neste post å måle er engangskosten i `getAvailableMappings()` under.
 - **Taket PER SIDE måtte følge enheten.** `/nb/sal/119` er den største sida vi
   serverer (1,20 MB), og et tak som ble stående i den gamle enheten ville
   stille kastet nettopp de dyreste sidene ut av cachen: de svarer 200 som før,
