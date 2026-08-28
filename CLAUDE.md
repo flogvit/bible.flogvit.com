@@ -1489,6 +1489,58 @@ med jevne mellomrom gjennom en INJISERT leser (`setContentVersionReader`, satt i
 selv når versjonen endres. Feiler spørringen, BEHOLDES cachen: den er det eneste
 som fortsatt kan svare.
 
+### Et budsjett i TEGN er ikke et budsjett i minne (#105)
+
+Appen ble OOM-drept hvert ~14. minutt av sitt eget 288 MiB-tak, og minnet
+vokste ~5 MiB/min uten å flate ut. Det så ut som en lekkasje — `--smol`
+stanset den ikke, og et tak kan ikke stanse noe som holder på referansene sine
+— men det er ingen lekkasje: mikrocachen fyller seg gradvis mens en crawler går
+over UNIKE adresser, og **taket den fylles til var dobbelt så høyt som tallet i
+koden**. Prosessen ble drept før cachen var full, og da er «vokser lineært og
+flater aldri ut» nøyaktig hva en helt vanlig oppfylling ser ut som.
+
+- **`bytes = body.length` teller TEGN.** En JS-streng koster én byte per tegn
+  bare når HVERT tegn er under 256; ett eneste tegn utenfor latin1 tvinger hele
+  strengen til UTF-16, og en kapittelside bærer hebraisk og gresk. Målt over 100
+  ekte kapittelsider: **1,97 byte beholdt heap per tegn**, altså et 48 MB-tak
+  som i virkeligheten var ~96 MB — på en container med 288 MiB.
+- **Fiksen er ikke å gange med to.** Kroppen LAGRES som byte
+  (`Uint8Array`): det er formen den sendes i uansett, den er én flat allokering
+  på nøyaktig den størrelsen regnskapet fører, og et ANSLAG som kan drive fra
+  virkeligheten er byttet mot et tall som ER virkeligheten. En treffende
+  forespørsel slipper dessuten å kode strengen til byte på nytt, og en bom
+  slipper å dekode dem til en streng bare for å telle dem.
+- **Målt på den ekte crawlen, 600 unike kapittelsider:** RSS 548 → 445 MB, heap
+  142 → 90 MB, og den flater ut etter ~200 sider i stedet for å klatre. Tallet
+  48 MB står uendret — det betyr nå det det alltid sa.
+- **Taket PER SIDE måtte følge enheten.** `/nb/sal/119` er den største sida vi
+  serverer (1,20 MB), og et tak som ble stående i den gamle enheten ville
+  stille kastet nettopp de dyreste sidene ut av cachen: de svarer 200 som før,
+  bare uten cache, og ingenting i loggen sier fra. Det er den motsatte skaden,
+  gjort mens man fikser denne.
+- **`PAGE_CACHE_MAX_BYTES` og `PAGE_CACHE_MAX_ENTRY_BYTES` er ENV-styrte.**
+  Minnebudsjettet i driftsrepoet er oppbrukt, så den dagen dette må ned igjen
+  skal det ikke kreve en deploy av appen.
+- **Vakta er `test/page-cache-memory-budget.test.ts`**, og minnet måles i et
+  EGET PROGRAM (`page-cache-memory-probe.ts`) av samme grunn som i #104: `bun
+  test` kjører alle filene i samme prosess, så et tall målt der inne er summen
+  av alt som har kjørt før. Fire halvdeler: REGNSKAPET (det cachen fører er
+  aldri LAVERE enn antallet byte sida leveres som — et gulv framfor et
+  likhetstegn, så en fiks som beholder strengen og fører opp to byte per tegn
+  også består; med et tak, ellers ville «gang med hundre» bestått ved å gjøre
+  cachen ubrukelig liten), BUDSJETTET (en crawl over unike adresser vokser
+  under et tak utledet av budsjettet — målt 64 MB mot 161 MB med den gamle
+  tellingen, med IDENTISK antall oppføringer, så det er ikke hvor mange sider
+  cachen holder som er forskjellen), TAKET PER SIDE (Sal 119 caches fortsatt)
+  og REGELEN (en side over taket caches ikke i det hele tatt). Prøvekroppene i
+  måleprogrammet er ASCII-markup med en håndfull hebraiske ord, som en ekte
+  kapittelside: et rent hebraisk dokument ville skjult forskjellen, for der er
+  UTF-8 og UTF-16 like dyre. Seks mutasjoner kjørt.
+- **Ikke gjort, med vilje:** `getAvailableMappings()` leser 1158 mappingfiler
+  ved første kapittelrender og etterlater +53 MB RSS permanent (målt). Det er
+  en ENGANGSKOST som ikke vokser, altså ikke symptomet i denne saken — og
+  avveiningen mot fil-cachen er alt tatt i #19.
+
 ### En byge kommer fra ÉN aktør — og den kan være nåbar (#86)
 
 60 × 503 i vaktvinduet 2026-08-07, og **alle 60 lå innenfor 32,7 sekunder** av
