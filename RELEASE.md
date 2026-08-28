@@ -1,5 +1,9 @@
 # Release notes
 
+## 2026-08-28 — Lighter memory footprint for verse lookups
+
+**Behind the scenes**
+- Verse number lookups now build their index from the folder structure instead of loading a 109 MB JSON file, cutting startup memory well under the platform's 288 MB cap.
 ## 2026-08-28 — Lighter-weight verse lookups under the hood
 
 **Behind the scenes**
