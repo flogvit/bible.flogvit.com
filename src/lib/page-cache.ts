@@ -23,8 +23,26 @@
 
 import type { Context, Next } from 'hono';
 
-const MAX_TOTAL_BYTES = 48 * 1024 * 1024;
-const MAX_ENTRY_BYTES = 1.5 * 1024 * 1024;
+/**
+ * Hva en cachet side KOSTER — og enheten er BYTE, ikke tegn (#105).
+ *
+ * Sidene ble lagret som JS-strenger og budsjettert med `body.length`, altså
+ * antall TEGN. En JS-streng koster én byte per tegn bare når HVERT tegn er
+ * under 256; ett eneste tegn utenfor latin1 tvinger hele strengen til UTF-16,
+ * og en kapittelside bærer hebraisk og gresk. Målt over 100 ekte kapittelsider:
+ * 1,97 byte beholdt heap per tegn — altså et 48 MB-tak som i virkeligheten var
+ * ~96 MB, og betydelig mer i RSS, som er det cgroup-en teller.
+ *
+ * Fiksen er ikke å gange med to. Kroppen LAGRES nå som byte: det er formen den
+ * sendes i uansett, den er én flat allokering på nøyaktig den størrelsen vi
+ * fører i regnskapet, og et anslag som kan drive fra virkeligheten er byttet
+ * mot et tall som ER virkeligheten. Sidebonus: en treffende forespørsel slipper
+ * å kode strengen til byte på nytt, og en bom slipper å dekode dem til en
+ * streng bare for å telle dem.
+ */
+export function entryBytes(body: Uint8Array): number {
+  return body.byteLength;
+}
 
 /** Taket, lest én gang: køens standardlengde er det samme tallet (under). */
 const MAX_CONCURRENT_RENDERS = Number(process.env.RENDER_MAX_CONCURRENT || 6);
@@ -55,6 +73,24 @@ export const PAGE_CACHE_DEFAULTS = Object.freeze({
   queueWaitMs: Number(process.env.RENDER_QUEUE_WAIT_MS || 3000),
   /** Hvor sjelden innholdsversjonen sjekkes (én liten spørring per intervall). */
   versionCheckMs: Number(process.env.PAGE_CACHE_VERSION_CHECK_MS || 30 * 1000),
+  /**
+   * Minnet cachen får bruke — og fra #105 er det EKTE byte, ikke tegn.
+   *
+   * Tallet er uendret (48 MB), men det betyr nå det det alltid sa: før holdt
+   * cachen 48 M TEGN, altså ~96 MB, på en container med 288 MiB.
+   *
+   * ENV-styrt fordi det må kunne settes mot containerens minnetak uten en
+   * kodeendring — minnebudsjettet i driftsrepoet er oppbrukt, så den dagen
+   * dette må ned igjen, skal det ikke kreve en deploy av appen.
+   */
+  maxTotalBytes: Number(process.env.PAGE_CACHE_MAX_BYTES || 48 * 1024 * 1024),
+  /**
+   * Taket for ÉN side. Sal 119 er den største vi serverer — 1,20 MB målt
+   * 2026-08-28 — og den skal fortsatt få plass: en side som er dyr å rendre er
+   * nettopp den cachen finnes for, og en side som stille faller ut av cachen
+   * ser helt lik ut i loggen.
+   */
+  maxEntryBytes: Number(process.env.PAGE_CACHE_MAX_ENTRY_BYTES || 2 * 1024 * 1024),
 });
 
 let config = { ...PAGE_CACHE_DEFAULTS };
@@ -100,7 +136,7 @@ async function invalidateOnContentChange(): Promise<void> {
 }
 
 interface CacheEntry {
-  body: string;
+  body: Uint8Array;
   contentType: string;
   expires: number;
   bytes: number;
@@ -111,10 +147,21 @@ let totalBytes = 0;
 
 function evictUntilRoom(needed: number): void {
   for (const [key, entry] of cache) {
-    if (totalBytes + needed <= MAX_TOTAL_BYTES) break;
+    if (totalBytes + needed <= config.maxTotalBytes) break;
     cache.delete(key);
     totalBytes -= entry.bytes;
   }
+}
+
+/**
+ * Hva cachen MENER den bruker, og på hvor mange sider.
+ *
+ * Eksportert for vakta i `page-cache-memory-budget.test.ts`: den skal måle
+ * regnskapet mot det som faktisk beholdes, og et regnskap ingen kan lese er et
+ * regnskap ingen kan motsi (#105).
+ */
+export function pageCacheStats(): { entries: number; bytes: number } {
+  return { entries: cache.size, bytes: totalBytes };
 }
 
 /** Kun for tester. */
@@ -208,7 +255,8 @@ export function resetPageCache(): void {
 }
 
 function serveEntry(c: Context, entry: CacheEntry, xCache: 'hit' | 'stale'): Response {
-  return c.body(entry.body, 200, {
+  // Kroppen ligger som byte (#105) — samme form `og.ts` serverer kortene i.
+  return c.body(entry.body as unknown as ArrayBuffer, 200, {
     'content-type': entry.contentType,
     'cache-control': cacheControl(),
     'x-cache': xCache,
@@ -316,16 +364,18 @@ export async function withPageCache(c: Context, next: Next): Promise<Response | 
   // Sider som satte sin egen Set-Cookie skal ikke deles på tvers.
   if (res.headers.get('set-cookie')) return;
 
-  const body = await res.clone().text();
-  const bytes = body.length;
+  // `arrayBuffer()` framfor `text()`: kroppen skal ligge som byte, og en
+  // omvei om en JS-streng ville både doblet minnet og kostet en dekoding.
+  const body = new Uint8Array(await res.clone().arrayBuffer());
+  const bytes = entryBytes(body);
   c.res.headers.set('cache-control', cacheControl());
-  if (bytes > MAX_ENTRY_BYTES) return;
+  if (bytes > config.maxEntryBytes) return;
   if (hit) {
     cache.delete(key);
     totalBytes -= hit.bytes;
   }
   evictUntilRoom(bytes);
-  if (totalBytes + bytes > MAX_TOTAL_BYTES) return;
+  if (totalBytes + bytes > config.maxTotalBytes) return;
   cache.set(key, { body, contentType, expires: Date.now() + config.ttlMs, bytes });
   totalBytes += bytes;
 }
