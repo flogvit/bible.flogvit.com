@@ -1,5 +1,9 @@
 # Release notes
 
+## 2026-08-28 — Lighter-weight verse lookups under the hood
+
+**Behind the scenes**
+- The verse-numbering list is now built from the folder structure instead of a 109 MB JSON file, cutting memory use — with a test in place to keep it that way.
 ## 2026-08-28 — Cache memory now measured in real bytes, not characters
 
 **Bug fixes**
