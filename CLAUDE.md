@@ -1711,6 +1711,52 @@ kall. Kapittelrender: **~350 ms → ~47 ms**.
   - `test/chapter-batching.test.ts` holder de to formene like rad for rad, og
     har en strukturell vakt mot at et per-vers-kall sniker seg inn i løkka igjen.
 
+#### Et SVAR som er større enn heapen bygges STYKKEVIS (#104)
+
+`/api/mappings/kvn/all` bygde alle 1158 KVN-mappingfilene til ETT objekt og
+serialiserte det. Målt: 73 MB JSON, **232 MB heap og 925 MB RSS av én anonym
+forespørsel** — og filene ble liggende permanent i fil-cachen etterpå, siden
+ruta gikk gjennom `getKvnMappingRaw()`. Med et minnetak på containeren er det
+ordrett signaturen saken er meldt på: `FATAL ERROR: Reached heap limit`.
+
+- **Prisen er HELE APPEN, ikke et dårlig svar.** Prosessen dør, containeren
+  starter på nytt, og hver leser som var midt i noe mister svaret sitt —
+  mikrocachen er dessuten tom etterpå, så den dyreste renderen er tilbake for
+  alle. Utslaget er stille som i #45 og #65: smoke sjekker at flatene svarer,
+  og en app som nettopp kom opp igjen svarer 200.
+- **Ruta ligger under `/api/`, altså UTENFOR lastvernet** (`page-cache.ts`
+  slipper `/api/` rett gjennom). Semaforen fra #19 kan altså ikke avvise to
+  samtidige kall, og to kall er to ganger så mye minne.
+- **Strømmen er fiksen, ikke et tak på hva vi deler ut.** `pull` kalles når
+  mottakeren er klar, og hver runde leser nøyaktig én mapping og slipper den —
+  toppen er da én fil (~0,6 MB) uansett hvor stor responsen er. Innholdet er
+  bit-identisk: 1158 nøkler, samme rekkefølge, samme verdier. Å svare mindre
+  ville vært å bli kvitt symptomet ved å ta bort noe vi HAR (#46, #61, #73).
+- **`loadRawMappingUncached()` framfor fil-cachen**, og det er samme avveining
+  `getAvailableMappings()` alt tar: det som skal leses ÉN gang, skal ikke bli
+  liggende. Cachen er riktig for de mappingene en leser velger (14 av 1158
+  resolver i det hele tatt, og de leses om igjen på hver sidevisning) og feil
+  for et gjennomløp av katalogen. `verse-mapper-cache.test.ts` teller derfor
+  tre `loadUkvnMapping`-kallsteder, ikke to.
+- **Vakta er `test/mapping-bulk-heap.test.ts`, og den måler i et EGET
+  PROGRAM** (`mapping-bulk-probe.ts`). `bun test` kjører alle 69 filene i samme
+  prosess, så et minnetall målt der inne er summen av alt som har kjørt før —
+  et tak på det ville vært et tak på suiten, ikke på ruta. Fem halvdeler:
+  MINNET (topp-heap og RSS under et tak; målt 232/925 før, 52/169 etter),
+  RETENSJONEN (heap etter GC — ellers ville en fiks som strømmet svaret men
+  fortsatt cachet hver fil bestått, og prosessen dødd på neste forespørsel),
+  ALT SKAL MED (alle id-ene er der, en hel fil finnes ordrett i strømmen, og
+  svaret er over 50 MB — uten den ville «svar `{}`» vært den billigste
+  fiksen), JSON-RAMMA, og FORMEN (hver rute under `/api/mappings` er enten
+  målt eller ført opp i `IKKE_MÅLT` med en grunn, så en ny bulk-rute ikke kan
+  legges til i stillhet). Mutasjonstestet ved å sette den gamle ruta tilbake:
+  to halvdeler blir røde, de tre andre grønne — som de skal, for den gamle
+  ruta delte ut det samme.
+- **Målingen er også svaret på hvorfor de andre minne-postene ikke er dette:**
+  mikrocachen har tak (48 MB), kortcachen i `routes/og.ts` har tak (256), og
+  mapping-cachene kan i praksis bare vokse til de 14 id-ene som resolver. Denne
+  ene ruta var det eneste stedet én forespørsel kunne ta heapen alene.
+
 ## Lesesporing (GitHub #16)
 
 `/lesekart` viser hvor i Bibelen brukeren faktisk leser. **Lesing er en HENDELSE,
