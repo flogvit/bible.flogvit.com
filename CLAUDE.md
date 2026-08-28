@@ -1553,10 +1553,63 @@ flater aldri ut» nøyaktig hva en helt vanlig oppfylling ser ut som.
   måleprogrammet er ASCII-markup med en håndfull hebraiske ord, som en ekte
   kapittelside: et rent hebraisk dokument ville skjult forskjellen, for der er
   UTF-8 og UTF-16 like dyre. Seks mutasjoner kjørt.
-- **Ikke gjort, med vilje:** `getAvailableMappings()` leser 1158 mappingfiler
-  ved første kapittelrender og etterlater +53 MB RSS permanent (målt). Det er
-  en ENGANGSKOST som ikke vokser, altså ikke symptomet i denne saken — og
-  avveiningen mot fil-cachen er alt tatt i #19.
+- **Ikke gjort her, men tatt i #106 under:** `getAvailableMappings()` leser 1158
+  mappingfiler ved første kapittelrender og etterlater +53 MB RSS permanent
+  (målt). Det er en ENGANGSKOST som ikke vokser, altså ikke symptomet i DENNE
+  saken — men den er halvparten av «grunnlasten» neste sak måtte forklare.
+
+#### En ENGANGSKOST er ikke gratis når taket er 288 MB (#106)
+
+Drapene fortsatte etter #105, og saken pekte på et tall ingen hadde forklart:
+«162 MB grunnlast er mye for en SSR-app. Hvorfor, er ikke undersøkt.» Målt
+herfra: **54,1 MB av de 162 er ÉN funksjon**, brent på den FØRSTE
+kapittelrenderen etter hver restart — altså på en tilfeldig leser, hver gang.
+
+`getAvailableMappings()` bygger nedtrekket «Versnummerering» i verktøylinja, og
+leste alle 1158 vendrede mappingfilene (~109 MB JSON) for å hente tre felter
+per fil. #19 sørget for at filene ikke BLIR LIGGENDE, og det er sant: heapen
+viser ingenting galt etterpå. RSS gjør det. Allokatorens høyvannsmerke fra
+109 MB churn gis aldri tilbake til OS-et, og **RSS er tallet cgroup-en teller**
+når den bestemmer seg for å OOM-drepe containeren. Målt: 54,1 MB → 0,9 MB,
+345 ms → 1,3 ms.
+
+- **Å lese filene BILLIGERE er ikke fiksen.** Et rent byte-skann uten
+  `JSON.parse` (tell oppføringer ved å gå gjennom bufferet) ble målt til
+  +55 MB — praktisk talt det samme. Kostnaden er å røre 109 MB i det hele
+  tatt, ikke hva man gjør med dem. Lista bygges derfor av KATALOGEN, uten å
+  åpne én eneste fil.
+- **Ingenting gikk tapt, og det er målt framfor antatt.** `file.name` er
+  ORDRETT id-en i alle 1158 filene, altså den strengen filnavnet allerede ga
+  oss; `shortname`/`displayName` kom uansett fra `MAPPING_META` for de 13 som
+  har et menneskelig navn. Det ENESTE feltet som trengte fila var
+  `entryCount` — og det leses ingen steder: ikke av nedtrekket, ikke av
+  /innstillinger, ikke av `translations.js`, som er den eneste klienten av
+  `/api/mappings/kvn`. Et felt ingen ser til 54 MB på en container med 288 er
+  ikke en handel verdt å gjøre, og det er derfor det er FJERNET framfor
+  beholdt — motsatt av #46/#61/#73, der det som sto på spill var innhold noen
+  faktisk fikk se.
+- **Vakta er `test/mapping-list-memory.test.ts`, og minnet måles i et EGET
+  PROGRAM** — som #104 og #105, og her med en grunn til: lista er memoisert,
+  altså målbar nøyaktig én gang per prosess. Fem halvdeler: MINNET (RSS-vekst
+  under et tak, og en tid — 109 MB JSON kan ikke leses på under et kvart
+  sekund — med et krav om at lista faktisk BLE bygget, ellers ville «returner
+  tom liste» vært den billigste fiksen), ALT SKAL MED (lista er nøyaktig
+  katalogen, i samme rekkefølge), NAVNET (de 13 navngitte utgavene beholder
+  sitt, og ingen oppføring får et tomt navn — en tom `<option>` er en rad
+  leseren ikke kan velge), DATA (påstanden fiksen hviler på, målt for HVER
+  fil og ikke for et utvalg: `name` i fila er id-en — og bare HODET av hver
+  fil leses, 400 byte × 1158, ellers ville vakta kostet det den er skrevet for
+  å fjerne) og FLATA (API-svaret bærer hele lista, og nedtrekket på
+  kapittelsida har fortsatt like mange `<option>` som katalogen har filer).
+  Sju mutasjoner kjørt.
+- **Det som IKKE er forklart av dette, og som er den større posten:** 100
+  unike kapittelrender tar RSS fra 146 til 313 MB **med mikrocachen helt
+  avskrudd**, mens heapen er 23 MB etterpå. Det er allokator-høyvann fra
+  selve rendringen — snittsida er 357 kB, Sal 119 er 1,18 MB — og det
+  platåer, men på et nivå over 288. Egen sak; her er bare grunnlasten målt.
+- **Nedtrekket er 54 kB av HVER kapittelside** (11 % av en snittside), fordi
+  det er 1158 `<option>`. At vi tilbyr 1158 versnummereringer i verktøylinja
+  er en produktavgjørelse, ikke en feil, og hører i sitt eget issue.
 
 ### En byge kommer fra ÉN aktør — og den kan være nåbar (#86)
 
