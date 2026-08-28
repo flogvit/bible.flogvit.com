@@ -10,8 +10,11 @@
 // To krav som trekker i hver sin retning, og som begge må holde:
 //   1. Listen bygges én gang (ellers er vi tilbake til 300 ms per sidevisning).
 //   2. Filene BLIR IKKE liggende. Gjennom fil-cachen ville alle 1158 blitt
-//      værende i minnet (93 MB heap, 409 MB RSS målt) for en liste som bare
-//      trenger navn og antall oppføringer.
+//      værende i minnet (93 MB heap, 409 MB RSS målt).
+//
+// Listen ÅPNER nå ingen fil i det hele tatt (#106): å slippe dem igjen var ikke
+// nok, for høyvannsmerket i RSS fra 109 MB churn gis aldri tilbake til OS-et —
+// 54 MB permanent på en container med 288. Se `mapping-list-memory.test.ts`.
 
 import { describe, expect, setDefaultTimeout, test } from 'bun:test';
 import { DB_TEST_TIMEOUT_MS } from './db-timeout.ts';
@@ -56,16 +59,15 @@ describe('mapping-filene leses én gang', () => {
   // Strukturell vakt: kalles `loadUkvnMapping` fra et NYTT sted, er 300 ms per
   // sidevisning tilbake uten at noen test over blir rød — de sjekker bare
   // stedene som allerede går gjennom cachen.
-  test('loadUkvnMapping kalles bare fra fil-cachen og listebyggingen', async () => {
+  test('loadUkvnMapping kalles bare fra fil-cachen og bulk-ruta', async () => {
     const src = await Bun.file('src/lib/verse-mapper.ts').text();
     const calls = [...src.matchAll(/^(?!\s*(?:\/\/|\*)).*\bloadUkvnMapping\(/gm)].map((m) =>
       m[0].trim(),
     );
-    // Nøyaktig tre, og de to ucachede er begge gjennomløp av HELE katalogen:
-    // mappingFile() (cachen), getAvailableMappings() (listen) og
-    // loadRawMappingUncached() (bulk-ruta, #104 — gjennom fil-cachen ville de
-    // 1158 blitt liggende, 232 MB heap / 925 MB RSS målt). Import-linja
-    // treffer ikke `(`.
-    expect(calls.length).toBe(3);
+    // Nøyaktig to: mappingFile() (fil-cachen) og loadRawMappingUncached()
+    // (bulk-ruta, #104 — gjennom fil-cachen ville de 1158 blitt liggende,
+    // 232 MB heap / 925 MB RSS målt). Listebyggingen var det TREDJE stedet, og
+    // den åpner ikke lenger en fil (#106). Import-linja treffer ikke `(`.
+    expect(calls.length).toBe(2);
   });
 });

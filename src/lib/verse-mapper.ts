@@ -34,7 +34,6 @@ interface MappingInfo {
   name: string;
   shortname: string;
   displayName: string;
-  entryCount: number;
 }
 
 // Cachede mappere og mapping-filer.
@@ -115,27 +114,37 @@ export function loadRawMappingUncached(id: string): UkvnMappingFile {
 }
 
 /**
- * Tilgjengelige KVN-mappings. Bygges ÉN gang per prosess — listen er statisk
- * (vendorede filer), og den rendres i verktøylinja på hver kapittelside.
+ * Tilgjengelige KVN-mappings — bygget av KATALOGEN, uten å åpne én eneste fil.
  *
- * Merk `loadUkvnMapping` framfor `mappingFile()` her, med vilje: det er 1158
- * mappinger på til sammen ~109 MB JSON, og vi trenger bare navnet og antall
- * oppføringer. Gjennom fil-cachen ville alle 1158 blitt liggende i minnet
- * (~93 MB heap, 409 MB RSS målt); slik lever de bare til listen er bygget, og
- * bare mappingene noen faktisk BRUKER beholdes (getMapper).
+ * Den leste alle 1158 mappingfilene (~109 MB JSON) for å hente tre felter per
+ * fil, og det er 54 MB RSS PERMANENT (#106). Filene slippes med en gang og
+ * heapen viser derfor ingenting galt — men allokatorens høyvannsmerke gis aldri
+ * tilbake til OS-et, og RSS er tallet cgroup-en teller når den OOM-dreper
+ * containeren. Av «162 MB grunnlast» var 54 denne løkka, brent på den FØRSTE
+ * kapittelrenderen etter hver restart, altså på en leser hver gang.
+ *
+ * Å lese filene billigere er ikke fiksen: et rent byte-skann uten JSON.parse
+ * ble målt til +55 MB, praktisk talt det samme. Kostnaden er å røre 109 MB i
+ * det hele tatt, ikke hva man gjør med dem.
+ *
+ * Det gikk uten å miste noe fordi filene ikke bar noe vi ikke alt hadde:
+ * `file.name` er ORDRETT id-en i alle 1158 (målt, og vaktet av DATA-halvdelen
+ * i `mapping-list-memory.test.ts` — leser hodet av hver fil, ikke hele).
+ * `entryCount` er den ene som TRENGTE fila, og den var det ingen som leste:
+ * ikke nedtrekket på kapittelsida, ikke /innstillinger, ikke `translations.js`,
+ * som er den eneste klienten av `/api/mappings/kvn`. Å beholde et felt ingen
+ * ser til 54 MB på en container med 288 er ikke en handel verdt å gjøre.
  */
 let availableMappings: MappingInfo[] | null = null;
 
 export function getAvailableMappings(): MappingInfo[] {
   return (availableMappings ??= listUkvnMappings().map((id) => {
-    const file = loadUkvnMapping(id);
     const meta = MAPPING_META[id];
     return {
       id,
-      name: meta?.displayName || file.name || id,
+      name: meta?.displayName || id,
       shortname: meta?.shortname || id,
-      displayName: meta?.displayName || file.name || id,
-      entryCount: file.map.length,
+      displayName: meta?.displayName || id,
     };
   }));
 }
