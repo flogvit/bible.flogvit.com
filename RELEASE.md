@@ -1,5 +1,12 @@
 # Release notes
 
+## 2026-08-28 — Bulk verse-mapping requests no longer risk crashing the site
+
+**Bug fixes**
+- A single large bulk mapping request could push memory past the process limit and take the whole site down for every reader; responses are now built incrementally so one request can no longer do that.
+
+**Behind the scenes**
+- Added a regression test that guards against any request growing memory past the heap limit.
 ## 2026-08-24 — Looking up a verse in an unfamiliar numbering scheme no longer breaks the page
 
 **Bug fixes**
