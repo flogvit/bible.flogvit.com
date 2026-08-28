@@ -92,6 +92,28 @@ export function getKvnMappingRaw(mappingId: string): UkvnMappingFile {
   return mappingFile(mappingId);
 }
 
+/** Id-ene vi har mapping-filer for, i katalogrekkefølge. */
+export function listMappingIds(): string[] {
+  return listUkvnMappings();
+}
+
+/**
+ * Rå mapping-fil UTENOM fil-cachen — for den som skal gjennom ALLE 1158 (#104).
+ *
+ * Fil-cachen over er riktig for de mappingene en leser faktisk velger: de er
+ * få (14 av 1158 resolver i det hele tatt), og de leses om igjen på hver
+ * sidevisning. Den er FEIL for et gjennomløp av hele katalogen: da blir alle
+ * 1158 liggende, og det er 232 MB beholdt heap / 925 MB RSS målt — altså
+ * `FATAL ERROR: Reached heap limit` i en container med et minnetak.
+ *
+ * Samme avveining som i `getAvailableMappings()` under, og den er ikke ny her:
+ * det som skal leses ÉN gang, skal ikke legges igjen i en cache som lever ut
+ * prosessen. Den som kaller denne må derfor slippe fila før neste hentes.
+ */
+export function loadRawMappingUncached(id: string): UkvnMappingFile {
+  return loadUkvnMapping(id);
+}
+
 /**
  * Tilgjengelige KVN-mappings. Bygges ÉN gang per prosess — listen er statisk
  * (vendorede filer), og den rendres i verktøylinja på hver kapittelside.

@@ -61,8 +61,11 @@ describe('mapping-filene leses én gang', () => {
     const calls = [...src.matchAll(/^(?!\s*(?:\/\/|\*)).*\bloadUkvnMapping\(/gm)].map((m) =>
       m[0].trim(),
     );
-    // Nøyaktig to: mappingFile() (cachen) og getAvailableMappings() (bevisst
-    // ucachet, se kommentaren der). Import-linja treffer ikke `(`.
-    expect(calls.length).toBe(2);
+    // Nøyaktig tre, og de to ucachede er begge gjennomløp av HELE katalogen:
+    // mappingFile() (cachen), getAvailableMappings() (listen) og
+    // loadRawMappingUncached() (bulk-ruta, #104 — gjennom fil-cachen ville de
+    // 1158 blitt liggende, 232 MB heap / 925 MB RSS målt). Import-linja
+    // treffer ikke `(`.
+    expect(calls.length).toBe(3);
   });
 });

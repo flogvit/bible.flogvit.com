@@ -2,9 +2,8 @@
 //
 // `/api/mappings/kvn/all` deler ut alle 1158 KVN-mappingfilene — 73 MB JSON.
 // Bygget som ett objekt tok den ene anonyme forespørselen prosessen fra 1 MB
-// til 305 MB topp-heap og 1057 MB RSS, og la ALLE filene permanent i
-// fil-cachen. I en container med et minnetak er det ordrett signaturen saken
-// er meldt på:
+// til 232 MB heap og 925 MB RSS, og la ALLE filene permanent i fil-cachen. I
+// en container med et minnetak er det ordrett signaturen saken er meldt på:
 //
 //     FATAL ERROR: Reached heap limit Allocation failed - JavaScript heap out of memory
 //
@@ -33,9 +32,9 @@ const ROOT = Bun.fileURLToPath(new URL('..', import.meta.url));
  * Takene, med de MÅLTE tallene ved siden av (MB):
  *
  *                     før fiksen      etter
- *   topp heap             305           52
- *   heap etter GC          88           36
- *   RSS                  1057          169
+ *   topp heap             232           52
+ *   heap etter GC         232           36
+ *   RSS                   925          169
  *
  * Takene ligger midt imellom, ikke like over det grønne: tallene er avhengige
  * av når GC-en velger å gå, og en vakt som er rød av en travel maskin blir

@@ -11,15 +11,18 @@
 //
 // Skriver én linje JSON på stdout, prefikset `MÅLING `.
 
+// Id-ene og nålen hentes fra PAKKA, ikke fra `verse-mapper.ts`: måleprogrammet
+// skal kunne kjøres mot en hvilken som helst utgave av ruta — også den defekte,
+// når vakta mutasjonstestes — uten å avhenge av hva fiksen valgte å eksportere.
+import { listUkvnMappings, loadUkvnMapping } from '@free-bible/kvn';
 import { createApp } from '../src/app.ts';
-import { listMappingIds, loadRawMappingUncached } from '../src/lib/verse-mapper.ts';
 import mappingsRoutes from '../src/routes/api/mappings.ts';
 
 const RUTE = '/api/mappings/kvn/all';
 const MB = (n: number) => Math.round(n / 1048576);
 
 const app = createApp();
-const ids = listMappingIds();
+const ids = listUkvnMappings();
 
 // --- 1. MÅLINGEN: hent hele svaret, behold ingenting -------------------------
 Bun.gc(true);
@@ -48,9 +51,9 @@ const etterGc = process.memoryUsage();
 // vinduet under må romme den, og et 600 kB vindu ville gjort vakta til det
 // tyngste i suiten.
 let nålId = ids[0]!;
-let nål = JSON.stringify(loadRawMappingUncached(nålId));
+let nål = JSON.stringify(loadUkvnMapping(nålId));
 for (const id of ids.slice(1, 20)) {
-  const json = JSON.stringify(loadRawMappingUncached(id));
+  const json = JSON.stringify(loadUkvnMapping(id));
   if (json.length < nål.length) {
     nålId = id;
     nål = json;
