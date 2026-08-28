@@ -1,5 +1,12 @@
 # Release notes
 
+## 2026-08-28 — Cache memory now measured in real bytes, not characters
+
+**Bug fixes**
+- Fixed a page-cache accounting bug that could let it hold more in memory than intended, most noticeable on pages with heavy non-Latin text (Hebrew, Greek, CJK), where each character can take several bytes.
+
+**Behind the scenes**
+- Added a regression test that keeps the cache's memory budget honest going forward.
 ## 2026-08-28 — Bulk verse-mapping requests no longer risk crashing the site
 
 **Bug fixes**
