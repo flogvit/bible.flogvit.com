@@ -1,5 +1,9 @@
 # Release notes
 
+## 2026-08-30 — Internal housekeeping for automation tooling
+
+**Behind the scenes**
+- Agent session and cookie storage is now excluded from version control, keeping automation credentials out of the repository.
 ## 2026-08-30 — Internal tooling hardening
 
 **Behind the scenes**
