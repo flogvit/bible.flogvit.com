@@ -1,5 +1,14 @@
 # Release notes
 
+## 2026-08-30 — Pages stay responsive when the database stumbles
+
+**Bug fixes**
+- Fixed a bug where pages with many database lookups (like a person's family tree on `/personer/:id`) could take far longer to fail than intended — the response-time cap is now shared across an entire page, not reset for every individual lookup, so a struggling database now fails fast instead of stalling for tens of seconds.
+- The background version check that keeps pages fresh no longer eats into a reader's own loading time budget, so it can't turn an otherwise-fast page into a slow one.
+- Fixed the homepage's "today's season" label (e.g. "Trinity season", "Trefaldighetstiden") overflowing off-screen on narrow phones with enlarged text.
+
+**Behind the scenes**
+- Documented the site's database wait-time budget as a hard contract in CLAUDE.md.
 ## 2026-08-30 — Housekeeping: agent session data kept out of version control
 
 **Behind the scenes**
