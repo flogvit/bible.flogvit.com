@@ -1,5 +1,9 @@
 # Release notes
 
+## 2026-08-30 — Repository hygiene fix
+
+**Behind the scenes**
+- Excluded local agent session/cookie storage from version control, so it can no longer end up committed to this repository.
 ## 2026-08-28 — Lighter memory footprint for verse lookups
 
 **Behind the scenes**
