@@ -10,6 +10,7 @@ import { contextStorage } from 'hono/context-storage';
 import type { AppEnv } from './lib/session.ts';
 import { ACCOUNT_URL, withSession } from './lib/session.ts';
 import { withPageCache } from './lib/page-cache.ts';
+import { withRetryBudget } from './lib/db.ts';
 import pages from './routes/pages.tsx';
 import { NotFoundPage } from './routes/pages/misc.tsx';
 import sync from './routes/sync.ts';
@@ -55,6 +56,12 @@ export function createApp() {
   // konto-chip) kan lese c.var.user server-side uten å tres gjennom hvert
   // Layout-kall. Ytterst, så den omslutter både cache og sesjon.
   app.use('*', contextStorage());
+
+  // ETT retry-budsjett for hele forespørselen (#107). Budsjettet i db.ts ble
+  // regnet ut på nytt per `sql`-kall, og en side gjør mange — `/personer/:id`
+  // ett per familiemedlem — så taket var antall spørringer × 25 s. Ytterst, så
+  // det gjelder både sider, API og versjonssjekken i mikrocachen.
+  app.use('*', (_c, next) => withRetryBudget(next));
 
   // Mikrocache for anonyme sidevisninger — FØR withSession, så cache-treff
   // hverken rendrer eller validerer sesjon (GitHub #4).
