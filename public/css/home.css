@@ -296,7 +296,9 @@
   border-radius: var(--radius);
   border: 1px solid var(--border);
 }
-.home-todays-day-head { display: flex; align-items: baseline; gap: 12px; justify-content: space-between; }
+/* Rada bryter: dagnavn + kategori får ikke plass ved siden av hverandre når
+   teksten forstørres (#50 — «Rader med tittel + meta bryter»). */
+.home-todays-day-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 12px; justify-content: space-between; }
 .home-todays-day-head h3 { font-size: 18px; margin: 0; }
 .home-todays-day-head a { color: var(--ink); }
 .home-todays-day-head a:hover { color: var(--gold-text); }
@@ -306,7 +308,9 @@
   letter-spacing: 0.08em;
   color: var(--muted);
   font-family: var(--font-mono);
-  white-space: nowrap;
+  /* Ingen `nowrap`: kategorien er en FRASE, ikke en atomær verdi (#50).
+     «Trefaldighetstiden» og «Kolminaisuuden aika» er bredere enn en 320 px
+     skjerm ved 150 % tekst, og da hjelper ingen radbryting rundt den. */
 }
 .home-todays-day-desc { color: var(--ink-2); font-size: 14px; margin: 6px 0 10px; line-height: 1.5; }
 .home-todays-day-refs { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-bottom: 8px; }
