@@ -3,7 +3,7 @@
 
 import { createApp } from './app.ts';
 import { initBooks } from './lib/bible.ts';
-import { getSql } from './lib/db.ts';
+import { getSql, withRetryBudget } from './lib/db.ts';
 import { setContentVersionReader } from './lib/page-cache.ts';
 
 // Bok-metadata (66 rader, statisk innhold) caches i minnet så parserne kan
@@ -15,12 +15,21 @@ await initBooks().catch((err) => console.error('initBooks feilet (DB nede?):', e
 // innholdsimport ikke vist seg før TTL-en løp ut, så cachen spør db_meta om
 // sync-versjonen med jevne mellomrom og tømmer seg selv når den endres.
 // Registreres HER, ikke i createApp(): cachen skal kunne testes uten database.
-setContentVersionReader(async () => {
-  const rows = (await getSql()`
-    SELECT value FROM db_meta WHERE \`key\` = 'sync_version'
-  `) as { value: string }[];
-  return rows[0]?.value;
-});
+//
+// Den kjører INNE i leserens forespørsel, men får ikke bruke leserens
+// retry-budsjett (#107): budsjettet er ett per forespørsel, og en versjonssjekk
+// som ventet ut en DB-restart ville brukt det opp før siden i det hele tatt
+// begynte å rendre. Et eget budsjett på null er ikke en nedprioritering, det er
+// hva cachen alt sier om denne spørringen — «feiler den, BEHOLDES cachen: den
+// er det eneste som fortsatt kan svare». Da er det ingenting å vente på.
+setContentVersionReader(() =>
+  withRetryBudget(async () => {
+    const rows = (await getSql()`
+      SELECT value FROM db_meta WHERE \`key\` = 'sync_version'
+    `) as { value: string }[];
+    return rows[0]?.value;
+  }, 0),
+);
 
 const app = createApp();
 const port = Number(process.env.PORT || 8080);

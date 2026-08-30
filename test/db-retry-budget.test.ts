@@ -33,6 +33,8 @@
  */
 import { describe, expect, setDefaultTimeout, test } from 'bun:test';
 import type { SQL } from 'bun';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { createApp } from '../src/app.ts';
 import { clearPageCache, setContentVersionReader } from '../src/lib/page-cache.ts';
 import { retryBudgetRemainingMs, withRetry, withRetryBudget } from '../src/lib/db.ts';
@@ -140,11 +142,46 @@ describe('retry-budsjettet er forespørselens (#107)', () => {
         kall++;
         return kall < 2 ? Promise.reject(tidsavbrudd()) : Promise.resolve([{ ok: 1 }]);
       });
-      expect(await sql`SELECT 2`).toEqual([{ ok: 1 }]);
+      expect(await (sql`SELECT 2` as unknown as Promise<unknown>)).toEqual([{ ok: 1 }]);
     } finally {
       if (før === undefined) delete process.env.DB_RETRY_BUDGET_MS;
       else process.env.DB_RETRY_BUDGET_MS = før;
     }
+  });
+});
+
+describe('VERSJONSSJEKKEN bruker ikke leserens budsjett (#107)', () => {
+  // Mikrocachens versjonssjekk kjører INNE i forespørselen. Med ett budsjett
+  // per forespørsel ville en sjekk som ventet ut en DB-restart brukt det opp
+  // før siden begynte å rendre — altså byttet «treg side» mot «feilside», og
+  // det for den ene forespørselen i hvert 30-sekundersvindu som gjør sjekken.
+  test('et eget budsjett på null venter ikke, og lar forespørselens stå igjen', async () => {
+    const sql = fakePool(() => Promise.reject(tidsavbrudd()));
+
+    await withRetryBudget(async () => {
+      const t0 = Date.now();
+      try {
+        await withRetryBudget(async () => {
+          await sql`SELECT value FROM db_meta`;
+        }, 0);
+      } catch {
+        /* forventet — cachen beholder innholdet sitt */
+      }
+      expect(Date.now() - t0).toBeLessThan(100);
+      // Leserens eget budsjett er urørt.
+      expect(retryBudgetRemainingMs()!).toBeGreaterThan(BUDSJETT - 200);
+    }, BUDSJETT);
+  });
+
+  // SØMMEN: `index.ts` starter en server ved import og kan ikke kalles fra en
+  // test, så registreringen leses. Uten denne halvdelen er regelen over en
+  // egenskap ingen bruker — samme grep som at `og-chapter-card` leser
+  // Dockerfilen for at artefaktene faktisk blir med i imaget (#68).
+  test('index.ts registrerer versjonsleseren med sitt eget budsjett', () => {
+    const src = readFileSync(resolve(import.meta.dir, '../src/index.ts'), 'utf8');
+    const kall = src.slice(src.indexOf('setContentVersionReader('));
+    expect(kall).toContain('withRetryBudget(');
+    expect(kall).toMatch(/\}, 0\)/);
   });
 });
 
