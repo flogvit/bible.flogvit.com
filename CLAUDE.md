@@ -1427,6 +1427,58 @@ er galt med svaret de fikk: «Skraperen får `text/html` der den ventet en PNG.�
   mutasjoner kjørt (ingen catch-all, `c.notFound()` tilbake i kortruta,
   catch-all FØRST, og en smal fiks som bare tar `/og/<språk>`).
 
+## Å VENTE PÅ DATABASEN er forespørselens budsjett, ikke spørringens (#107)
+
+`db.ts` gjentar lesninger når forbindelsen er borte, så en DB-restart (målt 12 s
+og 28 s, Cost Optimized-tieren har ingen SLA) gir en treg side framfor en
+feilside. Blokka lover et TAK — «brukeren venter litt» — og taket fantes ikke:
+deadlinen ble regnet ut på nytt inne i hvert eneste `sql`-kall, og en side gjør
+mange. `/personer/:id` slår opp far, mor, ektefelle, hvert søsken, hvert barn og
+hver relatert person — ett kall hver, i tur — så taket for den siden var ANTALL
+SPØRRINGER × 25 s. Med tjue oppslag er det over åtte minutter, og Caddy har
+ingen response-timeout som stopper det.
+
+- **Beviset er de to sidene som brukte like lang tid og endte ulikt.** Målt
+  2026-08-30T20:01:22–20:02:16Z, da nye forbindelser timet ut på 2 s:
+  `/sv/historier/…` brukte 24,67 s og ble **500**, altså én spørring som spiste
+  hele budsjettet og kastet. `/en/historier/daniel-i-lovehulen` brukte 24,8 s og
+  ble **200** — og det kan ikke være samme form, for et budsjett som løper ut,
+  kaster. Det er flere spørringer som hver brukte sin del av hvert sitt budsjett.
+- **Prisen er ikke bare den ene leserens tid.** Den som venter holder en
+  render-plass i semaforen hele veien (#19), så en blipp som rammer noen få
+  forespørsler kan stanse flata for alle — nettopp «sto i ~55 s». Det er samme
+  avveining #19 alt har tatt: raske nei til noen få slår trege svar til alle.
+- **`withRetryBudget(fn)` er scopet**, montert ytterst i `app.ts` og bygget på
+  `AsyncLocalStorage` framfor honos `contextStorage()`: `db.ts` skal ikke kjenne
+  rammeverket. UTENFOR et scope — altså i `init-db.ts` og `import-bible.ts` —
+  får hvert kall sitt eget budsjett som før; en import som rir av en restart
+  skal ikke gi opp fordi forrige spørring brukte tid.
+- **Mikrocachens versjonssjekk får sitt EGET budsjett, på null.** Den kjører
+  inne i forespørselen, og ville ellers brukt opp leserens budsjett før siden
+  begynte å rendre — altså byttet «treg side» mot «feilside» for den ene
+  forespørselen i hvert 30-sekundersvindu som gjør sjekken. Null er ikke en
+  nedprioritering; det er hva `page-cache.ts` alt sier om nettopp den
+  spørringen: «DB nede: behold cachen. Den er det eneste som fortsatt kan
+  svare.» Da er det ingenting å vente på.
+- **`DB_RETRY_BUDGET_MS` leses PER KALL**, ikke én gang ved import — samme grunn
+  som `PAGE_CACHE_MAX_BYTES` (#105): tallet skal kunne endres uten en deploy, og
+  en vakt skal kunne måle regelen uten å vente 25 s.
+- **Vakta er `test/db-retry-budget.test.ts`**, og den måler mot en «pool» som
+  bare er svaret sitt — regelen skal kunne måles uten en database som er nede.
+  Fem halvdeler: BUDSJETTET (flere spørringer i én forespørsel deler ett),
+  DELINGEN (er det brukt opp, får neste nei MED EN GANG — ellers ville
+  «budsjett/N per spørring» bestått), RETRYEN (den lever fortsatt, ellers er
+  DB-restarten fra 2026-07-28 tilbake), SKRIPTENE (utenfor en forespørsel har
+  hvert kall sitt eget) og VERSJONSSJEKKEN (eget budsjett, og `index.ts` bruker
+  det faktisk — sømmen leses, siden `index.ts` starter en server ved import).
+  RUTA måler at hver forespørsel virkelig kjøres inne i et budsjett, gjennom den
+  injiserte versjonsleseren. Fem mutasjoner kjørt.
+- **Ikke gjort, med vilje:** `DB_CONNECT_TIMEOUT` (2 s) er urørt. Saken lot det
+  stå åpent om det var poolen vår eller en blipp som bare rammet NYE
+  forbindelser, og det spørsmålet kan bare avgjøres med en måling i prod — å
+  flytte tallet herfra ville vært et gjett. Det er allerede env-styrt, så det
+  krever ingen deploy den dagen målingen finnes.
+
 ## Lastvern (anonyme sidevisninger)
 
 `src/lib/page-cache.ts` er både mikrocache OG lastavvisning (#4, #14): anonyme
