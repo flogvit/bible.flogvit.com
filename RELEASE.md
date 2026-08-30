@@ -1,5 +1,9 @@
 # Release notes
 
+## 2026-08-30 — Housekeeping: agent session data kept out of version control
+
+**Behind the scenes**
+- Excluded the local agent session and cookie storage from version control, keeping credentials out of the repo history.
 ## 2026-08-30 — Internal housekeeping for automation tooling
 
 **Behind the scenes**
