@@ -1,5 +1,9 @@
 # Release notes
 
+## 2026-08-30 — Internal tooling hardening
+
+**Behind the scenes**
+- Tightened repository hygiene by excluding automated agents' session and cookie storage from version control, reducing credential exposure risk.
 ## 2026-08-30 — Repository hygiene fix
 
 **Behind the scenes**
