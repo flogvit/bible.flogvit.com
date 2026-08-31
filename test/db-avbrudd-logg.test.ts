@@ -154,7 +154,10 @@ describe('SVEIPEN: ingen /api-rute dumper feilobjektet når basen er nede (#109)
       // 73 MB fra disk uten å spørre den (#104) — begge måler ingenting her.
       .filter((p) => p !== '/api/health' && p !== '/api/mappings/kvn/all')
       .map((p) =>
-        p.replace(/:([a-zA-Z]+)(\{[^}]*\})?/g, (_m, navn: string) =>
+        // Hono skriver mønsteret som `:date{[0-9]{4}-…}`, altså med nøstede
+        // krøllparenteser — et enkelt `\{[^}]*\}` klipper midt i det og lar en
+        // halv regex bli stående i adressen.
+        p.replace(/:([a-zA-Z]+)(\{(?:[^{}]|\{[^{}]*\})*\})?/g, (_m, navn: string) =>
           navn === 'date' ? '2026-01-01' : navn === 'slug' ? 'x' : '1',
         ),
       )
