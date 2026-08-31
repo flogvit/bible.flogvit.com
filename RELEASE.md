@@ -1,5 +1,12 @@
 # Release notes
 
+## 2026-08-31 — The site can now report what it is holding in memory
+
+**Behind the scenes**
+- Added `/api/minne`, which reports how much every in-memory cache is holding, alongside the process's resident memory. Four separate production incidents have asked the same question — "what is growing?" — and each time the answer had to be guessed at, with three of the guesses turning out to be wrong. The numbers are aggregate counters for our own caches: no reader data, and nothing about the machine it runs on.
+- A structural test reads the source for module-level caches and fails if any of them is neither reported nor listed with a stated reason, so the next cache someone adds is covered without anyone having to remember it.
+- Recorded that the frozen `.no` branch carries an unpushed fix, so it is not written a second time.
+
 ## 2026-08-31 — Site rides out short database outages instead of failing hard
 
 **Bug fixes**
