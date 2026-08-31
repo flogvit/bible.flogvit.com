@@ -1,5 +1,9 @@
 # Release notes
 
+## 2026-08-31 — Internal visibility into in-memory caches
+
+**Behind the scenes**
+- Added an internal accounting endpoint (`/api/minne`) that reports what the running app is holding in memory across the page cache, reading references, reading-text enrichment, static cache, and verse mapper — answering four open questions about what the app keeps in memory.
 ## 2026-08-31 — The site can now report what it is holding in memory
 
 **Behind the scenes**
