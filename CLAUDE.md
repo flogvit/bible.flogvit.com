@@ -584,6 +584,18 @@ ubehandlet ENOENT-kast midt i parsingen — ordrett signaturen saken er meldt p�
 - **Dette flytter ikke `.no`.** Symptomet i saken er målt på
   `bibel.flogvit.no`, som serveres fra `bibel-no` — der står `osnb2` hardkodet i
   ~20 filer, og hva flata skal være er avgjørelsen i #98.
+- **Svaret for `.no` ER skrevet, og det står upushet på ÉN disk (#111).** To
+  commits fra 2026-08-24 ligger bare på den lokale `bibel-no`: `59f5cb4` retter
+  de fire MAPPING-id-ene bak `OSNB_MAPPING_ID`, `915e2f6` legger vakta
+  `api/lib/verse-mapper.test.ts`. De ~20 andre `osnb2`-stedene er BIBEL-id-en og
+  skal bli stående — de to aksene delte en streng, ikke en betydning.
+  `origin/bibel-no` sto fortsatt på `5154b48` da dette ble skrevet (målt
+  2026-08-31, sju døgn etter). **Ikke skriv fiksen på nytt** — den mangler bare
+  `git push origin bibel-no`, og den pushen kan ikke gjøres fra smia (ssh er
+  stengt der, og smia pusher ikke brancher). Automatikken berger den heller
+  ikke: `bergning` sveiper `smie/*` og `testsmie/*`, og en `bibel-no`-utsjekk
+  faller utenfor begge. **Fjern dette avsnittet når `origin/bibel-no` er
+  `915e2f6`.**
 
 ### En offentlig URL skal ALDRI bære en auto_increment-id (#40)
 
