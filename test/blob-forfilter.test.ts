@@ -51,6 +51,10 @@ setDefaultTimeout(DB_TEST_TIMEOUT_MS);
 const ROT = resolve(import.meta.dir, '..');
 
 beforeAll(async () => {
+  // `ensureSchema()` her og ikke bare i DEPLOYEN-halvdelen: kjøres fila alene
+  // mot en base som ikke er løftet ennå, finnes ikke kolonnen, og halvdelene
+  // over ville feilet på «Unknown column» framfor på det de måler.
+  await ensureSchema(getSql());
   await initBooks();
 });
 
