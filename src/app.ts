@@ -48,6 +48,7 @@ import { getCookie } from 'hono/cookie';
 import { LOCALES, href, layoutProps, negotiateLocale, apiLocale } from './lib/i18n.ts';
 import { ogRoutes } from './routes/og.ts';
 import { seoRoutes } from './routes/seo.ts';
+import { minneRegnskap } from './lib/minne-regnskap.ts';
 
 /**
  * Bok-metadataen MÅ være der før en side eller et API-svar som slår opp en bok
@@ -74,6 +75,19 @@ export function createApp() {
   const app = new Hono<AppEnv>();
 
   app.get('/api/health', (c) => c.json({ ok: true }));
+
+  // HVA HOLDER DEN PÅ? — svaret som fire saker har manglet (#19, #105, #106,
+  // #216). Se `lib/minne-regnskap.ts` for hvorfor den finnes.
+  //
+  // Egen rute og ikke et felt i `/api/health`: helsesvaret er en kontrakt
+  // røyktesten og Caddy leser, og et svar som vokser med hver ny cache er ikke
+  // lenger et helsesvar. Denne ruta har lov til å endre form.
+  //
+  // OFFENTLIG, med vilje. Innholdet er aggregerte tellere for våre egne
+  // cacher — ingen brukerdata, ingen adresser, ingenting om maskinen den står
+  // på. Prisen for å gjemme den ville vært en nøkkel å dele, og et tall ingen
+  // rekker å lese klokka tre om natta er tallet som ikke finnes.
+  app.get('/api/minne', (c) => c.json(minneRegnskap()));
 
   // Et ubehandlet kast er ikke automatisk en 500 (#108). Løper retry-budsjettet
   // fra #107 ut fordi basen er borte lenger enn 25 s, er sida ikke i stykker —

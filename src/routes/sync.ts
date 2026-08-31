@@ -12,9 +12,14 @@ import { requirePlus } from '../lib/session.ts';
 // @ts-expect-error — delt klient-modul uten typer (samme kjernelogikk som reading.js)
 import { mergeProgress } from '../../public/js/reading-progress.js';
 import { loggFeil } from '../lib/error-handler.ts';
+import { registrerMinnekilde } from '../lib/minne-regnskap.ts';
 
 // Enkel rate-limit per bruker i minnet (som originalen).
 const rateLimitMap = new Map<number, { count: number; resetAt: number }>();
+// Nøklet på bruker-id, og en utløpt oppføring OVERSKRIVES framfor å slettes:
+// kartet er derfor like stort som antall innloggede som noen gang har synket
+// siden oppstart. Lite i dag, og meldt fordi det ikke kan vites uten å måle (#110).
+registrerMinnekilde('sync/rateLimitMap', () => ({ oppforinger: rateLimitMap.size }));
 const RATE_LIMIT_WINDOW_MS = 60_000;
 const RATE_LIMIT_MAX = 30;
 

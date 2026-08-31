@@ -31,6 +31,7 @@ import type { SQL } from 'bun';
 import { UkvnMapper, loadUkvnMapping, listUkvnMappings, ukvnEncode, ukvnDecode, resolveMappingId } from '@free-bible/kvn';
 import { BOOK_IDS } from '@free-bible/kvn/types';
 import { getChapterVerseCount } from './verse-counts.ts';
+import { registrerMinnekilde } from './minne-regnskap.ts';
 
 /** Én rad i `reading_text_refs` — osmain-koordinater. */
 export interface ReadingRefRow {
@@ -90,6 +91,10 @@ export function unknownMappingSystem(markup: string): string | null {
 }
 
 const mappers = new Map<string, UkvnMapper>();
+registrerMinnekilde('reading-ref/mappers', () => ({ oppforinger: mappers.size }));
+// Katalogen, ikke filene: 1158 filnavn lest én gang. Den er med fordi et
+// regnskap som bare viser de dyre postene ikke kan brukes til å utelukke noe.
+registrerMinnekilde('reading-ref/mappingIdsOnDisk', () => ({ oppforinger: mappingIdsOnDisk?.size ?? 0 }));
 function mapper(mappingId: string): UkvnMapper {
   let m = mappers.get(mappingId);
   if (!m) {

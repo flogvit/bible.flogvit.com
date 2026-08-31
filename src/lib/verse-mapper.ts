@@ -14,6 +14,7 @@ import {
 import type { UkvnMappingFile } from '@free-bible/kvn';
 import { getVerses } from './bible.ts';
 import type { Verse } from './bible.ts';
+import { registrerMinnekilde } from './minne-regnskap.ts';
 
 export { MAPPING_META, resolveMappingId } from '@free-bible/kvn';
 
@@ -45,6 +46,18 @@ const mappingData = new Map<
   string,
   { id: string; name: string; bookNames: Record<string, number>; verseMap: Record<string, string> }
 >();
+
+// INGEN AV DE FIRE HAR TAK, og det er et bevisst valg med en kjent pris: å
+// slippe dem igjen koster ~300 ms på neste kapittelrender (#19), mens å beholde
+// dem koster minne som aldri gis tilbake. Prisen er målt for den fulle
+// mengden — alle 1158 gjennom fil-cachen er 93 MB heap og 409 MB RSS — men
+// ingen har noensinne kunnet lese hvor langt opp den kurven vi FAKTISK er.
+// Derfor meldes antallet: veksten i det er svaret på om det er disse som
+// vokser, eller noe annet. Se `minne-regnskap.ts` og #110.
+registrerMinnekilde('verse-mapper/mappingFiles', () => ({ oppforinger: mappingFiles.size }));
+registrerMinnekilde('verse-mapper/mappers', () => ({ oppforinger: mappers.size }));
+registrerMinnekilde('verse-mapper/crossMappers', () => ({ oppforinger: crossMappers.size }));
+registrerMinnekilde('verse-mapper/mappingData', () => ({ oppforinger: mappingData.size }));
 
 /**
  * Mapping-fila for en id, lest ÉN gang per prosess.

@@ -23,6 +23,7 @@ import { readFileSync } from 'node:fs';
 import { Hono, type Context } from 'hono';
 import { isLocale } from '../lib/i18n.ts';
 import { bookByCardSlug, renderChapterCard } from '../lib/og-card.ts';
+import { registrerMinnekilde } from '../lib/minne-regnskap.ts';
 
 export const ogRoutes = new Hono();
 
@@ -33,6 +34,15 @@ export const ogRoutes = new Hono();
  */
 const CACHE_MAX = 256;
 const cache = new Map<string, Uint8Array>();
+// Kortene ER byte, og de er den ene cachen her som holder store verdier.
+// Taket (256) er et ANTALL, så regnskapet fører byte ved siden av: 256 kort
+// er ~8 MB eller ~25 avhengig av motivet, og det er forskjellen mellom
+// «ikke denne» og «kanskje denne» når noe vokser (#110).
+registrerMinnekilde('og/cache', () => {
+  let byte = 0;
+  for (const png of cache.values()) byte += png.byteLength;
+  return { oppforinger: cache.size, byte };
+});
 
 function remember(key: string, png: Uint8Array): Uint8Array {
   cache.set(key, png);

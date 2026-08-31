@@ -7,8 +7,10 @@ import { getVerse, type ReadingTextWithSlots, type VerseRange } from './bible.ts
 import { UkvnMapper, loadUkvnMapping, ukvnEncode, ukvnDecode, sliceVersePart, resolveMappingId } from '@free-bible/kvn';
 import { bookAbbrById } from './books-data.ts';
 import { getChapterVerseCount } from './verse-counts.ts';
+import { registrerMinnekilde } from './minne-regnskap.ts';
 
 const mapperCache = new Map<string, UkvnMapper>();
+registrerMinnekilde('reading-text-enrich/mapperCache', () => ({ oppforinger: mapperCache.size }));
 function getCachedMapper(mappingId: string): UkvnMapper {
   if (!mapperCache.has(mappingId)) {
     mapperCache.set(mappingId, new UkvnMapper(loadUkvnMapping(mappingId)));

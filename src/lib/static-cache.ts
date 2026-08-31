@@ -18,6 +18,7 @@
 
 import { readFileSync } from 'node:fs';
 import type { MiddlewareHandler } from 'hono';
+import { registrerMinnekilde } from './minne-regnskap.ts';
 
 interface Entry {
   etag: string;
@@ -26,6 +27,10 @@ interface Entry {
 }
 
 const etags = new Map<string, Entry>();
+// Vokser med ANTALL statiske filer som er servert, ikke med trafikken — den
+// er altså bundet av imaget. Meldt likevel: et regnskap som bare viser de
+// mistenkte kan ikke brukes til å frikjenne noen (#110).
+registrerMinnekilde('static-cache/etags', () => ({ oppforinger: etags.size }));
 
 /**
  * Sterk ETag fra innholdet. Cachet på (mtime, size) slik at fila leses én gang
@@ -67,6 +72,7 @@ async function etagFor(path: string): Promise<string | null> {
  * `public/js/` (`./locale.js`) er uendret og lener seg på ETag-en.
  */
 const versioned = new Map<string, string>();
+registrerMinnekilde('static-cache/versioned', () => ({ oppforinger: versioned.size }));
 
 export function assetUrl(path: string): string {
   const known = versioned.get(path);

@@ -20,10 +20,12 @@ import {
 } from '../../lib/contrib.ts';
 import { NO_CACHE } from './util.ts';
 import { loggFeil } from '../../lib/error-handler.ts';
+import { registrerMinnekilde } from '../../lib/minne-regnskap.ts';
 
 // Rate-limit per bruker i minnet (samme mønster som sync.ts) — innsending er
 // en sjelden handling, så 10/minutt stopper bare løpske klienter.
 const rateLimitMap = new Map<number, { count: number; resetAt: number }>();
+registrerMinnekilde('contrib/rateLimitMap', () => ({ oppforinger: rateLimitMap.size }));
 const RATE_LIMIT_WINDOW_MS = 60_000;
 const RATE_LIMIT_MAX = 10;
 

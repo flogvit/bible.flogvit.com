@@ -22,6 +22,7 @@
 // statiske filene sto bak det og fikk 503 under last — se NOT_A_PAGE (#64).
 
 import type { Context, Next } from 'hono';
+import { registrerMinnekilde } from './minne-regnskap.ts';
 
 /**
  * Hva en cachet side KOSTER — og enheten er BYTE, ikke tegn (#105).
@@ -163,6 +164,16 @@ function evictUntilRoom(needed: number): void {
 export function pageCacheStats(): { entries: number; bytes: number } {
   return { entries: cache.size, bytes: totalBytes };
 }
+
+// Den ENESTE cachen som fører byte selv, fordi den er den eneste som har et
+// budsjett å holde (`maxTotalBytes`). Tallet som meldes er cachens eget
+// regnskap — ikke et nytt anslag ved siden av, som ville kunne være uenig med
+// det uten at noen så det. Fra og med #110 er det lesbart i drift og ikke bare
+// i `page-cache-memory-budget.test.ts`.
+registrerMinnekilde('page-cache/cache', () => {
+  const s = pageCacheStats();
+  return { oppforinger: s.entries, byte: s.bytes };
+});
 
 /** Kun for tester. */
 export function clearPageCache(): void {
