@@ -1797,6 +1797,61 @@ når den bestemmer seg for å OOM-drepe containeren. Målt: 54,1 MB → 0,9 MB,
   det er 1158 `<option>`. At vi tilbyr 1158 versnummereringer i verktøylinja
   er en produktavgjørelse, ikke en feil, og hører i sitt eget issue.
 
+#### Ingenting holdes i live — det er ALLOKATOREN som ikke gir tilbake (#110)
+
+«15 MB/t, rett linje i sju timer» leste som en lekkasje, og saken pekte på fire
+ubundne mapping-cacher. Målt herfra er svaret et NEI på begge, og begge halvdeler
+er nå målbare uten ssh:
+
+```
+ 60 unike kapittelrender   live-sett  8,1 → 10,0 MB     rss +48 MB
+120 unike kapittelrender   live-sett  8,1 →  8,6 MB     rss +15 MB
+240 unike kapittelrender   live-sett  8,1 →  9,1 MB     rss +75 MB
+```
+
+- **Live-settet skalerer ikke med renderne.** Det står på 8–10 MB uansett om
+  sidene er nye eller de samme, mens residenten klatrer i sprang og så flater
+  ut (målt lokalt: ~480–500 MB etter ~1500 render, med mikrocachen AV). Det er
+  formen allokator-høyvann har, ikke formen en voksende heap har — altså
+  motsatt av det saken leste ut av ett øyeblikksbilde. Restansen fra #106 er
+  dermed denne saken, og den er ikke en lekkasje.
+- **Hypotesen kunne per konstruksjon ikke stemme.** Hver eneste vei inn til de
+  fire cachene — kapittelsida, `/api/chapter`, `/api/mappings/kvn/:id`,
+  `enrichWithVerseText` — går gjennom `resolveMappingId()`, som svarer på 14 av
+  de 1158 filene. En crawler som går nedtrekket ovenfra og ned legger derfor
+  ikke igjen ÉN oppføring; den får osnb-sida tilbake for de 1144 andre.
+  (At nedtrekket TILBYR 1144 valg som stille faller tilbake til osnb er en ekte
+  defekt, men det er #106s nedtrekks-sak, ikke denne.)
+- **`heapUsed` alene kan ikke avgjøre det, og det er grunnen til `heapGulv`.**
+  Øyeblikksbildet bærer usamlet søppel og svingte 21–140 MB i den SAMME
+  kjøringen mens live-settet lå i ro; to avlesninger med timer imellom ville
+  sammenliknet GC-faser. `minneRegnskap()` fører derfor det LAVESTE tallet den
+  har sett, og en poller som spør hvert minutt treffer tilstanden rett etter en
+  samling mange ganger i timen. Stiger gulvet, holdes noe i live. Vi tvinger
+  ALDRI fram en GC for å få tallet — `/api/minne` er offentlig, og en samling
+  midt i en forespørsel er en pause for en leser.
+- **Vakta er `test/minne-vekst.test.ts` med tre halvdeler.** LIVE-SETTET (eget
+  program, som #104/#105/#106: `bun test` deler prosess — 240 unike render, og
+  live-settet må stå stille; med krav om at sidene faktisk svarte 200 med en
+  ekte kropp, ellers ville en 404-sveip bestått taket og målt ingenting).
+  HYPOTESEN (40 katalog-id-er ingen kan slå opp sendes på BEGGE flatene, og
+  ingen cache får en oppføring — mens en id som VIRKELIG finnes fortsatt
+  lastes, ellers ville «cache aldri noe» bestått; taket er formulert som
+  ANTALL OPPLØSELIGE, ikke som tallet 14, så en ny navngitt utgave hever det
+  selv). GULVET (ren logikk mot en injisert avlesning: gulvet stiger aldri og
+  følger heapen ned, og `/api/minne` gir begge ut). Fem mutasjoner kjørt,
+  inkludert en render som holder 20 kB per side i live.
+- **Én samling er ikke nok når man måler live-settet.** JSC frigjør en del
+  objekter forsinket, så `Bun.gc(true)` uten en tur innom hendelsesløkka ga
+  22–50 MB for det SAMME settet. Med `await Bun.sleep(25)` mellom samlingene
+  lander avlesningene på ±30 kB. Gjelder enhver framtidig minnesonde her.
+- **Det som står igjen er ikke en kodefeil, og derfor ikke løst her.**
+  Arbeidssettet under crawl er større enn containerens 288 MiB, og platået
+  ligger over taket — å heve taket eller å gjøre sidene mindre er de to
+  veiene, og begge er avgjørelser (minnebudsjettet bor i driftsrepoet,
+  sidestørrelsen er nedtrekks-saken over). Det denne runden endrer er at
+  spørsmålet kan besvares fra `/api/minne` framfor fra en gjetning.
+
 ### En byge kommer fra ÉN aktør — og den kan være nåbar (#86)
 
 60 × 503 i vaktvinduet 2026-08-07, og **alle 60 lå innenfor 32,7 sekunder** av
