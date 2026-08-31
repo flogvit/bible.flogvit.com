@@ -1,5 +1,14 @@
 # Release notes
 
+## 2026-08-31 — Site rides out short database outages instead of failing hard
+
+**Bug fixes**
+- Brief database interruptions no longer show up as a bare server error — you now get a clear, temporary-outage response, and things keep working as soon as the database is back.
+- If a database interruption happens right as the site is starting up, it now recovers on its own instead of staying stuck.
+
+**Behind the scenes**
+- Every page and API route now reliably logs database interruptions, even ones that were being caught and handled locally before.
+- Fixed a route-matching bug and improved test coverage for how outages are detected and measured.
 ## 2026-08-30 — Pages stay responsive when the database stumbles
 
 **Bug fixes**
