@@ -584,18 +584,40 @@ ubehandlet ENOENT-kast midt i parsingen — ordrett signaturen saken er meldt p�
 - **Dette flytter ikke `.no`.** Symptomet i saken er målt på
   `bibel.flogvit.no`, som serveres fra `bibel-no` — der står `osnb2` hardkodet i
   ~20 filer, og hva flata skal være er avgjørelsen i #98.
-- **Svaret for `.no` ER skrevet, og det står upushet på ÉN disk (#111).** To
-  commits fra 2026-08-24 ligger bare på den lokale `bibel-no`: `59f5cb4` retter
-  de fire MAPPING-id-ene bak `OSNB_MAPPING_ID`, `915e2f6` legger vakta
-  `api/lib/verse-mapper.test.ts`. De ~20 andre `osnb2`-stedene er BIBEL-id-en og
-  skal bli stående — de to aksene delte en streng, ikke en betydning.
-  `origin/bibel-no` sto fortsatt på `5154b48` da dette ble skrevet (målt
-  2026-08-31, sju døgn etter). **Ikke skriv fiksen på nytt** — den mangler bare
-  `git push origin bibel-no`, og den pushen kan ikke gjøres fra smia (ssh er
-  stengt der, og smia pusher ikke brancher). Automatikken berger den heller
-  ikke: `bergning` sveiper `smie/*` og `testsmie/*`, og en `bibel-no`-utsjekk
-  faller utenfor begge. **Fjern dette avsnittet når `origin/bibel-no` er
-  `915e2f6`.**
+- **Svaret for `.no` ER skrevet, og det ligger på `origin/bibel-no`.** To
+  commits fra 2026-08-24: `59f5cb4` retter de fire MAPPING-id-ene bak
+  `OSNB_MAPPING_ID`, `915e2f6` legger vakta `api/lib/verse-mapper.test.ts`. De
+  ~20 andre `osnb2`-stedene er BIBEL-id-en og skal bli stående — de to aksene
+  delte en streng, ikke en betydning. **Ikke skriv fiksen på nytt.** Den er
+  ikke ROLLET UT: `.no` kjører fortsatt `bibel:20260818-112552-5154b48`, og hva
+  som skal skje med den frosne flata er avgjørelsen i #98.
+
+#### En fiks som bare finnes på ÉN disk er ikke levert (#111)
+
+De to commitene over lå sju døgn i den lokale `bibel-no` uten å finnes på noen
+remote — skrevet, testet og meldt som bygget, mens `git branch -r --contains`
+ga tomt. Ingenting sa fra: treet var rent, `bun test` var grønt, og CLAUDE.md
+pekte på dem som om de var levert. En disk som ryker, eller en `reset` på feil
+gren, tar dem med seg.
+
+- **Ingen automatikk så dit.** Orkesterets `bergning` sveiper `smie/*` og
+  `testsmie/*`; en `bibel-no`-utsjekk faller utenfor begge. Det hullet ligger i
+  orkesterrepoet — her ligger porten som gjør at bibel selv oppdager det.
+- **Vakta er `test/upushet-arbeid.test.ts`** og har fire halvdeler. REGELEN
+  (ren logikk: en commit uten remote OG uten plass i HEAD er alene — begge
+  veier, og en SHA som ikke resolver er et ANNET repos commit, ikke vår å
+  svare for). GRENA (hver lokal gren som ikke er en arbeidsgren finnes på en
+  remote). DOKUMENTASJONEN (hver commit-SHA CLAUDE.md peker på likeså — det er
+  slik disse to ble funnet). INGEN STILLE SKIP (det må finnes grener og SHA-er
+  å måle, ellers ville «returner tom liste» bestått). Seks mutasjoner kjørt.
+- **Unntaket er ARBEIDSGRENEN (`smie/*`, `testsmie/*`), ikke HEAD.** Det er
+  arbeid under utførelse, som skallet leverer — uten unntaket ville vakta vært
+  rød i hver eneste kjøring, altså ingen vakt. Men et HEAD-unntak ville gjort
+  den blind for nettopp denne saken: en `bibel-no`-utsjekk er sin egen HEAD.
+- **Den leser LOKALE remote-refs, ikke nettet.** En vakt som må ut på nettet er
+  treg og flakete i en merge-port. Prisen er at en foreldet ref kan gi falsk
+  rødt (branchen ER pushet, refen er gammel — `git fetch` retter det); den
+  motsatte, farlige retningen krever at noen sletter grenen på GitHub.
 
 ### En offentlig URL skal ALDRI bære en auto_increment-id (#40)
 
