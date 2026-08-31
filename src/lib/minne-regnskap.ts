@@ -25,6 +25,15 @@
 // en avlesning, og `/api/minne` gir tallene ut. Det retter ingen lekkasje — det
 // gjør neste lekkasje mulig å navngi uten å gjette.
 //
+// OG DET FØRSTE SVARET ER ET NEI (#110). Regnskapet talte OPPFØRINGER, og det
+// var halve spørsmålet: en cache med null oppføringer forklarer ingenting om
+// de 228 MB-ene. Den andre halvdelen er om minnet i det hele tatt er VÅRT —
+// altså om live-settet vokser (noe holdes i live) eller bare `rss` gjør det
+// (allokatoren gir ikke tilbake). Det skillet krevde ssh og `memory.stat` i et
+// annet repo; nå står `heap` og `heapGulv` her, og `minne-vekst.test.ts` måler
+// det samme fra innsiden: 240 unike kapittelrender flytter live-settet 1 MB og
+// residenten 75.
+//
 // TALLENE ER OPPFØRINGER, IKKE BYTE, der byte ikke måles. En Map med 900
 // mapping-filer i seg sier mer enn et anslag på hva de veier: antallet er
 // eksakt, og veksten i det er det som skal leses mot RSS. Der en cache FØRER
@@ -69,15 +78,55 @@ export function minnekilder(): string[] {
 }
 
 /**
+ * Hvor stor JS-heapen er NÅ. Injiserbar, så gulvet under kan måles av en vakt
+ * uten å vente på at en GC tilfeldigvis inntreffer.
+ */
+let lesHeap: () => number = () => process.memoryUsage().heapUsed;
+
+/**
+ * DET LAVESTE heapen har vært, over avlesningene som er gjort.
+ *
+ * Det er kolonnen saken navnga som avgjørende, og den kan ikke leses av ett
+ * øyeblikksbilde: `heapUsed` inneholder søppel som ennå ikke er samlet, og
+ * svinger derfor mellom to og seks ganger det som faktisk er levende (målt
+ * 21–140 MB i den samme kjøringen, mens live-settet lå i ro på ~25 MB). To
+ * avlesninger med timer imellom sammenlikner da GC-faser, ikke minne.
+ *
+ * GULVET er immunt mot det: rett etter en samling ER heapUsed live-settet, og
+ * en poller som spør hvert minutt treffer den tilstanden mange ganger i timen.
+ * Stiger gulvet, holdes noe i live — det er en lekkasje. Står gulvet stille
+ * mens `rss` klatrer, er det allokatoren som ikke gir tilbake, og da er ingen
+ * cache skyldig. Det er nøyaktig det skillet #110 ba om og ikke kunne gjøre.
+ *
+ * Prisen er én sammenlikning per avlesning. Vi tvinger ALDRI fram en GC for å
+ * få tallet: en samling midt i en forespørsel er en pause for en leser, og
+ * `/api/minne` er offentlig.
+ */
+let heapGulv = Infinity;
+
+/** Kun for tester: injiser heap-avlesningen og nullstill gulvet. */
+export function settHeapleser(fn: (() => number) | null): void {
+  lesHeap = fn ?? (() => process.memoryUsage().heapUsed);
+  heapGulv = Infinity;
+}
+
+/**
  * Hele regnskapet, lest NÅ.
  *
  * `rss` er tallet cgruppa teller når den bestemmer seg for å drepe containeren
  * (#106), så det er det de andre tallene skal leses mot. Summen av kildene vil
  * ALDRI bli rss: kode, stack, JIT og alt annet ligger utenfor. Poenget er
  * differansen over tid — hvilken post som flytter seg når rss gjør det.
+ *
+ * `heap` og `heapGulv` er den andre halvdelen av det svaret, og de er nye i
+ * #110: uten dem sier regnskapet hvor mye som er brukt, men ikke om det er VÅRT
+ * — og det var nettopp det spørsmålet som krevde ssh og `memory.stat` i et
+ * annet repo for å bli besvart.
  */
 export function minneRegnskap(): {
   rss: number;
+  heap: number;
+  heapGulv: number;
   kilder: Record<string, Minnemaaling>;
 } {
   const ut: Record<string, Minnemaaling> = {};
@@ -91,5 +140,7 @@ export function minneRegnskap(): {
       ut[navn] = { oppforinger: -1 };
     }
   }
-  return { rss: process.memoryUsage.rss(), kilder: ut };
+  const heap = lesHeap();
+  if (heap < heapGulv) heapGulv = heap;
+  return { rss: process.memoryUsage.rss(), heap, heapGulv, kilder: ut };
 }
