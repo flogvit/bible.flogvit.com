@@ -7,6 +7,7 @@ import {
 } from '../../lib/bible.ts';
 import { withApiId, withApiIds } from '../../lib/api-ids.ts';
 import { NO_CACHE } from './util.ts';
+import { loggFeil } from '../../lib/error-handler.ts';
 
 const r = new Hono();
 
@@ -20,7 +21,7 @@ r.get('/', async (c) => {
     const stories = category ? await getStoriesByCategory(category) : await getAllStories();
     return c.json({ stories: withApiIds(PATH, stories) }, 200, NO_CACHE);
   } catch (error) {
-    console.error('Error fetching stories:', error);
+    loggFeil('Error fetching stories', error);
     return c.json({ error: 'Internal server error' }, 500);
   }
 });
@@ -33,7 +34,7 @@ r.get('/search', async (c) => {
     const stories = await searchStories(query);
     return c.json({ stories: withApiIds(PATH, stories) }, 200, NO_CACHE);
   } catch (error) {
-    console.error('Error searching stories:', error);
+    loggFeil('Error searching stories', error);
     return c.json({ error: 'Internal server error' }, 500);
   }
 });
@@ -45,7 +46,7 @@ r.get('/:slug', async (c) => {
     if (!story) return c.json({ error: 'Story not found' }, 404);
     return c.json(withApiId(PATH, story), 200, NO_CACHE);
   } catch (error) {
-    console.error('Error fetching story:', error);
+    loggFeil('Error fetching story', error);
     return c.json({ error: 'Internal server error' }, 500);
   }
 });

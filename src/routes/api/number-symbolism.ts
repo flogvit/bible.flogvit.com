@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import { getAllNumberSymbolism, getNumberSymbolismByNumber } from '../../lib/bible.ts';
 import { withApiId, withApiIds } from '../../lib/api-ids.ts';
 import { NO_CACHE } from './util.ts';
+import { loggFeil } from '../../lib/error-handler.ts';
 
 const r = new Hono();
 
@@ -14,7 +15,7 @@ r.get('/', async (c) => {
     const symbolisms = await getAllNumberSymbolism();
     return c.json({ symbolisms: withApiIds(PATH, symbolisms) }, 200, NO_CACHE);
   } catch (error) {
-    console.error('Error fetching number symbolism:', error);
+    loggFeil('Error fetching number symbolism', error);
     return c.json({ error: 'Internal server error' }, 500);
   }
 });
@@ -28,7 +29,7 @@ r.get('/:number', async (c) => {
     if (!symbolism) return c.json({ error: 'Number symbolism not found' }, 404);
     return c.json(withApiId(PATH, symbolism), 200, NO_CACHE);
   } catch (error) {
-    console.error('Error fetching number symbolism:', error);
+    loggFeil('Error fetching number symbolism', error);
     return c.json({ error: 'Internal server error' }, 500);
   }
 });

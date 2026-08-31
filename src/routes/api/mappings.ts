@@ -7,6 +7,7 @@ import {
   loadRawMappingUncached,
 } from '../../lib/verse-mapper.ts';
 import { NO_CACHE } from './util.ts';
+import { loggFeil } from '../../lib/error-handler.ts';
 
 const r = new Hono();
 
@@ -16,7 +17,7 @@ r.get('/', async (c) => {
     const mappings = await getAllVerseMappings();
     return c.json({ mappings }, 200, NO_CACHE);
   } catch (error) {
-    console.error('Error fetching mappings:', error);
+    loggFeil('Error fetching mappings', error);
     return c.json({ error: 'Internal server error' }, 500);
   }
 });
@@ -69,7 +70,7 @@ r.get('/kvn/all', (c) => {
         // Hodene er alt sendt, så en 500 er ikke lenger mulig. Å avbryte
         // strømmen er det ærlige: en avkortet kropp er ugyldig JSON og kan
         // ikke forveksles med et fullstendig svar.
-        console.error('Error fetching all KVN mappings:', error);
+        loggFeil('Error fetching all KVN mappings', error);
         controller.error(error);
       }
     },
@@ -86,7 +87,7 @@ r.get('/kvn', (c) => {
   try {
     return c.json({ mappings: getAvailableMappings() }, 200, NO_CACHE);
   } catch (error) {
-    console.error('Error fetching KVN mappings:', error);
+    loggFeil('Error fetching KVN mappings', error);
     return c.json({ error: 'Internal server error' }, 500);
   }
 });
@@ -98,7 +99,7 @@ r.get('/kvn/:id', (c) => {
     if (!data) return c.json({ error: 'KVN mapping not found' }, 404);
     return c.json(data, 200, NO_CACHE);
   } catch (error) {
-    console.error('Error fetching KVN mapping data:', error);
+    loggFeil('Error fetching KVN mapping data', error);
     return c.json({ error: 'Internal server error' }, 500);
   }
 });
@@ -121,7 +122,7 @@ r.get('/:id', async (c) => {
       NO_CACHE,
     );
   } catch (error) {
-    console.error('Error fetching mapping:', error);
+    loggFeil('Error fetching mapping', error);
     return c.json({ error: 'Internal server error' }, 500);
   }
 });

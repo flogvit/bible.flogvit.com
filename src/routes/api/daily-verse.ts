@@ -5,6 +5,7 @@ import { normalizeBibleId } from '../../lib/bible.ts';
 import { DEFAULT_CONTENT_LANGUAGE } from '../../lib/lang.ts';
 import { NO_CACHE } from './util.ts';
 import { bookNameByShort } from '../../lib/books-data.ts';
+import { loggFeil } from '../../lib/error-handler.ts';
 
 const r = new Hono();
 
@@ -75,7 +76,7 @@ r.get('/', async (c) => {
     if (res.status === 404) return c.json({ error: 'No verse for today' }, 404);
     return res;
   } catch (error) {
-    console.error('Error fetching daily verse:', error);
+    loggFeil('Error fetching daily verse', error);
     return c.json({ error: 'Internal server error' }, 500);
   }
 });
@@ -89,7 +90,7 @@ r.get('/:date', async (c) => {
     }
     return await dailyVerseResponse(c, date);
   } catch (error) {
-    console.error('Error fetching daily verse:', error);
+    loggFeil('Error fetching daily verse', error);
     return c.json({ error: 'Internal server error' }, 500);
   }
 });

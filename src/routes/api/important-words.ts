@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import { getImportantWords } from '../../lib/bible.ts';
 import { intParam, NO_CACHE } from './util.ts';
+import { loggFeil } from '../../lib/error-handler.ts';
 
 const r = new Hono();
 
@@ -15,7 +16,7 @@ r.get('/', async (c) => {
     }
     return c.json(await getImportantWords(bookId, chapter), 200, NO_CACHE);
   } catch (error) {
-    console.error('Error fetching important words:', error);
+    loggFeil('Error fetching important words', error);
     return c.json({ error: 'Internal server error' }, 500);
   }
 });

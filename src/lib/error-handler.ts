@@ -47,6 +47,33 @@ import type { AppEnv } from './session.ts';
  */
 export const DB_NEDE_RETRY_AFTER_S = 30;
 
+/**
+ * Hvordan en feil SKRIVES, uansett hvem som oppdaget den (#109).
+ *
+ * Containerloggen bar denne tre ganger i vinduet 2026-08-31 00:58–02:08Z, uten
+ * at noe var rullet ut:
+ *
+ *     code: "ERR_MYSQL_CONNECTION_TIMEOUT"
+ *       at wrapError (internal:sql/mysql:14:10)
+ *       at #onClose (internal:sql/mysql:192:22)
+ *
+ * Formen er målt: den oppstår i det øyeblikket feilOBJEKTET fra Bun rekkes til
+ * `console.error`. `feilsvar` over tok den for sidene, men **hver rute under
+ * `/api/` fanger sitt eget kast** og når derfor aldri `app.onError` — der
+ * skrives dumpen fortsatt, fra ~55 kallsteder. Det samme gjelder oppstarten i
+ * `index.ts`, som ikke er en forespørsel i det hele tatt.
+ *
+ * Skillet er nøyaktig `feilsvar` sitt, og av samme grunn ÉN regel framfor to
+ * lister: et DB-avbrudd er DRIFT og trenger én linje (det kommer én per
+ * forespørsel i en byge, og en stacktrace ned i Buns interne mysql-modul sier
+ * ingenting om oss), mens en ekte feil er den ene gangen vi vil ha hele
+ * stacktracen. «Logg aldri objektet» ville gjort hver bug hos oss sporløs.
+ */
+export function loggFeil(hva: string, err: unknown): void {
+  if (isConnectionError(err)) console.error(`${hva} — DB utilgjengelig: ${(err as Error)?.message}`);
+  else console.error(hva, err);
+}
+
 export const feilsvar: ErrorHandler<AppEnv> = (err, c) => {
   // En HTTPException bærer sitt EGET svar (status og kropp er allerede valgt av
   // den som kastet den). Å overskrive det med 500 ville gjort et bevisst 4xx om
@@ -54,14 +81,13 @@ export const feilsvar: ErrorHandler<AppEnv> = (err, c) => {
   if (err instanceof HTTPException) return err.getResponse();
 
   const nede = isConnectionError(err);
-
-  // Loggen skiller de to like tydelig som svaret gjør: et DB-avbrudd er drift
-  // og trenger bare én linje (det kommer én per forespørsel i en byge), mens en
-  // ekte feil er den ene gangen vi vil ha hele stacktracen.
-  if (nede) console.error(`[503] ${c.req.method} ${c.req.path} — DB utilgjengelig: ${(err as Error).message}`);
-  else console.error(`[500] ${c.req.method} ${c.req.path}`, err);
-
   const status = nede ? 503 : 500;
+
+  // Loggen skiller de to like tydelig som svaret gjør, gjennom SAMME regel som
+  // rutene og oppstarten bruker (#109) — to skrivemåter ville vært to steder å
+  // glemme neste feilkode.
+  loggFeil(`[${status}] ${c.req.method} ${c.req.path}`, err);
+
   const headers: Record<string, string> = nede
     ? { 'retry-after': String(DB_NEDE_RETRY_AFTER_S) }
     : {};

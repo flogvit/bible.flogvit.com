@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import { getAllBooks, getBookSummary } from '../../lib/bible.ts';
 import { NO_CACHE } from './util.ts';
+import { loggFeil } from '../../lib/error-handler.ts';
 
 const r = new Hono();
 
@@ -13,7 +14,7 @@ r.get('/', async (c) => {
     );
     return c.json({ books: booksWithSummaries }, 200, NO_CACHE);
   } catch (error) {
-    console.error('Error fetching books:', error);
+    loggFeil('Error fetching books', error);
     return c.json({ error: 'Internal server error' }, 500);
   }
 });

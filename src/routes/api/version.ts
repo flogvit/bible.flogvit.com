@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
 import { getSql } from '../../lib/db.ts';
+import { loggFeil } from '../../lib/error-handler.ts';
 
 const r = new Hono();
 
@@ -29,7 +30,7 @@ r.get('/', async (c) => {
       { 'Cache-Control': 'public, max-age=300' },
     );
   } catch (error) {
-    console.error('Error fetching version:', error);
+    loggFeil('Error fetching version', error);
     return c.json({ version: '1970-01-01 00:00:00', importedAt: null, syncVersion: 0 }, 500);
   }
 });

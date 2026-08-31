@@ -8,6 +8,7 @@ import {
   normalizeBibleId,
 } from '../../lib/bible.ts';
 import { NO_CACHE } from './util.ts';
+import { loggFeil } from '../../lib/error-handler.ts';
 
 const r = new Hono();
 
@@ -18,7 +19,7 @@ r.get('/', async (c) => {
     const parallels = await getGospelParallels();
     return c.json({ sections, parallels }, 200, NO_CACHE);
   } catch (error) {
-    console.error('Error fetching gospel parallels:', error);
+    loggFeil('Error fetching gospel parallels', error);
     return c.json({ error: 'Internal server error' }, 500);
   }
 });
@@ -34,7 +35,7 @@ r.get('/chapter/:bookId/:chapter', async (c) => {
     const parallels = await getGospelParallelsForChapter(bookId, chapter);
     return c.json({ parallels }, 200, NO_CACHE);
   } catch (error) {
-    console.error('Error fetching chapter parallels:', error);
+    loggFeil('Error fetching chapter parallels', error);
     return c.json({ error: 'Internal server error' }, 500);
   }
 });
@@ -46,7 +47,7 @@ r.get('/:id', async (c) => {
     if (!parallel) return c.json({ error: 'Parallel not found' }, 404);
     return c.json(parallel, 200, NO_CACHE);
   } catch (error) {
-    console.error('Error fetching gospel parallel:', error);
+    loggFeil('Error fetching gospel parallel', error);
     return c.json({ error: 'Internal server error' }, 500);
   }
 });
@@ -71,7 +72,7 @@ r.post('/:id/verses', async (c) => {
     }
     return c.json({ verses }, 200, NO_CACHE);
   } catch (error) {
-    console.error('Error fetching parallel verses:', error);
+    loggFeil('Error fetching parallel verses', error);
     return c.json({ error: 'Internal server error' }, 500);
   }
 });

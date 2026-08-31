@@ -8,6 +8,7 @@ import {
 } from '../../lib/bible.ts';
 import { enrichWithVerseText } from '../../lib/reading-text-enrich.ts';
 import { NO_CACHE } from './util.ts';
+import { loggFeil } from '../../lib/error-handler.ts';
 
 const r = new Hono();
 
@@ -17,7 +18,7 @@ r.get('/', async (c) => {
     const texts = await getAllReadingTexts();
     return c.json({ readingTexts: texts }, 200, NO_CACHE);
   } catch (error) {
-    console.error('Error fetching reading texts:', error);
+    loggFeil('Error fetching reading texts', error);
     return c.json({ error: 'Internal server error' }, 500);
   }
 });
@@ -27,7 +28,7 @@ r.get('/today', async (c) => {
   try {
     return c.json(await getTodaysReadingTexts(), 200, NO_CACHE);
   } catch (error) {
-    console.error("Error fetching today's reading texts:", error);
+    loggFeil("Error fetching today's reading texts", error);
     return c.json({ error: 'Internal server error' }, 500);
   }
 });
@@ -48,7 +49,7 @@ r.get('/:date{[0-9]{4}-[0-9]{2}-[0-9]{2}}', async (c) => {
     for (const text of texts) enriched.push(await enrichWithVerseText(text, bible, mapping));
     return c.json(enriched, 200, NO_CACHE);
   } catch (error) {
-    console.error('Error fetching reading text:', error);
+    loggFeil('Error fetching reading text', error);
     return c.json({ error: 'Internal server error' }, 500);
   }
 });
@@ -66,7 +67,7 @@ r.get('/:id{[0-9]+}', async (c) => {
     const enriched = await enrichWithVerseText(text, bible, mapping);
     return c.json(enriched, 200, NO_CACHE);
   } catch (error) {
-    console.error('Error fetching reading text:', error);
+    loggFeil('Error fetching reading text', error);
     return c.json({ error: 'Internal server error' }, 500);
   }
 });

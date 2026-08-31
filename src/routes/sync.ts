@@ -11,6 +11,7 @@ import type { AppEnv } from '../lib/session.ts';
 import { requirePlus } from '../lib/session.ts';
 // @ts-expect-error — delt klient-modul uten typer (samme kjernelogikk som reading.js)
 import { mergeProgress } from '../../public/js/reading-progress.js';
+import { loggFeil } from '../lib/error-handler.ts';
 
 // Enkel rate-limit per bruker i minnet (som originalen).
 const rateLimitMap = new Map<number, { count: number; resetAt: number }>();
@@ -181,7 +182,7 @@ sync.post('/', async (c) => {
     });
     return c.json(result);
   } catch (err) {
-    console.error('Sync error:', err);
+    loggFeil('Sync error', err);
     return c.json({ error: 'Sync failed' }, 500);
   }
 });
@@ -253,7 +254,7 @@ sync.post('/user-bibles', async (c) => {
     });
     return c.json({ bibles: serverBibles });
   } catch (err) {
-    console.error('User bible sync error:', err);
+    loggFeil('User bible sync error', err);
     return c.json({ error: 'User bible sync failed' }, 500);
   }
 });
@@ -290,7 +291,7 @@ sync.post('/user-bible-chapters/:id', async (c) => {
     });
     return c.json({ ok: true, count: chapters?.length ?? 0 });
   } catch (err) {
-    console.error('Upload chapters error:', err);
+    loggFeil('Upload chapters error', err);
     return c.json({ error: 'Upload failed' }, 500);
   }
 });
@@ -317,7 +318,7 @@ sync.get('/user-bible-chapters/:id', async (c) => {
       })),
     });
   } catch (err) {
-    console.error('Download chapters error:', err);
+    loggFeil('Download chapters error', err);
     return c.json({ error: 'Download failed' }, 500);
   }
 });

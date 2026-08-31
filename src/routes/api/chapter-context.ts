@@ -7,6 +7,7 @@ import {
   getChapterSummary,
   getTimelineEventsForChapter,
 } from '../../lib/bible.ts';
+import { loggFeil } from '../../lib/error-handler.ts';
 
 const r = new Hono();
 
@@ -75,7 +76,7 @@ r.post('/', async (c) => {
 
     return c.json(results);
   } catch (error) {
-    console.error('Error fetching chapter context:', error);
+    loggFeil('Error fetching chapter context', error);
     return c.json({ error: 'Internal server error' }, 500);
   }
 });

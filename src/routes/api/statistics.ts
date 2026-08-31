@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import { getBibleStatistics, getTopOriginalWords, getTopWords, normalizeBibleId } from '../../lib/bible.ts';
 import { NO_CACHE } from './util.ts';
+import { loggFeil } from '../../lib/error-handler.ts';
 
 const r = new Hono();
 
@@ -10,7 +11,7 @@ r.get('/', async (c) => {
     const bible = normalizeBibleId(c.req.query('bible')) || 'osnb';
     return c.json(await getBibleStatistics(bible), 200, NO_CACHE);
   } catch (error) {
-    console.error('Error fetching statistics:', error);
+    loggFeil('Error fetching statistics', error);
     return c.json({ error: 'Internal server error' }, 500);
   }
 });
@@ -24,7 +25,7 @@ r.get('/top-words', async (c) => {
     const words = await getTopWords(bible, limit, includeStopWords);
     return c.json({ words }, 200, NO_CACHE);
   } catch (error) {
-    console.error('Error fetching top words:', error);
+    loggFeil('Error fetching top words', error);
     return c.json({ error: 'Internal server error' }, 500);
   }
 });
@@ -36,7 +37,7 @@ r.get('/top-words/hebrew', async (c) => {
     const words = await getTopOriginalWords('hebrew', limit);
     return c.json({ words, language: 'hebrew' }, 200, NO_CACHE);
   } catch (error) {
-    console.error('Error fetching Hebrew top words:', error);
+    loggFeil('Error fetching Hebrew top words', error);
     return c.json({ error: 'Internal server error' }, 500);
   }
 });
@@ -48,7 +49,7 @@ r.get('/top-words/greek', async (c) => {
     const words = await getTopOriginalWords('greek', limit);
     return c.json({ words, language: 'greek' }, 200, NO_CACHE);
   } catch (error) {
-    console.error('Error fetching Greek top words:', error);
+    loggFeil('Error fetching Greek top words', error);
     return c.json({ error: 'Internal server error' }, 500);
   }
 });

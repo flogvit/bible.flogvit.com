@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import { getAllReadingPlansList, getReadingPlanById } from '../../lib/bible.ts';
 import { NO_CACHE } from './util.ts';
+import { loggFeil } from '../../lib/error-handler.ts';
 
 const r = new Hono();
 
@@ -17,7 +18,7 @@ r.get('/', async (c) => {
   try {
     return c.json(await getAllReadingPlansList(), 200, NO_CACHE);
   } catch (error) {
-    console.error('Error fetching reading plans:', error);
+    loggFeil('Error fetching reading plans', error);
     return c.json({ error: 'Internal server error' }, 500);
   }
 });
@@ -29,7 +30,7 @@ r.get('/:id', async (c) => {
     if (!plan) return c.json({ error: 'Reading plan not found' }, 404);
     return c.json(plan, 200, NO_CACHE);
   } catch (error) {
-    console.error('Error fetching reading plan:', error);
+    loggFeil('Error fetching reading plan', error);
     return c.json({ error: 'Internal server error' }, 500);
   }
 });

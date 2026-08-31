@@ -14,6 +14,7 @@ import {
 } from '../../lib/bible.ts';
 import { mapChapter, resolveMappingId } from '../../lib/verse-mapper.ts';
 import { NO_CACHE } from './util.ts';
+import { loggFeil } from '../../lib/error-handler.ts';
 
 const r = new Hono();
 
@@ -175,7 +176,7 @@ r.get('/', async (c) => {
       NO_CACHE,
     );
   } catch (error) {
-    console.error('Error fetching chapter:', error);
+    loggFeil('Error fetching chapter', error);
     return c.json({ error: 'Internal server error' }, 500);
   }
 });
