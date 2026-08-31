@@ -4,12 +4,18 @@
 import { createApp } from './app.ts';
 import { initBooks } from './lib/bible.ts';
 import { getSql, withRetryBudget } from './lib/db.ts';
+import { loggFeil } from './lib/error-handler.ts';
 import { setContentVersionReader } from './lib/page-cache.ts';
 
 // Bok-metadata (66 rader, statisk innhold) caches i minnet så parserne kan
-// være synkrone. Feiler DB-en ved boot, logges det og API-et svarer 500 til
-// DB-en er oppe — appen skal fortsatt boote.
-await initBooks().catch((err) => console.error('initBooks feilet (DB nede?):', err));
+// være synkrone. Appen skal fortsatt boote om basen er borte akkurat nå —
+// `medBokdata` i `app.ts` laster den da på første forespørsel som trenger den
+// (#109). Linja her er en varsling, ikke en port.
+//
+// Den går gjennom `loggFeil` av samme grunn som rutene: et DB-avbrudd er drift
+// og skal skrives som ÉN linje. Rekkes feilobjektet til `console.error`, skriver
+// Bun hele stacken ned i sin egen mysql-modul — ordrett signaturen i #109.
+await initBooks().catch((err) => loggFeil('[oppstart] bok-metadata ikke lastet', err));
 
 // Mikrocachen holder anonyme sider i en time (#19). Uten dette ville en
 // innholdsimport ikke vist seg før TTL-en løp ut, så cachen spør db_meta om

@@ -100,11 +100,43 @@ export interface Reference {
 // --- Bok-metadata (synkron cache) ---
 
 let booksCache: Book[] | null = null;
+let laster: Promise<void> | null = null;
 
 /** Laster bok-metadata inn i minnet. Må kjøres ved oppstart før bok-oppslag. */
 export async function initBooks(): Promise<void> {
   const sql = getSql();
   booksCache = await sql`SELECT * FROM books ORDER BY id` as Book[];
+}
+
+/**
+ * Sørger for at bok-metadataen ER der, og prøver PÅ NYTT om oppstarten bommet
+ * (#109).
+ *
+ * `initBooks()` kjøres én gang fra `index.ts`. Traff den et DB-avbrudd — og
+ * instansen ligger på en delt node uten SLA, så det er forventet drift — sto
+ * containeren igjen med tom cache for ALLTID: `requireBooks()` kaster
+ * «initBooks() er ikke kjørt», som ikke er en forbindelsesfeil, så hver
+ * personside, hver historieside, `/statistikk` og hele `/api/books` svarte
+ * naken 500 i det uendelige mens basen forlengst var frisk igjen. Ingen 503,
+ * ingen `Retry-After`, ingen loggrad etter den ene ved oppstart — bare en
+ * container som måtte restartes av et menneske som skjønte hvorfor.
+ *
+ * Kalles fra middlewaren i `app.ts`, altså inne i forespørselens retry-budsjett
+ * (#107): en blipp rides av, og et avbrudd forbi budsjettet blir 503 (#108).
+ * Er cachen fylt, koster den ingenting — og alle som venter deler ÉN lasting,
+ * så en tom cache ikke blir 6 samtidige spørringer i det øyeblikket basen så
+ * vidt er tilbake.
+ */
+export function ensureBooks(): Promise<void> {
+  if (booksCache) return Promise.resolve();
+  if (!laster) {
+    laster = initBooks().finally(() => {
+      // Nulles uansett utfall: en lasting som feilet skal kunne prøves igjen av
+      // neste forespørsel, ellers er permanensen bare flyttet hit.
+      laster = null;
+    });
+  }
+  return laster;
 }
 
 function requireBooks(): Book[] {

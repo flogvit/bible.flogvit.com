@@ -3,8 +3,9 @@
 // JSON-kontrakt (bibel-hono/ISSUES.md #7). Gamle /api/auth finnes ikke lenger —
 // innlogging bor sentralt i konto (#5). Sidene rendres server-side i hono/jsx.
 
-import { Hono } from 'hono';
+import { Hono, type MiddlewareHandler } from 'hono';
 import { serveStatic } from 'hono/bun';
+import { ensureBooks } from './lib/bible.ts';
 import { STATIC_MOUNTS, staticCache, staticMountNotFound } from './lib/static-cache.ts';
 import { contextStorage } from 'hono/context-storage';
 import type { AppEnv } from './lib/session.ts';
@@ -48,6 +49,27 @@ import { LOCALES, href, layoutProps, negotiateLocale, apiLocale } from './lib/i1
 import { ogRoutes } from './routes/og.ts';
 import { seoRoutes } from './routes/seo.ts';
 
+/**
+ * Bok-metadataen MÅ være der før en side eller et API-svar som slår opp en bok
+ * (#109).
+ *
+ * `initBooks()` kjøres én gang ved oppstart. Bommet den fordi basen var borte i
+ * det øyeblikket containeren startet, sto den tom for alltid — og «tom» er ikke
+ * en forbindelsesfeil, så utfallet var naken 500 på hver personside, hver
+ * historieside, `/statistikk` og hele `/api/books`, i det uendelige, mens basen
+ * var frisk. Her er lastingen en del av forespørselen: innenfor retry-budsjettet
+ * (#107), altså 503 med `Retry-After` mens avbruddet varer (#108), og et svar i
+ * det øyeblikket basen er tilbake.
+ *
+ * Den er montert på sidene og på `/api/`, ikke på `*`. `/robots.txt`, sitemapene,
+ * delekortene og `public/` slår ikke opp en bok, og en brems bak sin egen port
+ * er ingen brems (#64).
+ */
+const medBokdata: MiddlewareHandler<AppEnv> = async (_c, next) => {
+  await ensureBooks();
+  await next();
+};
+
 export function createApp() {
   const app = new Hono<AppEnv>();
 
@@ -88,6 +110,7 @@ export function createApp() {
     c.set('locale', apiLocale(c.req, getCookie(c, 'fv-prefs')));
     await next();
   });
+  app.use('/api/*', medBokdata);
 
   // API — samme stier som Express-utgaven (api/server.ts).
   app.route('/api/chapter', chapter);
@@ -155,6 +178,7 @@ export function createApp() {
       c.set('locale', locale);
       await next();
     });
+    sub.use('*', medBokdata);
     // Samme snarveier som uprefikset (se over): /<lang>/logg-inn og
     // /<lang>/konto skal ikke 404 naar de uprefiksede virker. De redirecter
     // til sentral konto uansett spraak, saa locale spiller ingen rolle her.
