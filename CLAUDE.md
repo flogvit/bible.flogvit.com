@@ -1479,6 +1479,53 @@ ingen response-timeout som stopper det.
   flytte tallet herfra ville vært et gjett. Det er allerede env-styrt, så det
   krever ingen deploy den dagen målingen finnes.
 
+### Et avbrudd som VARER lenger enn budsjettet er 503, ikke 500 (#108)
+
+Budsjettet over er et TAK, og et tak har en andre side: varer avbruddet lenger,
+kaster `db.ts`. Appen hadde ingen `app.onError`, så kastet ble Honos standardsvar
+— en naken **500**. Målt 2026-08-31T01:45:37–01:45:47Z fikk to bingbot-hentinger
+og én SemrushBot nettopp det, etter 22,0 / 25,7 / 22,6 sekunder:
+`/en/1kr%C3%B8n/1`, `/en/historier/daniel-i-lovehulen`, `/es/historier/babels-tarn`.
+Samme blipp traff konto, hides og fuglefestival; bibel-hono var den eneste som
+ga 5xx til en klient. Restansen fra #95, og samme mangel som felte puzzles
+(`flogvit-com-puzzles#59`) og lab (`flogvit-com-lab#14`).
+
+- **Statuskoden er hele utfallet.** Sida er ikke i stykker — basen var borte et
+  halvminutt, som er forventet drift på en delt node uten SLA. 500 sier «denne
+  adressen er i stykker», og gjentatte 500-er tar den ut av indeksen; 503 +
+  `Retry-After` er den dokumenterte måten å si «midlertidig». Lastvernet i
+  `page-cache.ts` svarer allerede nettopp det under overlast, med samme
+  sekundtall (30) — det er samme beskjed, og den veien fantes. Den var bare ikke
+  koblet til DB-avbruddet.
+- **Ikke alt blir 503, og det er hele skillet.** En spørring mot en tabell som
+  ikke finnes er en defekt hos OSS og skal stå som 500. «503 på alt» ville
+  gjemt hver eneste bug bak et løfte om at det går over av seg selv.
+  Klassifiseringen er `isConnectionError()` fra `db.ts`, altså SAMME regel som
+  avgjør om spørringen gjentas i det hele tatt — to lister ville vært to steder
+  å glemme neste feilkode.
+- **Svaret er ren tekst, ikke 404-sidas HTML.** Å rendre `Layout` her ville
+  kjørt chrome-komponentene på nytt i nettopp det øyeblikket noe er galt, og et
+  kast INNE i `onError` gir Honos nakne 500 tilbake — altså feilen om igjen. En
+  crawler leser statuskoden og `Retry-After`. API-stier svarer JSON, som
+  `app.notFound()` allerede gjør, og en `HTTPException` beholder sitt eget svar:
+  et bevisst 4xx fra en middleware skal ikke bli vår 500.
+- **Loggen skiller de to like tydelig som svaret.** Et DB-avbrudd er drift og
+  får én linje (det kommer én per forespørsel i en byge); en ekte feil er den
+  ene gangen vi vil ha hele stacktracen. Uten `onError` logget Hono selv — den
+  linja måtte erstattes, ikke bare fjernes.
+- **Vakta er `src/lib/db-avbrudd-503.test.ts` og har to halvdeler.** REGELEN
+  måler BEGGE veier (forbindelsesfeil → 503 med `Retry-After`, ekte feil → 500
+  UTEN — ellers ville «503 på alt» bestått), pluss JSON på `/api/` og
+  `HTTPException`. FLATA er sakens eget bevis: appen bootes mot en port ingen
+  lytter på (ECONNREFUSED med en gang, framfor et tidsavbrudd som ville gjort
+  vakta treg), og de tre adressene fra Caddy-loggen må svare 503. Den siste
+  halvdelen krever at `/robots.txt` fortsatt svarer 200 i samme tilstand —
+  ellers ville en «fiks» som svarer 503 på ALT mens basen er nede bestått, og da
+  hadde vi tatt ned selve bremsen på lasten (#64). Seks mutasjoner kjørt,
+  inkludert nettopp den.
+- **Budsjettet leses per kall (#107), og det er derfor vakta kan måles.** Den
+  setter `DB_RETRY_BUDGET_MS` lavt framfor å vente 25 sekunder.
+
 ## Lastvern (anonyme sidevisninger)
 
 `src/lib/page-cache.ts` er både mikrocache OG lastavvisning (#4, #14): anonyme
@@ -1828,10 +1875,9 @@ ble ubehandlet.
   underkatalog måles uten at noen fører den opp). Og det må FINNES en
   katalogmontering, ellers måler de to andre ingenting. Fem mutasjoner kjørt,
   inkludert den smale fiksen som bare slipper `/js/` gjennom.
-- **Restanse, meldt i saken og ikke fikset her:** appen har ingen
-  `app.onError`, så et hvilket som helst ubehandlet kast i en handler blir en
-  stacktrace og 500 — samme mangel som felte puzzles ved en DB-blipp
-  (`flogvit-com-puzzles#59`). Egen sak.
+- **Restansen om `app.onError` er tatt i #108** — se «Et avbrudd som VARER
+  lenger enn budsjettet er 503, ikke 500» under retry-budsjettet. Den er samme
+  mangel som felte puzzles ved en DB-blipp (`flogvit-com-puzzles#59`).
 
 ##### Og roten UTEN skråstrek er den formen som faktisk skrives (#96)
 
