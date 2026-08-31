@@ -47,6 +47,7 @@
  */
 import { afterAll, beforeAll, describe, expect, setDefaultTimeout, test } from 'bun:test';
 import { createApp } from '../src/app.ts';
+import { initBooks } from '../src/lib/bible.ts';
 import { closeSql } from '../src/lib/db.ts';
 import { loggFeil } from '../src/lib/error-handler.ts';
 import { clearPageCache } from '../src/lib/page-cache.ts';
@@ -115,6 +116,13 @@ describe('SVEIPEN: ingen /api-rute dumper feilobjektet når basen er nede (#109)
   };
 
   beforeAll(async () => {
+    // Bok-metadataen lastes FØRST, mot den ekte basen: den vanlige formen i prod
+    // er en container som har stått en stund og får en blipp under seg. Uten
+    // dette stopper `medBokdata` (#109) forespørselen før rutene i det hele tatt
+    // kjører, og sveipen ville målt at den ene middlewaren oppfører seg — ikke
+    // at de ~55 kallstedene gjør det.
+    await initBooks();
+
     const server = Bun.serve({ port: 0, fetch: () => new Response('') });
     const stengtPort = server.port;
     await server.stop(true);
@@ -163,6 +171,10 @@ describe('SVEIPEN: ingen /api-rute dumper feilobjektet når basen er nede (#109)
       for (const sti of stier()) await app.request(`http://localhost${sti}`);
     });
     await svar;
+
+    // Uten denne måler halvdelen ingenting: en sveip der ingen rute i det hele
+    // tatt kom fram til sin egen catch, består uansett hva de skriver.
+    expect(kall.length).toBeGreaterThan(10);
 
     const dumper = kall.filter((args) => args.some((a) => typeof a !== 'string'));
     expect(
