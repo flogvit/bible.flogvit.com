@@ -11,6 +11,7 @@ import type { AppEnv } from './lib/session.ts';
 import { ACCOUNT_URL, withSession } from './lib/session.ts';
 import { withPageCache } from './lib/page-cache.ts';
 import { withRetryBudget } from './lib/db.ts';
+import { feilsvar } from './lib/error-handler.ts';
 import pages from './routes/pages.tsx';
 import { NotFoundPage } from './routes/pages/misc.tsx';
 import sync from './routes/sync.ts';
@@ -51,6 +52,12 @@ export function createApp() {
   const app = new Hono<AppEnv>();
 
   app.get('/api/health', (c) => c.json({ ok: true }));
+
+  // Et ubehandlet kast er ikke automatisk en 500 (#108). Løper retry-budsjettet
+  // fra #107 ut fordi basen er borte lenger enn 25 s, er sida ikke i stykker —
+  // og 503 + `Retry-After` er beskjeden crawleren kan handle på. Begrunnelsen
+  // for skillet står i `lib/error-handler.ts`.
+  app.onError(feilsvar);
 
   // AsyncLocalStorage for request-konteksten, så chrome-komponentene (headerens
   // konto-chip) kan lese c.var.user server-side uten å tres gjennom hvert
