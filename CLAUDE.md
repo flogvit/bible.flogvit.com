@@ -1845,12 +1845,88 @@ er nå målbare uten ssh:
   objekter forsinket, så `Bun.gc(true)` uten en tur innom hendelsesløkka ga
   22–50 MB for det SAMME settet. Med `await Bun.sleep(25)` mellom samlingene
   lander avlesningene på ±30 kB. Gjelder enhver framtidig minnesonde her.
-- **Det som står igjen er ikke en kodefeil, og derfor ikke løst her.**
-  Arbeidssettet under crawl er større enn containerens 288 MiB, og platået
-  ligger over taket — å heve taket eller å gjøre sidene mindre er de to
-  veiene, og begge er avgjørelser (minnebudsjettet bor i driftsrepoet,
-  sidestørrelsen er nedtrekks-saken over). Det denne runden endrer er at
-  spørsmålet kan besvares fra `/api/minne` framfor fra en gjetning.
+- **«Det som står igjen er ikke en kodefeil» var FEIL, og målingen over er
+  grunnen til at den kunne rettes.** Live-settet står stille, altså holdes
+  ingenting i live — men det følger ikke at ingenting er galt. Det følger at
+  det er TOPPEN per render som er for høy, og en topp har en årsak man kan
+  navngi når man leter etter den. Den står i avsnittet under.
+
+#### TOPPEN er en kapittelside som leser HELE personregisteret (#110)
+
+Med gulvet på plass sto spørsmålet igjen: hva ER toppen? Målt per getter i
+`loadChapterData` på `/en/rom/8` — en ferdig side på 232 kB:
+
+```
+getPersonsByChapter          2029 rader, 7,7 MB tekst   +33,3 MB rss   27,8 ms
+getStoriesByChapter          1357 rader                  +3,7 MB rss    7,9 ms
+getNumberSymbolismByChapter   326 rader                  +2,8 MB rss    4,9 ms
+getThemesByChapter             37 rader                  +3,3 MB rss    0,6 ms
+```
+
+Fire gettere henter HELE tabellen for språket og `JSON.parse`-r hver eneste rad
+for å finne de få som adresserer dette kapittelet. ~43 MB flyktig per
+kapittelrender, på den mest besøkte flata vi har (1189 kapitler × 8 språk) — og
+det er nettopp den kurven saken beskriver: én render tok RSS fra 76 til 151 MB
+i en fersk prosess, og residenten klatret videre i sprang mens live-settet lå i
+ro på 8 MB.
+
+- **Kommentaren over dem var riktig, og likevel ikke svaret.** «SQLite brukte
+  json_each/json_extract; i MySQL filtrerer vi i JS i stedet» stemmer: å dytte
+  filteret ned i SQL er MÅLT dyrere (`LIKE` 38,8 ms, `REGEXP` 54,2 ms mot
+  23,3 ms for å hente og parse alt), fordi MySQL må lese og skanne blobbene
+  uansett. Det den ikke vurderte var hva PARSINGEN koster, og det er der de
+  33 MB-ene ligger.
+- **To grep, fordi kostnaden ligger to ulike steder.** For de tre små er det
+  parsingen: `bookMentionTest()` er en STRENGTEST på råraden, og en rad uten
+  teksten `"bookId": <boka>` kan umulig bestå det eksakte predikatet. For
+  `persons` er radene 7,7 MB, og da er det HENTINGEN som koster — et forfilter
+  i JS tar bare 33,3 → 19,3 MB, fordi radstrengene selv blir igjen.
+- **`persons.ref_books` er en AVLEDET kolonne** (`,1,45,`) med bok-id-ene raden
+  adresserer — ~200 byte mot blobbens ~4 kB. Steg 1 henter `id` + `ref_books`
+  for alle radene i språket, steg 2 henter `content` bare for kandidatene:
+  2029 → 63.
+- **NULL betyr «ikke beregnet» og gjør raden til en KANDIDAT.** Kolonnen er en
+  optimalisering, aldri en sannhet: en base der synken ikke har kjørt svarer
+  som før, bare like tregt som før. Motsatt regel ville gjort en avledet
+  kolonne som henger etter innholdet til en stille tapt person på en
+  kapittelside — samme klasse hull som #45, #65 og #69.
+- **SQL-ENS FORM er urørt, og det er ikke en detalj.** `inLanguage()` avgjør
+  språket på «har tabellen rader i det hele tatt for dette språket», ikke på om
+  KAPITTELET har noe. En kapittel-scopet `WHERE` ville sendt en nb-side uten
+  personer til de ENGELSKE personene (#26). Steg 1 returnerer derfor fortsatt
+  alle radene for språket — bare to kolonner av dem.
+- **Synken kjøres fra `runMigrations()` og fra slutten av importen**, altså ved
+  HVER deploy og hver innholdsrunde — samme to steder som #46, #61 og #92, og
+  ETTER `prunePersonRefs()`, ellers indekseres adresser ryddingen nettopp har
+  fjernet. Kolonnen legges til i migreringen og ikke bare i DDL-en:
+  `CREATE TABLE IF NOT EXISTS` treffer bare nye baser. Den skriver bare rader
+  som har endret seg, så en deploy uten innholdsimport gjør null skrivinger.
+- **Målt over 480 unike kapittelrender lokalt, mikrocachen av:**
+
+  ```
+  i dag                    rss 310 MB etter oppvarming  ->  357, stiger ennå
+  forfilter (de tre små)   rss 270                      ->  330, platå
+  + ref_books (persons)    rss 230                      ->  242, platå
+  ```
+
+  Det er forskjellen saken ber om: residenten stiger til et arbeidssett og blir
+  stående, framfor å stige jevnt mot taket. Fersk prosess, én kapittelrender:
+  76 → 151 MB før, 79 → 114 etter.
+- **Vakta er `test/blob-forfilter.test.ts` med fem halvdeler.** REGELEN (ren
+  logikk: blind for formateringen — `persons` ligger pen-printet, `stories`
+  kompakt — og `45` er ikke `450`; NULL gir JA). SUPERSETTET (DATA, hele basen:
+  verken forfilteret eller kolonnen får kaste en rad det EKSAKTE predikatet
+  ville beholdt). SVARET (adressene velges av DATAENE som i #70 og #80, og de
+  to veiene sammenliknes rad for rad; pluss ett kapittel uten personer, så
+  «returner alt» ikke består). FORMEN (hver av de fire getterne må narre før
+  den parser — de tre små er for små til å måles i MB, men en fjernet linje er
+  like usynlig der). MINNET (eget program som #104/#105/#106, og BEGGE veiene i
+  hver sin ferske prosess: et absolutt MB-tall er en egenskap ved maskinen,
+  FORHOLDET er en egenskap ved koden — målt 57–70 MB gammel mot 12–17 MB ny,
+  med krav om at de finner NØYAKTIG de samme personene). Åtte mutasjoner kjørt.
+- **Restanse:** de 1158 `<option>` i verktøylinja er fortsatt 54 kB av hver
+  kapittelside, og resten av toppen er selve rendringen. Begge er avsnittet
+  over sine, ikke denne.
 
 ### En byge kommer fra ÉN aktør — og den kan være nåbar (#86)
 

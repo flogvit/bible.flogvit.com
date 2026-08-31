@@ -15,6 +15,7 @@ import { bookAbbrByShort, bookNameByShort } from './books-data.ts';
 // Re-export toUrlSlug for convenience (server-side usage)
 export { toUrlSlug } from './url-utils.ts';
 import { toUrlSlug } from './url-utils.ts';
+import { bookMentionTest, refBooksMayMatch } from './blob-forfilter.ts';
 
 // --- Språk-scopet uthenting ---
 //
@@ -1771,9 +1772,25 @@ export async function getPersonsByChapter(
   const sql = getSql();
   // SQLite brukte json_each/json_extract; i MySQL filtrerer vi i JS i stedet
   // (samme semantikk: minst én reference med matchende bookId + chapterId)
-  const rows = await inLanguage(lang, (language) => sql`
-    SELECT content FROM persons WHERE language = ${language}
-  ` as Promise<{ content: string }[]>);
+  // TO STEG (#110). Steg 1 henter fortsatt ALLE radene for språket — det er
+  // det `inLanguage()` avgjør språket på, og en kapittel-scopet spørring her
+  // ville sendt en nb-side uten personer til de ENGELSKE (#26). Men den henter
+  // bare `id` og den avledede `ref_books` (~200 byte mot blobbens ~4 kB), så de
+  // 7,7 MB krysser ikke nettet lenger: 2029 rader inn, 63 blobber ut på
+  // `/en/rom/8`. Uten dette er getteren +33 MB flyktig per kapittelrender, på
+  // den mest besøkte flata vi har.
+  const kandidater = await inLanguage(lang, (language) => sql`
+    SELECT id, ref_books FROM persons WHERE language = ${language}
+  ` as Promise<{ id: number; ref_books: string | null }[]>);
+
+  // `ref_books = NULL` er «ikke beregnet» og gir JA. Kolonnen er en
+  // optimalisering, aldri en sannhet — det EKSAKTE predikatet under er uendret.
+  const ider = kandidater.filter(r => refBooksMayMatch(r.ref_books, bookId)).map(r => r.id);
+  if (ider.length === 0) return [];
+
+  const rows = (await sql`
+    SELECT content FROM persons WHERE id IN ${sql(ider)}
+  `) as { content: string }[];
 
   return rows
     .map(r => parsePersonContent(r.content))
@@ -1793,7 +1810,9 @@ export async function getNumberSymbolismByChapter(
     SELECT content FROM number_symbolism WHERE language = ${language}
   ` as Promise<{ content: string }[]>);
 
+  const mentions = bookMentionTest(bookId);
   return rows
+    .filter(r => mentions(r.content))
     .map(r => { try { return JSON.parse(r.content) as NumberSymbolismData; } catch { return null; } })
     .filter((n): n is NumberSymbolismData =>
       n !== null && !!n.references?.some(ref => ref.bookId === bookId && ref.chapterId === chapter)
@@ -1806,10 +1825,12 @@ export async function getThemesByChapter(
   lang = currentContentLanguage(),
 ): Promise<{ id: number; name: string; title: string; introduction?: string; verses: number[] }[]> {
   const sql = getSql();
-  const themes = await inLanguage(lang, (language) => sql`
+  const all = await inLanguage(lang, (language) => sql`
     SELECT id, name, content FROM themes WHERE language = ${language}
   ` as Promise<Theme[]>);
 
+  const mentions = bookMentionTest(bookId);
+  const themes = all.filter(t => mentions(t.content));
   return themes.filter(t => {
     try {
       const data: ThemeData = JSON.parse(t.content);
@@ -1838,10 +1859,12 @@ export async function getStoriesByChapter(
   lang = currentContentLanguage(),
 ): Promise<{ slug: string; title: string; category: string; description: string; verses: number[] }[]> {
   const sql = getSql();
-  const stories = await inLanguage(lang, (language) => sql`
+  const all = await inLanguage(lang, (language) => sql`
     SELECT slug, title, category, content, description FROM stories WHERE language = ${language}
   ` as Promise<(Story & { description: string })[]>);
 
+  const mentions = bookMentionTest(bookId);
+  const stories = all.filter(s => mentions(s.content));
   return stories.filter(s => {
     try {
       const data: StoryData = JSON.parse(s.content);
