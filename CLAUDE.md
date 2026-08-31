@@ -1526,6 +1526,59 @@ ga 5xx til en klient. Restansen fra #95, og samme mangel som felte puzzles
 - **Budsjettet leses per kall (#107), og det er derfor vakta kan måles.** Den
   setter `DB_RETRY_BUDGET_MS` lavt framfor å vente 25 sekunder.
 
+#### En rute som fanger sitt EGET kast når aldri `app.onError` (#109)
+
+Samme avbrudd, sett fra loggen. Containerloggen bar denne tre ganger i vinduet
+2026-08-31 00:58–02:08Z — samme byge som #108, uten at noe var rullet ut:
+
+```
+code: "ERR_MYSQL_CONNECTION_TIMEOUT"
+  at wrapError (internal:sql/mysql:14:10)
+  at #onClose (internal:sql/mysql:192:22)
+```
+
+- **Formen er MÅLT, ikke gjettet.** Den oppstår i det øyeblikket
+  feilOBJEKTET fra Bun rekkes til `console.error` — reprodusert med en base som
+  ikke svarer, mot en app uten `app.onError` (altså taggen som sto i prod,
+  `20260830-235034-091af4e`, som ligger ÉN commit foran #108-fiksen). De tre
+  dumpene er de tre 500-ene i #108.
+- **#108 lukket bare halve klassen.** Sidene lar kastet gå til `app.onError`,
+  men **hver eneste rute under `/api/` fanger sitt eget** (`try { … } catch
+  (error) { console.error('Error fetching X:', error) }`) og når derfor aldri
+  dit. Signaturen lever videre der, fra ~55 kallsteder ingen liste kan holde
+  styr på. `loggFeil()` i `error-handler.ts` er regelen ETT sted, og den er
+  `feilsvar` sin: drift får én linje, en ekte feil beholder hele stacktracen.
+  `feilsvar` kaller nå den samme funksjonen framfor å ha sin egen kopi.
+- **Loggen alene ville vært å skru ned lyden på en alarm.** `initBooks()`
+  kjøres ÉN gang ved oppstart og prøves aldri igjen, så en container som bootet
+  mens basen var borte sto med tom bok-cache ut sin levetid. `requireBooks()`
+  kaster «initBooks() er ikke kjørt», som IKKE er en forbindelsesfeil — altså
+  **naken 500 i det uendelige** på `/personer/*`, `/historier/*`, `/statistikk`
+  og hele `/api/books`, mens basen forlengst var frisk. Ingen 503, ingen
+  `Retry-After`, ingen loggrad etter den ene ved oppstart. Målt, ikke antatt.
+- **`ensureBooks()` laster på nytt fra en middleware**, altså inne i
+  forespørselens retry-budsjett (#107): en blipp rides av, et lengre avbrudd
+  blir 503 (#108), og svaret kommer i det øyeblikket basen er tilbake — uten en
+  restart. Alle som venter deler ÉN lasting, og en lasting som FEILET nulles,
+  ellers er permanensen bare flyttet inn i hjelperen.
+- **Montert på sidene og på `/api/`, ikke på `*`.** `/robots.txt`, sitemapene,
+  delekortene og `public/` slår ikke opp en bok, og en brems bak sin egen port
+  er ingen brems (#64). Mutasjonstestet nettopp slik.
+- **Vakta er `test/db-avbrudd-logg.test.ts` med fire halvdeler.** REGELEN
+  (begge veier: drift uten feilobjektet, en defekt MED — ellers ville «logg
+  aldri objektet» bestått og hver bug hos oss blitt sporløs). SVEIPEN (hele
+  /api-RUTETABELLEN med basen nede, så en ny rute med et rått
+  `console.error(…, err)` blir rød uten at noen fører den opp; bok-cachen
+  lastes FØRST, ellers stopper middlewaren forespørselen før ruta kjører og
+  sveipen måler seg selv). OPPSTARTEN (et EGET PROGRAM: bok-cachen er
+  modulnivå-tilstand, og signaturen skrives til EKTE stderr — 503 under
+  avbruddet, 200 etterpå, robots.txt urørt). SØMMEN (`index.ts` starter en
+  server ved import og leses derfor fra kilden). Åtte mutasjoner kjørt.
+- **RESTANSE, ikke løst her:** under et avbrudd svarer 33 av 55 `/api`-ruter
+  fortsatt **500** framfor 503, fordi hver av dem returnerer sin egen
+  `c.json({error}, 500)` etter å ha fanget kastet. Det er #108s avgjørelse tatt
+  om igjen på API-flata, og en egen sak — 55 statuskoder er ikke en logglinje.
+
 ## Lastvern (anonyme sidevisninger)
 
 `src/lib/page-cache.ts` er både mikrocache OG lastavvisning (#4, #14): anonyme
