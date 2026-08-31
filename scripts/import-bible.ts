@@ -32,6 +32,7 @@ import {
   formatJsonPruneReport,
 } from '../src/lib/verse-refs.ts';
 import { prunePersonRefs, personPruneReportIsEmpty, formatPersonPruneReport } from '../src/lib/person-refs.ts';
+import { syncPersonRefBooks, refBooksSyncIsEmpty, formatRefBooksSync } from '../src/lib/blob-forfilter.ts';
 import { CONTENT_TABLES, CONTENT_SOURCES, contentSourceReport } from '../src/lib/content-sources.ts';
 import { parseReadingRefMarkup, unknownMappingSystem } from '../src/lib/reading-ref.ts';
 import { IMPORTED_BIBLES } from '../src/lib/editions.ts';
@@ -2035,6 +2036,13 @@ if (personsPruned.skipped) {
   console.log(`\n${formatPersonPruneReport(personsPruned)}`);
   console.log('Kilden lenker til personer som ikke finnes — meld det på flogvit/free-bible.');
 }
+
+// `persons.ref_books` er AVLEDET av content, og importen er det ene stedet
+// content endrer seg. Kjøres ETTER ryddingen over, ellers indekseres adresser
+// som nettopp ble fjernet. Uten dette ville de nye radene stått med NULL —
+// fortsatt riktige (NULL = kandidat), men uten gevinsten (#110).
+const refBooks = await syncPersonRefBooks(sql);
+if (!refBooksSyncIsEmpty(refBooks)) console.log(`\n${formatRefBooksSync(refBooks)}`);
 
 // PORTEN MOT FORELDRELØST INNHOLD (#58). De to over spør om en ADRESSE peker på
 // noe som finnes; denne spør om KILDEN til en hel innholdstype fortsatt finnes.

@@ -15,6 +15,7 @@ import { bookAbbrByShort, bookNameByShort } from './books-data.ts';
 // Re-export toUrlSlug for convenience (server-side usage)
 export { toUrlSlug } from './url-utils.ts';
 import { toUrlSlug } from './url-utils.ts';
+import { bookMentionTest, personChapterCandidates } from './blob-forfilter.ts';
 
 // --- Språk-scopet uthenting ---
 //
@@ -1770,13 +1771,19 @@ export async function getPersonsByChapter(
 ): Promise<PersonData[]> {
   const sql = getSql();
   // SQLite brukte json_each/json_extract; i MySQL filtrerer vi i JS i stedet
-  // (samme semantikk: minst én reference med matchende bookId + chapterId)
-  const rows = await inLanguage(lang, (language) => sql`
-    SELECT content FROM persons WHERE language = ${language}
-  ` as Promise<{ content: string }[]>);
+  // (samme semantikk: minst én reference med matchende bookId + chapterId).
+  //
+  // Men blobben trenger ikke krysse nettet for å bli forkastet (#110). Basen
+  // holder tilbake `content` for hver rad den avledede `ref_books` sier ikke
+  // kan adressere boka — 2029 rader og 8,1 MB ned til 63 blobber på
+  // `/en/rom/8`, og +36 MB flyktig rss ned til +2. Raden BLIR med uansett, så
+  // `inLanguage()` velger språk på nøyaktig samme grunnlag som før (#26).
+  const rows = await inLanguage(lang, (language) =>
+    personChapterCandidates(sql, language, bookId),
+  );
 
   return rows
-    .map(r => parsePersonContent(r.content))
+    .map(r => (r.content === null ? null : parsePersonContent(r.content)))
     .filter((p): p is PersonData =>
       p !== null && !!p.references?.some(ref => ref.bookId === bookId && ref.chapterId === chapter)
     );
@@ -1793,7 +1800,11 @@ export async function getNumberSymbolismByChapter(
     SELECT content FROM number_symbolism WHERE language = ${language}
   ` as Promise<{ content: string }[]>);
 
+  // Forfilteret er en STRENGTEST framfor en parsing (#110): en blobb uten
+  // teksten `"bookId": <boka>` kan umulig bestå det eksakte predikatet under.
+  const mentions = bookMentionTest(bookId);
   return rows
+    .filter(r => mentions(r.content))
     .map(r => { try { return JSON.parse(r.content) as NumberSymbolismData; } catch { return null; } })
     .filter((n): n is NumberSymbolismData =>
       n !== null && !!n.references?.some(ref => ref.bookId === bookId && ref.chapterId === chapter)
@@ -1810,7 +1821,9 @@ export async function getThemesByChapter(
     SELECT id, name, content FROM themes WHERE language = ${language}
   ` as Promise<Theme[]>);
 
-  return themes.filter(t => {
+  // Strengtest før parsing (#110), som i søsteren over.
+  const mentions = bookMentionTest(bookId);
+  return themes.filter(t => mentions(t.content)).filter(t => {
     try {
       const data: ThemeData = JSON.parse(t.content);
       return data.sections?.some(s =>
@@ -1842,7 +1855,9 @@ export async function getStoriesByChapter(
     SELECT slug, title, category, content, description FROM stories WHERE language = ${language}
   ` as Promise<(Story & { description: string })[]>);
 
-  return stories.filter(s => {
+  // Strengtest før parsing (#110), som i søsknene over.
+  const mentions = bookMentionTest(bookId);
+  return stories.filter(s => mentions(s.content)).filter(s => {
     try {
       const data: StoryData = JSON.parse(s.content);
       return data.references?.some(r =>

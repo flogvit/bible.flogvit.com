@@ -41,6 +41,7 @@ import {
   formatJsonPruneReport,
 } from './verse-refs.ts';
 import { prunePersonRefs, personPruneReportIsEmpty, formatPersonPruneReport } from './person-refs.ts';
+import { syncPersonRefBooks, refBooksSyncIsEmpty, formatRefBooksSync } from './blob-forfilter.ts';
 import {
   repairWholeChapterReadingRefs,
   readingRefRepairIsEmpty,
@@ -279,10 +280,16 @@ export const TABLES: string[] = [
     INDEX idx_prophecy_fulfillments_book (book_id, chapter, language)
   ) ENGINE=InnoDB ${CS}`,
 
+  // `ref_books` er AVLEDET av content (`,1,45,`) og bæres bare for at en
+  // kapittelside ikke skal måtte hente 7,7 MB blobber for å finne én person
+  // (#110). NULL betyr «ikke beregnet», og en NULL-rad er alltid en kandidat —
+  // kolonnen kan derfor aldri gjøre en person usynlig. Fylles av
+  // `syncPersonRefBooks()` i `runMigrations()` og på slutten av importen.
   `CREATE TABLE IF NOT EXISTS persons (
     id INT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
     content MEDIUMTEXT NOT NULL,
+    ref_books VARCHAR(255) NULL,
     ${LANG},
     UNIQUE KEY uq_persons (name, language)
   ) ENGINE=InnoDB ${CS}`,
@@ -999,6 +1006,16 @@ async function runMigrations(sql: SQL): Promise<void> {
   // endrer seg, og tekstrekkene ligger fast i årevis.
   const readingRefs = await repairWholeChapterReadingRefs(sql);
   if (!readingRefRepairIsEmpty(readingRefs)) console.log(formatReadingRefRepair(readingRefs));
+
+  // `persons.ref_books` er avledet av `content` og må derfor regnes ut på nytt
+  // her, ETTER prunePersonRefs() — ellers indekserer den adresser ryddingen
+  // nettopp har fjernet. `CREATE TABLE IF NOT EXISTS` treffer bare nye baser,
+  // så kolonnen legges til her og ikke i DDL-en alene (#110).
+  if (!(await columnExists(sql, 'persons', 'ref_books'))) {
+    await sql.unsafe('ALTER TABLE persons ADD COLUMN ref_books VARCHAR(255) NULL').simple();
+  }
+  const refBooks = await syncPersonRefBooks(sql);
+  if (!refBooksSyncIsEmpty(refBooks)) console.log(formatRefBooksSync(refBooks));
 }
 
 /** Oppretter alle tabeller og kjører migreringene (idempotent). */
