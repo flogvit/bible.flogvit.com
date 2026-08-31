@@ -1845,12 +1845,88 @@ er nå målbare uten ssh:
   objekter forsinket, så `Bun.gc(true)` uten en tur innom hendelsesløkka ga
   22–50 MB for det SAMME settet. Med `await Bun.sleep(25)` mellom samlingene
   lander avlesningene på ±30 kB. Gjelder enhver framtidig minnesonde her.
-- **Det som står igjen er ikke en kodefeil, og derfor ikke løst her.**
-  Arbeidssettet under crawl er større enn containerens 288 MiB, og platået
-  ligger over taket — å heve taket eller å gjøre sidene mindre er de to
-  veiene, og begge er avgjørelser (minnebudsjettet bor i driftsrepoet,
-  sidestørrelsen er nedtrekks-saken over). Det denne runden endrer er at
-  spørsmålet kan besvares fra `/api/minne` framfor fra en gjetning.
+- **«Det som står igjen er ikke en kodefeil» var FEIL, og målingen over er
+  grunnen til at den kunne rettes.** Live-settet står stille, altså holdes
+  ingenting i live — men det følger ikke at ingenting er galt. Det følger at
+  det er TOPPEN per render som er for høy, og en topp har en årsak man kan
+  navngi når man leter etter den. Den står i avsnittet under.
+
+#### TOPPEN er en kapittelside som leser HELE personregisteret (#110)
+
+Med gulvet på plass sto spørsmålet igjen: hva ER toppen? Målt per getter i
+`loadChapterData` på `/en/rom/8` — en ferdig side på 232 kB:
+
+```
+getPersonsByChapter          2029 rader, 8,1 MB tekst   +36,1 MB rss   36 ms
+getStoriesByChapter          1357 rader, 1,1 MB          +3,7 MB rss    8 ms
+getNumberSymbolismByChapter   326 rader, 1,7 MB          +2,8 MB rss    5 ms
+getThemesByChapter             37 rader, 0,1 MB          +3,3 MB rss    1 ms
+```
+
+Fire gettere henter HELE tabellen for språket og `JSON.parse`-r hver eneste rad
+for å finne de få som adresserer dette kapittelet. ~43 MB flyktig per
+kapittelrender, på den mest besøkte flata vi har (1189 kapitler × 8 språk) — og
+det er nettopp den kurven saken beskriver: residenten klatrer i sprang mens
+live-settet ligger i ro på 8 MB.
+
+- **Kommentaren over dem var riktig, og likevel ikke svaret.** «SQLite brukte
+  json_each/json_extract; i MySQL filtrerer vi i JS i stedet» stemmer: å dytte
+  filteret ned i SQL mot BLOBBEN er MÅLT dyrere (`LIKE` 38,8 ms, `REGEXP`
+  54,2 ms mot 23,3 ms for å hente og parse alt), fordi MySQL må lese og skanne
+  blobbene uansett. Det den ikke vurderte var hva PARSINGEN og HENTINGEN
+  koster oss, og det er der de 36 MB-ene ligger.
+- **To grep, fordi kostnaden ligger to ulike steder — og det er MÅLT, ikke
+  antatt.** For de tre små er det parsingen: `bookMentionTest()` er en
+  STRENGTEST på råraden, og en rad uten teksten `"bookId": <boka>` kan umulig
+  bestå det eksakte predikatet. For `persons` er radene 8,1 MB, og der hjelper
+  et JS-forfilter nesten ikke — målt over fem kapitteloppslag i hver sin
+  ferske prosess: `+101 MB` som i dag, `+88 MB` med strengtest, `+14 MB` når
+  basen holder blobben tilbake. Radstrengene er kostnaden, og de kommer uansett
+  når `content` står i `SELECT`-en.
+- **`persons.ref_books` er en AVLEDET kolonne** (`,1,45,`) med bok-id-ene raden
+  adresserer — ~200 byte mot blobbens ~4 kB. Spørringen sender `content` bare
+  for radene den peker ut: 2029 rader inn, 63 blobber ut på `/en/rom/8`.
+- **`IF(...)`, ikke `WHERE` — og det er ikke en stilvalg.** `inLanguage()`
+  avgjør språket på ANTALL rader, altså «har tabellen rader i det hele tatt for
+  dette språket», ikke på om KAPITTELET har noe. Et kapittelfilter i `WHERE`
+  ville gitt null rader for en bok ingen nb-person adresserer, og sendt
+  nb-sida videre til de ENGELSKE personene (#26). Raden blir derfor med som
+  før; det er bare blobben som holdes tilbake. Utslaget ville vært 200 og
+  ingen loggrad, så `SPRÅKVALGET`-halvdelen i vakta er den eneste som ser det.
+- **NULL betyr «ikke beregnet» og gir blobben ut som før.** Kolonnen er en
+  optimalisering, aldri en sannhet: en base der synken ikke har kjørt svarer
+  som før, bare like tregt som før. Motsatt regel ville gjort en avledet
+  kolonne som henger etter innholdet til en stille tapt person på en
+  kapittelside — samme klasse hull som #45, #65 og #69.
+- **Spørringene er FASTE STRENGER med `?`-parametre**, ikke satt sammen — heller
+  ikke synken, som grupperer på verdi og sender id-ene som ett
+  `FIND_IN_SET`-argument framfor å bygge en `IN (…)`-liste av variabel lengde.
+  Da finnes det ingen SQL her som er satt sammen av data i det hele tatt.
+- **Synken kjøres fra `runMigrations()` og fra slutten av importen**, altså ved
+  HVER deploy og hver innholdsrunde — samme to steder som #46, #61 og #92, og
+  ETTER `prunePersonRefs()`, ellers indekseres adresser ryddingen nettopp har
+  fjernet. Kolonnen legges til i migreringen og ikke bare i DDL-en:
+  `CREATE TABLE IF NOT EXISTS` treffer bare nye baser. Den skriver bare rader
+  som har endret seg — målt lokalt 4058 rader fordelt på 438 verdier, 1,6 s
+  første gang og 0 skrivinger hver gang etterpå.
+- **Vakta er `test/blob-forfilter.test.ts` med seks halvdeler.** REGELEN (ren
+  logikk: blind for formateringen — `persons` ligger pen-printet, `stories`
+  kompakt — og `45` er ikke `450`; NULL gir JA). SUPERSETTET (DATA, hele basen:
+  verken forfilteret eller kolonnen får kaste en rad det EKSAKTE predikatet
+  ville beholdt). SVARET (adressene velges av DATAENE som i #70 og #80, og de
+  to veiene sammenliknes rad for rad; pluss ett kapittel uten personer, så
+  «returner alt» ikke består). SPRÅKVALGET (spørringen gir én rad per person i
+  språket UANSETT bok — boka velges av dataene — og blobben holdes faktisk
+  tilbake, ellers ville «send alt» bestått). FORMEN (hver av de fire getterne
+  må narre før den parser, og testen må BRUKES: å la `bookMentionTest(bookId)`
+  stå mens `.filter()` fjernes er nettopp mutasjonen som ellers slipper
+  gjennom). MINNET (eget program som #104/#105/#106, og BEGGE veiene i hver sin
+  ferske prosess: et absolutt MB-tall er en egenskap ved maskinen, FORHOLDET er
+  en egenskap ved koden — målt 67 MB gammel mot 21 MB ny, med krav om at de
+  finner NØYAKTIG de samme personene). Ni mutasjoner kjørt.
+- **Restanse:** de 1158 `<option>` i verktøylinja er fortsatt 54 kB av hver
+  kapittelside, og resten av toppen er selve rendringen. Begge er avsnittet
+  over sine, ikke denne.
 
 ### En byge kommer fra ÉN aktør — og den kan være nåbar (#86)
 
