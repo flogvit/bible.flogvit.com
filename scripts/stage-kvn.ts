@@ -26,7 +26,17 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
-import { OWN, SOURCE, STAGED, STAMP, TARGET, freeBibleCandidates } from './kvn-staging.ts';
+import {
+  OWN,
+  SOURCE,
+  STAGED,
+  STAMP,
+  STRIPPED_FIELDS,
+  TARGET,
+  freeBibleCandidates,
+  inventoryProblems,
+  stagedPackageJson,
+} from './kvn-staging.ts';
 
 const force = process.argv.includes('--force');
 
@@ -85,13 +95,10 @@ function fingerprint(): string {
 }
 
 const wanted = [...STAGED].sort();
-const current = fs.existsSync(TARGET)
-  ? fs
-      .readdirSync(TARGET)
-      .filter((n) => !OWN.has(n))
-      .sort()
-  : [];
-const inventoryOk = current.length === wanted.length && current.every((n, i) => n === wanted[i]);
+// SAMME liste som `ensure-kvn.ts` reparerer etter. Hadde skriptet hatt sin egen
+// «er inventaret ok»-sjekk, kunne ensure bedt om en re-staging som stagingen så
+// hoppet over — altså en reparasjon som aldri skjer (#112).
+const inventoryOk = inventoryProblems().length === 0;
 const stamp = fs.existsSync(STAMP) ? JSON.parse(fs.readFileSync(STAMP, 'utf-8')) : null;
 const sourceFingerprint = fingerprint();
 
@@ -119,9 +126,24 @@ for (const entry of STAGED) {
   fs.cpSync(path.join(SOURCE, entry), to, { recursive: true });
 }
 
+// KJØRETIDSFLATA er `exports`, ikke free-bibles testverktøy. Bun installerer
+// en `file:`-avhengighet som et arbeidsområde og tar devDependencies med, så
+// en rå kopi låser 108 pakker vi verken importerer eller kjører — og som
+// `bun audit` med rette reviderer, siden de står låst hos oss (#112).
+const pkgPath = path.join(TARGET, 'package.json');
+const source = fs.readFileSync(pkgPath, 'utf-8');
+const staged = stagedPackageJson(source);
+if (staged !== source) fs.writeFileSync(pkgPath, staged);
+
 fs.writeFileSync(STAMP, `${JSON.stringify({ source: SOURCE, fingerprint: sourceFingerprint }, null, 2)}\n`);
 
 console.log(`Staget kvn-package/ fra ${SOURCE}: ${wanted.join(', ')}`);
+const dropped = STRIPPED_FIELDS.filter((f) => JSON.parse(source)[f] !== undefined);
+if (dropped.length) {
+  // Sies HØYT, av samme grunn som opprydningen under: en pakke som stille
+  // slutter å få verktøyet sitt er vanskelig å forstå den dagen noen lurer.
+  console.log(`Utelot ${dropped.join(', ')} fra package.json — free-bibles verktøy låses ikke her`);
+}
 if (removed.length) {
   // Sies HØYT. Det var nettopp en usett full kopi som låste bibel, og en
   // opprydding som skjer i stillhet lærer ingen noe.
