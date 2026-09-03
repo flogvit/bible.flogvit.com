@@ -66,6 +66,39 @@ export const STAGED = ['src', 'mappings', 'package.json', 'tsconfig.json'] as co
 export const OWN = new Set([STAMP_FILE]);
 
 /**
+ * Felter som IKKE bæres over i den stagede `package.json`.
+ *
+ * Hvitlista over gjelder FILER, og `package.json` er én av dem — men inni den
+ * står et felt som drar free-bibles eget testverktøy inn i VÅR `bun.lock`:
+ *
+ *   @free-bible/kvn (devDependencies) -> vitest -> vite -> postcss -> nanoid
+ *
+ * 108 pakker vi verken importerer eller kjører, men som `bun audit` med rette
+ * reviderer fordi de står låst hos oss. Det ga #112, og neste råd ville kommet
+ * mot esbuild eller rollup i den samme kjeden.
+ *
+ * Regelen er installasjonens egen: en devDependency får man av ROT-prosjektet
+ * sitt, aldri av en avhengighet. Bun avviker fra det for `file:`-avhengigheter
+ * — den installerer dem som et arbeidsområde — og det avviket er hele saken.
+ *
+ * `dependencies` strippes IKKE. Får kvn en ekte kjøretidsavhengighet en dag,
+ * trenger vi den; det er testverktøyet for tester vi aldri kjører her (#62)
+ * som ikke er vårt.
+ */
+export const STRIPPED_FIELDS = ['devDependencies'] as const;
+
+/**
+ * Innholdet i den stagede `package.json`, gitt kildens.
+ *
+ * Ren tekst inn og ut, så vakta kan måle REGELEN uten en free-bible-klone.
+ */
+export function stagedPackageJson(sourceText: string): string {
+  const pkg = JSON.parse(sourceText) as Record<string, unknown>;
+  for (const field of STRIPPED_FIELDS) delete pkg[field];
+  return `${JSON.stringify(pkg, null, 2)}\n`;
+}
+
+/**
  * Hva som er galt med kvn-package/ slik den ligger nå. Tom liste = i orden.
  *
  * Returnerer TEKST framfor en boolean fordi den eneste leseren som betyr noe
@@ -82,6 +115,26 @@ export function inventoryProblems(): string[] {
   }
   for (const missing of STAGED.filter((n) => !present.includes(n))) {
     problems.push(`kvn-package/${missing} mangler`);
+  }
+
+  // En rå kopi av kildens package.json ser riktig ut i inventaret over —
+  // filnavnet er jo på hvitlista — mens den drar free-bibles testverktøy inn i
+  // bun.lock (#112). Derfor er dette en INVENTARFEIL og ikke bare noe
+  // stagingen gjør: `ensure-kvn.ts` reparerer det som står her, og stagingen
+  // hopper ikke over en kjøring så lenge lista ikke er tom.
+  const pkgPath = path.join(TARGET, 'package.json');
+  if (fs.existsSync(pkgPath)) {
+    let pkg: Record<string, unknown> | null = null;
+    try {
+      pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8')) as Record<string, unknown>;
+    } catch {
+      problems.push('kvn-package/package.json lar seg ikke lese som JSON');
+    }
+    for (const field of STRIPPED_FIELDS) {
+      if (pkg && pkg[field] !== undefined) {
+        problems.push(`kvn-package/package.json deklarerer «${field}» — free-bibles verktøy er ikke vårt å låse`);
+      }
+    }
   }
   return problems;
 }
