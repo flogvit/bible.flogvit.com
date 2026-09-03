@@ -1,5 +1,9 @@
 # Release notes
 
+## 2026-09-03 — Release tooling hardening
+
+**Behind the scenes**
+- Fixed a bug where the deploy process could block its own release, and tightened the rules for when dependencies may be pinned in this repo.
 ## 2026-08-31 — Internal visibility into in-memory caches
 
 **Behind the scenes**
