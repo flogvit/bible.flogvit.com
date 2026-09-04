@@ -235,9 +235,10 @@ a {
   margin: 0 0 0.25rem;
 }
 
+/* Egen linje, ikke etter navnet: inline brøt den for `chapter` og ikke for
+   `book` i samme tabell, altså ulik form på to like rader. */
 .doc-required {
-  display: inline-block;
-  margin-left: 0.4rem;
+  display: block;
   font-size: 0.7rem;
   color: var(--accent);
 }
