@@ -44,6 +44,7 @@ import verseExtras from './routes/api/verse-extras.ts';
 import verses from './routes/api/verses.ts';
 import version from './routes/api/version.ts';
 import word4word from './routes/api/word4word.ts';
+import apiDocs from './routes/api/docs.tsx';
 import { getCookie } from 'hono/cookie';
 import { LOCALES, href, layoutProps, negotiateLocale, apiLocale } from './lib/i18n.ts';
 import { ogRoutes } from './routes/og.ts';
@@ -156,6 +157,11 @@ export function createApp() {
   app.route('/api/shares', shares);
   app.route('/api/publications', publications);
   app.route('/api/sync', sync);
+
+  // Referansen over de 74 endepunktene over — spesifikasjonen og sida som
+  // leser den (#114). SIST, så en `/api/docs`-rute i en samling alltid vinner
+  // over dokumentasjonen om den ene adressen skulle bli tatt i bruk.
+  app.route('/api', apiDocs);
 
   // Crawler-flater FØR serveStatic, ellers vinner den gamle statiske
   // sitemap.xml med sine uprefiksede URL-er.

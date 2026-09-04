@@ -1,0 +1,348 @@
+/* API-referansen (#114).
+ *
+ * Sida laster ikke `styles.css`: den er ett dokument utenfor språkprefiksene og
+ * trenger hverken chromen, øyene eller de 1158 versnummereringene. Paletten er
+ * likevel familiens (`styles.css` → `:root`), så den ikke ser ut som et annet
+ * produkt.
+ *
+ * #50-reglene gjelder her som overalt ellers: `min-width: 0` øverst, gulv i
+ * `rem` og aldri i px, tabellen scroller SELV framfor å gjøre sida bred, og
+ * lange ord brytes. En referanse er full av `/api/search/chapter-resources` og
+ * `x-contrib-token` — nettopp de ordene som ikke får plass på 320 px.
+ */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  min-width: 0;
+}
+
+:root {
+  --paper: #faf9f6;
+  --surface: #ffffff;
+  --ink: #1b1b18;
+  --ink-2: #67665f;
+  --line: #dcdacf;
+  --accent: #7a4a21;
+  --on-accent: #faf9f6;
+  --radius: 10px;
+  --radius-sm: 6px;
+  --maxw: 60rem;
+  --font-ui: 'Schibsted Grotesk', system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --paper: #161614;
+    --surface: #1e1e1b;
+    --ink: #edece6;
+    --ink-2: #99978d;
+    --line: #2e2d29;
+    --accent: #d9a06b;
+    --on-accent: #161614;
+  }
+}
+
+body {
+  margin: 0;
+  padding: 0 1.25rem 4rem;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-ui);
+  line-height: 1.55;
+  overflow-wrap: break-word;
+}
+
+code,
+pre {
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+  overflow-wrap: anywhere;
+}
+
+a {
+  color: var(--accent);
+}
+
+.doc-header,
+.doc-nav,
+.doc-main,
+.doc-footer {
+  max-width: var(--maxw);
+  margin: 0 auto;
+}
+
+.doc-header {
+  padding: 2.5rem 0 1.5rem;
+}
+
+.doc-brand {
+  margin: 0;
+  font-size: 0.85rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+}
+
+.doc-header h1 {
+  margin: 0.25rem 0 1rem;
+  font-size: clamp(2rem, 8vw, 2.75rem);
+  line-height: 1.1;
+}
+
+.doc-lede {
+  margin: 0 0 0.75rem;
+  max-width: 42em;
+  color: var(--ink-2);
+}
+
+.doc-nav ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  list-style: none;
+  margin: 0 0 2rem;
+  padding: 0;
+}
+
+.doc-nav li {
+  display: flex;
+  align-items: baseline;
+  gap: 0.35rem;
+  padding: 0.3rem 0.7rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+}
+
+.doc-nav a {
+  text-decoration: none;
+}
+
+.doc-nav span {
+  font-size: 0.8rem;
+  color: var(--ink-2);
+}
+
+.doc-section {
+  margin: 0 0 3rem;
+}
+
+.doc-section h2 {
+  margin: 0;
+  font-size: 1.5rem;
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 0.35rem;
+}
+
+.doc-tag-desc {
+  margin: 0.5rem 0 1.5rem;
+  color: var(--ink-2);
+}
+
+.doc-op {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  padding: 1rem;
+  margin: 0 0 1.25rem;
+}
+
+.doc-op-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.5rem;
+  margin: 0;
+  font-size: 1rem;
+}
+
+.doc-method {
+  flex: 0 0 auto;
+  padding: 0.1rem 0.5rem;
+  border-radius: var(--radius-sm);
+  background: var(--accent);
+  color: var(--on-accent);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
+}
+
+.doc-method-post,
+.doc-method-delete {
+  background: color-mix(in oklab, var(--accent) 60%, var(--ink));
+}
+
+.doc-path {
+  font-size: 1rem;
+}
+
+.doc-summary {
+  margin: 0.6rem 0 0;
+  font-weight: 600;
+}
+
+.doc-auth {
+  margin: 0.35rem 0 0;
+  font-size: 0.85rem;
+  color: var(--ink-2);
+}
+
+.doc-desc p,
+.doc-responses p,
+.doc-body p {
+  margin: 0.5rem 0;
+}
+
+.doc-op h4 {
+  margin: 1rem 0 0.25rem;
+  font-size: 0.8rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+}
+
+/* Tabellen scroller SELV framfor å gjøre sida bredere enn skjermen (#50). */
+.doc-table-wrap {
+  overflow-x: auto;
+  margin: 1rem 0 0;
+}
+
+.doc-params {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.doc-params th,
+.doc-params td {
+  text-align: left;
+  vertical-align: top;
+  padding: 0.4rem 0.6rem 0.4rem 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.doc-params th {
+  font-size: 0.75rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+}
+
+.doc-params td p {
+  margin: 0 0 0.25rem;
+}
+
+.doc-required {
+  display: inline-block;
+  margin-left: 0.4rem;
+  font-size: 0.7rem;
+  color: var(--accent);
+}
+
+.doc-example {
+  color: var(--ink-2);
+}
+
+.doc-responses ul {
+  margin: 0;
+  padding-left: 1.2rem;
+}
+
+.doc-responses li {
+  margin: 0.2rem 0;
+}
+
+.doc-responses li p {
+  display: inline;
+  margin: 0;
+}
+
+.doc-status {
+  font-weight: 600;
+}
+
+pre {
+  margin: 0.5rem 0 0;
+  padding: 0.7rem;
+  overflow-x: auto;
+  background: color-mix(in oklab, var(--ink) 5%, var(--surface));
+  border-radius: var(--radius-sm);
+}
+
+.doc-try {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 0.6rem;
+  margin: 1rem 0 0;
+  padding: 0.8rem;
+  border: 1px dashed var(--line);
+  border-radius: var(--radius-sm);
+}
+
+.doc-try label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  flex: 1 1 min(18rem, 100%);
+}
+
+.doc-try label span {
+  font-size: 0.75rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+}
+
+.doc-try input,
+.doc-try textarea {
+  width: 100%;
+  padding: 0.4rem 0.5rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+}
+
+.doc-try button {
+  flex: 0 0 auto;
+  padding: 0.45rem 1.1rem;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: var(--accent);
+  color: var(--on-accent);
+  font: inherit;
+  cursor: pointer;
+}
+
+.doc-try button[disabled] {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+.doc-try-status {
+  flex: 1 1 100%;
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+}
+
+.doc-try-out {
+  flex: 1 1 100%;
+  max-height: 22rem;
+  overflow: auto;
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+.doc-footer {
+  padding-top: 1rem;
+  border-top: 1px solid var(--line);
+  color: var(--ink-2);
+  font-size: 0.9rem;
+}
