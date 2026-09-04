@@ -1,5 +1,15 @@
 # Release notes
 
+## 2026-09-04 — Interactive API documentation launches
+
+**New features**
+- The Bible API now has interactive documentation covering all 74 endpoints, linked from the site so it's easy to find.
+
+**Polish**
+- Required-field markers in the API docs table line up consistently across rows.
+
+**Behind the scenes**
+- Added automated checks that keep the API docs in sync with the live routes and verify the documented examples actually run.
 ## 2026-09-03 — Release tooling hardening
 
 **Behind the scenes**
