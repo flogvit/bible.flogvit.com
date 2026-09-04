@@ -2721,6 +2721,57 @@ samme innholdet i et overlegg — som lå under headeren og ikke lot seg lukke.
   sin egen seksjon, og innholdet er tilbake på sin plass etter lukking). Åtte
   mutasjoner kjørt.
 
+## API-et er BESKREVET, og beskrivelsen er målt (#114)
+
+74 endepunkter — dagens vers, bibelteksten, studieinnholdet, brukerens egne
+notater — og ingen beskrivelse noe sted. Den eneste måten å lære hva
+`/api/chapter` tar imot var å lese `src/routes/api/`. For en som skal bygge noe
+mot bible.flogvit.com fantes API-et da ikke.
+
+- **`src/lib/openapi.ts` eier operasjonene**, og de brukes tre steder:
+  `/api/openapi.json` (OpenAPI 3.1), utforskersida `/api/docs`, og vakta. Hver
+  operasjon bærer `route` NØYAKTIG slik den står i RUTETABELLEN, med hono-formen
+  på parametrene (`:date{[0-9]{4}-…}`) — det er dét som lar vakta gå begge veier.
+  Hadde sida hatt sin egen liste, ville vakta målt at dokumentet er enig med seg
+  selv (samme grep som `API_COLLECTIONS`, #61).
+- **Sida er VÅR EGEN SSR, ikke `swagger-ui-dist` og ikke et CDN.** Repoets første
+  regel er innebygd framfor npm-pakker, og #112 er hva som skjer når et
+  verktøytre kommer inn bakveien. Et CDN ville dessuten gjort en side vi eier
+  avhengig av at noen andre er oppe. **Dokumentet er standard**, så den som VIL
+  ha Swagger UI eller Redoc peker den på `/api/openapi.json` — den veien er
+  åpen, vi holder bare ikke på treet.
+- **Eksempelet er MÅLT.** `prove.url` på hver operasjon er både adressen sida
+  fyller «Send»-knappen med, og den vakta faktisk henter. Et eksempel ingen har
+  kjørt er en gjetning med vår signatur på: endres et parameternavn, blir
+  dokumentet rødt framfor å stå og love den gamle formen.
+- **Sida står IKKE i `PAGES`,** og det er ikke en forglemmelse. `PAGES` er
+  lokaliserte sider, og hver invariant der er formulert på åtte språk
+  (hreflang-klynge, prefiksede lenker, ordbok, ingen norsk under `/en/`). En
+  API-referanse er ett engelsk dokument under `/api/` og ville stått som unntak i
+  hver eneste. Den har derfor sin egen BREDDE-halvdel i ekte Chrome — #50 er en
+  klasse som ikke bryr seg om hvem sida er skrevet for.
+- **Den er LENKET fra `/om`**, ved siden av de to repoene. En referanse ingen
+  finner er den samme feilen én etasje ned; `/api/` er dessuten ikke sperret i
+  robots.txt, så sida er også et svar på et søk.
+- **Notatene ligger bak `POST /api/sync`**, ikke bak en `/api/notes`. Det er én
+  delta-sync for alle datatypene (`notes`, `favorites`, `verseLists`,
+  `devotionals`, `topics`, `readingProgress` …), og `lastSyncAt: 0` med tom
+  `changes` henter alt. Dokumentet sier dette høyt, for et API som ser ut som
+  det mangler notater er det samme som å mangle dem.
+- **Vakta er `test/api-docs.test.ts` med fem halvdeler.** FORMEN (rutetabellen
+  og operasjonene mot hverandre begge veier — en ny rute blir dokumentert eller
+  rød, og en operasjon uten rute er et endepunkt vi sender klienter til en 404
+  på). DOKUMENTET (OpenAPI-formen: sti-parametre deklarert og bare de,
+  etikettene kjent, portene definert, ingen hono-form igjen i stiene).
+  EKSEMPLENE (hver `prove.url` hentes; statusen må være dokumentert, og
+  medietypen stemme). SIDA (hver operasjon vises med SIN egen metode, og hver
+  fil sida ber om serveres). BREDDEN (320/390 px ved 100/150 % tekst). Ni
+  mutasjoner kjørt.
+- **`UDOKUMENTERTE_RUTER` er tom**, og som `EXEMPT_ADDRESS_KEYS` (#46) er hver
+  framtidig oppføring en påstand — ikke et gjemmested. Det ene endepunktet uten
+  eksempel er `/api/mappings/kvn/all`, som er ~73 MB (#104); grunnen står i
+  `ikkeProvd`.
+
 ## Lenker og lokale vakter
 
 **Alle interne lenker skal bruke `lhref(path)`** (`lib/i18n.ts`), aldri `href="/…"` rått.

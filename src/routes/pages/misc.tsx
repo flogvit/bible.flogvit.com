@@ -39,6 +39,15 @@ r.get('/om', (c) => {
               </a>{' '}
               &ndash; {t('about.repoData')}
             </p>
+            {/* Referansen (#114) hører her, sammen med kildekoden og dataene:
+                den er den TREDJE måten å ta med seg det som står på sida. Uten
+                en lenke er den bare oppdagbar for den som gjetter adressen —
+                og en referanse ingen finner, er den samme feilen én etasje
+                ned. Uprefikset med vilje: `/api/` er ett dokument på engelsk
+                utenfor språkprefiksene (samme unntak som `lhref` har). */}
+            <p>
+              <a href="/api/docs">bible.flogvit.com/api/docs</a> &ndash; {t('about.apiDocs')}
+            </p>
           </section>
 
           <section class="about-section">

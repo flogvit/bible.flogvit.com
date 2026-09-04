@@ -366,6 +366,18 @@ describe('BREDDEN', () => {
         if (r.width < 2 || !r.height || r.right <= de.clientWidth + 1 || inScroller(el)) continue;
         offenders.push(`${el.tagName.toLowerCase()}.${String(el.className).split(' ')[0]} @${Math.round(r.right)}`);
       }
+      // Et for langt ORD har ingen element-rect å måle: boksen er smal nok, og
+      // teksten stikker ut av den. Uten dette svarer vakta «for bred» og peker
+      // på ingenting — og det er da man begynner å gjette (#50).
+      const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+      for (let n = walker.nextNode(); n; n = walker.nextNode()) {
+        if (!n.nodeValue?.trim() || inScroller(n.parentElement)) continue;
+        const range = document.createRange();
+        range.selectNodeContents(n);
+        const r = range.getBoundingClientRect();
+        if (r.right <= de.clientWidth + 1) continue;
+        offenders.push(`«${n.nodeValue.trim().slice(0, 30)}» @${Math.round(r.right)}`);
+      }
     }
     const result = { clientWidth: de.clientWidth, scrollWidth: de.scrollWidth, offenders: offenders.slice(0, 5) };
     if (scale !== 1) els.forEach((el, i) => (el.style.fontSize = original[i]!));
