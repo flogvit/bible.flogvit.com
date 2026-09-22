@@ -73,9 +73,16 @@ function fraMojibake(seg: string): string | null {
 /**
  * Boka et skadet bokledd peker på, eller undefined.
  *
- * Tre trinn, og alle tre krever et EKSAKT treff — som `personResolverFrom()`
+ * To omskrivinger, og begge krever et EKSAKT treff — som `personResolverFrom()`
  * (#61). Mojibaken kan være gjort to ganger av to ledd i samme kjede, så den
  * regnes tilbake til den ikke endrer seg mer.
+ *
+ * **En HEL adresse gir undefined**, og det er ikke en egen gren: begge
+ * omskrivingene må ENDRE leddet for å treffe, og en slug som allerede er vår
+ * gjør ikke det. Et «er dette en bok vi har?»-vern foran ville vært en linje
+ * ingen mutasjon kunne felle. Egenskapen holdes i live av vakta i stedet, som
+ * sveiper hver eneste slug OG hvert alias — der blir en gren som begynner å
+ * regne om en hel adresse rød.
  */
 export function bokFraSkadetLedd(seg: string): BookInfo | undefined {
   if (!seg) return undefined;
@@ -142,9 +149,6 @@ export function skadetKapitteladresse(url: URL): string | null {
     if (deler.length !== 4 || deler[0] !== '') continue;
     const [, locale, bokledd, kapittelledd] = deler as [string, string, string, string];
     if (!isLocale(locale) || !/^\d+$/.test(kapittelledd)) continue;
-    // En hel adresse er ikke vår sak — det som feiler der, feiler av en annen
-    // grunn, og et svar herfra ville skjult den.
-    if (getBookInfoBySlug(bokledd)) continue;
 
     const bok = bokFraSkadetLedd(bokledd);
     if (!bok) continue;

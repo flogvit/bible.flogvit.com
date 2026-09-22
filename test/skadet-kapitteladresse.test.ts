@@ -25,9 +25,10 @@ import { describe, expect, setDefaultTimeout, test } from 'bun:test';
 import { DB_TEST_TIMEOUT_MS } from './db-timeout.ts';
 import { createApp } from '../src/app.ts';
 import { initBooks } from '../src/lib/bible.ts';
+import { bookAliases } from '../src/lib/book-aliases.ts';
 import { booksData } from '../src/lib/books-data.ts';
 import { LOCALES } from '../src/lib/i18n.ts';
-import { skadetKapitteladresse } from '../src/lib/skadet-adresse.ts';
+import { bokFraSkadetLedd, skadetKapitteladresse } from '../src/lib/skadet-adresse.ts';
 import { toUrlSlug } from '../src/lib/url-utils.ts';
 
 setDefaultTimeout(DB_TEST_TIMEOUT_MS);
@@ -81,6 +82,21 @@ describe('en skadet kapitteladresse regnes tilbake (#118)', () => {
       for (const path of ['/nb/matt/5', '/en/1kr%C3%B8n/14', '/nb/', '/', '/en/personer/abaddon']) {
         expect({ path, mal: skadetKapitteladresse(new URL(path, 'http://x')) }).toEqual({ path, mal: null });
       }
+    });
+
+    // Og det gjelder HVER adresse vi selv kan gi ut, ikke de fem over: hver
+    // slug og hvert alias `getBookInfoBySlug()` kjenner. Regelen har ikke noe
+    // «er dette en bok vi har?»-vern foran seg — begge omskrivingene må ENDRE
+    // leddet for å treffe — så det er denne sveipen som holder egenskapen i
+    // live, og en gren som begynte å regne om en hel adresse blir rød her.
+    test('ingen kjent bokledd regnes om — verken slug eller alias', () => {
+      const kjente = [...booksData.map((b) => toUrlSlug(b.short_name)), ...Object.keys(bookAliases)];
+      const rort = kjente.filter(
+        (ledd) =>
+          bokFraSkadetLedd(ledd) !== undefined ||
+          skadetKapitteladresse(new URL(encodeURI(`/nb/${ledd}/1`), 'http://x')) !== null,
+      );
+      expect({ antall: kjente.length > 66, rort }).toEqual({ antall: true, rort: [] });
     });
 
     // En 301 til en 404 er ingen fiks (#61). Høysangen har 8 kapitler.
