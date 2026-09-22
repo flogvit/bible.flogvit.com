@@ -1,5 +1,12 @@
 # Release notes
 
+## 2026-09-22 — Damaged chapter links now resolve instead of showing as missing
+
+**Bug fixes**
+- A chapter link mangled in transit (browser extension, broken copy-paste, etc.) no longer shows as "not found" — the correct chapter loads instead, and this now covers the whole address, not just one known-bad pattern.
+
+**Behind the scenes**
+- Documented a crawl gap where about a third of Bingbot's fetches against four books were never getting indexed.
 ## 2026-09-04 — Interactive API documentation launches
 
 **New features**
