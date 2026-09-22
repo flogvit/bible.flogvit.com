@@ -1506,6 +1506,80 @@ er galt med svaret de fikk: «Skraperen får `text/html` der den ventet en PNG.�
   mutasjoner kjørt (ingen catch-all, `c.notFound()` tilbake i kortruta,
   catch-all FØRST, og en smal fiks som bare tar `/og/<språk>`).
 
+##### Og en adresse klienten har SKADET er ikke en adresse vi ikke har (#118)
+
+Samme fire bøker, samme tegn, men nå på SIDAS egen adresse — den #84 lot stå.
+Målt over 17,8 timer mot `1krøn`, `2krøn`, `høys` og `åp`: 145 hentinger
+korrekt prosentkodet og servert, **24 skadet av klienten og 404-et**.
+
+```
+bingbot   GET /en/1kr%C3%83%C2%B8n/14    7 av 22 (32 %)   UTF-8 lest som latin-1, kodet på nytt
+MJ12bot   GET /fr/1kr?n/20              17 av 17          tegnet byttet mot `?`
+```
+
+- **#84s begrunnelse for å la den stå var et TALL, og tallet har flyttet seg.**
+  «0,038 % … bæres ikke av 0,038 %» gjaldt Amazonbots kutt. For bingbot er
+  andelen nå 32 %, og bingbot er en SYNLIGHETSAKTØR: en tredel av hentingen
+  blir aldri indeksert. 4 bøker × 8 språk = 584 sider. Utslaget er stille i den
+  retningen som teller — vi ser en 404-rad, mottakeren ser et hull i indeksen.
+- **Begge formene er DETERMINISTISKE omskrivinger av adressen vi publiserte**,
+  altså kan begge regnes tilbake. Da er feilen i OPPSLAGET og ikke i adressen,
+  og svaret er **301, ikke 404** — ordrett samme argument `PERSON_ID_ALIASES`
+  og `normalizedPersonId()` står på (#61). `src/lib/skadet-adresse.ts` eier
+  regelen; `PLASSHOLDERE` er `?` og U+FFFD, altså formen KLASSEN tar, ikke en
+  liste over klienter.
+- **Den gjetter aldri.** Hver omskriving krever et EKSAKT treff i `booksData`,
+  mojibaken dekodes STRENGT (`TextDecoder` med `fatal`), og et kapittel boka
+  ikke har blir stående som 404 framfor å bli en 301 til en 404 (#61).
+- **En HEL adresse har ikke noe vern foran seg, og det er med vilje.** Begge
+  omskrivingene må ENDRE leddet for å treffe, så en slug som alt er vår faller
+  ut av seg selv; et «er dette en bok vi har?»-vern ville vært en linje ingen
+  mutasjon kunne felle (#50-lærdommen). Egenskapen holdes av en SVEIP over hver
+  slug og hvert alias i stedet.
+- **`?` er spørringens eget tegn, så MJ12bots form når oss som to ting.**
+  `/fr/1kr?n/20` er stien `/fr/1kr` med spørringen `n/20` — der er `?`-et en del
+  av ADRESSEN og skal ikke bæres videre, mens en EKTE spørring ved siden av
+  bingbots form (`?bible=osnn`) skal (#24, #61). Derfor leses adressen på to
+  måter, og bare den som regner seg tilbake brukes.
+- **To kallsteder, én regel.** `app.notFound()` fordi bingbots form er en ren
+  sti — `/:book/:chapter` MATCHER den og svarer `c.notFound()` selv, så
+  catch-allen ser den aldri. Catch-allen fordi `/de/åp/3` skadet blir `/de/`
+  med spørringen `p/3`, altså trailing-slash-trimmingen, som ellers 301-et den
+  til FORSIDA — en soft-404 er verre enn en 404.
+- **Prisen var dessuten en RENDER-PLASS.** En skadet adresse har ikke noe
+  punktum, altså er den en SIDE for `NOT_A_PAGE` (#64), og en hel SSR-render av
+  404-sida sto i køen bak semaforen (#19, #86). En 301 koster mikrosekunder.
+- **Dette gjør IKKE adressen ASCII-ren.** Å skrive om adresseskjemaet for 584
+  sider er fortsatt avgjørelsen #84 lot ligge — `ø`-en leses av et menneske — og
+  porten her trengs uansett hvilken vei den går: de `ø`-bærende adressene ligger
+  alt i indeksene, og en indeksert adresse lever lenger enn en deploy.
+- **Vakta er `test/skadet-kapitteladresse.test.ts` med fem halvdeler.** REGELEN
+  (ren logikk: begge formene gir den publiserte adressen, en hel adresse røres
+  ikke — sveipet over hver slug og hvert alias — et kapittel boka ikke har gir
+  ingen omskriving, og en ukjent bok gjettes ikke fram). DE MÅLTE FORMENE
+  (ordrett fra loggen, og vakta beviser først at formene den BYGGER er dem
+  loggen viser). FLATA (alle fire bøkene × åtte språk × begge formene: 301, og
+  måladressen hentes og må svare 200 med RIKTIG canonical — bare status hadde
+  bestått av en 301 til hva som helst; pluss at queryen bæres over). INGENTING
+  ANNET RØRES (en hel adresse svarer som før, og en ukjent er fortsatt 404 —
+  ellers ville «301 på alt som ikke finnes» bestått). Formene BYGGES slik
+  klienten bygger dem (UTF-8-bytes lest som latin-1, tegnet byttet mot `?`),
+  ikke slik fiksen regner dem tilbake. Sju mutasjoner kjørt.
+- **UMÅLT ER IKKE GRØNT.** Symptomet lever i prod, og verifiseringen må være
+  tidsavgrenset til utrullingen OG kreve at aktøren har vært innom etterpå —
+  ellers er den rød av historikken og grønn av stillhet (#86):
+
+  ```sh
+  ssh flogvit-vm 'docker exec server-caddy-1 sh -c "cat /var/log/caddy/access.log"' \
+   | LC_ALL=C awk -v fra=<utrullingens epoch> '
+     /bingbot|MJ12bot/ {
+       match($0,/"ts":[0-9.]+/); t=substr($0,RSTART+5,RLENGTH-5)+0
+       if (t < fra) next
+       sett++; if ($0 ~ /"status":404/) doede++
+     }
+     END { print "sett=" sett+0, "404=" doede+0; exit !(sett>0 && doede==0) }'
+  ```
+
 ## Å VENTE PÅ DATABASEN er forespørselens budsjett, ikke spørringens (#107)
 
 `db.ts` gjentar lesninger når forbindelsen er borte, så en DB-restart (målt 12 s
