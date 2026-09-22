@@ -49,6 +49,7 @@ import { getCookie } from 'hono/cookie';
 import { LOCALES, href, layoutProps, negotiateLocale, apiLocale } from './lib/i18n.ts';
 import { ogRoutes } from './routes/og.ts';
 import { seoRoutes } from './routes/seo.ts';
+import { skadetKapitteladresse } from './lib/skadet-adresse.ts';
 import { minneRegnskap } from './lib/minne-regnskap.ts';
 
 /**
@@ -217,6 +218,12 @@ export function createApp() {
     const url = new URL(c.req.url);
     const p = url.pathname;
     if (p.startsWith('/api/') || p.includes('.')) return c.notFound();
+    // En kapitteladresse klienten har skadet er ikke en adresse vi ikke har
+    // (#118). MJ12bots form bytter tegnet mot `?`, så `/de/åp/3` når oss som
+    // stien `/de/` med spørringen `p/3` — altså FØR trimmingen under, som
+    // ellers ville sendt den til forsida med en 301.
+    const skadet = skadetKapitteladresse(url);
+    if (skadet) return c.redirect(skadet, 301);
     if (new RegExp(`^/(${LOCALES.join('|')})(/|$)`).test(p)) {
       const trimmed = p.replace(/\/+$/, '') || '/';
       return trimmed !== p ? c.redirect(trimmed + url.search, 301) : c.notFound();
@@ -228,6 +235,12 @@ export function createApp() {
   // 404: API-stier svarer JSON (som gamle Express-appen), sider får 404-siden.
   app.notFound((c) => {
     if (c.req.path.startsWith('/api/')) return c.json({ error: 'Not found' }, 404);
+    // Det andre stedet en skadet adresse ender (#118): bingbots form er en ren
+    // sti, så `/:book/:chapter` MATCHER den og svarer `c.notFound()` selv —
+    // catch-allen over ser den aldri. Her, framfor i kapittelruta, fordi det
+    // er ETT sted alt som ingen rute kunne svare på kommer sammen.
+    const skadet = skadetKapitteladresse(new URL(c.req.url));
+    if (skadet) return c.redirect(skadet, 301);
     return c.html(NotFoundPage(layoutProps(c)), 404);
   });
 
