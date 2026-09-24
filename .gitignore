@@ -1,6 +1,10 @@
 node_modules/
 kvn-package/
 .env*
+!.env.example
+# Editor-backuper: `puzzles.env~` treffes ikke av `.env*`, og en backup av en
+# env-fil er like hemmelig som fila selv (#119, flogvit-com#261).
+*~
 .DS_Store
 tmp/
 *.tsbuildinfo
