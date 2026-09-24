@@ -1,5 +1,9 @@
 # Release notes
 
+## 2026-09-24 — Housekeeping only, nothing changes for readers
+
+**Behind the scenes**
+- Editor backup copies of env files are now kept out of git, with a test that fails if one is ever picked up.
 ## 2026-09-22 — Damaged chapter links now resolve instead of showing as missing
 
 **Bug fixes**
