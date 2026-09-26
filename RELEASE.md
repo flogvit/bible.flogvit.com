@@ -1,6 +1,14 @@
 # Release notes
 
-## 2026-09-26 — Security update to the web framework
+## 2026-09-26 — Links to a range of verses stay on the verses, and a security update
+
+**Bug fixes**
+
+- Following a link to several verses — «Romans 12:14-15» from the verse of the
+  day — now leaves you on those verses. In current versions of Chrome the page
+  jumped to them and then, a moment later, back to the top of the chapter, so
+  the highlighted verses were somewhere below you. Links to a single verse were
+  not affected.
 
 **Behind the scenes**
 
