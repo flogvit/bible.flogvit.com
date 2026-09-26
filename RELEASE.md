@@ -1,5 +1,12 @@
 # Release notes
 
+## 2026-09-26 — Links to several verses now stay on the verses in recent Chrome
+
+**Bug fixes**
+- Opening a link that points to several verses now leaves you on those verses in recent versions of Chrome. Before, the page could move away from them.
+
+**Behind the scenes**
+- Updated the web framework (Hono 4.12.34 → 4.13.9), which closes three published security advisories.
 ## 2026-09-26 — Links to a range of verses stay on the verses, and a security update
 
 **Bug fixes**
