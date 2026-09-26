@@ -1,5 +1,17 @@
 # Release notes
 
+## 2026-09-26 — Security update to the web framework
+
+**Behind the scenes**
+
+- Updated Hono, the web framework behind this service, from 4.12.34 to 4.13.9.
+  Three advisories published on 8 September are fixed from 4.13.5: a request
+  body with deeply nested dotted field names could exhaust the server's memory,
+  the query parser read parameters past the `#` in a URL, so a cache or proxy
+  in front could read a different request than the app did, and static site
+  generation could still write files outside its output directory.
+  Nothing changes for you.
+
 ## 2026-09-24 — Housekeeping only, nothing changes for readers
 
 **Behind the scenes**
