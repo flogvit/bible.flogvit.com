@@ -605,6 +605,18 @@ if (rootPage) {
     for (let n = jump.start; n <= jump.end; n++) {
       document.getElementById(`v${n}`)?.classList.add('is-jump-target');
     }
+    // HASHEN MÅ PEKE PÅ ET ELEMENT SOM FINNES. `#v14-15` har ingen `id` å lande
+    // på, og Chrome 153 ruller da tilbake til TOPPEN når sida er ferdig lastet —
+    // etter at hoppet under alt har skjedd. Leseren som fulgte «Romerne
+    // 12:14-15» havnet øverst i kapittelet (#120). Et tomt anker med nøyaktig
+    // den id-en i målverset gir nettleseren noe å lande på.
+    const ankerId = decodeURIComponent(location.hash.slice(1));
+    if (ankerId && !document.getElementById(ankerId)) {
+      const anker = document.createElement('span');
+      anker.id = ankerId;
+      anker.className = 'jump-anker';
+      jumpTarget.prepend(anker);
+    }
     setTimeout(() => jumpTarget.scrollIntoView({ block: 'center' }), 50);
   }
 }
