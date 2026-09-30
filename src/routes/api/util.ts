@@ -3,7 +3,8 @@
 // innholdsruter svarer med Cache-Control: no-cache.
 
 import type { Context } from 'hono';
-import { loggFeil } from '../../lib/error-handler.ts';
+import { isConnectionError } from '../../lib/db.ts';
+import { DB_NEDE_RETRY_AFTER_S, loggFeil } from '../../lib/error-handler.ts';
 
 export function intParam(c: Context, name: string): number {
   return parseInt(c.req.query(name) ?? '', 10);
@@ -25,13 +26,20 @@ export const NO_CACHE = { 'Cache-Control': 'no-cache' };
 
 /**
  * Svaret en API-rute gir når den har fanget sitt EGET kast (#109): feilen
- * skrives gjennom `loggFeil()`, og klienten får 500.
+ * skrives gjennom `loggFeil()`, og klienten får 500 — eller 503 med
+ * `Retry-After` når feilen er et DB-avbrudd (#123).
  *
- * Ett sted framfor ~40 kopier av de samme to linjene. Det er også stedet
- * RESTANSEN i #109 (CLAUDE.md) må løses: et DB-avbrudd svarer 500 her, der
- * `app.onError` ville svart 503 + `Retry-After`.
+ * Rutene fanger kastet selv, så det når aldri `app.onError`; skillet må derfor
+ * gjøres her, med SAMME regel og samme sekundtall som `feilsvar` (#108). En
+ * defekt hos oss er fortsatt 500. `kropp` lar en rute beholde sin egen
+ * feilform (`/api/version` svarer en fallback-versjon) uten å miste 503-en.
  */
-export function internFeil(c: Context, hva: string, err: unknown): Response {
+export function internFeil(c: Context, hva: string, err: unknown, kropp?: object): Response {
   loggFeil(hva, err);
-  return c.json({ error: 'Internal server error' }, 500);
+  if (isConnectionError(err)) {
+    return c.json(kropp ?? { error: 'Service unavailable' }, 503, {
+      'retry-after': String(DB_NEDE_RETRY_AFTER_S),
+    });
+  }
+  return c.json(kropp ?? { error: 'Internal server error' }, 500);
 }

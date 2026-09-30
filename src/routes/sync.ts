@@ -11,7 +11,7 @@ import type { AppEnv } from '../lib/session.ts';
 import { requirePlus } from '../lib/session.ts';
 // @ts-expect-error — delt klient-modul uten typer (samme kjernelogikk som reading.js)
 import { mergeProgress } from '../../public/js/reading-progress.js';
-import { loggFeil } from '../lib/error-handler.ts';
+import { internFeil } from './api/util.ts';
 import { registrerMinnekilde } from '../lib/minne-regnskap.ts';
 import { rateLimiter } from '../lib/rate-limit.ts';
 
@@ -171,8 +171,7 @@ sync.post('/', async (c) => {
     });
     return c.json(result);
   } catch (err) {
-    loggFeil('Sync error', err);
-    return c.json({ error: 'Sync failed' }, 500);
+    return internFeil(c, 'Sync error', err, { error: 'Sync failed' });
   }
 });
 
@@ -243,8 +242,7 @@ sync.post('/user-bibles', async (c) => {
     });
     return c.json({ bibles: serverBibles });
   } catch (err) {
-    loggFeil('User bible sync error', err);
-    return c.json({ error: 'User bible sync failed' }, 500);
+    return internFeil(c, 'User bible sync error', err, { error: 'User bible sync failed' });
   }
 });
 
@@ -280,8 +278,7 @@ sync.post('/user-bible-chapters/:id', async (c) => {
     });
     return c.json({ ok: true, count: chapters?.length ?? 0 });
   } catch (err) {
-    loggFeil('Upload chapters error', err);
-    return c.json({ error: 'Upload failed' }, 500);
+    return internFeil(c, 'Upload chapters error', err, { error: 'Upload failed' });
   }
 });
 
@@ -307,8 +304,7 @@ sync.get('/user-bible-chapters/:id', async (c) => {
       })),
     });
   } catch (err) {
-    loggFeil('Download chapters error', err);
-    return c.json({ error: 'Download failed' }, 500);
+    return internFeil(c, 'Download chapters error', err, { error: 'Download failed' });
   }
 });
 

@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { getFavoriteVerses } from '../../lib/bible.ts';
 import { bookNameByShort } from '../../lib/books-data.ts';
-import { loggFeil } from '../../lib/error-handler.ts';
+import { internFeil } from './util.ts';
 
 const r = new Hono();
 
@@ -32,8 +32,7 @@ r.post('/', async (c) => {
 
     return c.json(results);
   } catch (error) {
-    loggFeil('Failed to get favorite verses', error);
-    return c.json({ error: 'Failed to get verses' }, 500);
+    return internFeil(c, 'Failed to get favorite verses', error, { error: 'Failed to get verses' });
   }
 });
 

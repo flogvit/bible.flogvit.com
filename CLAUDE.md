@@ -1727,10 +1727,14 @@ code: "ERR_MYSQL_CONNECTION_TIMEOUT"
   modulnivå-tilstand, og signaturen skrives til EKTE stderr — 503 under
   avbruddet, 200 etterpå, robots.txt urørt). SØMMEN (`index.ts` starter en
   server ved import og leses derfor fra kilden). Åtte mutasjoner kjørt.
-- **RESTANSE, ikke løst her:** under et avbrudd svarer 33 av 55 `/api`-ruter
-  fortsatt **500** framfor 503, fordi hver av dem returnerer sin egen
-  `c.json({error}, 500)` etter å ha fanget kastet. Det er #108s avgjørelse tatt
-  om igjen på API-flata, og en egen sak — 55 statuskoder er ikke en logglinje.
+- **Statuskoden på API-flata er tatt i #123.** Rutene fanget kastet og svarte
+  sin egen 500, så et avbrudd ble «varig feil» på 33 av 55 `/api`-ruter.
+  `internFeil()` i `routes/api/util.ts` er nå det ENE svaret en rute gir på sitt
+  eget kast, med `feilsvar` sin regel: forbindelsesfeil → 503 +
+  `Retry-After`, alt annet → 500. En rute med egen feilkropp (`/api/version`,
+  `/api/sync`) sender den som `kropp` framfor å skrive sin egen `c.json(…, 500)`.
+  Vakta er `test/api-db-avbrudd.test.ts`: REGELEN begge veier, og en SVEIP over
+  hele /api-rutetabellen med basen nede der ingen rute får svare 500.
 
 ## Lastvern (anonyme sidevisninger)
 
