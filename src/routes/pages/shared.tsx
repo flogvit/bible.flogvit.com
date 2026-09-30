@@ -20,7 +20,7 @@ import type { AppEnv } from '../../lib/session.ts';
 import { Layout } from '../../views/layout.tsx';
 import { Breadcrumbs } from '../../views/breadcrumbs.tsx';
 import { Markdown } from '../../views/markdown.tsx';
-import { layoutProps, tFor, tCtx, lhref } from '../../lib/i18n.ts';
+import { layoutProps, tFor, lhref } from '../../lib/i18n.ts';
 import { resolveShare, sharedContent } from '../../lib/shares.ts';
 
 const r = new Hono<AppEnv>();
@@ -47,7 +47,7 @@ r.get('/delt/:token', async (c) => {
     >
       <div class="user-main">
         <div class="reading-container">
-          <Breadcrumbs items={[{ label: tCtx()('common.home'), href: '/' }, { label: t('sh.crumb') }]} />
+          <Breadcrumbs items={[{ label: t('sh.crumb') }]} />
           <article class="devotional-article">
             <h1>{title}</h1>
             <p class="user-note">{t('sh.sharedNote')}</p>

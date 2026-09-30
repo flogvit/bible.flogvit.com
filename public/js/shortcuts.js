@@ -6,11 +6,9 @@
 // ('bibel:layout-mode' / 'bibel:panel-tab') som lesesiden lytter på.
 
 import { localeHref, readStrings } from './locale.js';
+import { esc } from './dom.js';
 
 const t = readStrings(document.body);
-
-/** Attributt- og HTML-sikker escaping for tekst som limes inn i malstrengene. */
-const esc = (v) => String(v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
 
 const isMac = /Mac|iP(hone|ad|od)/.test(navigator.platform);
 

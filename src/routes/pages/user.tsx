@@ -17,7 +17,7 @@ import { getSql } from '../../lib/db.ts';
 import { bookNameByShort } from '../../lib/books-data.ts';
 import { getUserItems, getUserSingleton, getReadingProgress } from '../../lib/user-data.ts';
 import { summarizeProgress, fullHeat, stalestBooks, suggestedPlans, planCoverage } from '../../lib/reading-map.ts';
-import { getBibleEditions, getAllReadingPlansList, getReadingPlanChapterSets, type BibleEdition } from '../../lib/bible.ts';
+import { getBibleEditions, getFavoriteVerses, getAllReadingPlansList, getReadingPlanChapterSets, type BibleEdition } from '../../lib/bible.ts';
 import { getAvailableMappings } from '../../lib/verse-mapper.ts';
 import { layoutProps, makeT, tFor, tEnum, type Locale, type MessageKey, lhref } from '../../lib/i18n.ts';
 import { tCtx } from '../../lib/i18n.ts';
@@ -47,7 +47,7 @@ function UserPage(props: {
     >
       <div class="user-main">
         <div class={props.wide ? 'container' : 'reading-container'}>
-          <Breadcrumbs items={[{ label: tCtx()('common.home'), href: '/' }, { label: props.crumb }]} />
+          <Breadcrumbs items={[{ label: props.crumb }]} />
           <h1>{props.heading}</h1>
           {props.intro && <p class="user-intro">{props.intro}</p>}
           <div data-user-page={props.page}>{props.children}</div>
@@ -68,27 +68,12 @@ r.get('/favoritter', async (c) => {
   let cards: { href: string; ref: string; text: string }[] = [];
   if (user?.plus) {
     const favs = await getUserItems<FavoriteItem>(user.id, 'favorites');
-    const sql = getSql();
-    cards = (
-      await Promise.all(
-        favs
-          .sort((a, b) => (b.addedAt ?? 0) - (a.addedAt ?? 0))
-          .map(async (f) => {
-            const [v] = (await sql`
-              SELECT v.text, b.name_no, b.short_name FROM verses v
-              JOIN books b ON v.book_id = b.id
-              WHERE v.book_id = ${f.bookId} AND v.chapter = ${f.chapter}
-                AND v.verse = ${f.verse} AND v.bible = 'osnb'
-            `) as { text: string; name_no: string; short_name: string }[];
-            if (!v) return null;
-            return {
-              href: `/${v.short_name.toLowerCase()}/${f.chapter}#v${f.verse}`,
-              ref: `${bookNameByShort(v.short_name)} ${f.chapter}:${f.verse}`,
-              text: v.text,
-            };
-          }),
-      )
-    ).filter((x): x is NonNullable<typeof x> => x !== null);
+    const sorted = favs.sort((a, b) => (b.addedAt ?? 0) - (a.addedAt ?? 0));
+    cards = (await getFavoriteVerses(sorted)).map((v) => ({
+      href: `/${v.bookShortName.toLowerCase()}/${v.chapter}#v${v.verse}`,
+      ref: `${bookNameByShort(v.bookShortName)} ${v.chapter}:${v.verse}`,
+      text: v.text,
+    }));
   }
   return c.html(
     <UserPage {...layoutProps(c)} title={t('nav.favorites')} crumb={t('nav.favorites')} heading={t('u.favVerses')} page="favorites" intro={t('u.favIntro')}>
@@ -316,7 +301,7 @@ r.get('/leseplan', async (c) => {
     <Layout {...layoutProps(c)} title={`${t('home.readingPlans')} — FLOGVIT.bible`} description={t('u.plansIntro')} styles={['user.css']} scripts={['user.js']}>
       <div class="user-main">
         <div class="reading-container">
-          <Breadcrumbs items={[{ label: tCtx()('common.home'), href: '/' }, { label: tCtx()('nav.readingPlan') }]} />
+          <Breadcrumbs items={[{ label: tCtx()('nav.readingPlan') }]} />
           <h1>{t('home.readingPlans')}</h1>
           <p class="user-intro">
             {t('u.plansIntro')}
@@ -394,7 +379,7 @@ function DevotionalEditor(props: { slug?: string; locale: Locale; path: string }
     <Layout locale={props.locale} path={props.path} noindex title={`${t('u.editManuscript')} — FLOGVIT.bible`} description={t('u.manuscriptMeta')} styles={['user.css']} scripts={['user.js']}>
       <div class="user-main">
         <div class="container">
-          <Breadcrumbs items={[{ label: tCtx()('common.home'), href: '/' }, { label: tCtx()('nav.manuscripts'), href: '/manuskripter' }, { label: props.slug ? t('common.edit') : t('common.new') }]} />
+          <Breadcrumbs items={[{ label: tCtx()('nav.manuscripts'), href: '/manuskripter' }, { label: props.slug ? t('common.edit') : t('common.new') }]} />
           <h1 class="sr-only">{props.slug ? t('u.editManuscript') : t('u.newManuscript')}</h1>
           <div data-user-page="devotional-editor" data-slug={props.slug || ''}>
             <div class="editor-head">
@@ -425,7 +410,7 @@ r.get('/manuskripter/:slug', (c) => {
     <Layout {...layoutProps(c)} title={`${t('nav.manuscripts')} — FLOGVIT.bible`} description={t('u.manuscriptOne')} styles={['user.css']} scripts={['user.js']}>
       <div class="user-main">
         <div class="reading-container">
-          <Breadcrumbs items={[{ label: tCtx()('common.home'), href: '/' }, { label: tCtx()('nav.manuscripts'), href: '/manuskripter' }, { label: '…' }]} />
+          <Breadcrumbs items={[{ label: tCtx()('nav.manuscripts'), href: '/manuskripter' }, { label: '…' }]} />
           <div data-user-page="devotional-view" data-slug={c.req.param('slug')}>
             <article class="devotional-article" data-article></article>
             <p class="user-empty" data-empty hidden>{t('u.manuscriptNotFound')}</p>

@@ -14,28 +14,14 @@ import {
   getChapter,
 } from './offline-db.js';
 import { readStrings, intlLocale } from './locale.js';
+import { el } from './dom.js';
+import { hasPlus } from './fv-auth.js';
 
 const t = readStrings(document.body);
 
 const $ = (sel) => document.querySelector(sel);
 const listBox = $('[data-trans-list]');
 if (listBox) init();
-
-function el(tag, cls, text) {
-  const node = document.createElement(tag);
-  if (cls) node.className = cls;
-  if (text !== undefined) node.textContent = text;
-  return node;
-}
-
-// Skylagring av egne bibler («husking») krever FLOGVIT.plus — fv-auth=2.
-function hasPlus() {
-  try {
-    return /(?:^|;\s*)fv-auth=2/.test(document.cookie);
-  } catch {
-    return false;
-  }
-}
 
 // ── Liste ────────────────────────────────────────────────────────────
 async function renderList() {

@@ -12,12 +12,10 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
+import { FREE_BIBLE_DIR } from './import-utils.ts';
 
 const BIBLE_URL = (process.env.BIBLE_URL || 'https://bible.flogvit.com').replace(/\/$/, '');
 const TOKEN = process.env.CONTRIB_TOKEN;
-const FREE_BIBLE_DIR = process.env.FREE_BIBLE_DIR
-  ? path.resolve(process.env.FREE_BIBLE_DIR)
-  : path.join(process.cwd(), '..', 'free-bible');
 const QUEUE_DIR = path.join(FREE_BIBLE_DIR, 'contrib', 'queue');
 const ARCHIVE_DIR = path.join(QUEUE_DIR, 'archive');
 

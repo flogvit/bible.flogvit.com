@@ -6,8 +6,7 @@ import {
   getPersonsByRole,
 } from '../../lib/bible.ts';
 import { PERSON_ID_ALIASES, normalizedPersonId } from '../../lib/person-id-aliases.ts';
-import { NO_CACHE } from './util.ts';
-import { loggFeil } from '../../lib/error-handler.ts';
+import { NO_CACHE, internFeil } from './util.ts';
 
 const r = new Hono();
 
@@ -23,8 +22,7 @@ r.get('/', async (c) => {
         : await getAllPersonsData();
     return c.json(persons, 200, NO_CACHE);
   } catch (error) {
-    loggFeil('Error fetching persons', error);
-    return c.json({ error: 'Internal server error' }, 500);
+    return internFeil(c, 'Error fetching persons', error);
   }
 });
 
@@ -63,8 +61,7 @@ r.get('/:id', async (c) => {
     }
     return c.json(person, 200, NO_CACHE);
   } catch (error) {
-    loggFeil('Error fetching person', error);
-    return c.json({ error: 'Internal server error' }, 500);
+    return internFeil(c, 'Error fetching person', error);
   }
 });
 

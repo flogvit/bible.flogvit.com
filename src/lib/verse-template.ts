@@ -52,22 +52,3 @@ export function parseVerseTemplate(text: string): VerseTemplate[] {
 
   return parts;
 }
-
-/**
- * Check if text contains any {{reference}} templates
- */
-export function hasVerseTemplates(text: string): boolean {
-  return /\{\{[^}]+\}\}/.test(text);
-}
-
-/**
- * Extract all raw reference strings from text
- */
-export function extractRefStrings(text: string): string[] {
-  const parts = parseVerseTemplate(text);
-  return parts
-    .filter((p): p is VerseTemplate & { refString: string } =>
-      p.type === 'verse' && p.refString !== undefined
-    )
-    .map(p => p.refString);
-}

@@ -3,11 +3,9 @@
 // i headeren (som ellers faller tilbake til GET /sok uten JS).
 
 import { langParam, localeHref, readStrings } from './locale.js';
+import { esc } from './dom.js';
 
 const t = readStrings(document.body);
-
-/** Attributtsikker escaping for strengene som limes inn i malstrengen under. */
-const esc = (v) => String(v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
 
 // Hele paletten var hardkodet norsk — 24 sidenavn, hintene, plassholderen og
 // tomteksten — og den lastes på HVER side, altså norsk på alle åtte språk

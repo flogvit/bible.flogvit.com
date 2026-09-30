@@ -28,8 +28,8 @@ import { absoluteUrl } from './site-url.ts';
  * krever at de er nøyaktig disse. Deklarerte mål som ikke stemmer beskriver et
  * bilde som ikke finnes, og det er verre enn å la dem stå.
  */
-export const SHARE_CARD_WIDTH = 1200;
-export const SHARE_CARD_HEIGHT = 630;
+const SHARE_CARD_WIDTH = 1200;
+const SHARE_CARD_HEIGHT = 630;
 
 /**
  * Kortets plass i objektlagringen (#66) — ÉN sannhet for opplastingen,

@@ -7,6 +7,7 @@
 // Må lastes FØR sync.js (som også patcher localStorage.setItem).
 
 import { readStrings, localeHref } from './locale.js';
+import { hasPlus, loggedIn } from './fv-auth.js';
 
 const GATED_KEYS = [
   'bible-favorites',
@@ -20,22 +21,6 @@ const GATED_KEYS = [
   'activeReadingPlan',
   'readingPlanProgress',
 ];
-
-function hasPlus() {
-  try {
-    return /(?:^|;\s*)fv-auth=2/.test(document.cookie);
-  } catch {
-    return false;
-  }
-}
-
-function loggedIn() {
-  try {
-    return /(?:^|;\s*)fv-auth=[12]/.test(document.cookie);
-  } catch {
-    return false;
-  }
-}
 
 let cta = null;
 

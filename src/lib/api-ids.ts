@@ -103,7 +103,7 @@ export const UNADDRESSED_ROUTES: UnaddressedRoute[] = [
 
 const BY_PATH = new Map(API_COLLECTIONS.map((c) => [c.path, c]));
 
-export function apiCollection(path: string): ApiCollection {
+function apiCollection(path: string): ApiCollection {
   const collection = BY_PATH.get(path);
   // En samling som ikke er deklarert har ingen kjent adresse, og da ville
   // hjelperen bare flyttet gjetningen ett hakk inn.

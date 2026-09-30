@@ -23,8 +23,7 @@ import {
   getImportantWords,
   normalizeBibleId,
 } from '../../lib/bible.ts';
-import { NO_CACHE } from './util.ts';
-import { loggFeil } from '../../lib/error-handler.ts';
+import { NO_CACHE, internFeil } from './util.ts';
 
 const r = new Hono();
 
@@ -42,8 +41,7 @@ r.get('/', async (c) => {
     const { results, total, hasMore } = await searchVerses(query, limit, offset, bible);
     return c.json({ results, total, hasMore }, 200, NO_CACHE);
   } catch (error) {
-    loggFeil('Error searching verses', error);
-    return c.json({ error: 'Internal server error' }, 500);
+    return internFeil(c, 'Error searching verses', error);
   }
 });
 
@@ -75,8 +73,7 @@ r.get('/all', async (c) => {
       NO_CACHE,
     );
   } catch (error) {
-    loggFeil('Error in combined search', error);
-    return c.json({ error: 'Internal server error' }, 500);
+    return internFeil(c, 'Error in combined search', error);
   }
 });
 
@@ -181,8 +178,7 @@ r.get('/chapter-resources', async (c) => {
       NO_CACHE,
     );
   } catch (error) {
-    loggFeil('Error fetching chapter resources', error);
-    return c.json({ error: 'Internal server error' }, 500);
+    return internFeil(c, 'Error fetching chapter resources', error);
   }
 });
 
@@ -196,8 +192,7 @@ r.get('/original', async (c) => {
   try {
     return c.json(await searchOriginalWord(query, limit, offset), 200, NO_CACHE);
   } catch (error) {
-    loggFeil('Error searching original text', error);
-    return c.json({ error: 'Internal server error' }, 500);
+    return internFeil(c, 'Error searching original text', error);
   }
 });
 

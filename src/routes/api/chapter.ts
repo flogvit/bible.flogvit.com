@@ -13,10 +13,22 @@ import {
   normalizeBibleId,
 } from '../../lib/bible.ts';
 import { mapChapter, resolveMappingId } from '../../lib/verse-mapper.ts';
-import { NO_CACHE } from './util.ts';
-import { loggFeil } from '../../lib/error-handler.ts';
+import { NO_CACHE, internFeil } from './util.ts';
 
 const r = new Hono();
+
+/**
+ * Kapittelmetadata. Boksammendraget følger det FORESPURTE kapittelet (1), resten
+ * `metaChapter` — med mapping er det osnb-kapittelet primærinnholdet står i.
+ */
+async function chapterMeta(bookId: number, chapter: number, metaChapter: number) {
+  return {
+    bookSummary: chapter === 1 ? await getBookSummary(bookId) : null,
+    summary: await getChapterSummary(bookId, metaChapter),
+    context: await getChapterContext(bookId, metaChapter),
+    insight: await getChapterInsight(bookId, metaChapter),
+  };
+}
 
 /**
  * GET /api/chapter?book=&chapter=&bible=&mapping=&secondary=
@@ -27,6 +39,8 @@ r.get('/', async (c) => {
   const chapterStr = c.req.query('chapter');
   const bible = normalizeBibleId(c.req.query('bible')) || 'osnb';
   const mapping = normalizeBibleId(c.req.query('mapping'));
+  const secondary = c.req.query('secondary');
+  const lang = bible === 'osnn' ? 'nn' : 'nb';
 
   if (!bookIdStr || !chapterStr) {
     return c.json({ error: 'Missing required parameters: book and chapter' }, 400);
@@ -69,7 +83,6 @@ r.get('/', async (c) => {
         if (orig) originalVerses.push({ verse: m.displayVerse, text: orig.text });
       }
 
-      const lang = bible === 'osnn' ? 'nn' : 'nb';
       const word4word: Record<number, unknown[]> = {};
       for (const m of mapped) {
         const w4w = await getOriginalWord4Word(bookId, m.osnbChapter, m.osnbVerse, lang);
@@ -82,7 +95,6 @@ r.get('/', async (c) => {
         if (refs.length > 0) references[m.displayVerse] = refs;
       }
 
-      const secondary = c.req.query('secondary');
       let secondaryVerses: { verse: number; text: string }[] | undefined;
       if (secondary && secondary !== 'original' && secondary !== bible) {
         const secVerses: { verse: number; text: string }[] = [];
@@ -94,11 +106,7 @@ r.get('/', async (c) => {
       }
 
       // Kapittelmetadata bruker osnb-kapittelet (primærinnholdet).
-      const primaryChapter = mapped[0]?.osnbChapter ?? chapter;
-      const bookSummary = chapter === 1 ? await getBookSummary(bookId) : null;
-      const summary = await getChapterSummary(bookId, primaryChapter);
-      const context = await getChapterContext(bookId, primaryChapter);
-      const insight = await getChapterInsight(bookId, primaryChapter);
+      const meta = await chapterMeta(bookId, chapter, mapped[0]?.osnbChapter ?? chapter);
 
       return c.json(
         {
@@ -111,10 +119,7 @@ r.get('/', async (c) => {
           ...(secondaryVerses && { secondaryVerses }),
           word4word,
           references,
-          bookSummary,
-          summary,
-          context,
-          insight,
+          ...meta,
           cachedAt: Date.now(),
         },
         200,
@@ -129,7 +134,6 @@ r.get('/', async (c) => {
     const originalVersesRaw = await getOriginalVerses(bookId, chapter);
     const originalVerses = originalVersesRaw.map((v) => ({ verse: v.verse, text: v.text }));
 
-    const secondary = c.req.query('secondary');
     let secondaryVerses: { verse: number; text: string }[] | undefined;
     if (secondary && secondary !== 'original' && secondary !== bible) {
       const secondaryRaw = await getVerses(bookId, chapter, secondary);
@@ -138,7 +142,6 @@ r.get('/', async (c) => {
       }
     }
 
-    const lang = bible === 'osnn' ? 'nn' : 'nb';
     const word4word: Record<number, unknown[]> = {};
     for (const verse of verses) {
       const w4w = await getOriginalWord4Word(bookId, chapter, verse.verse, lang);
@@ -151,10 +154,7 @@ r.get('/', async (c) => {
       if (refs.length > 0) references[verse.verse] = refs;
     }
 
-    const bookSummary = chapter === 1 ? await getBookSummary(bookId) : null;
-    const summary = await getChapterSummary(bookId, chapter);
-    const context = await getChapterContext(bookId, chapter);
-    const insight = await getChapterInsight(bookId, chapter);
+    const meta = await chapterMeta(bookId, chapter, chapter);
 
     return c.json(
       {
@@ -166,18 +166,14 @@ r.get('/', async (c) => {
         ...(secondaryVerses && { secondaryVerses }),
         word4word,
         references,
-        bookSummary,
-        summary,
-        context,
-        insight,
+        ...meta,
         cachedAt: Date.now(),
       },
       200,
       NO_CACHE,
     );
   } catch (error) {
-    loggFeil('Error fetching chapter', error);
-    return c.json({ error: 'Internal server error' }, 500);
+    return internFeil(c, 'Error fetching chapter', error);
   }
 });
 

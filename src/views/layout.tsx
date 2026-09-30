@@ -293,7 +293,7 @@ function AccountChip({ t }: { t: Translator }) {
   );
 }
 
-function Header({ t, u }: { t: Translator; u: (p: string) => string }) {
+function Header({ t }: { t: Translator }) {
   return (
     <header class="site-header">
       <div class="site-header-inner">
@@ -394,7 +394,7 @@ function Header({ t, u }: { t: Translator; u: (p: string) => string }) {
   );
 }
 
-function Footer({ t, u }: { t: Translator; u: (p: string) => string }) {
+function Footer({ t }: { t: Translator }) {
   return (
     <footer class="site-footer">
       <div class="site-footer-inner">
@@ -497,7 +497,6 @@ export interface LayoutProps {
 /** Fullt HTML-dokument med familie-chromen. */
 export function Layout(props: LayoutProps) {
   const t = makeT(props.locale);
-  const u = (p: string) => href(props.locale, p);
   const desc = props.description ?? t('chrome.searchPlaceholder');
   const card = props.shareCard ?? shareCard();
   return (
@@ -556,11 +555,11 @@ export function Layout(props: LayoutProps) {
           <a class="skip-link" href="#innhold">
             {tCtx()('common.skipToContent')}
           </a>
-          <Header t={t} u={u} />
+          <Header t={t} />
           <main id="innhold" class={props.wide ? 'site-main site-main-wide' : 'site-main'}>
             {props.children}
           </main>
-          <Footer t={t} u={u} />
+          <Footer t={t} />
           <script type="module" src={assetUrl('/js/chrome.js')} />
           <script type="module" src={assetUrl('/js/shortcuts.js')} />
           <script type="module" src={assetUrl('/js/plus.js')} />

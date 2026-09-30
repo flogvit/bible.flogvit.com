@@ -9,34 +9,18 @@
 // Regnestykkene er rene funksjoner uten lagring, slik at de kan testes uten
 // nettleser.
 
+import { readJSON, writeJSON } from './store.js';
+
 const ACTIVE_KEY = 'activeReadingPlan';
 const PROGRESS_KEY = 'readingPlanProgress';
 
-function read(key, fallback) {
-  try {
-    const raw = localStorage.getItem(key);
-    return raw ? JSON.parse(raw) : fallback;
-  } catch {
-    return fallback;
-  }
-}
-
-function write(key, value) {
-  try {
-    localStorage.setItem(key, JSON.stringify(value));
-  } catch {
-    // Kvote full eller skrivesperret (gratisbruker, plus.js) — tilstanden
-    // lever videre i minnet for denne sidevisningen.
-  }
-}
-
 export function activePlanId() {
-  const id = read(ACTIVE_KEY, null);
+  const id = readJSON(ACTIVE_KEY, null);
   return typeof id === 'string' ? id : null;
 }
 
 export function allProgress() {
-  const all = read(PROGRESS_KEY, {});
+  const all = readJSON(PROGRESS_KEY, {});
   return all && typeof all === 'object' ? all : {};
 }
 
@@ -56,20 +40,13 @@ export function today() {
  * porten skrev bare plan-id-en, så panelet hadde ingenting å vise (#35).
  */
 export function startPlan(planId, pacing = 'scheduled') {
-  write(ACTIVE_KEY, planId);
+  writeJSON(ACTIVE_KEY, planId);
   const all = allProgress();
   if (!all[planId]) {
     all[planId] = { planId, startDate: today(), completedDays: [], lastReadDate: null, pacing };
-    write(PROGRESS_KEY, all);
+    writeJSON(PROGRESS_KEY, all);
   }
   return all[planId];
-}
-
-export function savePlanProgress(planId, progress) {
-  const all = allProgress();
-  all[planId] = progress;
-  write(PROGRESS_KEY, all);
-  return progress;
 }
 
 /** Hvilken dag i planen kalenderen står på. Dag 1 er startdatoen. */

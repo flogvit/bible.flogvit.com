@@ -8,6 +8,7 @@ import { Hono } from 'hono';
 import type { AppEnv } from '../../lib/session.ts';
 import { Layout } from '../../views/layout.tsx';
 import { Breadcrumbs } from '../../views/breadcrumbs.tsx';
+import { verseUrl } from '../../views/verse-display.tsx';
 import {
   searchVerses,
   searchOriginalWord,
@@ -35,8 +36,6 @@ import {
   booksData, getBookInfoById, bookName, bookNameById, bookNameByShort, bookAbbrById, type BookInfo,
 } from '../../lib/books-data.ts';
 import { toUrlSlug } from '../../lib/url-utils.ts';
-// @ts-expect-error — delt klient-modul uten typer (formen bor ett sted, se #91)
-import { verseHash } from '../../../public/js/verse-hash.js';
 import { layoutProps, tFor, type Translator, lhref, islandStrings, tEnum } from '../../lib/i18n.ts';
 import { tCtx } from '../../lib/i18n.ts';
 
@@ -115,8 +114,7 @@ function dayRefLabel(ref: DayReference): string {
 }
 
 function dayRefUrl(ref: DayReference): string {
-  const book = getBookInfoById(ref.bookId);
-  return `/${book ? toUrlSlug(book.short_name) : ''}/${ref.chapterId}${verseHash(ref.fromVerseId, ref.toVerseId)}`;
+  return verseUrl(getBookInfoById(ref.bookId)?.short_name ?? '', ref.chapterId, ref.fromVerseId, ref.toVerseId);
 }
 
 /** Kompakt referanse for en lesetekst-del: «Jer 1:17-19». */
@@ -127,8 +125,7 @@ function rangeLabel(range: VerseRange): string {
 }
 
 function rangeUrl(range: VerseRange): string {
-  const book = getBookInfoById(range.book_id);
-  return `/${book ? toUrlSlug(book.short_name) : ''}/${range.chapter}${verseHash(range.verse_start, range.verse_end)}`;
+  return verseUrl(getBookInfoById(range.book_id)?.short_name ?? '', range.chapter, range.verse_start, range.verse_end);
 }
 
 /** Strengene forside-øya bygger DOM med. Serveren oversetter, øya substituerer. */
@@ -187,7 +184,7 @@ r.get('/', async (c) => {
                   </div>
                   <div class="home-vod-foot">
                     <div class="home-vod-ref">
-                      <a href={lhref(`/${toUrlSlug(verse.shortName)}/${verse.chapter}${verseHash(verse.verseStart, verse.verseEnd)}`)}>
+                      <a href={lhref(verseUrl(verse.shortName, verse.chapter, verse.verseStart, verse.verseEnd))}>
                         {bookNameByShort(verse.shortName)} {verse.chapter}:{verseRange}
                       </a>
                       {verse.note && <span class="home-vod-note"> · {verse.note}</span>}
@@ -489,7 +486,7 @@ r.get('/sok', async (c) => {
     >
       <div class="search-main">
         <div class="reading-container">
-          <Breadcrumbs items={[{ label: tCtx()('common.home'), href: '/' }, { label: tCtx()('search.title') }]} />
+          <Breadcrumbs items={[{ label: tCtx()('search.title') }]} />
           <h1>{t('search.inBible')}</h1>
 
           <form class="search-form" action="/sok" method="get" role="search">
@@ -576,7 +573,6 @@ r.get('/sok/original', async (c) => {
         <div class="reading-container">
           <Breadcrumbs
             items={[
-              { label: tCtx()('common.home'), href: '/' },
               { label: tCtx()('search.title'), href: '/sok' },
               { label: t('so.originalLangs') },
             ]}

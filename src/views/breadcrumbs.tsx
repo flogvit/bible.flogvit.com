@@ -3,13 +3,17 @@ import { lhref, tCtx } from '../lib/i18n.ts';
 import { relFor } from '../lib/crawl.ts';
 // Brødsmulesti — port av React-appens Breadcrumbs (samme markup-kontrakt:
 // nav > ol > li med lenker, siste element uten lenke).
+//
+// Forsiden står først på hver eneste sti, så den legges på HER — kallstedene
+// oppgir bare smulene etter den.
 
 export interface Crumb {
   label: string;
   href?: string;
 }
 
-export function Breadcrumbs({ items }: { items: Crumb[] }) {
+export function Breadcrumbs({ items: after }: { items: Crumb[] }) {
+  const items: Crumb[] = [{ label: tCtx()('common.home'), href: '/' }, ...after];
   return (
     <nav class="breadcrumbs" aria-label={tCtx()('common.breadcrumbAria')}>
       <ol>

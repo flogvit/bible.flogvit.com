@@ -4,6 +4,8 @@
 // studium-overlegg). reading.js eier versdetaljer/layout/posisjon/kopiering.
 
 import { readStrings, langParam, localeHref } from './locale.js';
+import { el } from './dom.js';
+import { readJSON, writeJSON } from './store.js';
 
 const t = readStrings(document.body);
 
@@ -13,37 +15,17 @@ const KEYS = {
   devotionals: 'bible-devotionals',
 };
 
-function read(key, fallback) {
-  try {
-    const raw = localStorage.getItem(key);
-    return raw ? JSON.parse(raw) : fallback;
-  } catch {
-    return fallback;
-  }
-}
-function write(key, value) {
-  try {
-    localStorage.setItem(key, JSON.stringify(value));
-  } catch {}
-}
-function el(tag, cls, text) {
-  const e = document.createElement(tag);
-  if (cls) e.className = cls;
-  if (text != null) e.textContent = text;
-  return e;
-}
-
 const sidebar = document.querySelector('[data-panel-tabs]');
 if (sidebar) {
   // ── Sidebar-blokker: husk åpen/lukket per blokk ──────────────────
-  const blockState = read(KEYS.blocks, {});
+  const blockState = readJSON(KEYS.blocks, {});
   sidebar.querySelectorAll('.st-block[data-block-id]').forEach((block) => {
     const id = block.dataset.blockId;
     if (id in blockState) block.open = !!blockState[id];
     block.addEventListener('toggle', () => {
-      const cur = read(KEYS.blocks, {});
+      const cur = readJSON(KEYS.blocks, {});
       cur[id] = block.open;
-      write(KEYS.blocks, cur);
+      writeJSON(KEYS.blocks, cur);
     });
   });
 
@@ -74,7 +56,7 @@ if (sidebar) {
       const w = Math.min(Math.max(px, 220), window.innerWidth * 0.6);
       layout.style.setProperty('--sidebar-width', `${Math.round(w)}px`);
     };
-    const saved = read(KEYS.settings, {}).sidebarWidth;
+    const saved = readJSON(KEYS.settings, {}).sidebarWidth;
     if (saved) setWidth(saved);
     let dragging = false;
     resizer.addEventListener('pointerdown', (e) => {
@@ -89,11 +71,11 @@ if (sidebar) {
     resizer.addEventListener('pointerup', () => {
       dragging = false;
       resizer.classList.remove('is-dragging');
-      const s = read(KEYS.settings, {});
+      const s = readJSON(KEYS.settings, {});
       const w = layout.style.getPropertyValue('--sidebar-width');
       if (w) {
         s.sidebarWidth = parseInt(w, 10);
-        write(KEYS.settings, s);
+        writeJSON(KEYS.settings, s);
       }
     });
     resizer.addEventListener('dblclick', () => {
@@ -149,7 +131,7 @@ if (sidebar) {
   const chDevs = sidebar.querySelector('[data-chapter-devotionals]');
   if (chDevs) {
     const prefix = chDevs.dataset.chapterPrefix || '';
-    const devs = read(KEYS.devotionals, []).filter((d) => (d.verses || []).some((v) => v.startsWith(prefix)));
+    const devs = readJSON(KEYS.devotionals, []).filter((d) => (d.verses || []).some((v) => v.startsWith(prefix)));
     devs.forEach((d) => {
       const li = el('li', 'st-ms-item');
       const a = el('a', 'st-ms-title', d.title || t('is.untitled'));
@@ -255,15 +237,15 @@ if (toolbar) {
     location.href = url.pathname + url.search + url.hash;
   }
   document.querySelector('[data-secondary-select]')?.addEventListener('change', (e) => {
-    const s = read(KEYS.settings, {});
+    const s = readJSON(KEYS.settings, {});
     s.secondaryBible = e.target.value;
-    write(KEYS.settings, s);
+    writeJSON(KEYS.settings, s);
     navigateWithParam('secondary', e.target.value);
   });
   document.querySelector('[data-mapping-select]')?.addEventListener('change', (e) => {
-    const s = read(KEYS.settings, {});
+    const s = readJSON(KEYS.settings, {});
     s.verseMapping = e.target.value;
-    write(KEYS.settings, s);
+    writeJSON(KEYS.settings, s);
     navigateWithParam('mapping', e.target.value === 'osnb' ? '' : e.target.value);
   });
 
@@ -272,12 +254,12 @@ if (toolbar) {
   function paintFontButtons(size) {
     fontButtons.forEach((b) => b.classList.toggle('is-active', b.dataset.fontSize === (size || 'medium')));
   }
-  paintFontButtons(read(KEYS.settings, {}).fontSize);
+  paintFontButtons(readJSON(KEYS.settings, {}).fontSize);
   fontButtons.forEach((btn) => {
     btn.addEventListener('click', () => {
-      const s = read(KEYS.settings, {});
+      const s = readJSON(KEYS.settings, {});
       s.fontSize = btn.dataset.fontSize;
-      write(KEYS.settings, s);
+      writeJSON(KEYS.settings, s);
       paintFontButtons(s.fontSize);
       document.dispatchEvent(new CustomEvent('bibel:font-size', { detail: s.fontSize }));
     });

@@ -6,6 +6,7 @@
 
 import { getChapter, getUserBibles } from './offline-db.js';
 import { readStrings } from './locale.js';
+import { readJSON } from './store.js';
 
 const t = readStrings(document.body);
 
@@ -22,14 +23,6 @@ const ds = document.body.dataset;
 const bookId = parseInt(ds.bookId || '', 10);
 const chapter = parseInt(ds.chapter || '', 10);
 if (bookId && chapter) init();
-
-function settings() {
-  try {
-    return JSON.parse(localStorage.getItem('bible-settings') || '{}');
-  } catch {
-    return {};
-  }
-}
 
 function currentQueryWith(name, value) {
   const url = new URL(location.href);
@@ -90,7 +83,7 @@ async function applyUserSecondary(userSecondaryId, bibles) {
 
 function extendSwitcher(bibles, userBibleId) {
   const box = document.querySelector('.tools-bibles');
-  const hidden = settings().hiddenBibles || [];
+  const hidden = readJSON('bible-settings', {}).hiddenBibles || [];
   if (box) {
     box.querySelectorAll('.tools-bible-button').forEach((btn) => {
       const href = btn.getAttribute('href') || '';

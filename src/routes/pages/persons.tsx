@@ -68,7 +68,7 @@ r.get('/personer', async (c) => {
     >
       <div class="persons-main">
         <div class="reading-container">
-          <Breadcrumbs items={[{ label: t('common.home'), href: '/' }, { label: t('persons.title') }]} />
+          <Breadcrumbs items={[{ label: t('persons.title') }]} />
 
           <h1>{t('persons.title')}</h1>
           <p class="persons-intro">
@@ -219,7 +219,6 @@ r.get('/personer/:personId', async (c) => {
         <div class="reading-container">
           <Breadcrumbs
             items={[
-              { label: tCtx()('common.home'), href: '/' },
               { label: tCtx()('nav.persons'), href: '/personer' },
               { label: person.name },
             ]}

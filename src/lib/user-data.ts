@@ -4,7 +4,8 @@
 
 import { getSql } from './db.ts';
 
-function parseData<T>(raw: unknown): T | null {
+/** `data`-kolonnen i sync_items: JSON-typen kan komme som objekt eller streng. */
+export function parseData<T>(raw: unknown): T | null {
   if (raw == null) return null;
   if (typeof raw === 'object') return raw as T;
   try {

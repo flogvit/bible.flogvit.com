@@ -130,7 +130,7 @@ interface SpecRange {
  * normalisert til kolon («6b-65:2»), og det er nettopp den formen som falt ut
  * før. Uten eget kapittel arver slutten startens.
  */
-export function parseVerseSpec(spec: string, baseChapter: number): SpecRange[] {
+function parseVerseSpec(spec: string, baseChapter: number): SpecRange[] {
   if (!spec) return [];
   const out: SpecRange[] = [];
   for (const part of spec.replace(/[–—]/g, '-').split('.')) {

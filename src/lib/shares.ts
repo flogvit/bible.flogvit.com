@@ -15,6 +15,7 @@
 // delingslenke plus-gated. Å LESE en delt lenke er gratis og krever ingen konto.
 
 import { getSql } from './db.ts';
+import { parseData } from './user-data.ts';
 
 export interface ShareRow {
   token: string;
@@ -22,10 +23,14 @@ export interface ShareRow {
   createdAt: number;
 }
 
+type ShareDbRow = { token: string; item_id: string; created_at: number | bigint };
+
+const toShareRow = (r: ShareDbRow): ShareRow => ({ token: r.token, itemId: r.item_id, createdAt: Number(r.created_at) });
+
 /** 32 byte crypto-tilfeldighet, base64url (43 tegn) — ingen padding i URL-er. */
 function newToken(): string {
   const bytes = crypto.getRandomValues(new Uint8Array(32));
-  return btoa(String.fromCharCode(...bytes)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  return Buffer.from(bytes).toString('base64url');
 }
 
 /** Manuskriptet slik det ligger i sync_items (`data` fra klienten). */
@@ -39,23 +44,13 @@ export interface SharedDevotional {
   versions?: { content?: string; locked?: boolean }[];
 }
 
-function parse<T>(raw: unknown): T | null {
-  if (raw == null) return null;
-  if (typeof raw === 'object') return raw as T;
-  try {
-    return JSON.parse(String(raw)) as T;
-  } catch {
-    return null;
-  }
-}
-
 /** Delingslenkene brukeren har i dag, nyeste først. */
 export async function listShares(userId: number): Promise<ShareRow[]> {
   const rows = (await getSql()`
     SELECT token, item_id, created_at FROM devotional_shares
     WHERE user_id = ${userId} ORDER BY created_at DESC
-  `) as { token: string; item_id: string; created_at: number | bigint }[];
-  return rows.map((r) => ({ token: r.token, itemId: r.item_id, createdAt: Number(r.created_at) }));
+  `) as ShareDbRow[];
+  return rows.map(toShareRow);
 }
 
 /**
@@ -75,9 +70,8 @@ export async function createShare(userId: number, itemId: string): Promise<Share
   const existing = (await sql`
     SELECT token, item_id, created_at FROM devotional_shares
     WHERE user_id = ${userId} AND item_id = ${itemId}
-  `) as { token: string; item_id: string; created_at: number | bigint }[];
-  const found = existing[0];
-  if (found) return { token: found.token, itemId: found.item_id, createdAt: Number(found.created_at) };
+  `) as ShareDbRow[];
+  if (existing[0]) return toShareRow(existing[0]);
 
   const token = newToken();
   const createdAt = Date.now();
@@ -128,7 +122,7 @@ export async function resolveShare(token: string): Promise<SharedDevotional | nu
       ON i.user_id = s.user_id AND i.item_id = s.item_id AND i.data_type = 'devotionals'
     WHERE s.token = ${token} AND i.deleted = 0
   `) as { data: unknown }[];
-  return rows[0] ? parse<SharedDevotional>(rows[0].data) : null;
+  return rows[0] ? parseData<SharedDevotional>(rows[0].data) : null;
 }
 
 /** Innholdet som skal vises: utkastet, ellers første versjon. */

@@ -15,7 +15,7 @@ import { heatLevel, HEAT_LEVELS as SHARED_HEAT_LEVELS } from '../../public/js/re
 /** Antall intensitetsnivåer i varmekartet (1 = lest én gang, HEAT_LEVELS = ofte). */
 export const HEAT_LEVELS: number = SHARED_HEAT_LEVELS;
 
-export const TOTAL_CHAPTERS = booksData.reduce((sum, b) => sum + b.chapters, 0);
+const TOTAL_CHAPTERS = booksData.reduce((sum, b) => sum + b.chapters, 0);
 
 export interface ProgressSummary {
   chaptersRead: number;

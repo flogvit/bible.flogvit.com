@@ -69,7 +69,8 @@ async function etagFor(path: string): Promise<string | null> {
  * som ikke rører CSS-en beholder cachen.
  *
  * Merk: dette dekker inngangspunktene layout skriver ut. Modulimportene inne i
- * `public/js/` (`./locale.js`) er uendret og lener seg på ETag-en.
+ * `public/js/` (`./locale.js`, `./dom.js`, `./store.js`, `./fv-auth.js` …) får
+ * ingen `?v=` og lener seg på ETag-en.
  */
 const versioned = new Map<string, string>();
 registrerMinnekilde('static-cache/versioned', () => ({ oppforinger: versioned.size }));

@@ -20,15 +20,6 @@ import { parseStandardRef, refSegmentToUrl, findBookClient } from '../lib/standa
 import { getBookInfoBySlug } from '../lib/books-data.ts';
 import { lhref } from '../lib/i18n.ts';
 
-// Samme mønster som i React-utgaven (re-eksportert for gjenbruk i andre views)
-export const REF_PATTERN = /\[(vers|ref|manuskript|andakt|tema|person|profeti|parallell|historie):([^\]]+)\]/g;
-
-/** Sjekk om en streng inneholder klammer-referanser */
-export function hasInlineRefs(text: string): boolean {
-  REF_PATTERN.lastIndex = 0;
-  return REF_PATTERN.test(text);
-}
-
 type SegmentType =
   | 'text'
   | 'vers'

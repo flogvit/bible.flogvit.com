@@ -21,6 +21,7 @@ import { getSql, closeSql } from '../src/lib/db.ts';
 import { ensureSchema } from '../src/lib/schema.ts';
 import { publicationSlug } from '../src/lib/publications.ts';
 import { L } from './paths.ts';
+import { kontoUser, startMockKonto } from './mock-konto.ts';
 
 setDefaultTimeout(DB_TEST_TIMEOUT_MS);
 
@@ -92,21 +93,10 @@ async function decide(slug: string, status: 'approved' | 'rejected', note?: stri
 }
 
 beforeAll(async () => {
-  mock = Bun.serve({
-    port: 0,
-    fetch(req) {
-      const cookie = req.headers.get('cookie') ?? '';
-      const user = (id: number, plus: boolean) =>
-        Response.json({
-          user: { id, email: `kat-${id}@flogvit.com`, displayName: 'Katalog-test', verified: true, plus, plusUntil: null },
-          csrf: 'csrf',
-        });
-      if (cookie.includes('fv-session=kat-plus')) return user(PLUS_USER, true);
-      if (cookie.includes('fv-session=kat-free')) return user(FREE_USER, false);
-      return Response.json({ user: null });
-    },
+  mock = startMockKonto({
+    'kat-plus': () => kontoUser({ id: PLUS_USER, plus: true }),
+    'kat-free': () => kontoUser({ id: FREE_USER, plus: false }),
   });
-  process.env.ACCOUNT_API_URL = `http://localhost:${mock.port}`;
   process.env.REVIEW_TOKEN = TOKEN;
   app = createApp();
   await ensureSchema(getSql());

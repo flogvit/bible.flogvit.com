@@ -10,7 +10,7 @@ import { contextStorage } from 'hono/context-storage';
 import { initBooks } from '../src/lib/bible.ts';
 import { closeSql } from '../src/lib/db.ts';
 import { Footnotes } from '../src/views/footnotes.tsx';
-import { InlineRefs, hasInlineRefs } from '../src/views/inline-refs.tsx';
+import { InlineRefs } from '../src/views/inline-refs.tsx';
 import { KeyEventList, VerseRefList } from '../src/views/verse-display.tsx';
 import { ItemTagging } from '../src/views/item-tagging.tsx';
 
@@ -121,11 +121,6 @@ describe('InlineRefs', () => {
     expect(html).toContain('href="/en/personer/moses"');
     expect(html).toContain('class="inline-ref-resource"');
     expect(html).toContain('>Moses</a>');
-  });
-
-  test('hasInlineRefs gjenkjenner klammer-referanser', () => {
-    expect(hasInlineRefs('Se [ref:Joh 3,16]')).toBe(true);
-    expect(hasInlineRefs('Ingen referanser her')).toBe(false);
   });
 });
 

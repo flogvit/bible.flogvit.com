@@ -11,31 +11,19 @@
 // TODO(#12): sync-kobling
 
 import { readStrings } from './locale.js';
+import { readJSON, writeJSON } from './store.js';
 
 const t = readStrings(document.body);
 
 const STORAGE_KEY = 'bible-topics';
 
 function loadData() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    const data = raw ? JSON.parse(raw) : {};
-    return {
-      topics: Array.isArray(data.topics) ? data.topics : [],
-      verseTopics: Array.isArray(data.verseTopics) ? data.verseTopics : [],
-      itemTopics: Array.isArray(data.itemTopics) ? data.itemTopics : [],
-    };
-  } catch {
-    return { topics: [], verseTopics: [], itemTopics: [] };
-  }
-}
-
-function saveData(data) {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-  } catch {
-    /* full/utilgjengelig storage — ignorér */
-  }
+  const data = readJSON(STORAGE_KEY, {}) ?? {};
+  return {
+    topics: Array.isArray(data.topics) ? data.topics : [],
+    verseTopics: Array.isArray(data.verseTopics) ? data.verseTopics : [],
+    itemTopics: Array.isArray(data.itemTopics) ? data.itemTopics : [],
+  };
 }
 
 // Samme id-generator som gamle TopicsContext
@@ -166,7 +154,7 @@ function initContainer(container) {
       remove.addEventListener('click', () => {
         const d = loadData();
         removeTopicFromItem(d, itemType, itemId, topic.id);
-        saveData(d);
+        writeJSON(STORAGE_KEY, d);
         render();
       });
       tag.appendChild(remove);
@@ -182,7 +170,7 @@ function initContainer(container) {
     const data = loadData();
     const topic = existingTopic ? existingTopic : addTopic(data, value);
     addTopicToItem(data, itemType, itemId, topic.id);
-    saveData(data);
+    writeJSON(STORAGE_KEY, data);
     input.value = '';
     hideSuggestions();
     render();

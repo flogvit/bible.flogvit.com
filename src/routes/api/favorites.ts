@@ -1,5 +1,5 @@
 import { Hono } from 'hono';
-import { getSql } from '../../lib/db.ts';
+import { getFavoriteVerses } from '../../lib/bible.ts';
 import { bookNameByShort } from '../../lib/books-data.ts';
 import { loggFeil } from '../../lib/error-handler.ts';
 
@@ -21,29 +21,14 @@ r.post('/', async (c) => {
       return c.json([]);
     }
 
-    const sql = getSql();
-    const results = (
-      await Promise.all(
-        favorites.map(async (fav) => {
-          const [verse] = (await sql`
-            SELECT v.text, b.name_no AS book_name, b.short_name AS book_short_name
-            FROM verses v
-            JOIN books b ON v.book_id = b.id
-            WHERE v.book_id = ${fav.bookId} AND v.chapter = ${fav.chapter}
-              AND v.verse = ${fav.verse} AND v.bible = 'osnb'
-          `) as { text: string; book_name: string; book_short_name: string }[];
-          if (!verse) return null;
-          return {
-            bookId: fav.bookId,
-            chapter: fav.chapter,
-            verse: fav.verse,
-            bookName: bookNameByShort(verse.book_short_name),
-            bookShortName: verse.book_short_name,
-            text: verse.text,
-          };
-        }),
-      )
-    ).filter(Boolean);
+    const results = (await getFavoriteVerses(favorites)).map((v) => ({
+      bookId: v.bookId,
+      chapter: v.chapter,
+      verse: v.verse,
+      bookName: bookNameByShort(v.bookShortName),
+      bookShortName: v.bookShortName,
+      text: v.text,
+    }));
 
     return c.json(results);
   } catch (error) {

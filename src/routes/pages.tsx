@@ -5,7 +5,6 @@
 
 import { Hono } from 'hono';
 import type { AppEnv } from '../lib/session.ts';
-import { Layout } from '../views/layout.tsx';
 import homeSearch from './pages/home-search.tsx';
 import persons from './pages/persons.tsx';
 import themes from './pages/themes.tsx';

@@ -4,7 +4,7 @@
 // src/lib/bible.ts (getVersesWithOriginal) i stedet for POST /api/verses fra
 // klienten — samme markupstruktur og tekster.
 
-import { getVersesWithOriginal, getBookUrlSlug, getBookById, defaultBibleForLanguage } from '../lib/bible.ts';
+import { getVersesWithOriginal, defaultBibleForLanguage } from '../lib/bible.ts';
 import type { PersonKeyEvent, VerseRef, VerseWithOriginal } from '../lib/bible.ts';
 import { toUrlSlug } from '../lib/url-utils.ts';
 // @ts-expect-error — delt klient-modul uten typer (formen bor ett sted, se #91)
@@ -110,11 +110,13 @@ export async function KeyEventList({ keyEvents, bible }: { keyEvents: PersonKeyE
   );
 }
 
-/** Hjelper: bygg lesevisnings-URL for en VerseRef (første vers). */
-export function verseRefUrl(ref: VerseRef): string {
-  const book = getBookById(ref.bookId);
-  if (!book) return '#';
-  const first = ref.verses?.[0] ?? ref.verse;
-  const last = ref.verses?.[ref.verses.length - 1] ?? ref.verse;
-  return `/${getBookUrlSlug(book)}/${ref.chapter}${first ? verseHash(first, last) : ''}`;
+/**
+ * Lesevisnings-adressen til et vers eller en versrekke: `/joh/3#v16-18`.
+ *
+ * Hashen er formen i `public/js/verse-hash.js` (#91); her settes den sammen med
+ * bok og kapittel, så lenkebyggerne i sidene ikke gjør det hver for seg. Uten
+ * gyldig startvers blir det kapitteladressen alene.
+ */
+export function verseUrl(bookShortName: string, chapter: number, start?: number, end?: number | null): string {
+  return `/${toUrlSlug(bookShortName)}/${chapter}${verseHash(start, end)}`;
 }

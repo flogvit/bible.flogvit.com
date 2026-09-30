@@ -4,25 +4,12 @@
 
 import { getBooks, getChapter, countChapters } from './offline-db.js';
 import { readStrings, localeHref } from './locale.js';
+import { el } from './dom.js';
+import { readJSON } from './store.js';
 
 const t = readStrings(document.body);
 
 const root = document.querySelector('[data-offline-reader]');
-
-function el(tag, cls, text) {
-  const node = document.createElement(tag);
-  if (cls) node.className = cls;
-  if (text !== undefined) node.textContent = text;
-  return node;
-}
-
-function readSettings() {
-  try {
-    return JSON.parse(localStorage.getItem('bible-settings') || '{}');
-  } catch {
-    return {};
-  }
-}
 
 function slugFor(book) {
   return (book.short_name || '').toLowerCase();
@@ -45,7 +32,7 @@ async function resolvePath() {
 }
 
 async function renderChapter(book, chapter, books) {
-  const settings = readSettings();
+  const settings = readJSON('bible-settings', {});
   const params = new URLSearchParams(location.search);
   const bible = params.get('bible') || settings.bible || 'osnb';
   let stored = await getChapter(book.id, chapter, bible);

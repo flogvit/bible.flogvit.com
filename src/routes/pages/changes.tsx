@@ -14,7 +14,6 @@ import type { AppEnv } from '../../lib/session.ts';
 import { Layout } from '../../views/layout.tsx';
 import { Breadcrumbs } from '../../views/breadcrumbs.tsx';
 import { layoutProps, tFor, lhref, currentIntlTag } from '../../lib/i18n.ts';
-import { tCtx } from '../../lib/i18n.ts';
 import { absoluteUrl } from '../../lib/site-url.ts';
 
 const r = new Hono<AppEnv>();
@@ -178,7 +177,7 @@ r.get('/changes', async (c) => {
     >
       <div class="about-main">
         <div class="reading-container">
-          <Breadcrumbs items={[{ label: tCtx()('common.home'), href: '/' }, { label: t('ch.title') }]} />
+          <Breadcrumbs items={[{ label: t('ch.title') }]} />
           <h1>{t('ch.title')}</h1>
           <p class="overview-intro">{t('ch.intro')}</p>
 

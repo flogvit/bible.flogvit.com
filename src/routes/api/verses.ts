@@ -3,8 +3,7 @@ import {
   getVersesWithOriginal, normalizeBibleId, defaultBibleForLanguage, type VerseRef,
 } from '../../lib/bible.ts';
 import { parseStandardRef, refSegmentsToVerseRefs } from '../../lib/standard-ref-parser.ts';
-import { NO_CACHE } from './util.ts';
-import { loggFeil } from '../../lib/error-handler.ts';
+import { NO_CACHE, internFeil } from './util.ts';
 
 const r = new Hono();
 
@@ -26,8 +25,7 @@ r.get('/', async (c) => {
     const verses = await getVersesWithOriginal(verseRefs as VerseRef[], bible);
     return c.json(verses, 200, { 'Cache-Control': 'public, max-age=86400' });
   } catch (error) {
-    loggFeil('Error fetching verses', error);
-    return c.json({ error: 'Internal server error' }, 500);
+    return internFeil(c, 'Error fetching verses', error);
   }
 });
 
@@ -43,8 +41,7 @@ r.post('/', async (c) => {
     const verses = await getVersesWithOriginal(refs, bible);
     return c.json(verses, 200, NO_CACHE);
   } catch (error) {
-    loggFeil('Error fetching verses', error);
-    return c.json({ error: 'Internal server error' }, 500);
+    return internFeil(c, 'Error fetching verses', error);
   }
 });
 

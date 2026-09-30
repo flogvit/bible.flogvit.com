@@ -17,6 +17,7 @@ import { createApp } from '../src/app.ts';
 import { getSql, closeSql } from '../src/lib/db.ts';
 import { ensureSchema } from '../src/lib/schema.ts';
 import { L } from './paths.ts';
+import { kontoUser, startMockKonto } from './mock-konto.ts';
 
 setDefaultTimeout(DB_TEST_TIMEOUT_MS);
 
@@ -68,21 +69,10 @@ async function createLink(headers = PLUS): Promise<string> {
 }
 
 beforeAll(async () => {
-  mock = Bun.serve({
-    port: 0,
-    fetch(req) {
-      const cookie = req.headers.get('cookie') ?? '';
-      const user = (id: number, plus: boolean) =>
-        Response.json({
-          user: { id, email: `share-${id}@flogvit.com`, displayName: 'Del-test', verified: true, plus, plusUntil: null },
-          csrf: 'csrf',
-        });
-      if (cookie.includes('fv-session=share-plus')) return user(PLUS_USER, true);
-      if (cookie.includes('fv-session=share-free')) return user(FREE_USER, false);
-      return Response.json({ user: null });
-    },
+  mock = startMockKonto({
+    'share-plus': () => kontoUser({ id: PLUS_USER, plus: true }),
+    'share-free': () => kontoUser({ id: FREE_USER, plus: false }),
   });
-  process.env.ACCOUNT_API_URL = `http://localhost:${mock.port}`;
   app = createApp();
   await ensureSchema(getSql());
   await cleanup();

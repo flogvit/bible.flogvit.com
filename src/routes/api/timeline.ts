@@ -5,8 +5,7 @@ import {
   getTimelineEvents,
   getTimelinePeriods,
 } from '../../lib/bible.ts';
-import { NO_CACHE } from './util.ts';
-import { loggFeil } from '../../lib/error-handler.ts';
+import { NO_CACHE, internFeil } from './util.ts';
 
 const r = new Hono();
 
@@ -25,8 +24,7 @@ r.get('/', async (c) => {
 
     return c.json({ periods, events, chapterEventIds }, 200, NO_CACHE);
   } catch (error) {
-    loggFeil('Error fetching timeline', error);
-    return c.json({ error: 'Internal server error' }, 500);
+    return internFeil(c, 'Error fetching timeline', error);
   }
 });
 
@@ -35,8 +33,7 @@ r.get('/multi', async (c) => {
   try {
     return c.json(await getMultiTimeline(), 200, NO_CACHE);
   } catch (error) {
-    loggFeil('Error fetching multi timeline', error);
-    return c.json({ error: 'Internal server error' }, 500);
+    return internFeil(c, 'Error fetching multi timeline', error);
   }
 });
 

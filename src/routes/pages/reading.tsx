@@ -21,12 +21,10 @@ import { Footnotes } from '../../views/footnotes.tsx';
 import { InlineRefs } from '../../views/inline-refs.tsx';
 import { Markdown } from '../../views/markdown.tsx';
 import { ItemTagging } from '../../views/item-tagging.tsx';
-import { VerseView } from '../../views/verse-display.tsx';
+import { VerseView, verseUrl } from '../../views/verse-display.tsx';
 import { booksData, getBookInfoBySlug, getBookInfoById, bookName, bookNameById, bookAbbr, bookAbbrById } from '../../lib/books-data.ts';
 import type { BookInfo } from '../../lib/books-data.ts';
 import { toUrlSlug } from '../../lib/url-utils.ts';
-// @ts-expect-error — delt klient-modul uten typer (formen bor ett sted, se #91)
-import { verseHash } from '../../../public/js/verse-hash.js';
 import { parseStandardRef, refSegmentToUrl } from '../../lib/standard-ref-parser.ts';
 import { parseVerseTemplate } from '../../lib/verse-template.ts';
 import { tCtx, tEnum } from '../../lib/i18n.ts';
@@ -67,7 +65,8 @@ import type {
   VerseRef,
 } from '../../lib/bible.ts';
 import { mapChapter, resolveMappingId, getAvailableMappings } from '../../lib/verse-mapper.ts';
-import { getWorksForChapter, workHref, encodeKvn, type WorkRef } from '../../lib/works.ts';
+import { getWorksForChapter, workHref, type WorkRef } from '../../lib/works.ts';
+import { encode as encodeKvn } from '@free-bible/kvn/types';
 import { layoutProps, tFor, type Translator, type MessageKey, lhref } from '../../lib/i18n.ts';
 import { localeToContentLanguage } from '../../lib/lang.ts';
 import { relFor } from '../../lib/crawl.ts';
@@ -83,7 +82,7 @@ function buildQuery(
   bible: string,
   mapping: string | undefined,
   secondary: string | undefined,
-  defaultBible = 'osnb',
+  defaultBible: string,
 ): string {
   const params = new URLSearchParams();
   if (bible && bible !== defaultBible) params.set('bible', bible);
@@ -679,10 +678,6 @@ const GOSPEL_COLORS: Record<Gospel, string> = {
 };
 const BOOK_ID_TO_GOSPEL: Record<number, Gospel> = { 40: 'matthew', 41: 'mark', 42: 'luke', 43: 'john' };
 
-function passageUrl(passage: GospelParallelPassage): string {
-  return `/${toUrlSlug(passage.book_short_name || '')}/${passage.chapter}${verseHash(passage.verse_start, passage.verse_end)}`;
-}
-
 async function GospelColumn({
   gospel,
   passage,
@@ -715,7 +710,7 @@ async function GospelColumn({
           {isCurrentGospel && <span class="gospel-current-label">(du leser)</span>}
         </span>
         {!isCurrentGospel && (
-          <a href={lhref(passageUrl(passage))} class="gospel-reference-link">
+          <a href={lhref(verseUrl(passage.book_short_name || '', passage.chapter, passage.verse_start, passage.verse_end))} class="gospel-reference-link">
             {passage.reference}
           </a>
         )}
@@ -993,7 +988,7 @@ function VerseDetailPanel({
             {data.references.length > 0 ? (
               data.references.map((ref) => (
                 <a
-                  href={lhref(`/${toUrlSlug(ref.book_short_name || '')}/${ref.to_chapter}${verseHash(ref.to_verse_start, ref.to_verse_end)}`)}
+                  href={lhref(verseUrl(ref.book_short_name || '', ref.to_chapter, ref.to_verse_start, ref.to_verse_end))}
                   class="vd-reference"
                 >
                   <span class="vd-ref-link">{formatReference(ref)}</span>
@@ -1501,7 +1496,7 @@ function PanelTimeline({ t, events, bookId, chapter }: { t: Translator; events: 
                   ref.verse_start === ref.verse_end ? `${ref.verse_start}` : `${ref.verse_start}-${ref.verse_end}`;
                 return (
                   <a
-                    href={lhref(`/${toUrlSlug(ref.book_short_name || '')}/${ref.chapter}${verseHash(ref.verse_start, ref.verse_end)}`)}
+                    href={lhref(verseUrl(ref.book_short_name || '', ref.chapter, ref.verse_start, ref.verse_end))}
                     class={`pt-ref-link ${isCurrent ? 'is-current' : ''}`}
                   >
                     {bookAbbrById(ref.book_id)} {ref.chapter}:{range}
@@ -1849,7 +1844,6 @@ r.get('/:book/:chapter', async (c) => {
             <div class="chapter-meta">
               <Breadcrumbs
                 items={[
-                  { label: tCtx()('common.home'), href: '/' },
                   { label: bookName(book), href: `/${canonicalSlug}/1${query}` },
                   { label: tCtx()('rd.chapterCrumb', { n: chapter }) },
                 ]}
@@ -2133,7 +2127,7 @@ r.get('/tekst', async (c) => {
     >
       <div class="text-page">
         <div class="reading-container">
-          <Breadcrumbs items={[{ label: tCtx()('common.home'), href: '/' }, { label: tCtx()('rd.passagesCrumb') }]} />
+          <Breadcrumbs items={[{ label: tCtx()('rd.passagesCrumb') }]} />
 
           <h1>{t('rd.passages')}</h1>
 
@@ -2174,7 +2168,7 @@ r.get('/tekst', async (c) => {
                 const firstVerse = group.verses[0]?.verse.verse;
                 const lastVerse = group.verses[group.verses.length - 1]?.verse.verse;
                 const verseRange = firstVerse === lastVerse ? `${firstVerse}` : `${firstVerse}-${lastVerse}`;
-                const contextUrl = `/${toUrlSlug(group.bookShortName)}/${group.chapter}${verseHash(firstVerse, lastVerse)}`;
+                const contextUrl = verseUrl(group.bookShortName, group.chapter, firstVerse, lastVerse);
                 return (
                   <div class="text-passage">
                     <div class="text-passage-header">

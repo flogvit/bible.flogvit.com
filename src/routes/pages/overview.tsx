@@ -10,8 +10,8 @@ import { Layout } from '../../views/layout.tsx';
 import { Breadcrumbs } from '../../views/breadcrumbs.tsx';
 import { InlineRefs } from '../../views/inline-refs.tsx';
 import { ItemTagging } from '../../views/item-tagging.tsx';
-import { VerseRefList } from '../../views/verse-display.tsx';
-import { bookNameByShort, bookAbbrByShort } from '../../lib/books-data.ts';
+import { VerseRefList, verseUrl } from '../../views/verse-display.tsx';
+import { bookAbbrByShort } from '../../lib/books-data.ts';
 import {
   getAllReadingTexts,
   getReadingTextById,
@@ -36,10 +36,8 @@ import {
 import { GonePage } from './misc.tsx';
 import { enrichWithVerseText, readingTypeKey, formatVerseRefLabel, refTextWithoutSystem } from '../../lib/reading-text-enrich.ts';
 import { toUrlSlug } from '../../lib/url-utils.ts';
-// @ts-expect-error — delt klient-modul uten typer (formen bor ett sted, se #91)
-import { verseHash } from '../../../public/js/verse-hash.js';
 import { absoluteUrl } from '../../lib/site-url.ts';
-import { layoutProps, tFor, lhref, href, currentIntlTag, langName, scriptName, type Locale } from '../../lib/i18n.ts';
+import { layoutProps, tFor, lhref, href, currentIntlTag, langName, scriptName } from '../../lib/i18n.ts';
 import { tCtx, tEnum } from '../../lib/i18n.ts';
 import { pickLocalisedText, localesWithContent, localeToContentLanguage } from '../../lib/lang.ts';
 
@@ -52,7 +50,7 @@ function toVerseRef(ref: ProphecyReference): VerseRef {
   return { bookId: ref.book_id, chapter: ref.chapter, verses };
 }
 function prophecyRefUrl(ref: ProphecyReference): string {
-  return `/${toUrlSlug(ref.book_short_name || '')}/${ref.chapter}${verseHash(ref.verse_start, ref.verse_end)}`;
+  return verseUrl(ref.book_short_name || '', ref.chapter, ref.verse_start, ref.verse_end);
 }
 
 // ---------- /oversettelser/:id (info per oversettelse) ----------
@@ -120,7 +118,6 @@ r.get('/oversettelser/:id', async (c) => {
         <div class="container">
           <Breadcrumbs
             items={[
-              { label: tCtx()('common.home'), href: '/' },
               { label: tCtx()('nav.translations'), href: '/oversettelser' },
               { label: edition.abbreviation ?? name },
             ]}
@@ -375,7 +372,7 @@ r.get('/lesetekster', async (c) => {
     >
       <div class="overview-main">
         <div class="reading-container">
-          <Breadcrumbs items={[{ label: tCtx()('common.home'), href: '/' }, { label: tCtx()('nav.readingTexts') }]} />
+          <Breadcrumbs items={[{ label: tCtx()('nav.readingTexts') }]} />
           <h1>{t('nav.readingTexts')}</h1>
           <p class="overview-intro">
             {t('rt.intro')}
@@ -490,7 +487,6 @@ r.get('/lesetekster/:date{[0-9]{4}-[0-9]{2}-[0-9]{2}}', async (c) => {
         <div class="reading-container">
           <Breadcrumbs
             items={[
-              { label: tCtx()('common.home'), href: '/' },
               { label: tCtx()('nav.readingTexts'), href: '/lesetekster' },
               { label: formatFullDate(date) },
             ]}
@@ -604,7 +600,7 @@ r.get('/profetier', async (c) => {
     >
       <div class="overview-main">
         <div class="reading-container">
-          <Breadcrumbs items={[{ label: tCtx()('common.home'), href: '/' }, { label: tCtx()('nav.prophecies') }]} />
+          <Breadcrumbs items={[{ label: tCtx()('nav.prophecies') }]} />
           <h1>{t('pr.title')}</h1>
           <p class="overview-intro">
             {t('pr.intro')}
@@ -721,7 +717,7 @@ r.get('/paralleller', async (c) => {
     >
       <div class="overview-main">
         <div class="container">
-          <Breadcrumbs items={[{ label: tCtx()('common.home'), href: '/' }, { label: tCtx()('nav.parallels') }]} />
+          <Breadcrumbs items={[{ label: tCtx()('nav.parallels') }]} />
           <h1>{t('pa.title')}</h1>
           <p class="overview-intro">
             {t('pa.introFull')}
@@ -760,7 +756,7 @@ r.get('/paralleller', async (c) => {
                           {passage ? (
                             <>
                               <a
-                                href={lhref(`/${toUrlSlug(passage.book_short_name || '')}/${passage.chapter}${verseHash(passage.verse_start, passage.verse_end)}`)}
+                                href={lhref(verseUrl(passage.book_short_name || '', passage.chapter, passage.verse_start, passage.verse_end))}
                                 class="parallel-passage-ref"
                               >
                                 {passage.reference}
@@ -817,7 +813,7 @@ r.get('/tidslinje', async (c) => {
     >
       <div class="overview-main">
         <div class="reading-container">
-          <Breadcrumbs items={[{ label: tCtx()('common.home'), href: '/' }, { label: tCtx()('nav.timeline') }]} />
+          <Breadcrumbs items={[{ label: tCtx()('nav.timeline') }]} />
           <h1>{t('tl.title')}</h1>
           <p class="overview-intro">
             {t('tl.intro')}
@@ -854,7 +850,7 @@ r.get('/tidslinje', async (c) => {
                         <div class="timeline-event-refs">
                           {e.references.map((ref) => (
                             <a
-                              href={lhref(`/${toUrlSlug(ref.book_short_name || '')}/${ref.chapter}${verseHash(ref.verse_start, ref.verse_end)}`)}
+                              href={lhref(verseUrl(ref.book_short_name || '', ref.chapter, ref.verse_start, ref.verse_end))}
                               class="person-ref-chip"
                             >
                               {bookAbbrByShort(ref.book_short_name)} {ref.chapter}:{ref.verse_start}
@@ -936,7 +932,7 @@ r.get('/statistikk', async (c) => {
     >
       <div class="overview-main">
         <div class="container">
-          <Breadcrumbs items={[{ label: tCtx()('common.home'), href: '/' }, { label: tCtx()('nav.statistics') }]} />
+          <Breadcrumbs items={[{ label: tCtx()('nav.statistics') }]} />
           <h1>{t('st.title')}</h1>
 
           <section class="overview-section">

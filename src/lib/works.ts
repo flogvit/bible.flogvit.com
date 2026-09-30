@@ -4,6 +4,7 @@
 // en ren BETWEEN-sjekk. Tabellene fylles av import-bible.ts fra
 // free-bible/generate/verse_works/ (contrib-pipelinen).
 
+import { encode } from '@free-bible/kvn/types';
 import { getSql } from './db.ts';
 
 export interface WorkRef {
@@ -27,15 +28,11 @@ export interface WorkRef {
   contributors: string | null;
 }
 
-export function encodeKvn(bookId: number, chapter: number, verse: number): number {
-  return (bookId << 20) | (chapter << 12) | (verse << 4);
-}
-
 /** Alle verk-refs som overlapper kapitlet (inkl. bok-spenn som omslutter det). */
 export async function getWorksForChapter(bookId: number, chapter: number): Promise<WorkRef[]> {
   const sql = getSql();
-  const from = encodeKvn(bookId, chapter, 0);
-  const to = encodeKvn(bookId, chapter, 255) + 15;
+  const from = encode(bookId, chapter, 0);
+  const to = encode(bookId, chapter, 255) + 15;
   const rows = (await sql`
     SELECT r.work_id, r.kvn_from, r.kvn_to, r.kvn_ref, r.level, r.ref_kind,
            r.where_page, r.where_section,

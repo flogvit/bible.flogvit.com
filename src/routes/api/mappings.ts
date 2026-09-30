@@ -6,7 +6,7 @@ import {
   listMappingIds,
   loadRawMappingUncached,
 } from '../../lib/verse-mapper.ts';
-import { NO_CACHE } from './util.ts';
+import { NO_CACHE, internFeil } from './util.ts';
 import { loggFeil } from '../../lib/error-handler.ts';
 
 const r = new Hono();
@@ -17,8 +17,7 @@ r.get('/', async (c) => {
     const mappings = await getAllVerseMappings();
     return c.json({ mappings }, 200, NO_CACHE);
   } catch (error) {
-    loggFeil('Error fetching mappings', error);
-    return c.json({ error: 'Internal server error' }, 500);
+    return internFeil(c, 'Error fetching mappings', error);
   }
 });
 
@@ -87,8 +86,7 @@ r.get('/kvn', (c) => {
   try {
     return c.json({ mappings: getAvailableMappings() }, 200, NO_CACHE);
   } catch (error) {
-    loggFeil('Error fetching KVN mappings', error);
-    return c.json({ error: 'Internal server error' }, 500);
+    return internFeil(c, 'Error fetching KVN mappings', error);
   }
 });
 
@@ -99,8 +97,7 @@ r.get('/kvn/:id', (c) => {
     if (!data) return c.json({ error: 'KVN mapping not found' }, 404);
     return c.json(data, 200, NO_CACHE);
   } catch (error) {
-    loggFeil('Error fetching KVN mapping data', error);
-    return c.json({ error: 'Internal server error' }, 500);
+    return internFeil(c, 'Error fetching KVN mapping data', error);
   }
 });
 
@@ -122,8 +119,7 @@ r.get('/:id', async (c) => {
       NO_CACHE,
     );
   } catch (error) {
-    loggFeil('Error fetching mapping', error);
-    return c.json({ error: 'Internal server error' }, 500);
+    return internFeil(c, 'Error fetching mapping', error);
   }
 });
 

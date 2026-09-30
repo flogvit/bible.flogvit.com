@@ -4,6 +4,7 @@ import { Hono } from 'hono';
 import type { AppEnv } from '../src/lib/session.ts';
 import { requireUser, withSession } from '../src/lib/session.ts';
 import { createApp } from '../src/app.ts';
+import { kontoUser, startMockKonto } from './mock-konto.ts';
 
 setDefaultTimeout(DB_TEST_TIMEOUT_MS);
 
@@ -12,30 +13,10 @@ setDefaultTimeout(DB_TEST_TIMEOUT_MS);
 let mock: ReturnType<typeof Bun.serve>;
 
 beforeAll(() => {
-  mock = Bun.serve({
-    port: 0,
-    fetch(req) {
-      const cookie = req.headers.get('cookie') ?? '';
-      if (cookie.includes('fv-session=gyldig')) {
-        return Response.json({
-          user: {
-            id: 42,
-            email: 'test@flogvit.com',
-            displayName: 'Test',
-            verified: true,
-            plus: false,
-            plusUntil: null,
-          },
-          csrf: 'csrf-token',
-        });
-      }
-      if (cookie.includes('fv-session=nede')) {
-        return new Response('boom', { status: 500 });
-      }
-      return Response.json({ user: null });
-    },
+  mock = startMockKonto({
+    gyldig: () => kontoUser({ id: 42, email: 'test@flogvit.com', plus: false }, 'csrf-token'),
+    nede: () => new Response('boom', { status: 500 }),
   });
-  process.env.ACCOUNT_API_URL = `http://localhost:${mock.port}`;
 });
 
 afterAll(() => {

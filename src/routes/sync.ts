@@ -13,27 +13,11 @@ import { requirePlus } from '../lib/session.ts';
 import { mergeProgress } from '../../public/js/reading-progress.js';
 import { loggFeil } from '../lib/error-handler.ts';
 import { registrerMinnekilde } from '../lib/minne-regnskap.ts';
+import { rateLimiter } from '../lib/rate-limit.ts';
 
-// Enkel rate-limit per bruker i minnet (som originalen).
-const rateLimitMap = new Map<number, { count: number; resetAt: number }>();
-// Nøklet på bruker-id, og en utløpt oppføring OVERSKRIVES framfor å slettes:
-// kartet er derfor like stort som antall innloggede som noen gang har synket
-// siden oppstart. Lite i dag, og meldt fordi det ikke kan vites uten å måle (#110).
-registrerMinnekilde('sync/rateLimitMap', () => ({ oppforinger: rateLimitMap.size }));
-const RATE_LIMIT_WINDOW_MS = 60_000;
-const RATE_LIMIT_MAX = 30;
-
-function checkRateLimit(userId: number): boolean {
-  const now = Date.now();
-  const entry = rateLimitMap.get(userId);
-  if (!entry || now > entry.resetAt) {
-    rateLimitMap.set(userId, { count: 1, resetAt: now + RATE_LIMIT_WINDOW_MS });
-    return true;
-  }
-  if (entry.count >= RATE_LIMIT_MAX) return false;
-  entry.count++;
-  return true;
-}
+// Rate-limit per bruker, 30/minutt (som originalen).
+const checkRateLimit = rateLimiter<number>(30);
+registrerMinnekilde('sync/rateLimitMap', checkRateLimit.maaling);
 
 interface SyncChange {
   dataType: string;

@@ -6,6 +6,8 @@
 
 import { recordRead, mergeProgress, heatLevel } from './reading-progress.js';
 import { readStrings, localeHref } from './locale.js';
+import { el } from './dom.js';
+import { readJSON, writeJSON } from './store.js';
 
 const t = readStrings(document.body);
 
@@ -21,25 +23,6 @@ const KEYS = {
   progress: 'bible-reading-progress',
 };
 
-function read(key, fallback) {
-  try {
-    const raw = localStorage.getItem(key);
-    return raw ? JSON.parse(raw) : fallback;
-  } catch {
-    return fallback;
-  }
-}
-function write(key, value) {
-  try {
-    localStorage.setItem(key, JSON.stringify(value));
-  } catch {}
-}
-function el(tag, cls, text) {
-  const e = document.createElement(tag);
-  if (cls) e.className = cls;
-  if (text != null) e.textContent = text;
-  return e;
-}
 function showList(root, hasItems) {
   const empty = root.querySelector('[data-empty]');
   if (empty) empty.hidden = hasItems;
@@ -53,7 +36,7 @@ if (root) {
   // ---- favoritter (henter verstekst fra /api/favorites) ----
   if (page === 'favorites' && list) {
     const renderFavorites = () => {
-    const favs = read(KEYS.favorites, []);
+    const favs = readJSON(KEYS.favorites, []);
     showList(root, favs.length > 0);
     if (!favs.length) { list.textContent = ''; return; }
     {
@@ -84,7 +67,7 @@ if (root) {
   if (page === 'notes' && list) {
     const renderNotes = () => {
       list.textContent = '';
-      const notes = read(KEYS.notes, []);
+      const notes = readJSON(KEYS.notes, []);
       showList(root, notes.length > 0);
       notes
         .slice()
@@ -104,7 +87,7 @@ if (root) {
   if (page === 'topics' && list) {
     const renderTopics = () => {
       list.textContent = '';
-      const data = read(KEYS.topics, { topics: [], verseTopics: [], itemTopics: [] });
+      const data = readJSON(KEYS.topics, { topics: [], verseTopics: [], itemTopics: [] });
       const topics = data.topics || [];
       showList(root, topics.length > 0);
       topics.forEach((t) => {
@@ -125,7 +108,7 @@ if (root) {
   if (page === 'verselists' && list) {
     const render = () => {
       list.textContent = '';
-      const lists = read(KEYS.verseLists, []);
+      const lists = readJSON(KEYS.verseLists, []);
       showList(root, lists.length > 0);
       lists
         .slice()
@@ -147,10 +130,10 @@ if (root) {
         const name = input.value.trim();
         if (!name) return;
         if (!window.fvPlus?.gate(t('nav.verseLists'))) return;
-        const lists = read(KEYS.verseLists, []);
+        const lists = readJSON(KEYS.verseLists, []);
         const now = Date.now();
         lists.push({ id: `list-${now}`, name, refs: [], createdAt: now, updatedAt: now });
-        write(KEYS.verseLists, lists);
+        writeJSON(KEYS.verseLists, lists);
         input.value = '';
         render();
       });
@@ -169,7 +152,7 @@ if (root) {
     });
     const renderDevotionals = () => {
       list.textContent = '';
-      const devs = read(KEYS.devotionals, []);
+      const devs = readJSON(KEYS.devotionals, []);
       showList(root, devs.length > 0);
       devs
         .slice()
@@ -188,7 +171,7 @@ if (root) {
 
   // ---- leseplan (marker aktiv) ----
   if (page === 'readingplan') {
-    const active = read(KEYS.activePlan, null);
+    const active = readJSON(KEYS.activePlan, null);
     root.querySelectorAll('.plan-card').forEach((card) => {
       const id = card.dataset.planId;
       const badge = card.querySelector('.plan-active-badge');
@@ -213,7 +196,7 @@ if (root) {
 
   // ---- innstillinger ----
   if (page === 'settings') {
-    const s = read(KEYS.settings, {});
+    const s = readJSON(KEYS.settings, {});
     // data-setting støtter dot-path for nestede objekter (searchResultTypes.stories).
     const getPath = (obj, path) => path.split('.').reduce((o, k) => (o == null ? undefined : o[k]), obj);
     const setPath = (obj, path, value) => {
@@ -231,9 +214,9 @@ if (root) {
       if (input.type === 'checkbox') input.checked = cur !== false;
       else if (cur !== undefined) input.value = cur;
       input.addEventListener('change', () => {
-        const next = read(KEYS.settings, {});
+        const next = readJSON(KEYS.settings, {});
         setPath(next, key, input.type === 'checkbox' ? input.checked : input.value);
-        write(KEYS.settings, next);
+        writeJSON(KEYS.settings, next);
       });
     });
 
@@ -273,26 +256,26 @@ if (root) {
           ...fromServer,
           ...userBibles.map((b) => ({ value: b.id, label: b.name })),
         ];
-        const hidden = new Set((read(KEYS.settings, {}).hiddenBibles || []));
+        const hidden = new Set((readJSON(KEYS.settings, {}).hiddenBibles || []));
         for (const v of versions) {
           const label = el('label');
           label.className = 'settings-toggle';
           const input = el('input');
           input.type = 'checkbox';
           input.checked = !hidden.has(v.value);
-          const active = (read(KEYS.settings, {}).bible || 'osnb') === v.value;
+          const active = (readJSON(KEYS.settings, {}).bible || 'osnb') === v.value;
           if (active) {
             input.checked = true;
             input.disabled = true;
             input.title = t('is.activeCantHide');
           }
           input.addEventListener('change', () => {
-            const next = read(KEYS.settings, {});
+            const next = readJSON(KEYS.settings, {});
             const set = new Set(next.hiddenBibles || []);
             if (input.checked) set.delete(v.value);
             else set.add(v.value);
             next.hiddenBibles = [...set];
-            write(KEYS.settings, next);
+            writeJSON(KEYS.settings, next);
           });
           const span = el('span');
           span.textContent = v.label;
@@ -313,7 +296,7 @@ if (root) {
     root.querySelector('[data-export-data]')?.addEventListener('click', () => {
       const data = {};
       for (const key of EXPORT_KEYS) {
-        const val = read(key, undefined);
+        const val = readJSON(key, undefined);
         if (val !== undefined) data[key] = val;
       }
       const blob = new Blob([JSON.stringify({ app: 'flogvit-bibel', version: 1, exportedAt: new Date().toISOString(), data }, null, 2)], { type: 'application/json' });
@@ -332,7 +315,7 @@ if (root) {
         let n = 0;
         for (const key of EXPORT_KEYS) {
           if (key in data) {
-            write(key, data[key]);
+            writeJSON(key, data[key]);
             n++;
           }
         }
@@ -373,7 +356,7 @@ if (root) {
 
     let current = null;
     if (slug) {
-      current = read(KEYS.devotionals, []).find((d) => d.slug === slug) || null;
+      current = readJSON(KEYS.devotionals, []).find((d) => d.slug === slug) || null;
       if (current) {
         titleEl.value = current.title || '';
         const draft = (current.versions || []).find((v) => !v.locked) || current.versions?.[0];
@@ -398,7 +381,7 @@ if (root) {
     }
     saveBtn.addEventListener('click', () => {
       if (!window.fvPlus?.gate(t('nav.manuscripts'))) return;
-      const devs = read(KEYS.devotionals, []);
+      const devs = readJSON(KEYS.devotionals, []);
       const now = Date.now();
       const title = titleEl.value.trim() || t('is.untitledDoc');
       const content = contentEl.value;
@@ -424,7 +407,7 @@ if (root) {
         });
         current = devs[devs.length - 1];
       }
-      write(KEYS.devotionals, devs);
+      writeJSON(KEYS.devotionals, devs);
       location.href = localeHref(`/manuskripter/${current.slug}`);
     });
   }
@@ -433,7 +416,7 @@ if (root) {
   if (page === 'devotional-view') {
     const slug = root.dataset.slug || '';
     const article = root.querySelector('[data-article]');
-    const dev = read(KEYS.devotionals, []).find((d) => d.slug === slug);
+    const dev = readJSON(KEYS.devotionals, []).find((d) => d.slug === slug);
     if (!dev) {
       showList(root, false);
     } else {
@@ -749,7 +732,7 @@ if (mapRoot) {
    * etter at sync har gått. Hydreringen fjerner det etterslepet.
    */
   function hydrate() {
-    const all = read(KEYS.progress, {}) || {};
+    const all = readJSON(KEYS.progress, {}) || {};
     for (const [key, entry] of Object.entries(all)) {
       const [bookId, chapter] = key.split('-');
       const cell = mapRoot.querySelector(`[data-map-book="${bookId}"] .map-cell[data-chapter="${chapter}"]`);
@@ -765,12 +748,12 @@ if (mapRoot) {
     const section = mapRoot.querySelector(`[data-map-book="${bookId}"]`);
     if (!section) return;
     const chapters = parseInt(section.dataset.bookChapters, 10) || 0;
-    const all = read(KEYS.progress, {}) || {};
+    const all = readJSON(KEYS.progress, {}) || {};
     for (let ch = 1; ch <= chapters; ch++) {
       const key = `${bookId}-${ch}`;
       all[key] = mergeProgress(all[key], recordRead(all[key], at));
     }
-    write(KEYS.progress, all);
+    writeJSON(KEYS.progress, all);
     hydrate();
   }
 

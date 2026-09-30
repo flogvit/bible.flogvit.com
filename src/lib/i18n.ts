@@ -30,17 +30,11 @@ const FALLBACKS: Record<Locale, readonly Locale[]> = {
   fr: ['en'], es: ['en'], fi: ['en'], de: ['en'],
 };
 
-export const LOCALE_NAMES: Record<Locale, string> = {
-  en: 'English', nb: 'Norsk bokmål', nn: 'Norsk nynorsk', sv: 'Svenska',
-  fr: 'Français', es: 'Español', fi: 'Suomi', de: 'Deutsch',
-};
-
 const INTL_TAG: Record<Locale, string> = {
   en: 'en-GB', nb: 'nb-NO', nn: 'nn-NO', sv: 'sv-SE',
   fr: 'fr-FR', es: 'es-ES', fi: 'fi-FI', de: 'de-DE',
 };
 export const ogLocale = (l: Locale) => INTL_TAG[l].replace('-', '_');
-export const intlTag = (l: Locale) => INTL_TAG[l];
 
 /**
  * BCP-47-taggen for forespørselens locale, hentet fra contextStorage — samme
@@ -58,13 +52,13 @@ export function currentIntlTag(): string {
 }
 
 /** Makrospråket `no` er tvetydig og normaliseres til bokmål (I18N.md §2). */
-export function normalizeLocale(code: string | undefined | null): Locale | null {
+function normalizeLocale(code: string | undefined | null): Locale | null {
   const c = (code || '').toLowerCase().split('-')[0]!;
   if (c === 'no') return 'nb';
   return isLocale(c) ? c : null;
 }
 
-export function negotiateAcceptLanguage(header: string | undefined | null): Locale | null {
+function negotiateAcceptLanguage(header: string | undefined | null): Locale | null {
   if (!header) return null;
   const ranked = header.split(',').map((part) => {
     const [tag, ...params] = part.trim().split(';');
@@ -79,7 +73,7 @@ export function negotiateAcceptLanguage(header: string | undefined | null): Loca
   return null;
 }
 
-export function localeFromPrefsCookie(raw: string | undefined | null): Locale | null {
+function localeFromPrefsCookie(raw: string | undefined | null): Locale | null {
   if (!raw) return null;
   try {
     const p = JSON.parse(decodeURIComponent(raw)) as { lang?: unknown };
@@ -92,7 +86,7 @@ export function negotiateLocale(cookie: string | undefined | null, accept: strin
 }
 
 /** Språkprefikset i en URL-sti, om det er der. `/en/1mos/1` → `en`. */
-export function localeFromPath(path: string | undefined | null): Locale | null {
+function localeFromPath(path: string | undefined | null): Locale | null {
   const m = /^\/([a-z]{2})(?=\/|$)/.exec(path || '');
   return m && isLocale(m[1]) ? m[1] : null;
 }
@@ -158,7 +152,7 @@ export function lhref(path: string): string {
 }
 
 /** Stien uten språkprefiks — grunnlaget for hreflang og språkbytte. */
-export function stripLocale(path: string): string {
+function stripLocale(path: string): string {
   const m = /^\/([a-z]{2})(?=\/|$)/.exec(path);
   return m && isLocale(m[1]) ? path.slice(3) || '/' : path;
 }

@@ -8,6 +8,7 @@ import { createApp } from '../src/app.ts';
 import { getSql, closeSql } from '../src/lib/db.ts';
 import { ensureSchema } from '../src/lib/schema.ts';
 import { L } from './paths.ts';
+import { kontoUser, startMockKonto } from './mock-konto.ts';
 
 setDefaultTimeout(DB_TEST_TIMEOUT_MS);
 
@@ -32,27 +33,8 @@ async function cleanup() {
 }
 
 beforeAll(async () => {
-  mock = Bun.serve({
-    port: 0,
-    fetch(req) {
-      const cookie = req.headers.get('cookie') ?? '';
-      if (cookie.includes('fv-session=contrib-test')) {
-        return Response.json({
-          user: {
-            id: TEST_USER_ID,
-            email: 'contrib-test@flogvit.com',
-            displayName: 'Contrib-test',
-            verified: true,
-            plus: false, // bidrag er IKKE plus-gated
-            plusUntil: null,
-          },
-          csrf: 'csrf',
-        });
-      }
-      return Response.json({ user: null });
-    },
-  });
-  process.env.ACCOUNT_API_URL = `http://localhost:${mock.port}`;
+  // bidrag er IKKE plus-gated
+  mock = startMockKonto({ 'contrib-test': () => kontoUser({ id: TEST_USER_ID, plus: false }) });
   process.env.CONTRIB_TOKEN = TOKEN;
   app = createApp();
   await ensureSchema(getSql());

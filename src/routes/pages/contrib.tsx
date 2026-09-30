@@ -19,7 +19,6 @@ import { getChapterVerseCount } from '../../lib/verse-counts.ts';
 import { toUrlSlug } from '../../lib/url-utils.ts';
 import { MAPPING_META, resolveMappingId } from '../../lib/verse-mapper.ts';
 import { listSubmissionsForUser, type ContribRow } from '../../lib/contrib.ts';
-import { tCtx } from '../../lib/i18n.ts';
 
 const r = new Hono<AppEnv>();
 
@@ -38,9 +37,7 @@ function ContribShell(props: {
   /** Hold varianten ute av indeksen (#60). Se kallstedet. */
   noindex?: boolean;
 }) {
-  const crumbs: Crumb[] = [{ label: tCtx()('common.home'), href: '/' }];
-  if (props.origin) crumbs.push(props.origin);
-  crumbs.push({ label: props.crumb });
+  const crumbs: Crumb[] = props.origin ? [props.origin, { label: props.crumb }] : [{ label: props.crumb }];
   return (
     <Layout locale={props.locale} path={props.path} noindex={props.noindex}
       title={`${props.title} — FLOGVIT.bible`}

@@ -16,6 +16,8 @@ import {
 } from './reading-progress.js';
 import { readStrings, intlLocale, localeHref } from './locale.js';
 import { parseVerseHash } from './verse-hash.js';
+import { el } from './dom.js';
+import { readJSON, writeJSON } from './store.js';
 
 const t = readStrings(document.body);
 
@@ -29,29 +31,9 @@ const KEYS = {
   progress: 'bible-reading-progress',
 };
 
-function read(key, fallback) {
-  try {
-    const raw = localStorage.getItem(key);
-    return raw ? JSON.parse(raw) : fallback;
-  } catch {
-    return fallback;
-  }
-}
-function write(key, value) {
-  try {
-    localStorage.setItem(key, JSON.stringify(value));
-  } catch {}
-}
-function el(tag, cls, text) {
-  const e = document.createElement(tag);
-  if (cls) e.className = cls;
-  if (text != null) e.textContent = text;
-  return e;
-}
-
 const rootPage = document.querySelector('[data-reading-root]');
 if (rootPage) {
-  const settings = () => read(KEYS.settings, {});
+  const settings = () => readJSON(KEYS.settings, {});
   const bookId = parseInt(document.body.dataset.bookId || '0', 10);
   const chapter = parseInt(document.body.dataset.chapter || '0', 10);
   const bookSlug = document.body.dataset.bookSlug || '';
@@ -71,7 +53,7 @@ if (rootPage) {
     applyMode(mode);
     const s = settings();
     s.layoutMode = mode;
-    write(KEYS.settings, s);
+    writeJSON(KEYS.settings, s);
   }
   applyMode(settings().layoutMode || 'normal');
   // Knappene er av/på, ikke bare på: klikker du modusen du alt står i, går du
@@ -215,12 +197,12 @@ if (rootPage) {
     btn.addEventListener('click', () => {
       if (!window.fvPlus?.gate(t('nav.favorites'))) return;
       const f = favKeyOf(btn.closest('.verse'));
-      let favs = read(KEYS.favorites, []);
+      let favs = readJSON(KEYS.favorites, []);
       const on = isFav(f, favs);
       favs = on
         ? favs.filter((x) => !(x.bookId === f.bookId && x.chapter === f.chapter && x.verse === f.verse))
         : [...favs, { ...f, addedAt: Date.now() }];
-      write(KEYS.favorites, favs);
+      writeJSON(KEYS.favorites, favs);
       paintFav(btn, !on);
     });
   });
@@ -231,7 +213,7 @@ if (rootPage) {
     detail.dataset.inited = '1';
     const verse = detail.closest('.verse');
     const favBtn = detail.querySelector('[data-fav-toggle]');
-    if (favBtn) paintFav(favBtn, isFav(favKeyOf(verse), read(KEYS.favorites, [])));
+    if (favBtn) paintFav(favBtn, isFav(favKeyOf(verse), readJSON(KEYS.favorites, [])));
     renderNotes(detail);
     renderDevotionals(detail);
   }
@@ -246,7 +228,7 @@ if (rootPage) {
     if (!listBox) return;
     const { bookId: b, chapter: c2, verse: v } = noteRef(detail);
     listBox.textContent = '';
-    read(KEYS.notes, [])
+    readJSON(KEYS.notes, [])
       .filter((n) => n.bookId === b && n.chapter === c2 && n.verse === v)
       .sort((a, x) => x.updatedAt - a.updatedAt)
       .forEach((n) => {
@@ -256,7 +238,7 @@ if (rootPage) {
         const del = el('button', 'note-delete', t('is.delete'));
         del.type = 'button';
         del.addEventListener('click', () => {
-          write(KEYS.notes, read(KEYS.notes, []).filter((x) => x.id !== n.id));
+          writeJSON(KEYS.notes, readJSON(KEYS.notes, []).filter((x) => x.id !== n.id));
           renderNotes(detail);
         });
         meta.appendChild(del);
@@ -276,9 +258,9 @@ if (rootPage) {
       const detail = box.closest('.verse-detail');
       const { bookId: b, chapter: c2, verse: v } = noteRef(detail);
       const now = Date.now();
-      const notes = read(KEYS.notes, []);
+      const notes = readJSON(KEYS.notes, []);
       notes.push({ id: `note-${now}`, bookId: b, chapter: c2, verse: v, content: input.value.trim(), createdAt: now, updatedAt: now });
-      write(KEYS.notes, notes);
+      writeJSON(KEYS.notes, notes);
       input.value = '';
       add.disabled = true;
       renderNotes(detail);
@@ -291,7 +273,7 @@ if (rootPage) {
     const listBox = box && box.querySelector('[data-devotionals-list]');
     if (!listBox) return;
     const ref = box.dataset.verseRef;
-    const devs = read(KEYS.devotionals, []).filter((d) => (d.verses || []).includes(ref));
+    const devs = readJSON(KEYS.devotionals, []).filter((d) => (d.verses || []).includes(ref));
     if (devs.length === 0) return;
     listBox.textContent = '';
     devs.forEach((d) => {
@@ -302,7 +284,7 @@ if (rootPage) {
   }
 
   // ── Versjoner (bible-verse-versions: {'40-1-1': index}) ──────────
-  const versionChoices = read(KEYS.verseVersions, {});
+  const versionChoices = readJSON(KEYS.verseVersions, {});
   document.querySelectorAll('.verse-detail').forEach((detail) => {
     const box = detail.querySelector('[data-versions]');
     if (!box) return;
@@ -327,10 +309,10 @@ if (rootPage) {
     box.querySelectorAll('[data-version-radio]').forEach((radio) => {
       radio.addEventListener('change', () => {
         apply(radio.value);
-        const cur = read(KEYS.verseVersions, {});
+        const cur = readJSON(KEYS.verseVersions, {});
         if (radio.value === '') delete cur[key];
         else cur[key] = radio.value;
-        write(KEYS.verseVersions, cur);
+        writeJSON(KEYS.verseVersions, cur);
       });
     });
   });
@@ -351,7 +333,7 @@ if (rootPage) {
         saveTimer = setTimeout(() => {
           if (visible.size === 0) return;
           const verse = Math.min(...visible);
-          write(KEYS.position, { bookSlug, bookName, chapter, verse, updatedAt: Date.now() });
+          writeJSON(KEYS.position, { bookSlug, bookName, chapter, verse, updatedAt: Date.now() });
         }, 800);
       },
       { rootMargin: '0px 0px -60% 0px' },
@@ -369,13 +351,13 @@ if (rootPage) {
   // `manual` skriver ingenting automatisk — verken lesing eller åpning. Det er
   // en personvern-innstilling, ikke bare en preferanse.
   const progressKeyOf = () => `${bookId}-${chapter}`;
-  const readProgressAll = () => read(KEYS.progress, {}) || {};
+  const readProgressAll = () => readJSON(KEYS.progress, {}) || {};
   const progressEntry = () => readProgressAll()[progressKeyOf()] || emptyProgress();
 
   function saveProgress(entry) {
     const all = readProgressAll();
     all[progressKeyOf()] = entry;
-    write(KEYS.progress, all);
+    writeJSON(KEYS.progress, all);
     paintChapterRead(entry);
   }
 
@@ -414,7 +396,7 @@ if (rootPage) {
   function unmarkChapter() {
     const all = readProgressAll();
     delete all[progressKeyOf()];
-    write(KEYS.progress, all);
+    writeJSON(KEYS.progress, all);
     paintChapterRead(emptyProgress());
   }
 

@@ -115,20 +115,6 @@ export function getBookInfoBySlug(slug: string): BookInfo | undefined {
   return undefined;
 }
 
-/**
- * Get book name in Norwegian by ID (client-safe)
- */
-export function getBookNameById(id: number): string | undefined {
-  return booksById.get(id)?.name_no;
-}
-
-/**
- * Get book short name by ID (client-safe)
- */
-export function getBookShortNameById(id: number): string | undefined {
-  return booksById.get(id)?.short_name;
-}
-
 // ── Boknavn per språk (GitHub #20, alle åtte språk i #69) ────────────
 //
 // `name_no`/`short_name` over er NORSKE og er samtidig NØKLENE: URL-slugene

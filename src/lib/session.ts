@@ -52,7 +52,7 @@ interface CentralSessionResponse {
   csrf?: string;
 }
 
-export async function getCentralSession(cookieHeader: string): Promise<SessionUser | null> {
+async function getCentralSession(cookieHeader: string): Promise<SessionUser | null> {
   if (!cookieHeader || !cookieHeader.includes(`${SESSION_COOKIE}=`)) return null;
   try {
     const res = await fetch(`${accountApiUrl()}/api/auth/session`, {

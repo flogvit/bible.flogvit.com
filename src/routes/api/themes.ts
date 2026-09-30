@@ -1,8 +1,7 @@
 import { Hono } from 'hono';
 import { getAllThemes, getThemeByName } from '../../lib/bible.ts';
 import { withApiId, withApiIds } from '../../lib/api-ids.ts';
-import { NO_CACHE } from './util.ts';
-import { loggFeil } from '../../lib/error-handler.ts';
+import { NO_CACHE, internFeil } from './util.ts';
 
 const r = new Hono();
 
@@ -15,8 +14,7 @@ r.get('/', async (c) => {
     const themes = await getAllThemes();
     return c.json({ themes: withApiIds(PATH, themes) }, 200, NO_CACHE);
   } catch (error) {
-    loggFeil('Error fetching themes', error);
-    return c.json({ error: 'Internal server error' }, 500);
+    return internFeil(c, 'Error fetching themes', error);
   }
 });
 
@@ -27,8 +25,7 @@ r.get('/:id', async (c) => {
     if (!theme) return c.json({ error: 'Theme not found' }, 404);
     return c.json(withApiId(PATH, theme), 200, NO_CACHE);
   } catch (error) {
-    loggFeil('Error fetching theme', error);
-    return c.json({ error: 'Internal server error' }, 500);
+    return internFeil(c, 'Error fetching theme', error);
   }
 });
 

@@ -20,7 +20,7 @@ r.get('/om', (c) => {
     <Layout {...layoutProps(c)} title={`${t('about.title')} — FLOGVIT.bible`} description={t('about.meta')} styles={['about.css']}>
       <div class="about-main">
         <div class="reading-container">
-          <Breadcrumbs items={[{ label: t('common.home'), href: '/' }, { label: t('about.title') }]} />
+          <Breadcrumbs items={[{ label: t('about.title') }]} />
 
           <h1>{t('about.h1')}</h1>
 
@@ -265,7 +265,7 @@ r.get('/tilgjengelighet', (c) => {
     <Layout {...layoutProps(c)} title={`${t('foot.a11y')} — FLOGVIT.bible`} description={t('a11y.meta')} styles={['about.css']}>
       <div class="about-main">
         <div class="reading-container">
-          <Breadcrumbs items={[{ label: t('common.home'), href: '/' }, { label: t('foot.a11y') }]} />
+          <Breadcrumbs items={[{ label: t('foot.a11y') }]} />
 
           <h1>{t('a11y.h1')}</h1>
 
@@ -399,7 +399,6 @@ r.get('/tilgjengelighet', (c) => {
   );
 });
 
-/** 404-siden — koblet via app.notFound i app.ts. */
 // Offline-fallback (#14): SW-en serverer denne siden for navigasjoner uten
 // nett. offline-reader.js rendrer nedlastede kapitler fra IndexedDB basert på
 // location.pathname (SW-en svarer med denne siden på original-URL-en).
@@ -446,6 +445,7 @@ export function GonePage({ locale, path }: { locale: Locale; path: string }) {
   );
 }
 
+/** 404-siden — koblet via app.notFound i app.ts. */
 export function NotFoundPage({ locale, path }: { locale: Locale; path: string }) {
   const t = makeT(locale);
   return (

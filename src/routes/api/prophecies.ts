@@ -1,7 +1,6 @@
 import { Hono } from 'hono';
 import { getProphecies, getPropheciesForVerse, getProphecyCategories } from '../../lib/bible.ts';
-import { NO_CACHE } from './util.ts';
-import { loggFeil } from '../../lib/error-handler.ts';
+import { NO_CACHE, internFeil } from './util.ts';
 
 const r = new Hono();
 
@@ -19,8 +18,7 @@ r.get('/', async (c) => {
     const prophecies = await getProphecies();
     return c.json({ categories, prophecies }, 200, NO_CACHE);
   } catch (error) {
-    loggFeil('Error fetching prophecies', error);
-    return c.json({ error: 'Internal server error' }, 500);
+    return internFeil(c, 'Error fetching prophecies', error);
   }
 });
 

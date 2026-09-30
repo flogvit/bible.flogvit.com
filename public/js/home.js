@@ -12,30 +12,8 @@
 
 import { localeHref, readStrings, langParam } from './locale.js';
 import * as plan from './reading-plan.js';
-
-function readJSON(key) {
-  try {
-    const raw = localStorage.getItem(key);
-    return raw ? JSON.parse(raw) : null;
-  } catch {
-    return null;
-  }
-}
-
-function writeJSON(key, value) {
-  try {
-    localStorage.setItem(key, JSON.stringify(value));
-  } catch {
-    // Skrivesperret (gratisbruker) — plus.js har allerede vist CTA-en.
-  }
-}
-
-function el(tag, className, text) {
-  const node = document.createElement(tag);
-  if (className) node.className = className;
-  if (text !== undefined) node.textContent = text;
-  return node;
-}
+import { el } from './dom.js';
+import { readJSON, writeJSON } from './store.js';
 
 function icon(paths, filled) {
   const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');

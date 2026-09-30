@@ -7,6 +7,7 @@ import { DB_TEST_TIMEOUT_MS } from './db-timeout.ts';
 import { createApp } from '../src/app.ts';
 import { getSql, closeSql } from '../src/lib/db.ts';
 import { ensureSchema } from '../src/lib/schema.ts';
+import { kontoUser, startMockKonto } from './mock-konto.ts';
 
 setDefaultTimeout(DB_TEST_TIMEOUT_MS);
 
@@ -17,19 +18,8 @@ let app: ReturnType<typeof createApp>;
 const PLUS = { cookie: 'fv-session=plus' };
 const FREE = { cookie: 'fv-session=gratis' };
 
-function userJson(plus: boolean) {
-  return Response.json({
-    user: {
-      id: TEST_USER_ID,
-      email: 'kart-test@flogvit.com',
-      displayName: 'Kart-test',
-      verified: true,
-      plus,
-      plusUntil: plus ? '2099-01-01T00:00:00.000Z' : null,
-    },
-    csrf: 'csrf',
-  });
-}
+const userJson = (plus: boolean) =>
+  kontoUser({ id: TEST_USER_ID, plus, plusUntil: plus ? '2099-01-01T00:00:00.000Z' : null });
 
 async function seed(itemId: string, data: unknown) {
   const sql = getSql();
@@ -40,16 +30,10 @@ async function seed(itemId: string, data: unknown) {
 }
 
 beforeAll(async () => {
-  mock = Bun.serve({
-    port: 0,
-    fetch(req) {
-      const cookie = req.headers.get('cookie') ?? '';
-      if (cookie.includes('fv-session=plus')) return userJson(true);
-      if (cookie.includes('fv-session=gratis')) return userJson(false);
-      return new Response('unauthorized', { status: 401 });
-    },
-  });
-  process.env.ACCOUNT_API_URL = `http://localhost:${mock.port}`;
+  mock = startMockKonto(
+    { plus: () => userJson(true), gratis: () => userJson(false) },
+    () => new Response('unauthorized', { status: 401 }),
+  );
   await ensureSchema(getSql());
   const sql = getSql();
   await sql`DELETE FROM sync_items WHERE user_id = ${TEST_USER_ID}`;

@@ -18,6 +18,7 @@ import {
   deleteDatabase,
 } from './offline-db.js';
 import { readStrings, intlLocale, langParam, localeHref } from './locale.js';
+import { el } from './dom.js';
 
 const t = readStrings(document.body);
 
@@ -25,13 +26,6 @@ const $ = (sel) => document.querySelector(sel);
 const statusBox = $('[data-offline-status]');
 const contentBox = $('[data-offline-content]');
 if (statusBox) init();
-
-function el(tag, cls, text) {
-  const node = document.createElement(tag);
-  if (cls) node.className = cls;
-  if (text !== undefined) node.textContent = text;
-  return node;
-}
 
 function fmtBytes(n) {
   if (!n) return '0 MB';

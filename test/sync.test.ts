@@ -6,6 +6,7 @@ import { DB_TEST_TIMEOUT_MS } from './db-timeout.ts';
 import { createApp } from '../src/app.ts';
 import { getSql, closeSql } from '../src/lib/db.ts';
 import { ensureSchema } from '../src/lib/schema.ts';
+import { kontoUser, startMockKonto } from './mock-konto.ts';
 
 setDefaultTimeout(DB_TEST_TIMEOUT_MS);
 
@@ -23,40 +24,11 @@ async function cleanup() {
 }
 
 beforeAll(async () => {
-  mock = Bun.serve({
-    port: 0,
-    fetch(req) {
-      const cookie = req.headers.get('cookie') ?? '';
-      if (cookie.includes('fv-session=gyldig')) {
-        return Response.json({
-          user: {
-            id: TEST_USER_ID,
-            email: 'sync-test@flogvit.com',
-            displayName: 'Sync-test',
-            verified: true,
-            plus: true, // husking (sync) er plus-gated — sync-testene kjører som plus-bruker
-            plusUntil: '2099-01-01T00:00:00.000Z',
-          },
-          csrf: 'csrf',
-        });
-      }
-      if (cookie.includes('fv-session=uten-plus')) {
-        return Response.json({
-          user: {
-            id: TEST_USER_ID + 1,
-            email: 'gratis@flogvit.com',
-            displayName: 'Gratis',
-            verified: true,
-            plus: false,
-            plusUntil: null,
-          },
-          csrf: 'csrf',
-        });
-      }
-      return Response.json({ user: null });
-    },
+  mock = startMockKonto({
+    // husking (sync) er plus-gated — sync-testene kjører som plus-bruker
+    gyldig: () => kontoUser({ id: TEST_USER_ID, plus: true, plusUntil: '2099-01-01T00:00:00.000Z' }),
+    'uten-plus': () => kontoUser({ id: TEST_USER_ID + 1, plus: false }),
   });
-  process.env.ACCOUNT_API_URL = `http://localhost:${mock.port}`;
   app = createApp();
   await ensureSchema(getSql());
   await cleanup();

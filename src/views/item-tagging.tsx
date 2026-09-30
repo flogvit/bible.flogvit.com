@@ -21,15 +21,11 @@ export type ItemType =
 export interface ItemTaggingProps {
   itemType: ItemType;
   itemId: string;
-  /** Kompakt visning (🏷-knapp med nedtrekk) — som i gamle appen */
-  compact?: boolean;
-  className?: string;
 }
 
-export function ItemTagging({ itemType, itemId, compact = false, className }: ItemTaggingProps) {
-  const classes = ['item-tagging', compact ? 'compact' : '', className || ''].filter(Boolean).join(' ');
+export function ItemTagging({ itemType, itemId }: ItemTaggingProps) {
   return (
-    <div class={classes} data-item-type={itemType} data-item-id={itemId}>
+    <div class="item-tagging" data-item-type={itemType} data-item-id={itemId}>
       {/* Tom tilstand uten JS: emner er en lokal (localStorage) funksjon. */}
       <noscript>
         <span class="item-tagging-empty">{tCtx()('tag.needsJs')}</span>

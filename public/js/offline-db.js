@@ -8,7 +8,7 @@ const DB_VERSION = 4;
 
 let dbPromise = null;
 
-export function openDb() {
+function openDb() {
   if (dbPromise) return dbPromise;
   dbPromise = new Promise((resolve, reject) => {
     const req = indexedDB.open(DB_NAME, DB_VERSION);
@@ -87,7 +87,7 @@ export async function countChapters(bible) {
   return reqToPromise(st.index('by-bible').count(bible));
 }
 
-export async function deleteChaptersByBible(bible) {
+async function deleteChaptersByBible(bible) {
   const db = await openDb();
   const keys = await reqToPromise(
     db.transaction('chapters').objectStore('chapters').index('by-bible').getAllKeys(bible),
@@ -95,11 +95,6 @@ export async function deleteChaptersByBible(bible) {
   return tx(db, 'chapters', 'readwrite', (st) => {
     for (const key of keys) st.delete(key);
   });
-}
-
-export async function deleteAllChapters() {
-  const db = await openDb();
-  return tx(db, 'chapters', 'readwrite', (st) => st.clear());
 }
 
 // ── Bøker og støttedata ──────────────────────────────────────────────
@@ -136,11 +131,6 @@ export async function putAll(store, rows) {
 export async function getAll(store) {
   const db = await openDb();
   return reqToPromise(db.transaction(store).objectStore(store).getAll());
-}
-
-export async function clearStore(store) {
-  const db = await openDb();
-  return tx(db, store, 'readwrite', (st) => st.clear());
 }
 
 // ── Metadata ─────────────────────────────────────────────────────────

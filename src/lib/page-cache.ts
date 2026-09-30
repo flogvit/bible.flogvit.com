@@ -41,7 +41,7 @@ import { registrerMinnekilde } from './minne-regnskap.ts';
  * å kode strengen til byte på nytt, og en bom slipper å dekode dem til en
  * streng bare for å telle dem.
  */
-export function entryBytes(body: Uint8Array): number {
+function entryBytes(body: Uint8Array): number {
   return body.byteLength;
 }
 

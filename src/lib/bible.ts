@@ -12,8 +12,6 @@ import {
 } from './lang.ts';
 import { bookAbbrByShort, bookNameByShort } from './books-data.ts';
 
-// Re-export toUrlSlug for convenience (server-side usage)
-export { toUrlSlug } from './url-utils.ts';
 import { toUrlSlug } from './url-utils.ts';
 import { bookMentionTest, personChapterCandidates } from './blob-forfilter.ts';
 
@@ -152,18 +150,6 @@ export function getBookUrlSlug(book: Book): string {
   return toUrlSlug(book.short_name);
 }
 
-export function getBookByShortName(shortName: string): Book | undefined {
-  const books = requireBooks();
-  const normalized = shortName.toLowerCase();
-
-  // First try exact match
-  const book = books.find(b => b.short_name.toLowerCase() === normalized);
-  if (book) return book;
-
-  // Try matching with ASCII conversion (e.g., "ap" matches "Åp")
-  return books.find(b => toUrlSlug(b.short_name) === normalized);
-}
-
 export function getBookById(id: number): Book | undefined {
   return requireBooks().find(b => b.id === id);
 }
@@ -244,6 +230,33 @@ export interface VerseWithOriginal {
   originalText: string | null;
   originalLanguage: 'hebrew' | 'greek';
   bookShortName: string;
+}
+
+export interface FavoriteVerse {
+  bookId: number;
+  chapter: number;
+  verse: number;
+  bookShortName: string;
+  text: string;
+}
+
+/** Verstekstene til en liste favoritter, i samme rekkefølge. Et vers som ikke finnes, faller ut. */
+export async function getFavoriteVerses(
+  favs: readonly { bookId: number; chapter: number; verse: number }[],
+): Promise<FavoriteVerse[]> {
+  const sql = getSql();
+  const rows = await Promise.all(
+    favs.map(async ({ bookId, chapter, verse }) => {
+      const [v] = (await sql`
+        SELECT v.text, b.short_name FROM verses v
+        JOIN books b ON v.book_id = b.id
+        WHERE v.book_id = ${bookId} AND v.chapter = ${chapter}
+          AND v.verse = ${verse} AND v.bible = 'osnb'
+      `) as { text: string; short_name: string }[];
+      return v ? { bookId, chapter, verse, bookShortName: v.short_name, text: v.text } : null;
+    }),
+  );
+  return rows.filter((v): v is FavoriteVerse => v !== null);
 }
 
 export async function getVerse(bookId: number, chapter: number, verseNum: number, bible = 'osnb'): Promise<Verse | undefined> {
@@ -499,13 +512,6 @@ export interface Theme {
   content: string;
 }
 
-// Gammelt format (txt-filer)
-export interface ThemeItem {
-  title: string;
-  description: string;
-}
-
-// Nytt JSON-format
 export interface ThemeVerseRef {
   bookId: number;
   chapter: number;
@@ -559,36 +565,6 @@ export async function getThemeByName(name: string, lang = currentContentLanguage
     SELECT * FROM themes WHERE name = ${name} AND language = ${language}
   ` as Promise<Theme[]>);
   return row;
-}
-
-export function isJsonTheme(content: string): boolean {
-  try {
-    const parsed = JSON.parse(content);
-    return parsed && typeof parsed === 'object' && 'sections' in parsed;
-  } catch {
-    return false;
-  }
-}
-
-export function parseThemeJson(content: string): ThemeData | null {
-  try {
-    return JSON.parse(content) as ThemeData;
-  } catch {
-    return null;
-  }
-}
-
-// Beholdes for bakoverkompatibilitet med txt-filer
-export function parseThemeContent(content: string): ThemeItem[] {
-  return content.split('\n')
-    .filter(line => line.includes(':'))
-    .map(line => {
-      const colonIdx = line.indexOf(':');
-      return {
-        title: line.substring(0, colonIdx).trim(),
-        description: line.substring(colonIdx + 1).trim()
-      };
-    });
 }
 
 // --- Dager (helligdager/merkedager) ---
@@ -1055,14 +1031,8 @@ export interface TimelineData {
 }
 
 export interface MultiTimelineData {
-  bible: {
-    periods: TimelinePeriod[];
-    events: TimelineEvent[];
-  };
-  world: {
-    periods: TimelinePeriod[];
-    events: TimelineEvent[];
-  };
+  bible: TimelineData;
+  world: TimelineData;
   books: {
     available: { id: number; name_no: string; short_name: string }[];
     sections: TimelineBookSection[];
@@ -1077,9 +1047,7 @@ function dropSeq<T>(rows: T[]): T[] {
   return rows;
 }
 
-async function attachReferencesToEvents(
-  events: (TimelineEvent & { period_name?: string; period_color?: string; language?: string })[],
-): Promise<TimelineEvent[]> {
+async function attachReferencesToEvents(events: TimelineEventRow[]): Promise<TimelineEvent[]> {
   const sql = getSql();
   dropSeq(events);
   const result: TimelineEvent[] = [];
@@ -1102,7 +1070,7 @@ async function attachReferencesToEvents(
         timeline_type: event.timeline_type || 'bible',
         name: event.period_name || '',
         color: event.period_color || null,
-        description: null,
+        description: event.period_description || null,
         sort_order: 0
       } : undefined
     });
@@ -1110,88 +1078,44 @@ async function attachReferencesToEvents(
   return result;
 }
 
-type TimelineEventRow = TimelineEvent & { period_name?: string; period_color?: string; language?: string };
+// `period_description` hentes bare av enkeltoppslaget; listene lar den stå tom.
+type TimelineEventRow = TimelineEvent & {
+  period_name?: string;
+  period_color?: string;
+  period_description?: string;
+  language?: string;
+};
+
+type TimelineType = 'bible' | 'world';
+
+function timelinePeriodsOf(type: TimelineType, lang: string): Promise<TimelinePeriod[]> {
+  const sql = getSql();
+  return inLanguage(lang, (language) => sql`
+    SELECT * FROM timeline_periods
+    WHERE timeline_type = ${type} AND language = ${language} ORDER BY sort_order
+  ` as Promise<TimelinePeriod[]>);
+}
+
+async function timelineEventsOf(type: TimelineType, lang: string): Promise<TimelineEvent[]> {
+  const sql = getSql();
+  const events = await inLanguage(lang, (language) => sql`
+    SELECT e.*, p.name as period_name, p.color as period_color
+    FROM timeline_events e
+    LEFT JOIN timeline_periods p ON e.period_id = p.id AND p.timeline_type = e.timeline_type
+      AND p.language = e.language
+    WHERE e.timeline_type = ${type} AND e.language = ${language}
+    ORDER BY p.sort_order, e.year IS NULL DESC, e.year, e.sort_order, e.seq
+  ` as Promise<TimelineEventRow[]>);
+
+  return attachReferencesToEvents(events);
+}
 
 export async function getTimelinePeriods(lang = currentContentLanguage()): Promise<TimelinePeriod[]> {
-  const sql = getSql();
-  return await inLanguage(lang, (language) => sql`
-    SELECT * FROM timeline_periods
-    WHERE timeline_type = ${'bible'} AND language = ${language} ORDER BY sort_order
-  ` as Promise<TimelinePeriod[]>);
+  return await timelinePeriodsOf('bible', lang);
 }
 
 export async function getTimelineEvents(lang = currentContentLanguage()): Promise<TimelineEvent[]> {
-  const sql = getSql();
-  const events = await inLanguage(lang, (language) => sql`
-    SELECT e.*, p.name as period_name, p.color as period_color
-    FROM timeline_events e
-    LEFT JOIN timeline_periods p ON e.period_id = p.id AND p.timeline_type = e.timeline_type
-      AND p.language = e.language
-    WHERE e.timeline_type = 'bible' AND e.language = ${language}
-    ORDER BY p.sort_order, e.year IS NULL DESC, e.year, e.sort_order, e.seq
-  ` as Promise<TimelineEventRow[]>);
-
-  return attachReferencesToEvents(events);
-}
-
-export async function getWorldTimelinePeriods(lang = currentContentLanguage()): Promise<TimelinePeriod[]> {
-  const sql = getSql();
-  return await inLanguage(lang, (language) => sql`
-    SELECT * FROM timeline_periods
-    WHERE timeline_type = ${'world'} AND language = ${language} ORDER BY sort_order
-  ` as Promise<TimelinePeriod[]>);
-}
-
-export async function getWorldTimelineEvents(lang = currentContentLanguage()): Promise<TimelineEvent[]> {
-  const sql = getSql();
-  const events = await inLanguage(lang, (language) => sql`
-    SELECT e.*, p.name as period_name, p.color as period_color
-    FROM timeline_events e
-    LEFT JOIN timeline_periods p ON e.period_id = p.id AND p.timeline_type = e.timeline_type
-      AND p.language = e.language
-    WHERE e.timeline_type = 'world' AND e.language = ${language}
-    ORDER BY p.sort_order, e.year IS NULL DESC, e.year, e.sort_order, e.seq
-  ` as Promise<TimelineEventRow[]>);
-
-  return attachReferencesToEvents(events);
-}
-
-export async function getBookTimelineSections(
-  bookId?: number,
-  lang = currentContentLanguage(),
-): Promise<TimelineBookSection[]> {
-  const sql = getSql();
-  if (bookId) {
-    return dropSeq(await inLanguage(lang, (language) => sql`
-      SELECT * FROM timeline_book_sections
-      WHERE book_id = ${bookId} AND language = ${language} ORDER BY sort_order, seq
-    ` as Promise<TimelineBookSection[]>));
-  }
-  return dropSeq(await inLanguage(lang, (language) => sql`
-    SELECT * FROM timeline_book_sections
-    WHERE language = ${language} ORDER BY book_id, sort_order, seq
-  ` as Promise<TimelineBookSection[]>));
-}
-
-export async function getBookTimelineEvents(
-  bookId?: number,
-  lang = currentContentLanguage(),
-): Promise<TimelineEvent[]> {
-  const sql = getSql();
-  const events = bookId
-    ? await inLanguage(lang, (language) => sql`
-        SELECT e.*, NULL as period_name, NULL as period_color
-        FROM timeline_events e
-        WHERE e.timeline_type = 'books' AND e.book_id = ${bookId} AND e.language = ${language}
-        ORDER BY e.sort_order, e.seq
-      ` as Promise<TimelineEventRow[]>)
-    : await inLanguage(lang, (language) => sql`
-        SELECT e.*, NULL as period_name, NULL as period_color
-        FROM timeline_events e
-        WHERE e.timeline_type = 'books' AND e.language = ${language}
-        ORDER BY e.book_id, e.sort_order, e.seq
-      ` as Promise<TimelineEventRow[]>);
-  return attachReferencesToEvents(events);
+  return await timelineEventsOf('bible', lang);
 }
 
 export async function getMultiTimeline(lang = currentContentLanguage()): Promise<MultiTimelineData> {
@@ -1208,22 +1132,30 @@ export async function getMultiTimeline(lang = currentContentLanguage()): Promise
 
   return {
     bible: {
-      periods: await getTimelinePeriods(lang),
-      events: await getTimelineEvents(lang),
+      periods: await timelinePeriodsOf('bible', lang),
+      events: await timelineEventsOf('bible', lang),
     },
     world: {
-      periods: await getWorldTimelinePeriods(lang),
-      events: await getWorldTimelineEvents(lang),
+      periods: await timelinePeriodsOf('world', lang),
+      events: await timelineEventsOf('world', lang),
     },
     books: {
       available: availableBooks,
-      sections: await getBookTimelineSections(undefined, lang),
-      events: await getBookTimelineEvents(undefined, lang),
+      sections: dropSeq(await inLanguage(lang, (language) => sql`
+        SELECT * FROM timeline_book_sections
+        WHERE language = ${language} ORDER BY book_id, sort_order, seq
+      ` as Promise<TimelineBookSection[]>)),
+      events: await attachReferencesToEvents(await inLanguage(lang, (language) => sql`
+        SELECT e.*, NULL as period_name, NULL as period_color
+        FROM timeline_events e
+        WHERE e.timeline_type = 'books' AND e.language = ${language}
+        ORDER BY e.book_id, e.sort_order, e.seq
+      ` as Promise<TimelineEventRow[]>)),
     },
   };
 }
 
-export async function getTimelineEventById(
+async function getTimelineEventById(
   id: string,
   lang = currentContentLanguage(),
 ): Promise<TimelineEvent | undefined> {
@@ -1234,55 +1166,11 @@ export async function getTimelineEventById(
     LEFT JOIN timeline_periods p ON e.period_id = p.id AND p.timeline_type = e.timeline_type
       AND p.language = e.language
     WHERE e.id = ${id} AND e.language = ${language}
-  ` as Promise<(TimelineEvent & { period_name?: string; period_color?: string; period_description?: string; language?: string })[]>);
-
-  if (!event) return undefined;
-  const language = event.language ?? DEFAULT_CONTENT_LANGUAGE;
-  dropSeq([event]);
-
-  const refs = await sql`
-    SELECT tr.book_id, tr.chapter, tr.verse_start, tr.verse_end, b.short_name as book_short_name, b.name_no as book_name_no
-    FROM timeline_references tr
-    JOIN books b ON tr.book_id = b.id
-    WHERE tr.event_id = ${id} AND tr.language = ${language}
-  ` as TimelineReference[];
-
-  return {
-    ...event,
-    references: refs,
-    period: event.period_id ? {
-      id: event.period_id,
-      timeline_type: event.timeline_type || 'bible',
-      name: event.period_name || '',
-      color: event.period_color || null,
-      description: event.period_description || null,
-      sort_order: 0
-    } : undefined
-  };
-}
-
-export async function getTimelineEventsByPeriod(
-  periodId: string,
-  lang = currentContentLanguage(),
-): Promise<TimelineEvent[]> {
-  const sql = getSql();
-  const events = await inLanguage(lang, (language) => sql`
-    SELECT e.*, p.name as period_name, p.color as period_color
-    FROM timeline_events e
-    LEFT JOIN timeline_periods p ON e.period_id = p.id AND p.timeline_type = e.timeline_type
-      AND p.language = e.language
-    WHERE e.period_id = ${periodId} AND e.timeline_type = 'bible' AND e.language = ${language}
-    ORDER BY e.year IS NULL DESC, e.year, e.sort_order, e.seq
   ` as Promise<TimelineEventRow[]>);
 
-  return attachReferencesToEvents(events);
-}
-
-export async function getFullTimeline(lang = currentContentLanguage()): Promise<TimelineData> {
-  return {
-    periods: await getTimelinePeriods(lang),
-    events: await getTimelineEvents(lang)
-  };
+  if (!event) return undefined;
+  const [withRefs] = await attachReferencesToEvents([event]);
+  return withRefs;
 }
 
 function deduplicateTimelineEvents(events: TimelineEvent[]): TimelineEvent[] {
@@ -1449,11 +1337,6 @@ export interface Prophecy {
   category?: ProphecyCategory;
 }
 
-export interface ProphecyData {
-  categories: ProphecyCategory[];
-  prophecies: Prophecy[];
-}
-
 export async function getProphecyCategories(lang = currentContentLanguage()): Promise<ProphecyCategory[]> {
   const sql = getSql();
   // seq bevarer innsettingsrekkefølgen (= rekkefølgen i prophecies.json, som
@@ -1475,6 +1358,55 @@ type ProphecyRow = Prophecy & {
   language?: string;
 };
 
+/**
+ * Fyller ut én profetirad med oppfyllelser og formaterte referanser. Delt av
+ * lista og enkeltoppslaget, som skal gi nøyaktig samme form.
+ */
+async function toProphecy(p: ProphecyRow, lang: string): Promise<Prophecy> {
+  const sql = getSql();
+  // Get fulfillments — på samme språk som profetien faktisk ble funnet på.
+  const fulfillments = await sql`
+    SELECT pf.book_id, pf.chapter, pf.verse_start, pf.verse_end,
+           b.short_name as book_short_name, b.name_no as book_name_no
+    FROM prophecy_fulfillments pf
+    JOIN books b ON pf.book_id = b.id
+    WHERE pf.prophecy_id = ${p.id} AND pf.language = ${p.language ?? DEFAULT_CONTENT_LANGUAGE}
+  ` as ProphecyReference[];
+
+  // Format reference strings
+  const formatRef = (ref: ProphecyReference): string => {
+    const verseRange = ref.verse_start === ref.verse_end
+      ? `${ref.verse_start}`
+      : `${ref.verse_start}-${ref.verse_end}`;
+    // Forkortelsen i raden er den NORSKE nøkkelen — oversett for visning (#20).
+    return `${bookAbbrByShort(ref.book_short_name, lang)} ${ref.chapter}:${verseRange}`;
+  };
+
+  const prophecyRef: ProphecyReference = {
+    book_id: p.prophecy_book_id,
+    chapter: p.prophecy_chapter,
+    verse_start: p.prophecy_verse_start,
+    verse_end: p.prophecy_verse_end,
+    book_short_name: p.prophecy_book_short_name,
+    book_name_no: p.prophecy_book_name_no
+  };
+  prophecyRef.reference = formatRef(prophecyRef);
+
+  return {
+    id: p.id,
+    category_id: p.category_id,
+    title: p.title,
+    explanation: p.explanation,
+    prophecy: prophecyRef,
+    fulfillments: fulfillments.map(f => ({ ...f, reference: formatRef(f) })),
+    category: p.category_id ? {
+      id: p.category_id,
+      name: p.category_name || '',
+      description: p.category_description || null
+    } : undefined
+  };
+}
+
 export async function getProphecies(lang = currentContentLanguage()): Promise<Prophecy[]> {
   const sql = getSql();
   const prophecies = await inLanguage(lang, (language) => sql`
@@ -1488,58 +1420,11 @@ export async function getProphecies(lang = currentContentLanguage()): Promise<Pr
   ` as Promise<ProphecyRow[]>);
 
   const result: Prophecy[] = [];
-  for (const p of prophecies) {
-    // Get fulfillments — på samme språk som profetien faktisk ble funnet på.
-    const fulfillments = await sql`
-      SELECT pf.book_id, pf.chapter, pf.verse_start, pf.verse_end,
-             b.short_name as book_short_name, b.name_no as book_name_no
-      FROM prophecy_fulfillments pf
-      JOIN books b ON pf.book_id = b.id
-      WHERE pf.prophecy_id = ${p.id} AND pf.language = ${p.language ?? DEFAULT_CONTENT_LANGUAGE}
-    ` as ProphecyReference[];
-
-    // Format reference strings
-    const formatRef = (ref: ProphecyReference): string => {
-      const verseRange = ref.verse_start === ref.verse_end
-        ? `${ref.verse_start}`
-        : `${ref.verse_start}-${ref.verse_end}`;
-      // Forkortelsen i raden er den NORSKE nøkkelen — oversett for visning (#20).
-      return `${bookAbbrByShort(ref.book_short_name, lang)} ${ref.chapter}:${verseRange}`;
-    };
-
-    const prophecyRef: ProphecyReference = {
-      book_id: p.prophecy_book_id,
-      chapter: p.prophecy_chapter,
-      verse_start: p.prophecy_verse_start,
-      verse_end: p.prophecy_verse_end,
-      book_short_name: p.prophecy_book_short_name,
-      book_name_no: p.prophecy_book_name_no
-    };
-    prophecyRef.reference = formatRef(prophecyRef);
-
-    const fulfillmentsWithRef = fulfillments.map(f => ({
-      ...f,
-      reference: formatRef(f)
-    }));
-
-    result.push({
-      id: p.id,
-      category_id: p.category_id,
-      title: p.title,
-      explanation: p.explanation,
-      prophecy: prophecyRef,
-      fulfillments: fulfillmentsWithRef,
-      category: p.category_id ? {
-        id: p.category_id,
-        name: p.category_name || '',
-        description: p.category_description || null
-      } : undefined
-    });
-  }
+  for (const p of prophecies) result.push(await toProphecy(p, lang));
   return result;
 }
 
-export async function getProphecyById(id: string, lang = currentContentLanguage()): Promise<Prophecy | undefined> {
+async function getProphecyById(id: string, lang = currentContentLanguage()): Promise<Prophecy | undefined> {
   const sql = getSql();
   const [prophecy] = await inLanguage(lang, (language) => sql`
     SELECT p.*, c.name as category_name, c.description as category_description,
@@ -1550,61 +1435,16 @@ export async function getProphecyById(id: string, lang = currentContentLanguage(
     WHERE p.id = ${id} AND p.language = ${language}
   ` as Promise<ProphecyRow[]>);
 
-  if (!prophecy) return undefined;
-
-  const fulfillments = await sql`
-    SELECT pf.book_id, pf.chapter, pf.verse_start, pf.verse_end,
-           b.short_name as book_short_name, b.name_no as book_name_no
-    FROM prophecy_fulfillments pf
-    JOIN books b ON pf.book_id = b.id
-    WHERE pf.prophecy_id = ${id} AND pf.language = ${prophecy.language ?? DEFAULT_CONTENT_LANGUAGE}
-  ` as ProphecyReference[];
-
-  const formatRef = (ref: ProphecyReference): string => {
-    const verseRange = ref.verse_start === ref.verse_end
-      ? `${ref.verse_start}`
-      : `${ref.verse_start}-${ref.verse_end}`;
-    return `${bookAbbrByShort(ref.book_short_name, lang)} ${ref.chapter}:${verseRange}`;
-  };
-
-  const prophecyRef: ProphecyReference = {
-    book_id: prophecy.prophecy_book_id,
-    chapter: prophecy.prophecy_chapter,
-    verse_start: prophecy.prophecy_verse_start,
-    verse_end: prophecy.prophecy_verse_end,
-    book_short_name: prophecy.prophecy_book_short_name,
-    book_name_no: prophecy.prophecy_book_name_no
-  };
-  prophecyRef.reference = formatRef(prophecyRef);
-
-  return {
-    id: prophecy.id,
-    category_id: prophecy.category_id,
-    title: prophecy.title,
-    explanation: prophecy.explanation,
-    prophecy: prophecyRef,
-    fulfillments: fulfillments.map(f => ({ ...f, reference: formatRef(f) })),
-    category: prophecy.category_id ? {
-      id: prophecy.category_id,
-      name: prophecy.category_name || '',
-      description: prophecy.category_description || null
-    } : undefined
-  };
+  return prophecy ? toProphecy(prophecy, lang) : undefined;
 }
 
-export async function getPropheciesByCategory(
-  categoryId: string,
-  lang = currentContentLanguage(),
-): Promise<Prophecy[]> {
-  const all = await getProphecies(lang);
-  return all.filter(p => p.category_id === categoryId);
-}
-
-export async function getFullProphecyData(lang = currentContentLanguage()): Promise<ProphecyData> {
-  return {
-    categories: await getProphecyCategories(lang),
-    prophecies: await getProphecies(lang)
-  };
+async function propheciesByIds(ids: { id: string }[], lang: string): Promise<Prophecy[]> {
+  const prophecies: Prophecy[] = [];
+  for (const { id } of ids) {
+    const prophecy = await getProphecyById(id, lang);
+    if (prophecy) prophecies.push(prophecy);
+  }
+  return prophecies;
 }
 
 export async function getPropheciesForChapter(
@@ -1625,17 +1465,7 @@ export async function getPropheciesForChapter(
     WHERE pf.book_id = ${bookId} AND pf.chapter = ${chapter} AND pf.language = ${language}
   ` as Promise<{ id: string }[]>);
 
-  if (prophecyIds.length === 0) return [];
-
-  const prophecies: Prophecy[] = [];
-  for (const { id } of prophecyIds) {
-    const prophecy = await getProphecyById(id, lang);
-    if (prophecy) {
-      prophecies.push(prophecy);
-    }
-  }
-
-  return prophecies;
+  return propheciesByIds(prophecyIds, lang);
 }
 
 export async function getPropheciesForVerse(
@@ -1661,17 +1491,7 @@ export async function getPropheciesForVerse(
       AND pf.language = ${language}
   ` as Promise<{ id: string }[]>);
 
-  if (prophecyIds.length === 0) return [];
-
-  const prophecies: Prophecy[] = [];
-  for (const { id } of prophecyIds) {
-    const prophecy = await getProphecyById(id, lang);
-    if (prophecy) {
-      prophecies.push(prophecy);
-    }
-  }
-
-  return prophecies;
+  return propheciesByIds(prophecyIds, lang);
 }
 
 // Person types and functions
@@ -1724,14 +1544,14 @@ export interface Person {
   content: string;
 }
 
-export async function getAllPersons(lang = currentContentLanguage()): Promise<Person[]> {
+async function getAllPersons(lang = currentContentLanguage()): Promise<Person[]> {
   const sql = getSql();
   return await inLanguage(lang, (language) => sql`
     SELECT * FROM persons WHERE language = ${language} ORDER BY name
   ` as Promise<Person[]>);
 }
 
-export async function getPersonByName(name: string, lang = currentContentLanguage()): Promise<Person | undefined> {
+async function getPersonByName(name: string, lang = currentContentLanguage()): Promise<Person | undefined> {
   const sql = getSql();
   const [row] = await inLanguage(lang, (language) => sql`
     SELECT * FROM persons WHERE name = ${name} AND language = ${language}
@@ -1888,21 +1708,6 @@ export async function getPersonsByEra(era: string, lang = currentContentLanguage
   return allPersons.filter(p => p.era === era);
 }
 
-export async function getRelatedPersonsData(
-  personId: string,
-  lang = currentContentLanguage(),
-): Promise<PersonData[]> {
-  const person = await getPersonData(personId, lang);
-  if (!person || !person.relatedPersons) return [];
-
-  const result: PersonData[] = [];
-  for (const id of person.relatedPersons) {
-    const p = await getPersonData(id, lang);
-    if (p !== null) result.push(p);
-  }
-  return result;
-}
-
 // Chapter Insights types and functions
 
 export interface ChapterInsightBase {
@@ -1971,11 +1776,6 @@ export interface GospelParallel {
   section?: GospelParallelSection;
 }
 
-export interface GospelParallelsData {
-  sections: GospelParallelSection[];
-  parallels: GospelParallel[];
-}
-
 export async function getGospelParallelSections(lang = currentContentLanguage()): Promise<GospelParallelSection[]> {
   const sql = getSql();
   return await inLanguage(lang, (language) => sql`
@@ -1989,86 +1789,18 @@ type GospelParallelRow = GospelParallel & {
   language?: string;
 };
 
-export async function getGospelParallels(lang = currentContentLanguage()): Promise<GospelParallel[]> {
+/**
+ * Fyller ut én parallellrad med tekstavsnittene sine. Delt av lista og
+ * enkeltoppslaget, som skal gi nøyaktig samme form.
+ */
+async function toGospelParallel(parallel: GospelParallelRow): Promise<GospelParallel> {
   const sql = getSql();
-  const parallels = await inLanguage(lang, (language) => sql`
-    SELECT p.*, s.name as section_name, s.description as section_description
-    FROM gospel_parallels p
-    LEFT JOIN gospel_parallel_sections s ON p.section_id = s.id AND s.language = p.language
-    WHERE p.language = ${language}
-    ORDER BY p.sort_order
-  ` as Promise<GospelParallelRow[]>);
-
-  const result: GospelParallel[] = [];
-  for (const parallel of parallels) {
-    // Get passages for this parallel — på parallellens eget språk.
-    const passages = await sql`
-      SELECT gpp.*, b.short_name as book_short_name, b.name_no as book_name_no
-      FROM gospel_parallel_passages gpp
-      JOIN books b ON gpp.book_id = b.id
-      WHERE gpp.parallel_id = ${parallel.id} AND gpp.language = ${parallel.language ?? DEFAULT_CONTENT_LANGUAGE}
-    ` as (GospelParallelPassage & { parallel_id: string })[];
-
-    // Convert passages array to Record keyed by gospel
-    const passagesRecord: Record<string, GospelParallelPassage> = {};
-    for (const passage of passages) {
-      passagesRecord[passage.gospel] = {
-        gospel: passage.gospel,
-        book_id: passage.book_id,
-        chapter: passage.chapter,
-        verse_start: passage.verse_start,
-        verse_end: passage.verse_end,
-        reference: passage.reference,
-        book_short_name: passage.book_short_name,
-        book_name_no: passage.book_name_no
-      };
-    }
-
-    result.push({
-      id: parallel.id,
-      section_id: parallel.section_id,
-      title: parallel.title,
-      notes: parallel.notes,
-      sort_order: parallel.sort_order,
-      passages: passagesRecord,
-      section: parallel.section_id ? {
-        id: parallel.section_id,
-        name: parallel.section_name || '',
-        description: parallel.section_description || null,
-        sort_order: 0
-      } : undefined
-    });
-  }
-  return result;
-}
-
-export async function getGospelParallelsData(lang = currentContentLanguage()): Promise<GospelParallelsData> {
-  return {
-    sections: await getGospelParallelSections(lang),
-    parallels: await getGospelParallels(lang)
-  };
-}
-
-export async function getGospelParallelById(
-  id: string,
-  lang = currentContentLanguage(),
-): Promise<GospelParallel | undefined> {
-  const sql = getSql();
-  const [parallel] = await inLanguage(lang, (language) => sql`
-    SELECT p.*, s.name as section_name, s.description as section_description
-    FROM gospel_parallels p
-    LEFT JOIN gospel_parallel_sections s ON p.section_id = s.id AND s.language = p.language
-    WHERE p.id = ${id} AND p.language = ${language}
-  ` as Promise<GospelParallelRow[]>);
-
-  if (!parallel) return undefined;
-
-  // Get passages for this parallel
+  // Get passages for this parallel — på parallellens eget språk.
   const passages = await sql`
     SELECT gpp.*, b.short_name as book_short_name, b.name_no as book_name_no
     FROM gospel_parallel_passages gpp
     JOIN books b ON gpp.book_id = b.id
-    WHERE gpp.parallel_id = ${id} AND gpp.language = ${parallel.language ?? DEFAULT_CONTENT_LANGUAGE}
+    WHERE gpp.parallel_id = ${parallel.id} AND gpp.language = ${parallel.language ?? DEFAULT_CONTENT_LANGUAGE}
   ` as (GospelParallelPassage & { parallel_id: string })[];
 
   // Convert passages array to Record keyed by gospel
@@ -2102,12 +1834,34 @@ export async function getGospelParallelById(
   };
 }
 
-export async function getGospelParallelsBySection(
-  sectionId: string,
+export async function getGospelParallels(lang = currentContentLanguage()): Promise<GospelParallel[]> {
+  const sql = getSql();
+  const parallels = await inLanguage(lang, (language) => sql`
+    SELECT p.*, s.name as section_name, s.description as section_description
+    FROM gospel_parallels p
+    LEFT JOIN gospel_parallel_sections s ON p.section_id = s.id AND s.language = p.language
+    WHERE p.language = ${language}
+    ORDER BY p.sort_order
+  ` as Promise<GospelParallelRow[]>);
+
+  const result: GospelParallel[] = [];
+  for (const parallel of parallels) result.push(await toGospelParallel(parallel));
+  return result;
+}
+
+export async function getGospelParallelById(
+  id: string,
   lang = currentContentLanguage(),
-): Promise<GospelParallel[]> {
-  const all = await getGospelParallels(lang);
-  return all.filter(p => p.section_id === sectionId);
+): Promise<GospelParallel | undefined> {
+  const sql = getSql();
+  const [parallel] = await inLanguage(lang, (language) => sql`
+    SELECT p.*, s.name as section_name, s.description as section_description
+    FROM gospel_parallels p
+    LEFT JOIN gospel_parallel_sections s ON p.section_id = s.id AND s.language = p.language
+    WHERE p.id = ${id} AND p.language = ${language}
+  ` as Promise<GospelParallelRow[]>);
+
+  return parallel ? toGospelParallel(parallel) : undefined;
 }
 
 export async function getGospelParallelsForChapter(
@@ -2179,7 +1933,7 @@ function countWords(text: string): number {
   return text.split(/\s+/).filter(w => w.length > 0).length;
 }
 
-export async function getBookStatistics(bookId: number, bible = 'osnb'): Promise<BookStatistics | null> {
+async function getBookStatistics(bookId: number, bible = 'osnb'): Promise<BookStatistics | null> {
   const sql = getSql();
   const book = getBookById(bookId);
   if (!book) return null;

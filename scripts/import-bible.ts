@@ -15,6 +15,7 @@ import type { SQL } from 'bun';
 import { getSql, closeSql } from '../src/lib/db.ts';
 import { ensureSchema } from '../src/lib/schema.ts';
 import {
+  FREE_BIBLE_DIR,
   computeHash,
   updateContentHash,
   incrementSyncVersion,
@@ -37,13 +38,8 @@ import { CONTENT_TABLES, CONTENT_SOURCES, contentSourceReport } from '../src/lib
 import { parseReadingRefMarkup, unknownMappingSystem } from '../src/lib/reading-ref.ts';
 import { IMPORTED_BIBLES } from '../src/lib/editions.ts';
 
-// Kilde for bibelinnhold. Standard: ../free-bible relativt til cwd (som er en
-// symlink til det ekte free-bible-repoet). Kan overstyres eksplisitt med
-// FREE_BIBLE_DIR — deploy-bibel-data.sh setter den til den resolverte stien slik
-// at importen aldri leser en tilfeldig/stale klon ved feil cwd.
-const FREE_BIBLE_DIR = process.env.FREE_BIBLE_DIR
-  ? path.resolve(process.env.FREE_BIBLE_DIR)
-  : path.join(process.cwd(), '..', 'free-bible');
+// Kilde for bibelinnhold: FREE_BIBLE_DIR (se import-utils.ts). Standard er
+// ../free-bible relativt til cwd, som er en symlink til det ekte free-bible-repoet.
 const GENERATE_PATH = path.join(FREE_BIBLE_DIR, 'generate');
 console.log(`Kilde: ${GENERATE_PATH}`);
 
@@ -84,62 +80,42 @@ const isFullImport = args.includes('--full');
 // og de bygges uten database.
 const BIBLES: readonly string[] = IMPORTED_BIBLES;
 
-// Statistics tracking
-interface ImportStats {
-  chapters: { updated: number; unchanged: number };
-  bibleEditions: { updated: number; unchanged: number };
-  word4word: { updated: number; unchanged: number };
-  references: { updated: number; unchanged: number };
-  bookSummaries: { updated: number; unchanged: number };
-  bookContext: { updated: number; unchanged: number };
-  chapterSummaries: { updated: number; unchanged: number };
-  chapterContext: { updated: number; unchanged: number };
-  importantWords: { updated: number; unchanged: number };
-  versePrayers: { updated: number; unchanged: number };
-  verseSermons: { updated: number; unchanged: number };
-  themes: { updated: number; unchanged: number };
-  timeline: { updated: number; unchanged: number };
-  prophecies: { updated: number; unchanged: number };
-  persons: { updated: number; unchanged: number };
-  chapterInsights: { updated: number; unchanged: number };
-  dailyVerses: { updated: number; unchanged: number };
-  readingPlans: { updated: number; unchanged: number };
-  gospelParallels: { updated: number; unchanged: number };
-  verseMappings: { updated: number; unchanged: number };
-  stories: { updated: number; unchanged: number };
-  numberSymbolism: { updated: number; unchanged: number };
-  days: { updated: number; unchanged: number };
-  readingTexts: { updated: number; unchanged: number };
-  verseWorks: { updated: number; unchanged: number };
-}
+// Statistikk per innholdstype: nøkkel, etikett i sammendraget, og nøkkelen
+// slettinger føres under i `deleted`. Rekkefølgen er sammendragstabellens.
+// Lesetekster står ikke i tabellen, men teller med i totalen.
+const STAT_ROWS = [
+  ['chapters', 'Kapitler', 'kapitler'],
+  ['bibleEditions', 'Oversettelser', 'oversettelser'],
+  ['word4word', 'Word4word', 'word4word'],
+  ['references', 'Referanser', 'referanser'],
+  ['bookSummaries', 'Boksammendrag', 'boksammendrag'],
+  ['bookContext', 'Bokkontekst', 'bokkontekst'],
+  ['chapterSummaries', 'Kapittelsammendrag', 'kapittelsammendrag'],
+  ['chapterContext', 'Kapittelkontekst', 'kapittelkontekst'],
+  ['importantWords', 'Viktige ord', 'viktige ord-kapitler'],
+  ['versePrayers', 'Vers-bønn', 'vers-bønn'],
+  ['verseSermons', 'Vers-andakt', 'vers-andakt'],
+  ['themes', 'Temaer', 'temaer'],
+  ['timeline', 'Tidslinje', 'tidslinje'],
+  ['prophecies', 'Profetier', 'profetier'],
+  ['persons', 'Personer', 'personer'],
+  ['chapterInsights', 'Kapittel-innsikter', 'kapittel-innsikter'],
+  ['dailyVerses', 'Dagens vers', 'dagens vers'],
+  ['readingPlans', 'Leseplaner', 'leseplaner'],
+  ['gospelParallels', 'Evangelieparalleller', 'evangelieparalleller'],
+  ['verseMappings', 'Vers-mappinger', 'vers-mappinger'],
+  ['stories', 'Bibelhistorier', 'historier'],
+  ['numberSymbolism', 'Tallsymbolikk', 'tall'],
+  ['days', 'Dager', 'dager'],
+  ['verseWorks', 'Verk', 'verk'],
+] as const;
 
-const stats: ImportStats = {
-  verseWorks: { updated: 0, unchanged: 0 },
-  chapters: { updated: 0, unchanged: 0 },
-  bibleEditions: { updated: 0, unchanged: 0 },
-  word4word: { updated: 0, unchanged: 0 },
-  references: { updated: 0, unchanged: 0 },
-  bookSummaries: { updated: 0, unchanged: 0 },
-  bookContext: { updated: 0, unchanged: 0 },
-  chapterSummaries: { updated: 0, unchanged: 0 },
-  chapterContext: { updated: 0, unchanged: 0 },
-  importantWords: { updated: 0, unchanged: 0 },
-  versePrayers: { updated: 0, unchanged: 0 },
-  verseSermons: { updated: 0, unchanged: 0 },
-  themes: { updated: 0, unchanged: 0 },
-  timeline: { updated: 0, unchanged: 0 },
-  prophecies: { updated: 0, unchanged: 0 },
-  persons: { updated: 0, unchanged: 0 },
-  chapterInsights: { updated: 0, unchanged: 0 },
-  dailyVerses: { updated: 0, unchanged: 0 },
-  readingPlans: { updated: 0, unchanged: 0 },
-  gospelParallels: { updated: 0, unchanged: 0 },
-  verseMappings: { updated: 0, unchanged: 0 },
-  stories: { updated: 0, unchanged: 0 },
-  numberSymbolism: { updated: 0, unchanged: 0 },
-  days: { updated: 0, unchanged: 0 },
-  readingTexts: { updated: 0, unchanged: 0 },
-};
+type Stat = { updated: number; unchanged: number };
+type StatKey = (typeof STAT_ROWS)[number][0] | 'readingTexts';
+
+const stats = Object.fromEntries(
+  [...STAT_ROWS.map(([key]) => key), 'readingTexts'].map((key) => [key, { updated: 0, unchanged: 0 }]),
+) as Record<StatKey, Stat>;
 
 const deleted: Record<string, number> = {};
 
@@ -158,6 +134,22 @@ function hasContentChangedCached(
   language: string = DEFAULT_CONTENT_LANGUAGE,
 ): boolean {
   return hashCache.get(hashKey(contentType, contentKey, language)) !== newHash;
+}
+
+/**
+ * Er innholdet uendret siden forrige import? Da telles det som uendret, og
+ * kalleren hopper over det. En full import regner alt som endret.
+ */
+function unchanged(
+  stat: Stat,
+  contentType: string,
+  contentKey: string,
+  newHash: string,
+  language: string = DEFAULT_CONTENT_LANGUAGE,
+): boolean {
+  if (isFullImport || hasContentChangedCached(contentType, contentKey, newHash, language)) return false;
+  stat.unchanged++;
+  return true;
 }
 
 async function setContentHash(
@@ -377,10 +369,7 @@ async function importVerses(bible: string): Promise<void> {
         const contentKey = `${bible}-${bookId}-${chapterId}`;
 
         // Check if content has changed
-        if (!isFullImport && !hasContentChangedCached('chapter', contentKey, contentHash)) {
-          stats.chapters.unchanged++;
-          continue;
-        }
+        if (unchanged(stats.chapters, 'chapter', contentKey, contentHash)) continue;
 
         // Content changed - update
         const verses = JSON.parse(content) as RawVerse[];
@@ -449,10 +438,7 @@ for (const bible of BIBLES) {
   const licenseContent = fs.existsSync(licensePath) ? fs.readFileSync(licensePath, 'utf-8') : null;
   const contentHash = computeHash(metaContent + (licenseContent ?? ''));
 
-  if (!isFullImport && !hasContentChangedCached('bible_edition', bible, contentHash)) {
-    stats.bibleEditions.unchanged++;
-    continue;
-  }
+  if (unchanged(stats.bibleEditions, 'bible_edition', bible, contentHash)) continue;
 
   try {
     const meta = JSON.parse(metaContent) as RawBibleMeta;
@@ -563,10 +549,7 @@ async function importWord4Word(original: string, lang: string): Promise<void> {
           const contentKey = `${bibleValue}-${bookId}-${chapterId}-${verseId}`;
 
           // Check if content has changed
-          if (!isFullImport && !hasContentChangedCached('word4word', contentKey, contentHash)) {
-            stats.word4word.unchanged++;
-            continue;
-          }
+          if (unchanged(stats.word4word, 'word4word', contentKey, contentHash)) continue;
 
           // Content changed - update
           const data = JSON.parse(content) as { words?: RawWord[] }[];
@@ -658,10 +641,7 @@ for (const lang of contentLanguages('references')) {
           const contentKey = `ref-${lang}-${bookId}-${chapterId}-${verseId}`;
 
           // Check if content has changed
-          if (!isFullImport && !hasContentChangedCached('reference', contentKey, contentHash, lang)) {
-            stats.references.unchanged++;
-            continue;
-          }
+          if (unchanged(stats.references, 'reference', contentKey, contentHash, lang)) continue;
 
           // Content changed - update
           const data = JSON.parse(content) as { references?: RawReference[] };
@@ -699,137 +679,72 @@ for (const lang of contentLanguages('references')) {
   });
 }
 
-// Importer boksammendrag
-console.log('Importerer boksammendrag...');
-for (const lang of contentLanguages('book_summaries')) {
-  const bookSummariesPath = path.join(GENERATE_PATH, 'book_summaries', lang);
-  const before = stats.bookSummaries.updated;
-  await sql.begin(async (tx) => {
-    const files = fs.readdirSync(bookSummariesPath).filter((f) => f.endsWith('.md'));
+// Innholdsslagene der hver fil ER én rad: nøkkelen står i filnavnet
+// (`<bok>.md`, `<bok>-<kap>.md`, `<bok>-<kap>-<vers>.txt`), og teksten lagres
+// som den er. `keyOf` gir tallene i nøkkelen, eller null for en fil som ikke
+// er innhold; `content_key` er tallene satt sammen med bindestrek.
+async function importTextFiles(
+  label: string,
+  source: string,
+  ext: string,
+  keyOf: (file: string) => number[] | null,
+  contentType: string,
+  stat: Stat,
+  insert: (tx: SQL, key: number[], content: string, lang: string) => Promise<unknown>,
+): Promise<void> {
+  console.log(`Importerer ${label}...`);
+  for (const lang of contentLanguages(source)) {
+    const dir = path.join(GENERATE_PATH, source, lang);
+    const before = stat.updated;
+    await sql.begin(async (tx) => {
+      for (const file of fs.readdirSync(dir).filter((f) => f.endsWith(ext))) {
+        const key = keyOf(file);
+        if (!key) continue;
 
-    for (const file of files) {
-      const bookId = parseInt(file.replace('.md', ''));
-      if (isNaN(bookId)) continue;
+        const content = fs.readFileSync(path.join(dir, file), 'utf-8');
+        const contentHash = computeHash(content);
+        const contentKey = key.join('-');
 
-      const filePath = path.join(bookSummariesPath, file);
-      const content = fs.readFileSync(filePath, 'utf-8');
-      const contentHash = computeHash(content);
-      const contentKey = String(bookId);
+        if (unchanged(stat, contentType, contentKey, contentHash, lang)) continue;
 
-      if (!isFullImport && !hasContentChangedCached('book_summary', contentKey, contentHash, lang)) {
-        stats.bookSummaries.unchanged++;
-        continue;
+        await insert(tx, key, content, lang);
+        await setContentHash(tx, contentType, contentKey, contentHash, lang);
+        stat.updated++;
       }
-
-      await tx`REPLACE INTO book_summaries (book_id, summary, language) VALUES (${bookId}, ${content}, ${lang})`;
-      await setContentHash(tx, 'book_summary', contentKey, contentHash, lang);
-      stats.bookSummaries.updated++;
-    }
-  });
-  console.log(`${forLang(lang)} ${stats.bookSummaries.updated - before} oppdatert`);
+    });
+    console.log(`${forLang(lang)} ${stat.updated - before} oppdatert`);
+  }
 }
 
-// Importer bokkontekst
-console.log('Importerer bokkontekst...');
-for (const lang of contentLanguages('book_context')) {
-  const bookContextPath = path.join(GENERATE_PATH, 'book_context', lang);
-  const before = stats.bookContext.updated;
-  await sql.begin(async (tx) => {
-    const files = fs.readdirSync(bookContextPath).filter((f) => f.endsWith('.md'));
+// `parseInt` leser tallet foran `.md` og ignorerer resten, som før.
+const bookFile = (file: string) => {
+  const bookId = parseInt(file);
+  return isNaN(bookId) ? null : [bookId];
+};
+const numberedFile = (pattern: RegExp) => (file: string) => file.match(pattern)?.slice(1).map(Number) ?? null;
+const chapterFile = numberedFile(/^(\d+)-(\d+)\.md$/);
+const verseFile = numberedFile(/^(\d+)-(\d+)-(\d+)\.txt$/);
 
-    for (const file of files) {
-      const bookId = parseInt(file.replace('.md', ''));
-      if (isNaN(bookId)) continue;
-
-      const filePath = path.join(bookContextPath, file);
-      const content = fs.readFileSync(filePath, 'utf-8');
-      const contentHash = computeHash(content);
-      const contentKey = String(bookId);
-
-      if (!isFullImport && !hasContentChangedCached('book_context', contentKey, contentHash, lang)) {
-        stats.bookContext.unchanged++;
-        continue;
-      }
-
-      await tx`REPLACE INTO book_context (book_id, context, language) VALUES (${bookId}, ${content}, ${lang})`;
-      await setContentHash(tx, 'book_context', contentKey, contentHash, lang);
-      stats.bookContext.updated++;
-    }
-  });
-  console.log(`${forLang(lang)} ${stats.bookContext.updated - before} oppdatert`);
-}
-
-// Importer kapittelsammendrag
-console.log('Importerer kapittelsammendrag...');
-for (const lang of contentLanguages('chapter_summaries')) {
-  const chapterSummariesPath = path.join(GENERATE_PATH, 'chapter_summaries', lang);
-  const before = stats.chapterSummaries.updated;
-  await sql.begin(async (tx) => {
-    const files = fs.readdirSync(chapterSummariesPath).filter((f) => f.endsWith('.md'));
-
-    for (const file of files) {
-      const match = file.match(/^(\d+)-(\d+)\.md$/);
-      if (!match) continue;
-
-      const bookId = parseInt(match[1]!);
-      const chapter = parseInt(match[2]!);
-
-      const filePath = path.join(chapterSummariesPath, file);
-      const content = fs.readFileSync(filePath, 'utf-8');
-      const contentHash = computeHash(content);
-      const contentKey = `${bookId}-${chapter}`;
-
-      if (!isFullImport && !hasContentChangedCached('chapter_summary', contentKey, contentHash, lang)) {
-        stats.chapterSummaries.unchanged++;
-        continue;
-      }
-
-      await tx`
-        REPLACE INTO chapter_summaries (book_id, chapter, summary, language)
-        VALUES (${bookId}, ${chapter}, ${content}, ${lang})
-      `;
-      await setContentHash(tx, 'chapter_summary', contentKey, contentHash, lang);
-      stats.chapterSummaries.updated++;
-    }
-  });
-  console.log(`${forLang(lang)} ${stats.chapterSummaries.updated - before} oppdatert`);
-}
-
-// Importer kapittelkontekst
-console.log('Importerer kapittelkontekst...');
-for (const lang of contentLanguages('chapter_context')) {
-  const chapterContextPath = path.join(GENERATE_PATH, 'chapter_context', lang);
-  const before = stats.chapterContext.updated;
-  await sql.begin(async (tx) => {
-    const files = fs.readdirSync(chapterContextPath).filter((f) => f.endsWith('.md'));
-
-    for (const file of files) {
-      const match = file.match(/^(\d+)-(\d+)\.md$/);
-      if (!match) continue;
-
-      const bookId = parseInt(match[1]!);
-      const chapter = parseInt(match[2]!);
-
-      const filePath = path.join(chapterContextPath, file);
-      const content = fs.readFileSync(filePath, 'utf-8');
-      const contentHash = computeHash(content);
-      const contentKey = `${bookId}-${chapter}`;
-
-      if (!isFullImport && !hasContentChangedCached('chapter_context', contentKey, contentHash, lang)) {
-        stats.chapterContext.unchanged++;
-        continue;
-      }
-
-      await tx`
-        REPLACE INTO chapter_context (book_id, chapter, context, language)
-        VALUES (${bookId}, ${chapter}, ${content}, ${lang})
-      `;
-      await setContentHash(tx, 'chapter_context', contentKey, contentHash, lang);
-      stats.chapterContext.updated++;
-    }
-  });
-  console.log(`${forLang(lang)} ${stats.chapterContext.updated - before} oppdatert`);
-}
+await importTextFiles('boksammendrag', 'book_summaries', '.md', bookFile, 'book_summary', stats.bookSummaries,
+  (tx, [bookId], content, lang) =>
+    tx`REPLACE INTO book_summaries (book_id, summary, language) VALUES (${bookId}, ${content}, ${lang})`,
+);
+await importTextFiles('bokkontekst', 'book_context', '.md', bookFile, 'book_context', stats.bookContext,
+  (tx, [bookId], content, lang) =>
+    tx`REPLACE INTO book_context (book_id, context, language) VALUES (${bookId}, ${content}, ${lang})`,
+);
+await importTextFiles('kapittelsammendrag', 'chapter_summaries', '.md', chapterFile, 'chapter_summary', stats.chapterSummaries,
+  (tx, [bookId, chapter], content, lang) => tx`
+    REPLACE INTO chapter_summaries (book_id, chapter, summary, language)
+    VALUES (${bookId}, ${chapter}, ${content}, ${lang})
+  `,
+);
+await importTextFiles('kapittelkontekst', 'chapter_context', '.md', chapterFile, 'chapter_context', stats.chapterContext,
+  (tx, [bookId, chapter], content, lang) => tx`
+    REPLACE INTO chapter_context (book_id, chapter, context, language)
+    VALUES (${bookId}, ${chapter}, ${content}, ${lang})
+  `,
+);
 
 // Importer viktige ord
 console.log('Importerer viktige ord...');
@@ -853,10 +768,7 @@ for (const lang of contentLanguages('important_words')) {
       const contentHash = computeHash(content);
       const contentKey = `${bookId}-${chapter}`;
 
-      if (!isFullImport && !hasContentChangedCached('important_words', contentKey, contentHash, lang)) {
-        stats.importantWords.unchanged++;
-        continue;
-      }
+      if (unchanged(stats.importantWords, 'important_words', contentKey, contentHash, lang)) continue;
 
       let entries: unknown;
       try {
@@ -911,79 +823,18 @@ for (const lang of contentLanguages('important_words')) {
   console.log(`${forLang(lang)} ${stats.importantWords.updated - before} oppdatert`);
 }
 
-// Importer vers-bønn
-console.log('Importerer vers-bønn...');
-for (const lang of contentLanguages('verse_prayer')) {
-  const versePrayerPath = path.join(GENERATE_PATH, 'verse_prayer', lang);
-  const before = stats.versePrayers.updated;
-  await sql.begin(async (tx) => {
-    const files = fs.readdirSync(versePrayerPath).filter((f) => f.endsWith('.txt'));
-
-    for (const file of files) {
-      const match = file.match(/^(\d+)-(\d+)-(\d+)\.txt$/);
-      if (!match) continue;
-
-      const bookId = parseInt(match[1]!);
-      const chapter = parseInt(match[2]!);
-      const verse = parseInt(match[3]!);
-
-      const filePath = path.join(versePrayerPath, file);
-      const content = fs.readFileSync(filePath, 'utf-8');
-      const contentHash = computeHash(content);
-      const contentKey = `${bookId}-${chapter}-${verse}`;
-
-      if (!isFullImport && !hasContentChangedCached('verse_prayer', contentKey, contentHash, lang)) {
-        stats.versePrayers.unchanged++;
-        continue;
-      }
-
-      await tx`
-        REPLACE INTO verse_prayers (book_id, chapter, verse, prayer, language)
-        VALUES (${bookId}, ${chapter}, ${verse}, ${content}, ${lang})
-      `;
-      await setContentHash(tx, 'verse_prayer', contentKey, contentHash, lang);
-      stats.versePrayers.updated++;
-    }
-  });
-  console.log(`${forLang(lang)} ${stats.versePrayers.updated - before} oppdatert`);
-}
-
-// Importer vers-andakt
-console.log('Importerer vers-andakt...');
-for (const lang of contentLanguages('verse_sermon')) {
-  const verseSermonPath = path.join(GENERATE_PATH, 'verse_sermon', lang);
-  const before = stats.verseSermons.updated;
-  await sql.begin(async (tx) => {
-    const files = fs.readdirSync(verseSermonPath).filter((f) => f.endsWith('.txt'));
-
-    for (const file of files) {
-      const match = file.match(/^(\d+)-(\d+)-(\d+)\.txt$/);
-      if (!match) continue;
-
-      const bookId = parseInt(match[1]!);
-      const chapter = parseInt(match[2]!);
-      const verse = parseInt(match[3]!);
-
-      const filePath = path.join(verseSermonPath, file);
-      const content = fs.readFileSync(filePath, 'utf-8');
-      const contentHash = computeHash(content);
-      const contentKey = `${bookId}-${chapter}-${verse}`;
-
-      if (!isFullImport && !hasContentChangedCached('verse_sermon', contentKey, contentHash, lang)) {
-        stats.verseSermons.unchanged++;
-        continue;
-      }
-
-      await tx`
-        REPLACE INTO verse_sermons (book_id, chapter, verse, sermon, language)
-        VALUES (${bookId}, ${chapter}, ${verse}, ${content}, ${lang})
-      `;
-      await setContentHash(tx, 'verse_sermon', contentKey, contentHash, lang);
-      stats.verseSermons.updated++;
-    }
-  });
-  console.log(`${forLang(lang)} ${stats.verseSermons.updated - before} oppdatert`);
-}
+await importTextFiles('vers-bønn', 'verse_prayer', '.txt', verseFile, 'verse_prayer', stats.versePrayers,
+  (tx, [bookId, chapter, verse], content, lang) => tx`
+    REPLACE INTO verse_prayers (book_id, chapter, verse, prayer, language)
+    VALUES (${bookId}, ${chapter}, ${verse}, ${content}, ${lang})
+  `,
+);
+await importTextFiles('vers-andakt', 'verse_sermon', '.txt', verseFile, 'verse_sermon', stats.verseSermons,
+  (tx, [bookId, chapter, verse], content, lang) => tx`
+    REPLACE INTO verse_sermons (book_id, chapter, verse, sermon, language)
+    VALUES (${bookId}, ${chapter}, ${verse}, ${content}, ${lang})
+  `,
+);
 
 // Importer temaer
 console.log('Importerer temaer...');
@@ -1001,10 +852,7 @@ for (const lang of contentLanguages('themes')) {
       const contentHash = computeHash(content);
       const contentKey = name;
 
-      if (!isFullImport && !hasContentChangedCached('theme', contentKey, contentHash, lang)) {
-        stats.themes.unchanged++;
-        continue;
-      }
+      if (unchanged(stats.themes, 'theme', contentKey, contentHash, lang)) continue;
 
       try {
         JSON.parse(content);
@@ -1023,10 +871,7 @@ for (const lang of contentLanguages('themes')) {
       const contentHash = computeHash(content);
       const contentKey = name;
 
-      if (!isFullImport && !hasContentChangedCached('theme', contentKey, contentHash, lang)) {
-        stats.themes.unchanged++;
-        continue;
-      }
+      if (unchanged(stats.themes, 'theme', contentKey, contentHash, lang)) continue;
 
       await tx`REPLACE INTO themes (name, content, language) VALUES (${name}, ${content}, ${lang})`;
       await setContentHash(tx, 'theme', contentKey, contentHash, lang);
@@ -1071,26 +916,45 @@ interface RawTimelineRef {
   verseEnd?: number;
 }
 
+interface RawTimelineEvent {
+  id: string;
+  title: string;
+  description?: string;
+  year?: number;
+  year_display?: string;
+  period?: string;
+  importance?: string;
+  sort_order: number;
+  region?: string;
+  section?: string;
+  references?: RawTimelineRef[];
+}
+
+/**
+ * Én hendelse med referansene sine. Bibel- og verdenstidslinjen har perioder og
+ * regioner; bok-tidslinjen har bok og seksjon — og der bærer referansene ikke
+ * boka selv, den er fila de står i.
+ */
 async function insertTimelineEvent(
   tx: SQL,
-  id: string,
-  title: string,
-  description: string | null,
-  year: number | null,
-  yearDisplay: string | null,
-  periodId: string | null,
-  importance: string,
-  sortOrder: number,
-  timelineType: string,
-  region: string | null,
-  bookId: number | null,
-  sectionId: string | null,
+  event: RawTimelineEvent,
+  timelineType: 'bible' | 'world' | 'books',
+  place: { periodId: string | null; region: string | null; bookId: number | null; sectionId: string | null },
   language: string,
 ): Promise<void> {
   await tx`
     REPLACE INTO timeline_events (id, title, description, year, year_display, period_id, importance, sort_order, timeline_type, region, book_id, section_id, language)
-    VALUES (${id}, ${title}, ${description}, ${year}, ${yearDisplay}, ${periodId}, ${importance}, ${sortOrder}, ${timelineType}, ${region}, ${bookId}, ${sectionId}, ${language})
+    VALUES (${event.id}, ${event.title}, ${event.description || null}, ${event.year || null}, ${event.year_display || null}, ${place.periodId}, ${event.importance || 'minor'}, ${event.sort_order}, ${timelineType}, ${place.region}, ${place.bookId}, ${place.sectionId}, ${language})
   `;
+  for (const ref of event.references ?? []) {
+    const verseStart = ref.verseStart ?? ref.verse ?? 1;
+    const verseEnd = ref.verseEnd ?? ref.verse ?? verseStart;
+    const bookId = timelineType === 'books' ? place.bookId : ref.book;
+    await tx`
+      INSERT INTO timeline_references (event_id, book_id, chapter, verse_start, verse_end, language)
+      VALUES (${event.id}, ${bookId}, ${ref.chapter}, ${verseStart}, ${verseEnd}, ${language})
+    `;
+  }
 }
 
 async function importTimelineType(
@@ -1122,33 +986,12 @@ async function importTimelineType(
         const eventsData = JSON.parse(fs.readFileSync(eventsPath, 'utf-8'));
         if (eventsData.events) {
           for (const event of eventsData.events) {
-            await insertTimelineEvent(
-              tx,
-              event.id,
-              event.title,
-              event.description || null,
-              event.year || null,
-              event.year_display || null,
-              event.period || null,
-              event.importance || 'minor',
-              event.sort_order,
-              type,
-              event.region || null,
-              null,
-              null,
-              lang,
-            );
-
-            if (event.references && event.references.length > 0) {
-              for (const ref of event.references as RawTimelineRef[]) {
-                const verseStart = ref.verseStart ?? ref.verse ?? 1;
-                const verseEnd = ref.verseEnd ?? ref.verse ?? verseStart;
-                await tx`
-                  INSERT INTO timeline_references (event_id, book_id, chapter, verse_start, verse_end, language)
-                  VALUES (${event.id}, ${ref.book}, ${ref.chapter}, ${verseStart}, ${verseEnd}, ${lang})
-                `;
-              }
-            }
+            await insertTimelineEvent(tx, event, type, {
+              periodId: event.period || null,
+              region: event.region || null,
+              bookId: null,
+              sectionId: null,
+            }, lang);
             totalEvents++;
           }
         }
@@ -1190,33 +1033,12 @@ async function importBookTimelines(tx: SQL, lang: string): Promise<{ books: numb
     // Import events
     if (data.events) {
       for (const event of data.events) {
-        await insertTimelineEvent(
-          tx,
-          event.id,
-          event.title,
-          event.description || null,
-          event.year || null,
-          event.year_display || null,
-          null,
-          event.importance || 'minor',
-          event.sort_order,
-          'books',
-          null,
+        await insertTimelineEvent(tx, event, 'books', {
+          periodId: null,
+          region: null,
           bookId,
-          event.section || null,
-          lang,
-        );
-
-        if (event.references && event.references.length > 0) {
-          for (const ref of event.references as RawTimelineRef[]) {
-            const verseStart = ref.verseStart ?? ref.verse ?? 1;
-            const verseEnd = ref.verseEnd ?? ref.verse ?? verseStart;
-            await tx`
-              INSERT INTO timeline_references (event_id, book_id, chapter, verse_start, verse_end, language)
-              VALUES (${event.id}, ${bookId}, ${ref.chapter}, ${verseStart}, ${verseEnd}, ${lang})
-            `;
-          }
-        }
+          sectionId: event.section || null,
+        }, lang);
         totalEvents++;
       }
     }
@@ -1334,10 +1156,7 @@ for (const lang of contentLanguages('persons')) {
       const contentHash = computeHash(content);
       const contentKey = name;
 
-      if (!isFullImport && !hasContentChangedCached('person', contentKey, contentHash, lang)) {
-        stats.persons.unchanged++;
-        continue;
-      }
+      if (unchanged(stats.persons, 'person', contentKey, contentHash, lang)) continue;
 
       try {
         JSON.parse(content);
@@ -1376,10 +1195,7 @@ for (const lang of contentLanguages('chapter_insights')) {
       const contentHash = computeHash(content);
       const contentKey = `${bookId}-${chapter}`;
 
-      if (!isFullImport && !hasContentChangedCached('chapter_insight', contentKey, contentHash, lang)) {
-        stats.chapterInsights.unchanged++;
-        continue;
-      }
+      if (unchanged(stats.chapterInsights, 'chapter_insight', contentKey, contentHash, lang)) continue;
 
       try {
         const insight = JSON.parse(content);
@@ -1410,10 +1226,7 @@ for (const lang of contentLanguages('daily_verse')) {
       const contentHash = computeHash(content);
       const contentKey = file.replace('.json', '');
 
-      if (!isFullImport && !hasContentChangedCached('daily_verse', contentKey, contentHash, lang)) {
-        stats.dailyVerses.unchanged++;
-        continue;
-      }
+      if (unchanged(stats.dailyVerses, 'daily_verse', contentKey, contentHash, lang)) continue;
 
       const yearData = JSON.parse(content);
 
@@ -1465,10 +1278,7 @@ for (const lang of contentLanguages('reading_plans')) {
       const contentHash = computeHash(content);
       const contentKey = file.replace('.json', '');
 
-      if (!isFullImport && !hasContentChangedCached('reading_plan', contentKey, contentHash, lang)) {
-        stats.readingPlans.unchanged++;
-        continue;
-      }
+      if (unchanged(stats.readingPlans, 'reading_plan', contentKey, contentHash, lang)) continue;
 
       try {
         const plan = JSON.parse(content);
@@ -1565,10 +1375,7 @@ if (fs.existsSync(mappingsPath)) {
       const contentHash = computeHash(content);
       const mappingId = file.replace('.json', '');
 
-      if (!isFullImport && !hasContentChangedCached('verse_mapping', mappingId, contentHash)) {
-        stats.verseMappings.unchanged++;
-        continue;
-      }
+      if (unchanged(stats.verseMappings, 'verse_mapping', mappingId, contentHash)) continue;
 
       try {
         const data = JSON.parse(content);
@@ -1624,10 +1431,7 @@ if (fs.existsSync(verseWorksPath)) {
       const fileId = file.replace('.json', '');
       workKeysOnDisk.add(fileId);
 
-      if (!isFullImport && !hasContentChangedCached('verse_work', fileId, contentHash)) {
-        stats.verseWorks.unchanged++;
-        continue;
-      }
+      if (unchanged(stats.verseWorks, 'verse_work', fileId, contentHash)) continue;
 
       try {
         const data = JSON.parse(content) as {
@@ -1728,10 +1532,7 @@ for (const lang of contentLanguages('stories')) {
         const contentHash = computeHash(content);
         const contentKey = slug;
 
-        if (!isFullImport && !hasContentChangedCached('story', contentKey, contentHash, lang)) {
-          stats.stories.unchanged++;
-          continue;
-        }
+        if (unchanged(stats.stories, 'story', contentKey, contentHash, lang)) continue;
 
         try {
           // FILNAVNET er slug-en, ikke `slug` inni fila. De to har drevet fra
@@ -1805,10 +1606,7 @@ for (const lang of contentLanguages('number_symbolism')) {
       const contentHash = computeHash(content);
       const contentKey = `number-${file.replace('.json', '')}`;
 
-      if (!isFullImport && !hasContentChangedCached('numberSymbolism', contentKey, contentHash, lang)) {
-        stats.numberSymbolism.unchanged++;
-        continue;
-      }
+      if (unchanged(stats.numberSymbolism, 'numberSymbolism', contentKey, contentHash, lang)) continue;
 
       try {
         const data = JSON.parse(content);
@@ -1844,10 +1642,7 @@ for (const lang of contentLanguages('days')) {
       const content = fs.readFileSync(filePath, 'utf-8');
       const contentHash = computeHash(content);
 
-      if (!isFullImport && !hasContentChangedCached('day', id, contentHash, lang)) {
-        stats.days.unchanged++;
-        continue;
-      }
+      if (unchanged(stats.days, 'day', id, contentHash, lang)) continue;
 
       try {
         const data = JSON.parse(content);
@@ -2098,12 +1893,10 @@ if (
   await sql.begin(async (tx) => {
     const newSyncVersion = await incrementSyncVersion(tx);
 
-    // Store timestamp for this version
     const now = new Date();
     const version = now.toISOString().replace('T', ' ').substring(0, 19);
     await tx`REPLACE INTO db_meta (\`key\`, value) VALUES ('version', ${version})`;
     await tx`REPLACE INTO db_meta (\`key\`, value) VALUES ('imported_at', ${now.toISOString()})`;
-    await tx`REPLACE INTO db_meta (\`key\`, value) VALUES (${`version_${newSyncVersion}`}, ${now.toISOString()})`;
     console.log(`\nSync-versjon: ${newSyncVersion}`);
     console.log(`Database-versjon: ${version}`);
   });
@@ -2121,30 +1914,10 @@ console.log('');
 const d = (label: string) => (deleted[label] ? String(deleted[label]).padStart(7) : '      -');
 console.log('Innholdstype          Oppdatert  Uendret  Slettet');
 console.log('--------------------------------------------------');
-console.log(`Kapitler              ${String(stats.chapters.updated).padStart(9)}  ${String(stats.chapters.unchanged).padStart(7)}  ${d('kapitler')}`);
-console.log(`Oversettelser         ${String(stats.bibleEditions.updated).padStart(9)}  ${String(stats.bibleEditions.unchanged).padStart(7)}  ${d('oversettelser')}`);
-console.log(`Word4word             ${String(stats.word4word.updated).padStart(9)}  ${String(stats.word4word.unchanged).padStart(7)}  ${d('word4word')}`);
-console.log(`Referanser            ${String(stats.references.updated).padStart(9)}  ${String(stats.references.unchanged).padStart(7)}  ${d('referanser')}`);
-console.log(`Boksammendrag         ${String(stats.bookSummaries.updated).padStart(9)}  ${String(stats.bookSummaries.unchanged).padStart(7)}  ${d('boksammendrag')}`);
-console.log(`Bokkontekst           ${String(stats.bookContext.updated).padStart(9)}  ${String(stats.bookContext.unchanged).padStart(7)}  ${d('bokkontekst')}`);
-console.log(`Kapittelsammendrag    ${String(stats.chapterSummaries.updated).padStart(9)}  ${String(stats.chapterSummaries.unchanged).padStart(7)}  ${d('kapittelsammendrag')}`);
-console.log(`Kapittelkontekst      ${String(stats.chapterContext.updated).padStart(9)}  ${String(stats.chapterContext.unchanged).padStart(7)}  ${d('kapittelkontekst')}`);
-console.log(`Viktige ord           ${String(stats.importantWords.updated).padStart(9)}  ${String(stats.importantWords.unchanged).padStart(7)}  ${d('viktige ord-kapitler')}`);
-console.log(`Vers-bønn             ${String(stats.versePrayers.updated).padStart(9)}  ${String(stats.versePrayers.unchanged).padStart(7)}  ${d('vers-bønn')}`);
-console.log(`Vers-andakt           ${String(stats.verseSermons.updated).padStart(9)}  ${String(stats.verseSermons.unchanged).padStart(7)}  ${d('vers-andakt')}`);
-console.log(`Temaer                ${String(stats.themes.updated).padStart(9)}  ${String(stats.themes.unchanged).padStart(7)}  ${d('temaer')}`);
-console.log(`Tidslinje             ${String(stats.timeline.updated).padStart(9)}  ${String(stats.timeline.unchanged).padStart(7)}  ${d('tidslinje')}`);
-console.log(`Profetier             ${String(stats.prophecies.updated).padStart(9)}  ${String(stats.prophecies.unchanged).padStart(7)}  ${d('profetier')}`);
-console.log(`Personer              ${String(stats.persons.updated).padStart(9)}  ${String(stats.persons.unchanged).padStart(7)}  ${d('personer')}`);
-console.log(`Kapittel-innsikter    ${String(stats.chapterInsights.updated).padStart(9)}  ${String(stats.chapterInsights.unchanged).padStart(7)}  ${d('kapittel-innsikter')}`);
-console.log(`Dagens vers           ${String(stats.dailyVerses.updated).padStart(9)}  ${String(stats.dailyVerses.unchanged).padStart(7)}  ${d('dagens vers')}`);
-console.log(`Leseplaner            ${String(stats.readingPlans.updated).padStart(9)}  ${String(stats.readingPlans.unchanged).padStart(7)}  ${d('leseplaner')}`);
-console.log(`Evangelieparalleller  ${String(stats.gospelParallels.updated).padStart(9)}  ${String(stats.gospelParallels.unchanged).padStart(7)}  ${d('evangelieparalleller')}`);
-console.log(`Vers-mappinger        ${String(stats.verseMappings.updated).padStart(9)}  ${String(stats.verseMappings.unchanged).padStart(7)}  ${d('vers-mappinger')}`);
-console.log(`Bibelhistorier        ${String(stats.stories.updated).padStart(9)}  ${String(stats.stories.unchanged).padStart(7)}  ${d('historier')}`);
-console.log(`Tallsymbolikk         ${String(stats.numberSymbolism.updated).padStart(9)}  ${String(stats.numberSymbolism.unchanged).padStart(7)}  ${d('tall')}`);
-console.log(`Dager                 ${String(stats.days.updated).padStart(9)}  ${String(stats.days.unchanged).padStart(7)}  ${d('dager')}`);
-console.log(`Verk                  ${String(stats.verseWorks.updated).padStart(9)}  ${String(stats.verseWorks.unchanged).padStart(7)}  ${d('verk')}`);
+for (const [key, label, deletedLabel] of STAT_ROWS) {
+  const stat = stats[key];
+  console.log(`${label.padEnd(22)}${String(stat.updated).padStart(9)}  ${String(stat.unchanged).padStart(7)}  ${d(deletedLabel)}`);
+}
 console.log('--------------------------------------------------');
 console.log(`Totalt                ${String(totalUpdated).padStart(9)}  ${String(totalUnchanged).padStart(7)}  ${totalDeleted > 0 ? String(totalDeleted).padStart(7) : '      -'}`);
 // «Ferdig!» er en påstand om utfallet, og den skal ikke stå der utfallet var at

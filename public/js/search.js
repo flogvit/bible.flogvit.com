@@ -2,14 +2,7 @@
 // innstillinger (bible-settings.searchResultTypes, samme nøkler som gamle
 // appen). SSR viser alle typene; uten JS er alt synlig.
 
-function readJSON(key) {
-  try {
-    const raw = localStorage.getItem(key);
-    return raw ? JSON.parse(raw) : null;
-  } catch {
-    return null;
-  }
-}
+import { readJSON } from './store.js';
 
 const settings = readJSON('bible-settings') || {};
 const types = settings.searchResultTypes || {};

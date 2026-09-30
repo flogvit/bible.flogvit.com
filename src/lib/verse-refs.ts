@@ -43,7 +43,7 @@ import type { SQL } from 'bun';
 import { CONTENT_SOURCES } from './person-refs.ts';
 
 /** Oversettelsen som definerer hvilke versadresser som finnes. */
-export const CANONICAL_BIBLE = 'osnb';
+const CANONICAL_BIBLE = 'osnb';
 
 /** En tabell som adresserer ett vers eller et versspenn. */
 export interface VerseRefTable {
@@ -410,7 +410,7 @@ export function verseExtentFrom(rows: { book_id: number; chapter: number; mx: nu
 }
 
 /** Leser den kanoniske utstrekningen. `null` når basen ikke har osnb-vers. */
-export async function loadVerseExtent(sql: SQL): Promise<VerseExtent | null> {
+async function loadVerseExtent(sql: SQL): Promise<VerseExtent | null> {
   const rows = (await sql`
     SELECT book_id, chapter, MAX(verse) AS mx FROM verses WHERE bible = ${CANONICAL_BIBLE}
     GROUP BY book_id, chapter

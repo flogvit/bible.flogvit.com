@@ -14,6 +14,8 @@ const SHADOW_KEY = 'bible-sync-shadow';
 
 import { mergeProgress } from './reading-progress.js';
 import { readStrings, intlLocale } from './locale.js';
+import { hasPlus } from './fv-auth.js';
+import { readJSON } from './store.js';
 
 const t = readStrings(document.body);
 
@@ -34,14 +36,6 @@ const MAP = {
 };
 const TYPE_TO_KEY = Object.fromEntries(Object.entries(MAP).map(([k, v]) => [v.type, k]));
 
-function read(key, fallback) {
-  try {
-    const raw = localStorage.getItem(key);
-    return raw ? JSON.parse(raw) : fallback;
-  } catch {
-    return fallback;
-  }
-}
 let applying = false;
 const rawSetItem = localStorage.setItem.bind(localStorage);
 function writeRaw(key, value) {
@@ -52,7 +46,7 @@ function writeRaw(key, value) {
 
 // ── Endringsfangst: patch setItem, husk pending på tvers av sidelastinger ─
 function markPending(key) {
-  const pending = new Set(read(PENDING_KEY, []));
+  const pending = new Set(readJSON(PENDING_KEY, []));
   if (!pending.has(key)) {
     pending.add(key);
     writeRaw(PENDING_KEY, [...pending]);
@@ -69,12 +63,12 @@ try {
 // ── Bygg changes fra pending nøkler ────────────────────────────────
 function buildChanges(pendingKeys) {
   const changes = [];
-  const shadow = read(SHADOW_KEY, {});
+  const shadow = readJSON(SHADOW_KEY, {});
   const now = Date.now();
   for (const key of pendingKeys) {
     const spec = MAP[key];
     if (!spec) continue;
-    const data = read(key, null);
+    const data = readJSON(key, null);
     if (spec.kind === 'singleton') {
       changes.push({ dataType: spec.type, itemId: '_singleton', data, updatedAt: now });
     } else if (spec.kind === 'record') {
@@ -104,7 +98,7 @@ function updateShadow() {
   const shadow = {};
   for (const [key, spec] of Object.entries(MAP)) {
     if (spec.kind !== 'items') continue;
-    const items = read(key, []);
+    const items = readJSON(key, []);
     shadow[spec.type] = (Array.isArray(items) ? items : []).map((i) => String(spec.id(i))).filter((x) => x !== 'undefined');
   }
   writeRaw(SHADOW_KEY, shadow);
@@ -128,7 +122,7 @@ function applyServerChanges(changes) {
         if (ch.deleted || ch.data == null) localStorage.removeItem(key);
         else writeRaw(key, ch.data);
       } else if (spec.kind === 'record') {
-        const cur = read(key, {}) || {};
+        const cur = readJSON(key, {}) || {};
         for (const ch of list) {
           if (ch.deleted) delete cur[ch.itemId];
           // Framdrift flettes også lokalt: uten dette ville serversvaret
@@ -137,7 +131,7 @@ function applyServerChanges(changes) {
         }
         writeRaw(key, cur);
       } else {
-        const cur = read(key, []);
+        const cur = readJSON(key, []);
         const arr = Array.isArray(cur) ? cur : [];
         for (const ch of list) {
           const idx = arr.findIndex((i) => String(spec.id(i)) === ch.itemId);
@@ -158,7 +152,7 @@ function applyServerChanges(changes) {
 }
 
 // ── Selve synken ───────────────────────────────────────────────────
-let deviceId = read(DEVICE_KEY, null);
+let deviceId = readJSON(DEVICE_KEY, null);
 if (!deviceId) {
   deviceId = `web-${Math.random().toString(36).slice(2)}${Date.now().toString(36)}`;
   writeRaw(DEVICE_KEY, deviceId);
@@ -177,28 +171,19 @@ function setStatus(text) {
   if (box && text) box.textContent = text;
 }
 
-// Serveren setter fv-auth (ikke-HttpOnly markør): '1' = innlogget, '2' =
-// innlogget med FLOGVIT.plus. Husking (sync) krever plus, så uten '2' dropper
+// Husking (sync) krever plus (fv-auth.js), så uten markøren '2' dropper
 // vi API-kallet helt i stedet for å provosere 401/402 i konsollen på hver
 // sidelast. Statuskode-håndteringen under står som fallback for en foreldet
 // markør (utlogget/plus utløpt i en annen fane).
-function hasPlusMarker() {
-  try {
-    return /(?:^|;\s*)fv-auth=2/.test(document.cookie);
-  } catch {
-    return false;
-  }
-}
-
 async function syncNow(full) {
-  if (loggedOut || syncing || !hasPlusMarker()) return;
+  if (loggedOut || syncing || !hasPlus()) return;
   syncing = true;
   try {
     // Full sync (sidelast): server er sannhetskilden — les alt (lastSyncAt=0)
     // og push utboksen i SAMME kall, så offline-endringer aldri overskrives.
-    const lastSyncAt = full ? 0 : read(LAST_SYNC_KEY, 0);
-    let pending = read(PENDING_KEY, []);
-    if (full && !read(LAST_SYNC_KEY, 0)) pending = Object.keys(MAP); // helt førstegangs: push alt lokalt
+    const lastSyncAt = full ? 0 : readJSON(LAST_SYNC_KEY, 0);
+    let pending = readJSON(PENDING_KEY, []);
+    if (full && !readJSON(LAST_SYNC_KEY, 0)) pending = Object.keys(MAP); // helt førstegangs: push alt lokalt
     const changes = buildChanges(pending);
     const res = await fetch('/api/sync', {
       method: 'POST',
@@ -262,7 +247,7 @@ function rebuildFromServer(serverChanges, pushedChanges) {
           localStorage.removeItem(key);
         }
       } else if (spec.kind === 'record') {
-        const cur = read(key, {}) || {};
+        const cur = readJSON(key, {}) || {};
         const next = {};
         for (const [id, value] of Object.entries(cur)) {
           if (pushedIds.has(`${spec.type}:${id}`)) next[id] = value; // vår push beholdes
@@ -274,7 +259,7 @@ function rebuildFromServer(serverChanges, pushedChanges) {
         if (Object.keys(next).length > 0) writeRaw(key, next);
         else localStorage.removeItem(key);
       } else {
-        const cur = read(key, []);
+        const cur = readJSON(key, []);
         const arr = (Array.isArray(cur) ? cur : []).filter((i) => pushedIds.has(`${spec.type}:${spec.id(i)}`));
         for (const [id, ch] of serverItems) {
           if (ch.deleted) continue;
@@ -298,7 +283,7 @@ function rebuildFromServer(serverChanges, pushedChanges) {
 // Kjøres rått (writeRaw) fordi verdien ikke er en brukerendring som skal pushes.
 const LEGACY_BIBLE_IDS = { osnb2: 'osnb', osnn1: 'osnn' };
 (function migrateLegacyBibleIds() {
-  const settings = read('bible-settings', null);
+  const settings = readJSON('bible-settings', null);
   if (!settings) return;
   let changed = false;
   for (const key of ['bible', 'secondaryBible', 'verseMapping']) {
@@ -323,5 +308,5 @@ const LEGACY_BIBLE_IDS = { osnb2: 'osnb', osnn1: 'osnn' };
 setTimeout(() => syncNow(true), 300);
 window.addEventListener('online', () => syncNow(false));
 document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'hidden' && read(PENDING_KEY, []).length > 0) syncNow(false);
+  if (document.visibilityState === 'hidden' && readJSON(PENDING_KEY, []).length > 0) syncNow(false);
 });

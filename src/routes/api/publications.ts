@@ -27,33 +27,20 @@ import {
   withdrawPublication,
 } from '../../lib/publications.ts';
 import { NO_CACHE } from './util.ts';
+import { registrerMinnekilde } from '../../lib/minne-regnskap.ts';
+import { rateLimiter } from '../../lib/rate-limit.ts';
 
 const r = new Hono<AppEnv>();
 
-// Rate-limit i minnet, samme mønster som contrib/sync. Publisering er sjeldent;
-// dette stopper løpske klienter, ikke bruk.
-function limiter(max: number, windowMs = 60_000) {
-  const seen = new Map<string, { count: number; resetAt: number }>();
-  return (key: string): boolean => {
-    const now = Date.now();
-    const entry = seen.get(key);
-    if (!entry || now > entry.resetAt) {
-      seen.set(key, { count: 1, resetAt: now + windowMs });
-      return true;
-    }
-    if (entry.count >= max) return false;
-    entry.count++;
-    return true;
-  };
-}
-
 // 30/min: en forfatter som retter og publiserer på nytt et par ganger skal ALDRI
 // treffe taket — det er løpske klienter det stopper, ikke redigering.
-const submitLimit = limiter(30);
+const submitLimit = rateLimiter<string>(30);
+registrerMinnekilde('publications/submitLimit', submitLimit.maaling);
 // Rapportering er anonym, så nøkkelen er IP-en Caddy setter. Taket er lavt:
 // tallet er et signal til en reviewer, og en enkelt kilde skal ikke kunne
 // blåse det opp.
-const reportLimit = limiter(5);
+const reportLimit = rateLimiter<string>(5);
+registrerMinnekilde('publications/reportLimit', reportLimit.maaling);
 
 const clientKey = (c: Context<AppEnv>): string =>
   c.req.header('x-forwarded-for')?.split(',')[0]?.trim() || c.req.header('x-real-ip') || 'ukjent';

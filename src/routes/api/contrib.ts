@@ -18,28 +18,14 @@ import {
   respondToSubmission,
   validateContribInput,
 } from '../../lib/contrib.ts';
-import { NO_CACHE } from './util.ts';
-import { loggFeil } from '../../lib/error-handler.ts';
+import { NO_CACHE, internFeil } from './util.ts';
 import { registrerMinnekilde } from '../../lib/minne-regnskap.ts';
+import { rateLimiter } from '../../lib/rate-limit.ts';
 
-// Rate-limit per bruker i minnet (samme mønster som sync.ts) — innsending er
-// en sjelden handling, så 10/minutt stopper bare løpske klienter.
-const rateLimitMap = new Map<number, { count: number; resetAt: number }>();
-registrerMinnekilde('contrib/rateLimitMap', () => ({ oppforinger: rateLimitMap.size }));
-const RATE_LIMIT_WINDOW_MS = 60_000;
-const RATE_LIMIT_MAX = 10;
-
-function checkRateLimit(userId: number): boolean {
-  const now = Date.now();
-  const entry = rateLimitMap.get(userId);
-  if (!entry || now > entry.resetAt) {
-    rateLimitMap.set(userId, { count: 1, resetAt: now + RATE_LIMIT_WINDOW_MS });
-    return true;
-  }
-  if (entry.count >= RATE_LIMIT_MAX) return false;
-  entry.count++;
-  return true;
-}
+// Rate-limit per bruker — innsending er en sjelden handling, så 10/minutt
+// stopper bare løpske klienter.
+const checkRateLimit = rateLimiter<number>(10);
+registrerMinnekilde('contrib/rateLimitMap', checkRateLimit.maaling);
 
 async function requireContribToken(c: Context<AppEnv>, next: Next): Promise<Response | void> {
   const token = process.env.CONTRIB_TOKEN;
@@ -61,8 +47,7 @@ contrib.post('/', requireUser, async (c) => {
     const id = await createSubmission(result.input, user);
     return c.json({ id, status: 'pending' }, 201);
   } catch (error) {
-    loggFeil('Contrib create error', error);
-    return c.json({ error: 'Internal server error' }, 500);
+    return internFeil(c, 'Contrib create error', error);
   }
 });
 
@@ -86,8 +71,7 @@ contrib.get('/mine', requireUser, async (c) => {
       NO_CACHE,
     );
   } catch (error) {
-    loggFeil('Contrib list error', error);
-    return c.json({ error: 'Internal server error' }, 500);
+    return internFeil(c, 'Contrib list error', error);
   }
 });
 
@@ -105,8 +89,7 @@ contrib.post('/:id/respond', requireUser, async (c) => {
     if (!ok) return c.json({ error: 'Not found' }, 404);
     return c.json({ id, status: 'pending' });
   } catch (error) {
-    loggFeil('Contrib respond error', error);
-    return c.json({ error: 'Internal server error' }, 500);
+    return internFeil(c, 'Contrib respond error', error);
   }
 });
 
@@ -120,8 +103,7 @@ contrib.get('/pending', requireContribToken, async (c) => {
       NO_CACHE,
     );
   } catch (error) {
-    loggFeil('Contrib pending error', error);
-    return c.json({ error: 'Internal server error' }, 500);
+    return internFeil(c, 'Contrib pending error', error);
   }
 });
 
@@ -143,8 +125,7 @@ contrib.post('/apply', requireContribToken, async (c) => {
     }
     return c.json({ applied, failed });
   } catch (error) {
-    loggFeil('Contrib apply error', error);
-    return c.json({ error: 'Internal server error' }, 500);
+    return internFeil(c, 'Contrib apply error', error);
   }
 });
 

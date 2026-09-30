@@ -1,7 +1,6 @@
 import { Hono } from 'hono';
 import { getAllDays, getDayById, getTodaysDays } from '../../lib/bible.ts';
-import { NO_CACHE } from './util.ts';
-import { loggFeil } from '../../lib/error-handler.ts';
+import { NO_CACHE, internFeil } from './util.ts';
 
 const r = new Hono();
 
@@ -11,8 +10,7 @@ r.get('/', async (c) => {
     const days = await getAllDays();
     return c.json({ days }, 200, NO_CACHE);
   } catch (error) {
-    loggFeil('Error fetching days', error);
-    return c.json({ error: 'Internal server error' }, 500);
+    return internFeil(c, 'Error fetching days', error);
   }
 });
 
@@ -21,8 +19,7 @@ r.get('/today', async (c) => {
   try {
     return c.json(await getTodaysDays(), 200, NO_CACHE);
   } catch (error) {
-    loggFeil("Error fetching today's days", error);
-    return c.json({ error: 'Internal server error' }, 500);
+    return internFeil(c, "Error fetching today's days", error);
   }
 });
 
@@ -33,8 +30,7 @@ r.get('/:id', async (c) => {
     if (!day) return c.json({ error: 'Day not found' }, 404);
     return c.json(day, 200, NO_CACHE);
   } catch (error) {
-    loggFeil('Error fetching day', error);
-    return c.json({ error: 'Internal server error' }, 500);
+    return internFeil(c, 'Error fetching day', error);
   }
 });
 

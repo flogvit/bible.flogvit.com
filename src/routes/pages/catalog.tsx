@@ -53,8 +53,6 @@ async function renderCatalog(c: Context<AppEnv>, page: number) {
   // Et sidetall forbi siste side er 404, ikke en tom side med 200.
   if (page > pageCount) return c.notFound();
   const pageHref = (n: number) => lhref(catalogPagePath(n));
-  const crumbs = [{ label: tCtx()('common.home'), href: '/' }];
-  if (current > 1) crumbs.push({ label: tCtx()('pub.catalog'), href: '/manuskripter/katalog' });
 
   return c.html(
     <Layout {...layoutProps(c)}
@@ -65,10 +63,11 @@ async function renderCatalog(c: Context<AppEnv>, page: number) {
       <div class="user-main">
         <div class="reading-container">
           <Breadcrumbs
-            items={[
-              ...crumbs,
-              current > 1 ? { label: tCtx()('pub.pageN', { page: String(current) }) } : { label: tCtx()('pub.catalog') },
-            ]}
+            items={
+              current > 1
+                ? [{ label: tCtx()('pub.catalog'), href: '/manuskripter/katalog' }, { label: tCtx()('pub.pageN', { page: String(current) }) }]
+                : [{ label: tCtx()('pub.catalog') }]
+            }
           />
           <h1>{t('pub.catalog')}</h1>
           <p class="user-intro">{t('pub.intro')}</p>
@@ -140,7 +139,6 @@ r.get('/manuskripter/katalog/:slug', async (c) => {
         <div class="reading-container">
           <Breadcrumbs
             items={[
-              { label: tCtx()('common.home'), href: '/' },
               { label: tCtx()('pub.catalog'), href: '/manuskripter/katalog' },
               { label: pub.title },
             ]}

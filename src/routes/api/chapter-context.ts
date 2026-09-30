@@ -1,4 +1,5 @@
 import { Hono } from 'hono';
+import { internFeil } from './util.ts';
 import { bookNameById } from '../../lib/books-data.ts';
 import {
   getBookById,
@@ -7,7 +8,6 @@ import {
   getChapterSummary,
   getTimelineEventsForChapter,
 } from '../../lib/bible.ts';
-import { loggFeil } from '../../lib/error-handler.ts';
 
 const r = new Hono();
 
@@ -76,8 +76,7 @@ r.post('/', async (c) => {
 
     return c.json(results);
   } catch (error) {
-    loggFeil('Error fetching chapter context', error);
-    return c.json({ error: 'Internal server error' }, 500);
+    return internFeil(c, 'Error fetching chapter context', error);
   }
 });
 

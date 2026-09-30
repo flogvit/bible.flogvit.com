@@ -10,12 +10,12 @@
 import { getSql } from './db.ts';
 import type { SessionUser } from './session.ts';
 
-export type ContribKind = 'article_verse_refs' | 'book_verse_refs' | 'song_verse_refs';
-export type ContribStatus = 'pending' | 'needs_info' | 'approved' | 'rejected';
-
-export const CONTRIB_STATUSES = ['pending', 'needs_info', 'approved', 'rejected'] as const;
+const KINDS = ['article_verse_refs', 'book_verse_refs', 'song_verse_refs'] as const;
+const CONTRIB_STATUSES = ['pending', 'needs_info', 'approved', 'rejected'] as const;
 const REF_KINDS = ['cites', 'discusses', 'covers_passage'] as const;
-const KINDS: ContribKind[] = ['article_verse_refs', 'book_verse_refs', 'song_verse_refs'];
+
+export type ContribKind = (typeof KINDS)[number];
+export type ContribStatus = (typeof CONTRIB_STATUSES)[number];
 
 export interface ContribRefInput {
   raw: string;
