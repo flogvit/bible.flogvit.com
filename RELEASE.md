@@ -1,5 +1,12 @@
 # Release notes
 
+## 2026-09-30 — More resilient during brief database hiccups
+
+**Bug fixes**
+- If the database is briefly unreachable, the app now says so and asks your client to retry shortly, instead of showing a generic error.
+
+**Behind the scenes**
+- Internal cleanup: removed duplicated helpers and dead code across scripts and API routes.
 ## 2026-09-26 — Links to several verses now stay on the verses in recent Chrome
 
 **Bug fixes**
