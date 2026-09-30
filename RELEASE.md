@@ -1,9 +1,10 @@
 # Release notes
 
-## 2026-09-30 — More resilient during brief database hiccups
+## 2026-09-30 — More resilient during database hiccups and traffic spikes
 
 **Bug fixes**
 - If the database is briefly unreachable, the app now says so and asks your client to retry shortly, instead of showing a generic error.
+- A burst of requests from a single visitor or bot can no longer claim every render slot, so the page keeps loading normally for everyone else even under a one-sided traffic spike.
 
 **Behind the scenes**
 - Internal cleanup: removed duplicated helpers and dead code across scripts and API routes.
