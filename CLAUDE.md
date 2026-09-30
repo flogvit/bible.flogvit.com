@@ -2134,6 +2134,34 @@ rask, og med taket på 6 holder én slik aktør til å fylle semaforen alene.
   slengen: `parseRobots(txt, agent)` velger gruppe som RFC-en, `namedAgents()`
   og `crawlDelayFor()` leser resten. Åtte mutasjoner kjørt.
 
+### Taket ser AVSENDEREN — én adresse får ikke ta alle plassene (#126)
+
+Fjerde gang (flogvit-com-server#255, #260, #268): én adresse, 13.140.37.198,
+kapittelvis gjennom Mosebøkene med fire roterende nettleserstrenger, fylte alle
+seks plassene alene. 136 × 503, 135 av dem dens egne — og alle andre som kom i
+de sju bygesekundene fikk 503 også. Ingen UA-signatur, altså ingen Caddy-regel
+som i #268.
+
+- **`maxRendersPerSender`** (`RENDER_MAX_PER_SENDER`, standard halve taket = 3)
+  er hvor mange plasser ÉN avsender får holde, **render og kø til sammen**. Over
+  det avvises den straks (stale om vi har en kopi, ellers 503) — før den kan ta
+  en plass fra noen andre. Køen teller med: en avsender som fyller køen har tatt
+  plassene til de neste i det øyeblikket en blir ledig.
+- **Avsenderen er HØYRE ledd i X-Forwarded-For**, altså det kanten skrev
+  (`(klientip)` i Caddyfila setter headeren til TCP-motparten). Venstre ledd
+  ville vært en fersk bøtte per forespørsel for den som setter headeren selv
+  (#103).
+- **Uten header gjelder bare det felles taket.** Å samle alle ukjente i én
+  bøtte ville gjort halve taket til hele taket for trafikken vi ikke kan skille.
+- **Vakta er `per-avsender-tak (#126)` i `test/page-cache.test.ts`:** N+1 fra
+  samme avsender avvises STRAKS mens en annen slipper til, avsenderen tar ikke
+  køplassen fra den neste, høyre ledd avgjør, plassen gis tilbake både etter
+  render og etter en kø-plass som gikk ut, en avsender under taket merker
+  ingenting, og standarden er under det felles taket. Tre mutasjoner kjørt
+  (venstre ledd, ingen tilbakelevering ved tidsavbrudd, ingen ved release).
+- **UMÅLT ER IKKE GRØNT.** Verifiseres i prod ved neste enkeltavsender-byge:
+  503-ene skal stå på den avsenderen (`vakt-crawl.awk`, `bygesum`/`adresse`).
+
 ### Taket verner RENDEREN — ikke alt som passerer middlewaren (#64)
 
 `withPageCache` er montert på `*`, så `/robots.txt` sto bak semaforen som alle

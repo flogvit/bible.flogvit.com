@@ -1,6 +1,7 @@
 import { afterAll, beforeEach, describe, expect, test } from 'bun:test';
 import { Hono } from 'hono';
 import {
+  PAGE_CACHE_DEFAULTS,
   clearPageCache,
   configurePageCache,
   resetPageCache,
@@ -238,5 +239,154 @@ describe('lastavvisning', () => {
     gates.shift()!();
     expect((await loggedIn).status).toBe(200);
     await first;
+  });
+});
+
+// Per-avsender-tak (#126): lastvernet talte samtidige render uten å se HVEM, så
+// én adresse (13.140.37.198, fire roterende nettleserstrenger, ingen
+// UA-signatur) fylte alle plassene alene og ga 503 til alle andre i sju
+// sekunder. Forespørsel N+1 fra SAMME avsender skal avvises før noen andre.
+// Avsenderen er adressen kanten (Caddy, `(klientip)`) skriver i
+// X-Forwarded-For — HØYRE ledd, så et ledd klienten setter selv ikke gir en
+// fersk bøtte.
+describe('per-avsender-tak (#126)', () => {
+  const fra = (ip: string) => ({ headers: { 'x-forwarded-for': ip } });
+
+  beforeEach(() => {
+    // Hele tilstanden, ikke bare cachen: en test som røk mens en render sto
+    // åpen skal ikke holde plassene for de neste.
+    resetPageCache();
+    configurePageCache({
+      maxConcurrentRenders: 2,
+      maxQueuedRenders: 2,
+      maxRendersPerSender: 1,
+      queueWaitMs: 2000,
+      ttlMs: 5 * 60 * 1000,
+    });
+  });
+
+  test('én avsender over sitt tak avvises straks, mens en annen fortsatt slipper til', async () => {
+    const { app, gates } = buildGatedApp();
+    const a1 = app.request('/side?a=1', fra('13.140.37.198'));
+    while (gates.length === 0) await Bun.sleep(1);
+
+    const t0 = performance.now();
+    const a2 = await app.request('/side?a=2', fra('13.140.37.198'));
+    expect(a2.status).toBe(503);
+    expect(a2.headers.get('retry-after')).toBe('30');
+    expect(performance.now() - t0).toBeLessThan(500); // ikke etter fristen
+
+    const b = app.request('/side?a=3', fra('84.208.1.1'));
+    while (gates.length < 2) await Bun.sleep(1); // B fikk en plass
+
+    gates.shift()!();
+    gates.shift()!();
+    expect((await a1).status).toBe(200);
+    expect((await b).status).toBe(200);
+  });
+
+  test('avsenderen tar heller ikke køen — den som kommer etter får plassen', async () => {
+    configurePageCache({
+      maxConcurrentRenders: 1,
+      maxQueuedRenders: 1,
+      maxRendersPerSender: 1,
+      queueWaitMs: 2000,
+      ttlMs: 5 * 60 * 1000,
+    });
+    const { app, gates, getRenders } = buildGatedApp();
+    const a1 = app.request('/side?a=1', fra('13.140.37.198'));
+    while (gates.length === 0) await Bun.sleep(1);
+
+    // Uten taket hadde A2 stått i den ene kø-plassen, og B fått 503 med en gang.
+    const t0 = performance.now();
+    const a2 = await app.request('/side?a=2', fra('13.140.37.198'));
+    expect(a2.status).toBe(503);
+    expect(performance.now() - t0).toBeLessThan(500);
+    const b = app.request('/side?a=3', fra('84.208.1.1'));
+    await Bun.sleep(5);
+    expect(getRenders()).toBe(1); // B står i kø, ikke avvist
+
+    gates.shift()!();
+    expect((await a1).status).toBe(200);
+    while (gates.length === 0) await Bun.sleep(1);
+    gates.shift()!();
+    expect((await b).status).toBe(200);
+    expect(getRenders()).toBe(2);
+  });
+
+  test('avsenderen er HØYRE ledd i X-Forwarded-For — et ledd klienten setter selv hjelper ikke', async () => {
+    const { app, gates } = buildGatedApp();
+    const a1 = app.request('/side?a=1', fra('10.0.0.1, 13.140.37.198'));
+    while (gates.length === 0) await Bun.sleep(1);
+
+    const a2 = await app.request('/side?a=2', fra('10.0.0.2, 13.140.37.198'));
+    expect(a2.status).toBe(503);
+
+    gates.shift()!();
+    await a1;
+  });
+
+  test('plassen gis tilbake: etter en ferdig render, og etter en kø-plass som gikk ut', async () => {
+    configurePageCache({
+      maxConcurrentRenders: 1,
+      maxQueuedRenders: 1,
+      maxRendersPerSender: 1,
+      queueWaitMs: 30,
+      ttlMs: 5 * 60 * 1000,
+    });
+    const { app, gates } = buildGatedApp();
+
+    // Ferdig render → samme avsender slipper til igjen.
+    const a1 = app.request('/side?a=1', fra('13.140.37.198'));
+    while (gates.length === 0) await Bun.sleep(1);
+    gates.shift()!();
+    expect((await a1).status).toBe(200);
+    const a2 = app.request('/side?a=2', fra('13.140.37.198'));
+    while (gates.length === 0) await Bun.sleep(1);
+
+    // B står i kø og gir opp etter fristen — da skal B ikke stå som opptatt.
+    expect((await app.request('/side?a=3', fra('84.208.1.1'))).status).toBe(503);
+    gates.shift()!();
+    expect((await a2).status).toBe(200);
+    const b2 = app.request('/side?a=4', fra('84.208.1.1'));
+    while (gates.length === 0) await Bun.sleep(1);
+    gates.shift()!();
+    expect((await b2).status).toBe(200);
+  });
+
+  test('en avsender under taket merker ingenting', async () => {
+    configurePageCache({
+      maxConcurrentRenders: 2,
+      maxQueuedRenders: 2,
+      maxRendersPerSender: 2,
+      queueWaitMs: 2000,
+      ttlMs: 5 * 60 * 1000,
+    });
+    const { app, gates } = buildGatedApp();
+    const a1 = app.request('/side?a=1', fra('13.140.37.198'));
+    const a2 = app.request('/side?a=2', fra('13.140.37.198'));
+    while (gates.length < 2) await Bun.sleep(1);
+    gates.shift()!();
+    gates.shift()!();
+    expect((await a1).status).toBe(200);
+    expect((await a2).status).toBe(200);
+  });
+
+  test('uten adresse gjelder bare det felles taket — ukjente deler ikke én bøtte', async () => {
+    const { app, gates } = buildGatedApp();
+    const x1 = app.request('/side?a=1');
+    const x2 = app.request('/side?a=2');
+    while (gates.length < 2) await Bun.sleep(1);
+    gates.shift()!();
+    gates.shift()!();
+    expect((await x1).status).toBe(200);
+    expect((await x2).status).toBe(200);
+  });
+
+  test('standarden: én avsender kan aldri ta alle plassene', () => {
+    expect(PAGE_CACHE_DEFAULTS.maxRendersPerSender).toBeGreaterThanOrEqual(1);
+    expect(PAGE_CACHE_DEFAULTS.maxRendersPerSender).toBeLessThan(
+      PAGE_CACHE_DEFAULTS.maxConcurrentRenders,
+    );
   });
 });

@@ -72,6 +72,20 @@ export const PAGE_CACHE_DEFAULTS = Object.freeze({
   // den fikk høre nei, selv om vi visste det med en gang (#19).
   maxQueuedRenders: Number(process.env.RENDER_QUEUE_MAX || MAX_CONCURRENT_RENDERS),
   queueWaitMs: Number(process.env.RENDER_QUEUE_WAIT_MS || 3000),
+  /**
+   * Hvor mange plasser — render OG kø til sammen — ÉN avsender får holde (#126).
+   *
+   * Taket talte samtidige render uten å se HVEM: 2026-09-30 fylte én adresse
+   * (13.140.37.198, fire roterende nettleserstrenger, ingen UA-signatur å
+   * sette en Caddy-regel på) alle seks plassene alene, og alle andre fikk 503 i
+   * sju sekunder — 135 av 136 avvisninger var dens egne. Fjerde gang. Med halve
+   * taket per avsender står resten alltid åpent for alle andre, og N+1 fra den
+   * samme avsenderen avvises før noen andre. Køen teller med: en avsender som
+   * fyller køen har tatt plassene til de neste i det øyeblikket en blir ledig.
+   */
+  maxRendersPerSender: Number(
+    process.env.RENDER_MAX_PER_SENDER || Math.max(1, Math.floor(MAX_CONCURRENT_RENDERS / 2)),
+  ),
   /** Hvor sjelden innholdsversjonen sjekkes (én liten spørring per intervall). */
   versionCheckMs: Number(process.env.PAGE_CACHE_VERSION_CHECK_MS || 30 * 1000),
   /**
@@ -208,27 +222,70 @@ export function clearPageCache(): void {
 let active = 0;
 const waiters: Array<(ok: boolean) => void> = [];
 
-function acquireRenderSlot(): Promise<boolean> {
+// Plasser (render + kø) per avsender, se `maxRendersPerSender`. En avsender
+// står her bare så lenge den holder noe, så kartet vokser ikke med trafikken.
+const heldBySender = new Map<string, number>();
+
+function holdFor(sender: string, delta: number): void {
+  const n = (heldBySender.get(sender) ?? 0) + delta;
+  if (n > 0) heldBySender.set(sender, n);
+  else heldBySender.delete(sender);
+}
+
+/**
+ * Avsenderen er adressen KANTEN skrev, altså HØYRE ledd i X-Forwarded-For.
+ * Caddy (`(klientip)` i driftsrepoet) setter headeren til TCP-motparten og
+ * ingenting annet i dag, men leste vi venstre ledd, ville én linje i
+ * Caddyfila gjort det til et ledd klienten velger selv — og en fersk bøtte per
+ * forespørsel er intet tak (bible.flogvit.com#103).
+ *
+ * Uten header vet vi ikke hvem det er, og da gjelder bare det felles taket:
+ * å samle alle ukjente i én bøtte ville gjort halve taket til hele taket for
+ * nettopp den trafikken vi ikke kan skille.
+ */
+function senderOf(c: Context): string | null {
+  const xff = c.req.header('x-forwarded-for');
+  if (!xff) return null;
+  const last = xff.split(',').pop()?.trim();
+  return last || null;
+}
+
+function acquireRenderSlot(sender: string | null): Promise<boolean> {
+  if (sender !== null) {
+    if ((heldBySender.get(sender) ?? 0) >= config.maxRendersPerSender) {
+      return Promise.resolve(false);
+    }
+    holdFor(sender, 1);
+  }
+  const giveBack = () => {
+    if (sender !== null) holdFor(sender, -1);
+  };
   if (active < config.maxConcurrentRenders) {
     active++;
     return Promise.resolve(true);
   }
-  if (waiters.length >= config.maxQueuedRenders) return Promise.resolve(false);
+  if (waiters.length >= config.maxQueuedRenders) {
+    giveBack();
+    return Promise.resolve(false);
+  }
   return new Promise((resolve) => {
     const waiter = (ok: boolean) => {
       clearTimeout(timer);
+      if (!ok) giveBack();
       resolve(ok);
     };
     const timer = setTimeout(() => {
       const i = waiters.indexOf(waiter);
       if (i !== -1) waiters.splice(i, 1);
+      giveBack();
       resolve(false);
     }, config.queueWaitMs);
     waiters.push(waiter);
   });
 }
 
-function releaseRenderSlot(): void {
+function releaseRenderSlot(sender: string | null): void {
+  if (sender !== null) holdFor(sender, -1);
   const next = waiters.pop(); // ferskest først, se begrunnelsen over
   if (next) {
     next(true); // plassen går videre, active står
@@ -263,6 +320,7 @@ export function resetPageCache(): void {
   setContentVersionReader(null);
   active = 0;
   for (const waiter of waiters.splice(0)) waiter(false);
+  heldBySender.clear();
 }
 
 function serveEntry(c: Context, entry: CacheEntry, xCache: 'hit' | 'stale'): Response {
@@ -355,7 +413,8 @@ export async function withPageCache(c: Context, next: Next): Promise<Response | 
   // Utløpte entries beholdes til de re-rendres eller evictes på plass —
   // ved overlast er en stale side bedre enn 503.
 
-  if (!(await acquireRenderSlot())) {
+  const sender = senderOf(c);
+  if (!(await acquireRenderSlot(sender))) {
     if (hit) return serveEntry(c, hit, 'stale');
     return c.body('Service overloaded, try again shortly.\n', 503, {
       'content-type': 'text/plain; charset=utf-8',
@@ -366,7 +425,7 @@ export async function withPageCache(c: Context, next: Next): Promise<Response | 
   try {
     await next();
   } finally {
-    releaseRenderSlot();
+    releaseRenderSlot(sender);
   }
 
   const res = c.res;
