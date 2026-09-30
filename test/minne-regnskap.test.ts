@@ -82,6 +82,8 @@ const UTELATT: Record<string, string> = {
   'books-data/booksById': 'bygget av booksData ved import — 66 bøker',
   'books-data/booksBySlug': 'bygget av booksData ved import — 66 bøker',
   'person-refs/REF_KEYS': 'literal nøkkelliste, bygget ved import',
+  'page-cache/heldBySender':
+    'en avsender står bare der mens den holder en render- eller køplass — høyst tak + kø oppføringer (#126)',
 };
 
 /** Navnene `registrerMinnekilde()` kalles med, lest ut av kildekoden. */
