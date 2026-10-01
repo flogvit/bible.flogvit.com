@@ -8,7 +8,7 @@ import { CALLS, mcpPost } from './calls.ts';
 // Runs against the local database (`../.env`, DB_PORT=3326), like bibel's own
 // DB tests: the point is that the real getters answer, not that a stub does.
 
-const handler = createHandler({ maxConcurrent: 4, queueWaitMs: 1000, dbBudgetMs: 5000 });
+const handler = createHandler({ maxConcurrent: 4, maxConcurrentCli: 4, queueWaitMs: 1000, dbBudgetMs: 5000 });
 let id = 0;
 
 function post(body: unknown, h = handler): Promise<Response> {
@@ -108,6 +108,17 @@ test('search terms are literal, not LIKE patterns', async () => {
   expect(text).toContain('No verses');
 });
 
+test('check_references counts in its structured answer what its text says', async () => {
+  const { result } = await rpc('tools/call', {
+    name: 'check_references',
+    arguments: { text: 'Joh 3,16 og Sal 23,9.', first_line: 7 },
+  });
+  expect(result.structuredContent.checked).toBe(2);
+  expect(result.structuredContent.problems).toBe(1);
+  expect(result.structuredContent.references.map((r: { line: number }) => r.line)).toEqual([7, 7]);
+  expect(result.content.at(-1).text).toBe('2 Bible references, 1 with problems.');
+});
+
 describe('HTTP', () => {
   test('GET is not a stream here', async () => {
     const res = await handler(new Request('http://localhost/mcp'));
@@ -120,14 +131,40 @@ describe('HTTP', () => {
   });
 
   test('a full server answers 503 with Retry-After instead of queueing forever', async () => {
-    const full = createHandler({ maxConcurrent: 0, queueWaitMs: 0, dbBudgetMs: 1000 });
+    const full = createHandler({ maxConcurrent: 0, maxConcurrentCli: 0, queueWaitMs: 0, dbBudgetMs: 1000 });
     const res = await post({ jsonrpc: '2.0', id: 1, method: 'tools/list' }, full);
     expect(res.status).toBe(503);
     expect(res.headers.get('retry-after')).toBeTruthy();
   });
 
+  // A slow call holds its slot long enough for the others to arrive while it does.
+  const slow = (n: number, ua?: string) =>
+    new Request('http://localhost/mcp', {
+          method: 'POST',
+          headers: {
+            'content-type': 'application/json',
+            accept: 'application/json, text/event-stream',
+            ...(ua ? { 'user-agent': ua } : {}),
+          },
+          body: JSON.stringify({ jsonrpc: '2.0', id: n, method: 'tools/call', params: { name: 'get_passage', arguments: { reference: 'Ps 119', editions: ['osen', 'osnb', 'tanach'] } } }),
+        });
+
+  test('the command line client holds at most its own share of the slots', async () => {
+    const capped = createHandler({ maxConcurrent: 2, maxConcurrentCli: 1, queueWaitMs: 0, dbBudgetMs: 5000 });
+    const cli = 'flogvit-bible-cli/1.0.0';
+    const statuses = await Promise.all([slow(1, cli), slow(2, cli), slow(3)].map((r) => capped(r).then((x) => x.status)));
+    // The second CLI request finds the CLI's one slot taken; the assistant's request still gets the other.
+    expect(statuses).toEqual([200, 503, 200]);
+  });
+
+  test('without the User-Agent, the same requests share the global cap as before', async () => {
+    const capped = createHandler({ maxConcurrent: 2, maxConcurrentCli: 1, queueWaitMs: 0, dbBudgetMs: 5000 });
+    const statuses = await Promise.all([slow(1), slow(2)].map((r) => capped(r).then((x) => x.status)));
+    expect(statuses).toEqual([200, 200]);
+  });
+
   test('a slot frees up when a request finishes', async () => {
-    const one = createHandler({ maxConcurrent: 1, queueWaitMs: 5000, dbBudgetMs: 5000 });
+    const one = createHandler({ maxConcurrent: 1, maxConcurrentCli: 1, queueWaitMs: 5000, dbBudgetMs: 5000 });
     const results = await Promise.all(
       [1, 2, 3].map((n) => post({ jsonrpc: '2.0', id: n, method: 'tools/list' }, one).then((r) => r.status)),
     );

@@ -52,7 +52,7 @@ afterAll(async () => {
 });
 
 test.each(CALLS)('%s runs with only the granted tables', async (name, args) => {
-  const handler = createHandler({ maxConcurrent: 2, queueWaitMs: 1000, dbBudgetMs: 2000 });
+  const handler = createHandler({ maxConcurrent: 2, maxConcurrentCli: 2, queueWaitMs: 1000, dbBudgetMs: 2000 });
   const res = await mcpPost(handler, { jsonrpc: '2.0', id: 1, method: 'tools/call', params: { name, arguments: args } });
   const body = (await res.json()) as { result: { content: { text: string }[]; isError?: boolean } };
   expect(body.result.content[0]!.text).not.toMatch(/denied|command denied/i);
@@ -72,7 +72,7 @@ test.each(['sync_items', 'devotional_shares', 'contrib_submissions', 'user_bible
 });
 
 test('/healthz answers 200 with the verse when every content table is granted', async () => {
-  const res = await createHandler({ maxConcurrent: 1, queueWaitMs: 1000, dbBudgetMs: 2000 })(new Request('http://localhost/healthz'));
+  const res = await createHandler({ maxConcurrent: 1, maxConcurrentCli: 1, queueWaitMs: 1000, dbBudgetMs: 2000 })(new Request('http://localhost/healthz'));
   expect(res.status).toBe(200);
   expect(await res.text()).toContain('For God so loved');
 });
@@ -82,7 +82,7 @@ test('/healthz names a content table the user cannot read', async () => {
   await sql.unsafe(`REVOKE SELECT ON \`${DB_NAME}\`.\`persons\` FROM '${USER}'@'localhost'`);
   await sql.end();
   try {
-    const res = await createHandler({ maxConcurrent: 1, queueWaitMs: 1000, dbBudgetMs: 2000 })(new Request('http://localhost/healthz'));
+    const res = await createHandler({ maxConcurrent: 1, maxConcurrentCli: 1, queueWaitMs: 1000, dbBudgetMs: 2000 })(new Request('http://localhost/healthz'));
     expect(res.status).toBe(503);
     expect(await res.text()).toContain('persons');
   } finally {

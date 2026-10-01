@@ -51,6 +51,7 @@ import {
 import { bookName, getBookInfoById as bookById, type BookInfo } from '../../src/lib/books-data.ts';
 import { IMPORTED_BIBLES } from '../../src/lib/editions.ts';
 import { LOCALES } from '../../src/lib/i18n.ts';
+import { findReferences } from './find-references.ts';
 import { chapterUrl, pageUrl } from './links.ts';
 import { chaptersOf, contains, parseReferences, type Passage } from './reference.ts';
 import { searchVerseText } from './search.ts';
@@ -61,6 +62,13 @@ export const MAX_VERSES = 200;
 const MAX_WORD_BY_WORD_VERSES = 20;
 const MAX_CROSS_REFERENCE_VERSES = 50;
 const MAX_PEOPLE = 20;
+/** Verses check_references quotes per reference; the rest is a count. */
+const MAX_CHECK_VERSES_PER_REFERENCE = 10;
+/**
+ * Characters check_references reads in one call. The CLI splits a longer file
+ * by lines. At three bytes a character it still fits the 64 KB request body.
+ */
+export const MAX_CHECK_TEXT = 20_000;
 
 const READABLE = ['osnb', 'osnn', 'osen'] as const;
 
@@ -610,6 +618,78 @@ export function registerTools(server: McpServer): void {
         `**${label(book, v.chapter, v.verseStart, v.chapter, v.verseEnd, language)}** (${bible})\n${v.text}${v.note ? `\n\n${v.note}` : ''}\n\n${chapterUrl(book, v.chapter, language, v.verseStart, bible)}` +
           (await attribution([bible], language)),
       );
+    },
+  );
+  server.registerTool(
+    'check_references',
+    {
+      title: 'Check the Bible references in a text',
+      description:
+        'Finds every Bible reference in a piece of running text — a sermon, a manuscript, an article — and says for each one where it stands (line and column), whether it exists, and what the verses say, so a quotation can be compared with the text it cites. A reference that points past the end of a chapter or book is reported as a problem. Book names must be capitalised, as in text written for a reader.',
+      inputSchema: {
+        text: z.string().min(1).max(MAX_CHECK_TEXT).describe(`The text to check, at most ${MAX_CHECK_TEXT} characters. Split a longer text by lines and pass first_line.`),
+        first_line: z.number().int().min(1).default(1).describe('Line number of the first line of `text`, when it is a part of a longer file.'),
+        edition: z.enum(IMPORTED_BIBLES).optional().describe('Edition to quote the verses from. Default: the edition for `language`.'),
+        include_text: z.boolean().default(true).describe('Quote the verses each reference points at.'),
+        language,
+      },
+      outputSchema: {
+        references: z.array(
+          z.object({
+            line: z.number(),
+            column: z.number(),
+            written: z.string(),
+            reference: z.string().optional(),
+            url: z.string().optional(),
+            problem: z.string().optional(),
+          }),
+        ),
+        checked: z.number(),
+        problems: z.number(),
+      },
+      annotations: READ_ONLY,
+    },
+    async ({ text: input, first_line, edition, include_text, language }) => {
+      const bible = edition ?? (await defaultEdition(language));
+      const found = findReferences(input, first_line, language);
+      const references: { line: number; column: number; written: string; reference?: string; url?: string; problem?: string }[] = [];
+      const blocks: string[] = [];
+      let remaining = MAX_VERSES;
+      let quoted = false;
+
+      for (const f of found) {
+        const at = `line ${f.line}, column ${f.column}: ${f.written}`;
+        const first = f.passages[0];
+        const reference = f.passages.length ? f.passages.map((p) => passageLabel(p, language)).join('; ') : undefined;
+        const url = first ? chapterUrl(first.book, first.chapter, language, first.verseStart, bible) : undefined;
+        references.push({ line: f.line, column: f.column, written: f.written, reference, url, problem: f.problem });
+        if (f.problem) {
+          blocks.push(`${at} — PROBLEM: ${f.problem}`);
+          continue;
+        }
+        const lines = [`${at} → ${reference}`, `  ${url}`];
+        if (include_text && remaining > 0) {
+          for (const p of f.passages) {
+            const verses = await passageVerses(p, bible);
+            const shown = verses.slice(0, Math.min(MAX_CHECK_VERSES_PER_REFERENCE, remaining));
+            remaining -= shown.length;
+            quoted ||= shown.length > 0;
+            for (const v of shown) lines.push(`  ${p.endChapter !== p.chapter ? `${v.chapter}:` : ''}${v.verse} ${v.text}`);
+            if (verses.length > shown.length) lines.push(`  (${verses.length - shown.length} more verses — read them with get_passage)`);
+          }
+        }
+        blocks.push(lines.join('\n'));
+      }
+
+      const problems = references.filter((r) => r.problem).length;
+      const summary = found.length
+        ? `${found.length} Bible references, ${problems} with problems.`
+        : 'No Bible references found. Book names must be capitalised ("Joh 3,16", "John 3:16").';
+      const body = plain(blocks.join('\n\n')) + (quoted ? await attribution([bible], language) : '');
+      return {
+        content: [...(body ? [{ type: 'text' as const, text: body }] : []), { type: 'text' as const, text: summary }],
+        structuredContent: { references, checked: found.length, problems },
+      };
     },
   );
 }

@@ -8,7 +8,7 @@ import { ICONS, createHandler, createMcpServer } from '../src/server.ts';
 // which is built from a whitelist.
 
 const ROOT = Bun.fileURLToPath(new URL('../../', import.meta.url));
-const handler = createHandler({ maxConcurrent: 1, queueWaitMs: 100, dbBudgetMs: 100 });
+const handler = createHandler({ maxConcurrent: 1, maxConcurrentCli: 1, queueWaitMs: 100, dbBudgetMs: 100 });
 const get = (path: string) => handler(new Request(`http://localhost${path}`));
 
 test('the paths a browser and a connector list ask for are among the icons', () => {
