@@ -1,0 +1,5 @@
+# bibel's .env lives one level up, and Bun only reads the one in the working
+# directory. The preload brings it in, so `cd mcp && bun test` and
+# `bun run test` reach the same database (test/root-env.ts).
+[test]
+preload = ["./test/root-env.ts"]

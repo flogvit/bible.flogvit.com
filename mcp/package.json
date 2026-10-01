@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "bun --env-file=../.env --watch src/index.ts",
     "start": "bun src/index.ts",
-    "test": "bun --env-file=../.env test",
+    "test": "bun test",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
