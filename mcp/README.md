@@ -124,7 +124,7 @@ this package has its own dependencies.
 |---|---|---|
 | `PORT` | 8080 | |
 | `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME` | as the site | the database user should have only `grantStatements()` |
-| `DB_TLS` | off | `1` connects over TLS. Bun's MySQL driver does a new user's first (full) authentication only over TLS |
+| `DB_TLS` | off | `1` connects over TLS — for a database user that is refused in plain text |
 | `DB_POOL_MAX` | 5 | |
 | `MCP_MAX_CONCURRENT` | 4 | requests served at once |
 

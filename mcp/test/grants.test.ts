@@ -35,7 +35,7 @@ beforeAll(async () => {
   await closeSql();
   process.env.DB_USER = USER;
   process.env.DB_PASSWORD = PASSWORD;
-  // A brand-new user: its first login is a full authentication (see db.ts).
+  // A user created through Bun is refused in plain text locally (see db.ts).
   process.env.DB_TLS = '1';
 });
 

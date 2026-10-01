@@ -125,10 +125,11 @@ function createPool(): SQL {
     max: Number(process.env.DB_POOL_MAX || 5),
     connectionTimeout: CONNECT_TIMEOUT_S,
     maxLifetime: MAX_LIFETIME_S,
-    // DB_TLS=1 for a user whose FIRST login must authenticate in full: Bun's
-    // MySQL driver does caching_sha2_password's full authentication only over
-    // TLS, so a user nobody has logged in as yet is refused in plain text —
-    // tried 2026-10-01 against MySQL 9.7. bibel/mcp's grant test needs it.
+    // DB_TLS=1 connects over TLS. Tried 2026-10-01 against MySQL 9.7: a fresh
+    // caching_sha2_password user created through Bun's own driver was refused
+    // in plain text and accepted over TLS (one created with the mysql CLI was
+    // accepted either way). bibel/mcp's grant test creates its user through
+    // Bun, so it sets this; production uses whatever provisioning found.
     ...(process.env.DB_TLS === '1' ? { tls: true } : {}),
   });
 }
