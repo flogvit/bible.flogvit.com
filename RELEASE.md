@@ -1,5 +1,14 @@
 # Release notes
 
+## 2026-10-01 — MCP server: ask the Bible through Claude, ChatGPT and other AI assistants
+
+**New features**
+- The Bible is now reachable as an MCP server, so AI assistants like Claude and ChatGPT can look up verses, search, and follow cross-references directly — a setup page is linked from /om.
+
+**Behind the scenes**
+- The MCP server runs its own read-only database user and a health check that verifies both database access and the grants it needs.
+- Tightened wording in a few places so the server never overstates what it knows — no claims about TLS beyond what was observed, or about how much of the Bible actually has cross-references.
+- Removed duplicated book-lookup code and settings nobody was changing.
 ## 2026-09-30 — More resilient during database hiccups and traffic spikes
 
 **Bug fixes**
