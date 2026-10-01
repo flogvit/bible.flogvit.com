@@ -26,7 +26,7 @@ export interface ParsedReferences {
   errors: string[];
 }
 
-const BOOK_AND_REST = /^((?:[1-3]\s*\.?\s*)?\p{L}[^\d]*?)\s*(\d.*)?$/u;
+const BOOK_AND_REST = /^((?:[1-5]\s*\.?\s*)?\p{L}[^\d]*?)\s*(\d.*)?$/u;
 const NUMBERS_ONLY = /^\d/;
 
 export function parseReferences(input: string): ParsedReferences {
