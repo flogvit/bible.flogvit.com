@@ -1,8 +1,11 @@
-# Whitelist: the MCP image needs bibel's src/lib and its own package, nothing
+# Whitelist: the MCP image needs bibel's src/lib, its icon files and its own package, nothing
 # else. See Dockerfile.
 *
 !src/lib
 !mcp/package.json
 !mcp/bun.lock
 !mcp/src
+!public/favicon.svg
+!public/favicon.ico
+!public/apple-touch-icon.png
 src/lib/**/*.test.ts

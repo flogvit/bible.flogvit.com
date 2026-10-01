@@ -27,8 +27,32 @@ Quote Bible text from get_passage rather than from memory, and give the link and
 
 Typical flow: search_bible or search_topics to find passages, get_passage to read them (several references in one call, separated by ";"), get_original_text for the Hebrew/Greek, get_cross_references and get_chapter_study to go deeper.`;
 
+const ORIGIN = 'https://mcp.bible.flogvit.com';
+
+/**
+ * bible.flogvit.com's own icon, served here too (#128): browsers and the
+ * crawlers that build MCP-server directories ask for /favicon.ico, and clients
+ * that read `serverInfo.icons` get the same files. The bytes are bibel's
+ * public/ — copied into the image, not duplicated in this package.
+ */
+export const ICONS = [
+  { path: '/favicon.svg', mimeType: 'image/svg+xml', sizes: ['any'] },
+  { path: '/favicon.ico', mimeType: 'image/x-icon', sizes: ['16x16', '32x32'] },
+  { path: '/apple-touch-icon.png', mimeType: 'image/png', sizes: ['180x180'] },
+] as const;
+
+const PUBLIC_DIR = Bun.fileURLToPath(new URL('../../public', import.meta.url));
+
 export function createMcpServer(): McpServer {
-  const server = new McpServer({ name: SERVER_NAME, version: SERVER_VERSION }, { instructions: INSTRUCTIONS });
+  const server = new McpServer(
+    {
+      name: SERVER_NAME,
+      version: SERVER_VERSION,
+      websiteUrl: 'https://bible.flogvit.com',
+      icons: ICONS.map(({ path, mimeType, sizes }) => ({ src: ORIGIN + path, mimeType, sizes: [...sizes] })),
+    },
+    { instructions: INSTRUCTIONS },
+  );
   registerTools(server);
   return server;
 }
@@ -124,6 +148,12 @@ export function createHandler(limits: Limits): (req: Request) => Promise<Respons
     const { pathname } = new URL(req.url);
     if (pathname === '/healthz') return withRetryBudget(health, limits.dbBudgetMs);
     if (pathname === '/') return new Response(ABOUT, { headers: { 'content-type': 'text/plain; charset=utf-8' } });
+    const icon = ICONS.find((i) => i.path === pathname);
+    if (icon) {
+      return new Response(Bun.file(PUBLIC_DIR + icon.path), {
+        headers: { 'content-type': icon.mimeType, 'cache-control': 'public, max-age=86400' },
+      });
+    }
     if (pathname !== '/mcp') return new Response('Not found', { status: 404 });
     // Stateless: no server-initiated stream to open, no session to delete.
     if (req.method !== 'POST') return jsonRpcError(405, 'Method not allowed.', { allow: 'POST' });

@@ -13,6 +13,8 @@ COPY mcp/package.json mcp/bun.lock ./
 RUN bun install --frozen-lockfile --production
 COPY src/lib ./src/lib
 COPY mcp/src ./mcp/src
+# The icon is bibel's own (#128).
+COPY public/favicon.svg public/favicon.ico public/apple-touch-icon.png ./public/
 ENV NODE_ENV=production
 ENV PORT=8080
 EXPOSE 8080
