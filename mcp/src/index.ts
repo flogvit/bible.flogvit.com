@@ -1,6 +1,6 @@
 // mcp.bible.flogvit.com — runbook in ../README.md.
 
-import { getSql } from '../../src/lib/db.ts';
+import { getVerse } from '../../src/lib/bible.ts';
 import { createHandler, limitsFromEnv } from './server.ts';
 
 const ABOUT = `This is the MCP server for bible.flogvit.com.
@@ -16,10 +16,13 @@ const server = Bun.serve({
   port: Number(process.env.PORT || 8080),
   async fetch(req) {
     const { pathname } = new URL(req.url);
+    // A real read, with the MCP database user's own grants: a missing grant or
+    // an empty `verses` is as fatal here as a dead connection, and `SELECT 1`
+    // would have passed both. smoke.sh looks for the verse text.
     if (pathname === '/healthz') {
       try {
-        await getSql()`SELECT 1`;
-        return new Response('ok');
+        const v = await getVerse(43, 3, 16, 'osen');
+        return v ? new Response(`ok — John 3:16: ${v.text}`) : new Response('no Bible text in the database', { status: 503 });
       } catch {
         return new Response('database unavailable', { status: 503 });
       }

@@ -1,0 +1,8 @@
+# Whitelist: the MCP image needs bibel's src/lib and its own package, nothing
+# else. See Dockerfile.
+*
+!src/lib
+!mcp/package.json
+!mcp/bun.lock
+!mcp/src
+src/lib/**/*.test.ts

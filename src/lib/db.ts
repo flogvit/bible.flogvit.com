@@ -125,6 +125,11 @@ function createPool(): SQL {
     max: Number(process.env.DB_POOL_MAX || 5),
     connectionTimeout: CONNECT_TIMEOUT_S,
     maxLifetime: MAX_LIFETIME_S,
+    // DB_TLS=1 for a user whose FIRST login must authenticate in full: Bun's
+    // MySQL driver does caching_sha2_password's full authentication only over
+    // TLS, so a user nobody has logged in as yet is refused in plain text —
+    // tried 2026-10-01 against MySQL 9.7. bibel/mcp's grant test needs it.
+    ...(process.env.DB_TLS === '1' ? { tls: true } : {}),
   });
 }
 
