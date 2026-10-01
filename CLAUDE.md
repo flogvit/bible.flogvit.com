@@ -2346,6 +2346,22 @@ ordrett signaturen saken er meldt på: `FATAL ERROR: Reached heap limit`.
   mapping-cachene kan i praksis bare vokse til de 14 id-ene som resolver. Denne
   ene ruta var det eneste stedet én forespørsel kunne ta heapen alene.
 
+## MCP-serveren — `mcp/` (#127)
+
+`mcp.bible.flogvit.com/mcp` gir KI-assistenter (Claude, ChatGPT, Cursor …)
+bibelteksten og studiestoffet som MCP-verktøy. Runbook og verktøyliste:
+`mcp/README.md`.
+
+- **Egen pakke, egne avhengigheter, eget image** — men den leser basen gjennom
+  getterne i `src/lib/`. **Endrer du en getter, kjør `cd mcp && bun run test`
+  også**: rotens `bun test` hopper over `mcp/` (`bunfig.toml`), fordi pakka har
+  sin egen `node_modules`.
+- **Én commit, to containere.** FLOGVIT ruller ut `bibel-mcp` fra samme commit
+  som `bibel-hono`, og bare bibel setter deploy-taggen.
+- **Egen db-bruker med SELECT på `CONTENT_TABLES` og ingenting annet**
+  (`mcp/src/grants.ts`). Får importen en ny innholdstabell, må grantene kjøres
+  på nytt i prod; til da svarer `/healthz` 503 og navngir tabellen.
+
 ## Lesesporing (GitHub #16)
 
 `/lesekart` viser hvor i Bibelen brukeren faktisk leser. **Lesing er en HENDELSE,

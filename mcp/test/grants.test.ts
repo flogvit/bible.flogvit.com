@@ -92,3 +92,24 @@ test.each(['sync_items', 'devotional_shares', 'contrib_submissions', 'user_bible
   }
   expect(error).toMatch(/denied/i);
 });
+
+test('/healthz answers 200 with the verse when every content table is granted', async () => {
+  const res = await createHandler({ maxConcurrent: 1, queueWaitMs: 1000, dbBudgetMs: 2000 })(new Request('http://localhost/healthz'));
+  expect(res.status).toBe(200);
+  expect(await res.text()).toContain('For God so loved');
+});
+
+test('/healthz names a content table the user cannot read', async () => {
+  const sql = admin();
+  await sql.unsafe(`REVOKE SELECT ON \`${DB_NAME}\`.\`persons\` FROM '${USER}'@'localhost'`);
+  await sql.end();
+  try {
+    const res = await createHandler({ maxConcurrent: 1, queueWaitMs: 1000, dbBudgetMs: 2000 })(new Request('http://localhost/healthz'));
+    expect(res.status).toBe(503);
+    expect(await res.text()).toContain('persons');
+  } finally {
+    const again = admin();
+    await again.unsafe(`GRANT SELECT ON \`${DB_NAME}\`.\`persons\` TO '${USER}'@'localhost'`);
+    await again.end();
+  }
+});

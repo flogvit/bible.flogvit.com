@@ -48,6 +48,16 @@ r.get('/om', (c) => {
             <p>
               <a href="/api/docs">bible.flogvit.com/api/docs</a> &ndash; {t('about.apiDocs')}
             </p>
+            {/* MCP-serveren (#127): den fjerde veien, for den som spør en
+                KI-assistent framfor å lese sida. Adressen står som kode fordi
+                den skal LIMES INN i Claude eller ChatGPT, ikke klikkes; lenken
+                går til tjenestens egen side, som sier det samme. */}
+            <p>
+              <a href="https://mcp.bible.flogvit.com/" target="_blank" rel="noopener noreferrer">
+                <code>https://mcp.bible.flogvit.com/mcp</code>
+              </a>{' '}
+              &ndash; {t('about.mcp')}
+            </p>
           </section>
 
           <section class="about-section">

@@ -11,7 +11,9 @@
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { WebStandardStreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js';
-import { withRetryBudget } from '../../src/lib/db.ts';
+import { getVerse } from '../../src/lib/bible.ts';
+import { CONTENT_TABLES } from '../../src/lib/content-sources.ts';
+import { getSql, withRetryBudget } from '../../src/lib/db.ts';
 import { registerTools } from './tools.ts';
 
 export const SERVER_NAME = 'flogvit-bible';
@@ -47,6 +49,46 @@ export function limitsFromEnv(env = process.env): Limits {
   };
 }
 
+const ABOUT = `This is the MCP server for bible.flogvit.com.
+
+Add https://mcp.bible.flogvit.com/mcp as a custom connector in Claude, ChatGPT
+or any other MCP client to read and search the Bible from the assistant.
+No account or key is needed.
+`;
+
+/** Content tables this database user cannot read. */
+async function ungranted(): Promise<string[]> {
+  const missing: string[] = [];
+  for (const table of CONTENT_TABLES) {
+    try {
+      await getSql().unsafe(`SELECT 1 FROM \`${table}\` LIMIT 0`);
+    } catch (e) {
+      if (!/denied|doesn't exist/i.test((e as Error).message)) throw e;
+      missing.push(table);
+    }
+  }
+  return missing;
+}
+
+/**
+ * A real read, with the service's own grants. `SELECT 1` would pass with a
+ * grant missing or `verses` empty; this does not. The grants are applied at
+ * provisioning, so a content table added since then is NAMED here — smoke.sh
+ * sees the 503, and the deploy rolls back with the reason in the body.
+ */
+async function health(): Promise<Response> {
+  try {
+    const missing = await ungranted();
+    if (missing.length) {
+      return new Response(`no SELECT on ${missing.join(', ')} — re-run the grants (mcp/README.md)`, { status: 503 });
+    }
+    const v = await getVerse(43, 3, 16, 'osen');
+    return v ? new Response(`ok — John 3:16: ${v.text}`) : new Response('no Bible text in the database', { status: 503 });
+  } catch {
+    return new Response('database unavailable', { status: 503 });
+  }
+}
+
 function jsonRpcError(status: number, message: string, headers: Record<string, string> = {}): Response {
   return Response.json({ jsonrpc: '2.0', error: { code: -32000, message }, id: null }, { status, headers });
 }
@@ -79,8 +121,10 @@ export function createHandler(limits: Limits): (req: Request) => Promise<Respons
   };
 
   return async (req: Request): Promise<Response> => {
-    const url = new URL(req.url);
-    if (url.pathname !== '/mcp') return new Response('Not found', { status: 404 });
+    const { pathname } = new URL(req.url);
+    if (pathname === '/healthz') return withRetryBudget(health, limits.dbBudgetMs);
+    if (pathname === '/') return new Response(ABOUT, { headers: { 'content-type': 'text/plain; charset=utf-8' } });
+    if (pathname !== '/mcp') return new Response('Not found', { status: 404 });
     // Stateless: no server-initiated stream to open, no session to delete.
     if (req.method !== 'POST') return jsonRpcError(405, 'Method not allowed.', { allow: 'POST' });
 
