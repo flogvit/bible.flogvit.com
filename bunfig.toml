@@ -1,0 +1,5 @@
+# mcp/ is its own package with its own dependencies and its own `bun test`
+# (mcp/README.md). Without this, bibel's suite would run it too and fail in any
+# checkout where mcp/node_modules is not installed — including bibel's deploy.
+[test]
+pathIgnorePatterns = ["mcp/**"]

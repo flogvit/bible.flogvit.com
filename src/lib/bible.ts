@@ -1424,7 +1424,7 @@ export async function getProphecies(lang = currentContentLanguage()): Promise<Pr
   return result;
 }
 
-async function getProphecyById(id: string, lang = currentContentLanguage()): Promise<Prophecy | undefined> {
+export async function getProphecyById(id: string, lang = currentContentLanguage()): Promise<Prophecy | undefined> {
   const sql = getSql();
   const [prophecy] = await inLanguage(lang, (language) => sql`
     SELECT p.*, c.name as category_name, c.description as category_description,
