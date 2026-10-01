@@ -48,10 +48,9 @@ import {
   type ThemeData,
   type Verse,
 } from '../../src/lib/bible.ts';
-import { bookName, type BookInfo } from '../../src/lib/books-data.ts';
+import { bookName, getBookInfoById as bookById, type BookInfo } from '../../src/lib/books-data.ts';
 import { IMPORTED_BIBLES } from '../../src/lib/editions.ts';
 import { LOCALES } from '../../src/lib/i18n.ts';
-import { bookById } from './books.ts';
 import { chapterUrl, pageUrl } from './links.ts';
 import { chaptersOf, contains, parseReferences, type Passage } from './reference.ts';
 import { searchVerseText } from './search.ts';
@@ -59,8 +58,8 @@ import { searchVerseText } from './search.ts';
 /** Most verses one call returns per edition. Psalm 119 (176) fits. */
 export const MAX_VERSES = 200;
 /** Word-by-word is ~15 lines per verse; past this the answer drowns the model. */
-export const MAX_WORD_BY_WORD_VERSES = 20;
-export const MAX_CROSS_REFERENCE_VERSES = 50;
+const MAX_WORD_BY_WORD_VERSES = 20;
+const MAX_CROSS_REFERENCE_VERSES = 50;
 const MAX_PEOPLE = 20;
 
 const READABLE = ['osnb', 'osnn', 'osen'] as const;
@@ -88,7 +87,7 @@ const READ_ONLY = { readOnlyHint: true, destructiveHint: false, idempotentHint: 
 // the value without its `@edition` suffix.
 const MARKUP = /\[(?:vers|ref|manuskript|andakt|tema|person|profeti|parallell|historie):([^\]|]+)(?:\|([^\]]+))?\]/g;
 
-export function plain(body: string): string {
+function plain(body: string): string {
   return body.replace(MARKUP, (_, value: string, shown?: string) => shown ?? value.replace(/@[\w-]+$/, '').trim());
 }
 
@@ -101,7 +100,7 @@ function failure(body: string): CallToolResult {
 }
 
 /** "John 3:16-18", "John 3", "Genesis 1:1-2:3" — in the requested language. */
-export function label(book: BookInfo, chapter: number, from: number | null, endChapter: number, to: number | null, lang: string): string {
+function label(book: BookInfo, chapter: number, from: number | null, endChapter: number, to: number | null, lang: string): string {
   const name = bookName(book, lang);
   if (from === null || to === null) return endChapter === chapter ? `${name} ${chapter}` : `${name} ${chapter}-${endChapter}`;
   if (endChapter !== chapter) return `${name} ${chapter}:${from}-${endChapter}:${to}`;

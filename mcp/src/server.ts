@@ -17,7 +17,7 @@ import { getSql, withRetryBudget } from '../../src/lib/db.ts';
 import { registerTools } from './tools.ts';
 
 export const SERVER_NAME = 'flogvit-bible';
-export const SERVER_VERSION = '1.0.0';
+const SERVER_VERSION = '1.0.0';
 
 const INSTRUCTIONS = `Bible text and study material from bible.flogvit.com.
 
@@ -41,11 +41,11 @@ export interface Limits {
   dbBudgetMs: number;
 }
 
-export function limitsFromEnv(env = process.env): Limits {
+export function limitsFromEnv(): Limits {
   return {
-    maxConcurrent: Number(env.MCP_MAX_CONCURRENT || 4),
-    queueWaitMs: Number(env.MCP_QUEUE_WAIT_MS || 5000),
-    dbBudgetMs: Number(env.MCP_DB_BUDGET_MS || 10_000),
+    maxConcurrent: Number(process.env.MCP_MAX_CONCURRENT || 4),
+    queueWaitMs: 5000,
+    dbBudgetMs: 10_000,
   };
 }
 

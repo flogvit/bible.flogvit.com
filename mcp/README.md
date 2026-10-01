@@ -127,8 +127,6 @@ this package has its own dependencies.
 | `DB_TLS` | off | `1` connects over TLS. Bun's MySQL driver does a new user's first (full) authentication only over TLS |
 | `DB_POOL_MAX` | 5 | |
 | `MCP_MAX_CONCURRENT` | 4 | requests served at once |
-| `MCP_QUEUE_WAIT_MS` | 5000 | how long a request waits for a slot before 503 |
-| `MCP_DB_BUDGET_MS` | 10000 | how long one request may wait for the database across retries |
 
 `bun scripts/grants.ts <database>` prints the GRANT statements for the
 database user. They are derived from `CONTENT_TABLES`, but applied only when

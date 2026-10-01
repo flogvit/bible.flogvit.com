@@ -10,7 +10,7 @@
 
 import { bookAliases } from '../../src/lib/book-aliases.ts';
 import { BOOK_ABBRS, BOOK_NAMES } from '../../src/lib/book-names.ts';
-import { booksData, type BookInfo } from '../../src/lib/books-data.ts';
+import { booksData, getBookInfoById, type BookInfo } from '../../src/lib/books-data.ts';
 
 /** Common forms a model writes that no display table carries. */
 const EXTRA: Record<string, number> = {
@@ -35,7 +35,6 @@ export function bookKey(input: string): string {
   return input.normalize('NFC').toLowerCase().replace(/\./g, ' ').replace(/\s+/g, ' ').trim();
 }
 
-const byId = new Map(booksData.map((b) => [b.id, b]));
 const index = new Map<string, number>();
 
 function add(name: string, id: number): void {
@@ -75,9 +74,5 @@ for (const names of [Object.fromEntries(booksData.map((b) => [b.id, b.name_no]))
 export function findBook(input: string): BookInfo | undefined {
   const key = bookKey(input);
   const id = index.get(key) ?? index.get(key.replace(/ /g, ''));
-  return id ? byId.get(id) : undefined;
-}
-
-export function bookById(id: number): BookInfo | undefined {
-  return byId.get(id);
+  return id ? getBookInfoById(id) : undefined;
 }
