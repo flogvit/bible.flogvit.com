@@ -375,7 +375,7 @@ export function registerTools(server: McpServer): void {
           }
         }
       }
-      if (blocks.length === 0) return text(`No cross-references recorded for ${reference} (they cover part of the Bible so far).`);
+      if (blocks.length === 0) return text(`No cross-references recorded for ${reference}.`);
       return text(blocks.join('\n\n') + p.notes);
     },
   );
