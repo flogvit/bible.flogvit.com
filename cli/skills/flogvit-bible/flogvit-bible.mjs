@@ -207,7 +207,9 @@ function parts(text, max) {
       size = 0;
       start = i + 1;
     }
-    // A single line longer than a part is cut; its references keep their line.
+    // A single line longer than a part is cut, and says so: a reference past
+    // the cut would otherwise be missing without a word.
+    if (line.length > max - 1) console.error(`Line ${i + 1} is longer than ${max - 1} characters; only its start was checked.`);
     current.push(line.slice(0, max - 1));
     size += Math.min(line.length, max - 1) + 1;
   });

@@ -85,6 +85,16 @@ const reference = z
     'Bible reference in English or Norwegian style, e.g. "John 3:16", "Joh 3,16-18", "1 Cor 13:4-7", "Ps 23", "Gen 1:1-2:3". Several separated by ";": "Rom 8:28; 9:1; John 3:16".',
   );
 
+/** One reference check_references found, in its structured answer. */
+const checkedReference = z.object({
+  line: z.number(),
+  column: z.number(),
+  written: z.string(),
+  reference: z.string().optional(),
+  url: z.string().optional(),
+  problem: z.string().optional(),
+});
+
 const READ_ONLY = { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false } as const;
 
 // --- formatting ---
@@ -634,16 +644,7 @@ export function registerTools(server: McpServer): void {
         language,
       },
       outputSchema: {
-        references: z.array(
-          z.object({
-            line: z.number(),
-            column: z.number(),
-            written: z.string(),
-            reference: z.string().optional(),
-            url: z.string().optional(),
-            problem: z.string().optional(),
-          }),
-        ),
+        references: z.array(checkedReference),
         checked: z.number(),
         problems: z.number(),
       },
@@ -652,7 +653,7 @@ export function registerTools(server: McpServer): void {
     async ({ text: input, first_line, edition, include_text, language }) => {
       const bible = edition ?? (await defaultEdition(language));
       const found = findReferences(input, first_line, language);
-      const references: { line: number; column: number; written: string; reference?: string; url?: string; problem?: string }[] = [];
+      const references: z.infer<typeof checkedReference>[] = [];
       const blocks: string[] = [];
       let remaining = MAX_VERSES;
       let quoted = false;

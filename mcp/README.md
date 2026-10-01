@@ -44,6 +44,10 @@ Then ask as you normally would — "what does John 3:16 say in the Greek?",
 "where does the Bible talk about forgiveness?", "who was Tamar?". The assistant
 picks the tools itself.
 
+**Without MCP** — in a terminal, a script, or an agent that reads skills — the
+same tools are the command line client `flogvit-bible`, with a skill and a
+Claude Code plugin around it: `../cli/README.md`.
+
 ## The tools
 
 | Tool | What it answers |
@@ -58,6 +62,7 @@ picks the tools itself.
 | `search_people`, `get_person` | People of the Bible, their family and key events |
 | `search_topics`, `get_topic` | Stories, themes, prophecies and gospel parallels |
 | `get_daily_verse` | Today's verse |
+| `check_references` | Every Bible reference in a piece of text — line, column, the verses, and a problem for one that does not exist |
 | `list_editions` | The editions and their licences |
 
 References are read in English and Norwegian style alike — `John 3:16-18`,
@@ -146,7 +151,10 @@ the sources the licence names) and never shows the site's `[ref:…]` markup.
 server gets in production, runs every tool as that user, and checks that the
 user tables refuse it — a tool that needs a table outside the grants fails
 there — and that `/healthz` names a table whose grant is revoked. `test/books.test.ts` checks that every book name and abbreviation the
-site shows, in every language, finds its own book.
+site shows, in every language, finds its own book. `test/find-references.test.ts`
+finds every book by every name inside a sentence, and its last verse as the
+last. `test/cli.test.ts` runs the command line client (`../cli/`) as its own
+program, with node and bun, against a listening server.
 
 bibel's own `bun test` in the repo root does not run these (`bunfig.toml`):
 this package has its own dependencies.
@@ -165,7 +173,9 @@ this package has its own dependencies.
   process.
 - **A global cap, not a per-IP one.** Claude and ChatGPT call connectors from
   their own servers, so one IP is many users. Over the cap the server answers
-  503 with `Retry-After` instead of queueing without end.
+  503 with `Retry-After` instead of queueing without end. The command line
+  client is the one caller it can tell apart, and the one most likely to come in
+  a loop, so it may hold only `MCP_MAX_CONCURRENT_CLI` of the slots.
 
 ## Configuration
 
@@ -176,6 +186,7 @@ this package has its own dependencies.
 | `DB_TLS` | off | `1` connects over TLS — for a database user that is refused in plain text |
 | `DB_POOL_MAX` | 5 | |
 | `MCP_MAX_CONCURRENT` | 4 | requests served at once |
+| `MCP_MAX_CONCURRENT_CLI` | 2 | of those, how many the command line client may hold (`User-Agent: flogvit-bible-cli/…`) |
 
 `bun scripts/grants.ts <database>` prints the GRANT statements for the
 database user. They are derived from `CONTENT_TABLES`, but applied only when

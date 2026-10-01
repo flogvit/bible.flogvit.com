@@ -357,6 +357,12 @@ bibelteksten og studiestoffet som MCP-verktøy. Runbook og verktøyliste:
   sin egen `node_modules`.
 - **Én commit, to containere.** FLOGVIT ruller ut `bibel-mcp` fra samme commit
   som `bibel-hono`, og bare bibel setter deploy-taggen.
+- **CLI-en `flogvit-bible` (`cli/`, #129) er en tynn klient av MCP-serveren**:
+  kommandoene er verktøyene, lest fra `tools/list`. Et nytt verktøy er en ny
+  kommando uten kodeendring i `cli/`; testene ligger i `mcp/test/cli.test.ts`.
+  Repoet er også en Claude Code-markedsplass (`.claude-plugin/marketplace.json`
+  → `cli/`), så skillen publiseres ved push — ingen deploy. How-to:
+  `cli/README.md`.
 - **Egen db-bruker med SELECT på `CONTENT_TABLES` og ingenting annet**
   (`mcp/src/grants.ts`). Får importen en ny innholdstabell, må grantene kjøres
   på nytt i prod; til da svarer `/healthz` 503 og navngir tabellen.

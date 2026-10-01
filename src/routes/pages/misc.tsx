@@ -65,6 +65,15 @@ r.get('/om', (c) => {
               </a>{' '}
               &ndash; {t('about.mcp')}
             </p>
+            {/* Kommandolinja og skillen (#129): det samme for den som jobber
+                i en terminal eller med en agent uten MCP. Lenken går til
+                how-toen, der installasjonen står. */}
+            <p>
+              <a href="https://github.com/flogvit/bible.flogvit.com/tree/main/cli" target="_blank" rel="noopener noreferrer">
+                <code>flogvit-bible</code>
+              </a>{' '}
+              &ndash; {t('about.cli')}
+            </p>
           </section>
 
           <section class="about-section">

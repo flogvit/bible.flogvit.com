@@ -211,6 +211,12 @@ describe('check', () => {
     expect(json.references.map((x: { line: number }) => x.line)).toEqual([10, 1990]);
     expect(json.problems).toBe(1);
   });
+
+  test('a line longer than one call says that its end was not checked', async () => {
+    const r = await run(['check', file('one-line.md', `Joh 3,16 ${'ord '.repeat(MAX_CHECK_TEXT / 2)} Sal 23,1`)]);
+    expect(r.stdout).toContain('Joh 3,16');
+    expect(r.stderr).toContain(`Line 1 is longer than ${MAX_CHECK_TEXT - 1} characters`);
+  });
 });
 
 test('the server recognises the User-Agent the CLI sends', async () => {
