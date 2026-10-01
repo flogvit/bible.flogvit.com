@@ -18,7 +18,7 @@ describe('both citation conventions', () => {
     ['1 Cor 13:4-7', [['1Kor', 13, 4, 13, 7]]],
     ['John 3:16–18', [['Joh', 3, 16, 3, 18]]],
   ] as const)('%s', (input, expected) => {
-    expect(read(input)).toEqual(expected as unknown as unknown[][]);
+    expect(read(input)).toEqual(expected as unknown as (string | number | null)[][]);
   });
 });
 

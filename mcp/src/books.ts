@@ -40,8 +40,9 @@ const index = new Map<string, number>();
 
 function add(name: string, id: number): void {
   const key = bookKey(name);
-  // First writer wins, and the order below is the priority: the Norwegian keys
-  // the site itself uses, then English, then the other locales.
+  // First writer wins: the Norwegian keys the site itself parses come first.
+  // A collision between two languages is caught by test/books.test.ts, which
+  // demands that every displayed name finds its own book.
   if (!index.has(key)) index.set(key, id);
   const compact = key.replace(/ /g, '');
   if (!index.has(compact)) index.set(compact, id);
@@ -52,8 +53,7 @@ for (const b of booksData) {
   add(b.name_no, b.id);
 }
 for (const [alias, id] of Object.entries(bookAliases)) add(alias, id);
-const languages = ['en', ...Object.keys(BOOK_NAMES).filter((l) => l !== 'en')];
-for (const lang of languages) {
+for (const lang of Object.keys(BOOK_NAMES)) {
   for (const [id, name] of Object.entries(BOOK_NAMES[lang] ?? {})) add(name, Number(id));
   for (const [id, abbr] of Object.entries(BOOK_ABBRS[lang] ?? {})) add(abbr, Number(id));
 }
