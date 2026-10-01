@@ -19,9 +19,18 @@ dependencies. It needs node 18 or later, or bun.
 Then ask as you normally would — "check the Bible references in sermon.md",
 "what does John 1:1 say in the Greek?". The skill runs the CLI itself.
 
-**Other agents that read `SKILL.md` files:** copy the
+**Codex, Gemini CLI and other agents that read `SKILL.md` files:** copy the
 folder `skills/flogvit-bible/` into the agent's skills folder. The CLI lies in
-the same folder, so nothing else needs installing.
+the same folder, so nothing else needs installing. Codex and Gemini CLI both
+read `~/.agents/skills/` (for you) and `.agents/skills/` (for one project):
+
+```sh
+git clone --depth 1 https://github.com/flogvit/bible.flogvit.com /tmp/flogvit-bible
+mkdir -p ~/.agents/skills && cp -R /tmp/flogvit-bible/cli/skills/flogvit-bible ~/.agents/skills/
+```
+
+They ask before each command, since `allowed-tools` in `SKILL.md` is Claude
+Code's.
 
 **On the command line:**
 

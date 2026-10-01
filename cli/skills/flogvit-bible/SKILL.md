@@ -9,9 +9,10 @@ allowed-tools: Bash(node ${CLAUDE_SKILL_DIR}/flogvit-bible.mjs *), Bash(bun ${CL
 A command line client for the Bible on bible.flogvit.com. It needs node 18 or
 later, or bun, and network access to `mcp.bible.flogvit.com`.
 
-Run it as `node ${CLAUDE_SKILL_DIR}/flogvit-bible.mjs <command> …` — the file
-lies next to this SKILL.md. If `flogvit-bible` is on the PATH, that works too.
-Below it is written `flogvit-bible`.
+The CLI is the file `flogvit-bible.mjs` in the same folder as this SKILL.md.
+Run it with the full path: `node <this folder>/flogvit-bible.mjs <command> …`
+(in Claude Code the folder is `${CLAUDE_SKILL_DIR}`). If `flogvit-bible` is on
+the PATH, that works too. Below it is written `flogvit-bible`.
 
 If the session already has the `flogvit-bible` MCP tools (`get_passage`,
 `search_bible` …), use those instead: they are the same tools.
