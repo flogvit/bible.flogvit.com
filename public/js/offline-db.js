@@ -161,14 +161,18 @@ export async function getAllUserBibles() {
   return reqToPromise(db.transaction('userBibles').objectStore('userBibles').getAll());
 }
 
-export async function deleteUserBible(id) {
+/**
+ * `at` er slettetidspunktet. Standard er nå (brukeren sletter her); synken
+ * sender serverens tidsstempel når slettingen KOM fra en annen enhet (#134).
+ */
+export async function deleteUserBible(id, at = Date.now()) {
   const db = await openDb();
   // Behold metadata som tombstone (deleted) så sync kan fjerne på serveren.
   const st = db.transaction('userBibles', 'readwrite').objectStore('userBibles');
   const existing = await reqToPromise(st.get(id));
   if (existing) {
     existing.deleted = true;
-    existing.uploadedAt = Date.now();
+    existing.uploadedAt = at;
     await reqToPromise(st.put(existing));
   }
   await deleteChaptersByBible(id);

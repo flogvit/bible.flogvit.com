@@ -261,6 +261,13 @@ sync.post('/user-bibles', async (c) => {
                 uploaded_at = ${bible.uploadedAt}, deleted = ${bible.deleted ? 1 : 0}
             WHERE id = ${bible.id}
           `;
+          // En slettet oversettelse skal ikke bli liggende på kontoen (#134).
+          // Raden står som tombstone, så de andre enhetene får vite om
+          // slettingen — men teksten er brukerens eget innhold, og den har
+          // ingen grunn til å overleve at hen slettet den.
+          if (bible.deleted) {
+            await tx`DELETE FROM user_bible_chapters WHERE bible_id = ${bible.id}`;
+          }
         }
       }
 

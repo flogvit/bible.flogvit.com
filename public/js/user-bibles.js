@@ -7,6 +7,8 @@
 import { getChapter, getUserBibles } from './offline-db.js';
 import { readStrings } from './locale.js';
 import { readJSON } from './store.js';
+import { hasPlus } from './fv-auth.js';
+import { syncUserBibles } from './user-bibles-sync.js';
 
 const t = readStrings(document.body);
 
@@ -36,6 +38,9 @@ async function applyUserPrimary(userBibleId, bibles) {
   const meta = bibles.find((b) => b.id === userBibleId);
   const name = meta ? meta.name : t('is.ownTranslation');
   const rail = document.querySelector('.chapter-rail');
+  // Kan kjøres to ganger: først fra den lokale kopien, så igjen når synken
+  // har hentet bibelen (#134). Notatet fra første runde skal ikke bli stående.
+  document.querySelector('.user-bible-note')?.remove();
   const note = document.createElement('p');
   note.className = 'user-bible-note';
   if (!stored) {
@@ -93,10 +98,14 @@ function extendSwitcher(bibles, userBibleId) {
       const active = !userBibleId && btn.classList.contains('is-active');
       if (hidden.includes(value) && !active) btn.hidden = true;
     });
+    // Velgeren tegnes på nytt når synken har endret lista (#134) — de egne
+    // knappene fra forrige runde må ut først, ellers dobles de.
+    box.querySelectorAll('[data-user-bible]').forEach((a) => a.remove());
     for (const bible of bibles) {
       if (hidden.includes(bible.id) && bible.id !== userBibleId) continue;
       const a = document.createElement('a');
       a.className = `tools-bible-button ${bible.id === userBibleId ? 'is-active' : ''}`;
+      a.dataset.userBible = bible.id;
       a.href = currentQueryWith('bible', bible.id);
       a.textContent = bible.name;
       box.append(a);
@@ -104,13 +113,28 @@ function extendSwitcher(bibles, userBibleId) {
   }
   const select = document.querySelector('[data-secondary-select]');
   if (select) {
+    select.querySelectorAll('[data-user-bible]').forEach((o) => o.remove());
     for (const bible of bibles) {
       const opt = document.createElement('option');
+      opt.dataset.userBible = bible.id;
       opt.value = bible.id;
       opt.textContent = bible.name;
       if (ds.userSecondary === bible.id) opt.selected = true;
       select.append(opt);
     }
+  }
+}
+
+// Har velgeren fått egne knapper? Da må den tegnes på nytt også når lista
+// blir TOM — ellers står en bibel som er slettet på en annen enhet igjen.
+let extended = false;
+
+async function render(bibles) {
+  if (bibles.length > 0 || extended || ds.userBible || ds.userSecondary) {
+    extended = true;
+    extendSwitcher(bibles, ds.userBible);
+    if (ds.userBible) await applyUserPrimary(ds.userBible, bibles);
+    if (ds.userSecondary) await applyUserSecondary(ds.userSecondary, bibles);
   }
 }
 
@@ -121,9 +145,15 @@ async function init() {
   } catch {
     return;
   }
-  if (bibles.length > 0 || ds.userBible || ds.userSecondary) {
-    extendSwitcher(bibles, ds.userBible);
-    if (ds.userBible) await applyUserPrimary(ds.userBible, bibles);
-    if (ds.userSecondary) await applyUserSecondary(ds.userSecondary, bibles);
+  await render(bibles);
+  // Pluss lover egne oversettelser på ALLE enheter (#134). Uten denne var en
+  // ny enhet blind for dem til leseren tilfeldigvis besøkte /oversettelser,
+  // og en sletting på en annen enhet nådde aldri hit. Først tegnes det som
+  // ligger lokalt (raskt, og virker offline), så avstemmes det med kontoen.
+  if (!hasPlus()) return;
+  try {
+    if (await syncUserBibles()) await render(await getUserBibles());
+  } catch {
+    // nett borte eller utlogget — den lokale kopien står
   }
 }

@@ -1,18 +1,11 @@
 // Oversettelser-øy (#14): opplasting/parsing/import av egne bibler til
 // IndexedDB, liste + sletting, og sync mot kontoen når man er innlogget
-// (POST /api/sync/user-bibles + user-bible-chapters — endepunktene fantes på
-// serveren i gamle appen, men klienten var aldri koblet på; det gjøres her).
+// (POST /api/sync/user-bibles + user-bible-chapters). Selve synken bor i
+// user-bibles-sync.js, fordi lesesiden må kjøre den samme (#134).
 
 import { parseBibleText } from './bible-text-parser.js';
-import {
-  addUserBible,
-  getUserBibles,
-  getAllUserBibles,
-  deleteUserBible,
-  storeChapters,
-  getAllChapterKeys,
-  getChapter,
-} from './offline-db.js';
+import { addUserBible, getUserBibles, deleteUserBible, storeChapters } from './offline-db.js';
+import { pushMetadata, pushChapters, syncUserBibles } from './user-bibles-sync.js';
 import { readStrings, intlLocale } from './locale.js';
 import { el } from './dom.js';
 import { hasPlus } from './fv-auth.js';
@@ -51,80 +44,6 @@ async function renderList() {
     row.append(info, del);
     listBox.append(row);
   }
-}
-
-// ── Sync mot konto ───────────────────────────────────────────────────
-async function pushMetadata() {
-  const all = await getAllUserBibles();
-  const bibles = all.map((b) => ({
-    id: b.id,
-    name: b.name,
-    mappingId: b.mappingId,
-    verseCounts: b.verseCounts ?? null,
-    uploadedAt: b.uploadedAt,
-    deleted: !!b.deleted,
-  }));
-  const res = await fetch('/api/sync/user-bibles', {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ bibles }),
-  });
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  return res.json();
-}
-
-async function pushChapters(bibleId) {
-  const keys = (await getAllChapterKeys()).filter(([, , bible]) => bible === bibleId);
-  for (let i = 0; i < keys.length; i += 100) {
-    const batch = await Promise.all(
-      keys.slice(i, i + 100).map(async ([bookId, chapter]) => {
-        const stored = await getChapter(bookId, chapter, bibleId);
-        return { bookId, chapter, data: stored };
-      }),
-    );
-    const res = await fetch(`/api/sync/user-bible-chapters/${encodeURIComponent(bibleId)}`, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ chapters: batch }),
-    });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  }
-}
-
-/** Sørg for at lokale bibler er fullt opplastet (retry etter nettbrudd). */
-async function pushUnsynced() {
-  for (const bible of await getUserBibles()) {
-    if (bible.syncedAt && bible.syncedAt >= bible.uploadedAt) continue;
-    try {
-      await pushChapters(bible.id);
-      await addUserBible({ ...bible, syncedAt: Date.now() });
-    } catch {
-      return; // nett borte — prøver ved neste last
-    }
-  }
-}
-
-/** Hent bibler som finnes på kontoen, men ikke lokalt. */
-async function pullFromAccount() {
-  const server = await pushMetadata(); // sender lokale + får full serverliste
-  await pushUnsynced();
-  const local = new Map((await getUserBibles()).map((b) => [b.id, b]));
-  for (const bible of server.bibles || []) {
-    if (bible.deleted || local.has(bible.id)) continue;
-    const res = await fetch(`/api/sync/user-bible-chapters/${encodeURIComponent(bible.id)}`);
-    if (!res.ok) continue;
-    const { chapters } = await res.json();
-    await storeChapters((chapters || []).map((ch) => ch.data).filter(Boolean));
-    await addUserBible({
-      id: bible.id,
-      name: bible.name,
-      mappingId: bible.mappingId,
-      verseCounts: bible.verseCounts ?? null,
-      uploadedAt: Number(bible.uploadedAt) || Date.now(),
-      syncedAt: Date.now(),
-    });
-  }
-  renderList();
 }
 
 // ── Opplasting ───────────────────────────────────────────────────────
@@ -240,5 +159,5 @@ function init() {
   });
   $('[data-trans-parse]')?.addEventListener('click', handleParse);
   $('[data-trans-import]')?.addEventListener('click', handleImport);
-  if (hasPlus()) pullFromAccount().catch(() => {});
+  if (hasPlus()) syncUserBibles().then(renderList, () => {});
 }
