@@ -1,5 +1,20 @@
 # Release notes
 
+## 2026-10-10 — Read chapters offline without visiting them first, save verses to lists, and safer syncing
+
+**New features**
+- Read any chapter without a connection, even one you never opened while online. You get the Bible text and the study data, not just a cached page.
+- Put verses in a list and open the list to see the verses themselves.
+- Your own translations now sync from the reading page. Deleting one removes it on all your devices.
+
+**Bug fixes**
+- Setting up a new device no longer wipes your topics and settings on your other devices.
+- The topics list no longer breaks when you add your first topic.
+- Dialogs no longer show Norwegian text when you use another language.
+- The word-list API now accepts a `limit` between 1 and 500 and clamps values outside that range.
+
+**Behind the scenes**
+- Two cleanup passes over the sync, offline and MCP code, which removed about 100 net lines.
 ## 2026-10-01 — MCP server: ask the Bible through Claude, ChatGPT and other AI assistants
 
 **New features**
