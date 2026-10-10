@@ -4,8 +4,12 @@ import { NO_CACHE, intParam, internFeil } from './util.ts';
 
 const r = new Hono();
 
-/** `?limit=` for ordlistene: 100 som standard, aldri over 500. */
-const limitParam = (c: Context) => Math.min(intParam(c, 'limit') || 100, 500);
+/**
+ * `?limit=` for ordlistene: 100 som standard, klemt til 1–500. Gulvet er ikke
+ * pynt: `getTopWords` gjør `.slice(0, limit)`, og et negativt tall kutter da
+ * bakfra — nesten hele ordlista (#131).
+ */
+const limitParam = (c: Context) => Math.max(1, Math.min(intParam(c, 'limit') || 100, 500));
 
 /** GET /api/statistics — overordnet bibelstatistikk. */
 r.get('/', async (c) => {
