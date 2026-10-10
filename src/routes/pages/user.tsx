@@ -13,7 +13,6 @@ import { ACCOUNT_URL } from '../../lib/session.ts';
 import { Layout } from '../../views/layout.tsx';
 import { Breadcrumbs } from '../../views/breadcrumbs.tsx';
 import type { Child } from 'hono/jsx';
-import { getSql } from '../../lib/db.ts';
 import { bookNameByShort } from '../../lib/books-data.ts';
 import { getUserItems, getUserSingleton, getReadingProgress } from '../../lib/user-data.ts';
 import { summarizeProgress, fullHeat, stalestBooks, suggestedPlans, planCoverage } from '../../lib/reading-map.ts';

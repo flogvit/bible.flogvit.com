@@ -23,7 +23,7 @@ import {
   getImportantWords,
   normalizeBibleId,
 } from '../../lib/bible.ts';
-import { NO_CACHE, internFeil } from './util.ts';
+import { NO_CACHE, intParam, internFeil } from './util.ts';
 
 const r = new Hono();
 
@@ -79,8 +79,8 @@ r.get('/all', async (c) => {
 
 /** GET /api/search/chapter-resources?bookId=&chapter= — ressurser knyttet til kapittel. */
 r.get('/chapter-resources', async (c) => {
-  const bookId = parseInt(c.req.query('bookId') ?? '', 10);
-  const chapter = parseInt(c.req.query('chapter') ?? '', 10);
+  const bookId = intParam(c, 'bookId');
+  const chapter = intParam(c, 'chapter');
 
   if (!bookId || !chapter) {
     return c.json({ persons: [], prophecies: [], numbers: [], themes: [], stories: [] });

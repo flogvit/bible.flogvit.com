@@ -24,27 +24,6 @@
 import type { Context, Next } from 'hono';
 import { registrerMinnekilde } from './minne-regnskap.ts';
 
-/**
- * Hva en cachet side KOSTER — og enheten er BYTE, ikke tegn (#105).
- *
- * Sidene ble lagret som JS-strenger og budsjettert med `body.length`, altså
- * antall TEGN. En JS-streng koster én byte per tegn bare når HVERT tegn er
- * under 256; ett eneste tegn utenfor latin1 tvinger hele strengen til UTF-16,
- * og en kapittelside bærer hebraisk og gresk. Målt over 100 ekte kapittelsider:
- * 1,97 byte beholdt heap per tegn — altså et 48 MB-tak som i virkeligheten var
- * ~96 MB, og betydelig mer i RSS, som er det cgroup-en teller.
- *
- * Fiksen er ikke å gange med to. Kroppen LAGRES nå som byte: det er formen den
- * sendes i uansett, den er én flat allokering på nøyaktig den størrelsen vi
- * fører i regnskapet, og et anslag som kan drive fra virkeligheten er byttet
- * mot et tall som ER virkeligheten. Sidebonus: en treffende forespørsel slipper
- * å kode strengen til byte på nytt, og en bom slipper å dekode dem til en
- * streng bare for å telle dem.
- */
-function entryBytes(body: Uint8Array): number {
-  return body.byteLength;
-}
-
 /** Taket, lest én gang: køens standardlengde er det samme tallet (under). */
 const MAX_CONCURRENT_RENDERS = Number(process.env.RENDER_MAX_CONCURRENT || 6);
 
@@ -151,10 +130,26 @@ async function invalidateOnContentChange(): Promise<void> {
 }
 
 interface CacheEntry {
+  /**
+   * Hva en cachet side KOSTER — og enheten er BYTE, ikke tegn (#105).
+   *
+   * Sidene ble lagret som JS-strenger og budsjettert med `body.length`, altså
+   * antall TEGN. En JS-streng koster én byte per tegn bare når HVERT tegn er
+   * under 256; ett eneste tegn utenfor latin1 tvinger hele strengen til UTF-16,
+   * og en kapittelside bærer hebraisk og gresk. Målt over 100 ekte kapittelsider:
+   * 1,97 byte beholdt heap per tegn — altså et 48 MB-tak som i virkeligheten var
+   * ~96 MB, og betydelig mer i RSS, som er det cgroup-en teller.
+   *
+   * Fiksen er ikke å gange med to. Kroppen LAGRES nå som byte: det er formen den
+   * sendes i uansett, den er én flat allokering på nøyaktig den størrelsen vi
+   * fører i regnskapet, og et anslag som kan drive fra virkeligheten er byttet
+   * mot et tall som ER virkeligheten. Sidebonus: en treffende forespørsel slipper
+   * å kode strengen til byte på nytt, og en bom slipper å dekode dem til en
+   * streng bare for å telle dem.
+   */
   body: Uint8Array;
   contentType: string;
   expires: number;
-  bytes: number;
 }
 
 const cache = new Map<string, CacheEntry>();
@@ -164,7 +159,7 @@ function evictUntilRoom(needed: number): void {
   for (const [key, entry] of cache) {
     if (totalBytes + needed <= config.maxTotalBytes) break;
     cache.delete(key);
-    totalBytes -= entry.bytes;
+    totalBytes -= entry.body.byteLength;
   }
 }
 
@@ -437,15 +432,15 @@ export async function withPageCache(c: Context, next: Next): Promise<Response | 
   // `arrayBuffer()` framfor `text()`: kroppen skal ligge som byte, og en
   // omvei om en JS-streng ville både doblet minnet og kostet en dekoding.
   const body = new Uint8Array(await res.clone().arrayBuffer());
-  const bytes = entryBytes(body);
+  const bytes = body.byteLength;
   c.res.headers.set('cache-control', cacheControl());
   if (bytes > config.maxEntryBytes) return;
   if (hit) {
     cache.delete(key);
-    totalBytes -= hit.bytes;
+    totalBytes -= hit.body.byteLength;
   }
   evictUntilRoom(bytes);
   if (totalBytes + bytes > config.maxTotalBytes) return;
-  cache.set(key, { body, contentType, expires: Date.now() + config.ttlMs, bytes });
+  cache.set(key, { body, contentType, expires: Date.now() + config.ttlMs });
   totalBytes += bytes;
 }

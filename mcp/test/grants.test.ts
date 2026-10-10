@@ -3,6 +3,7 @@ import { SQL } from 'bun';
 import { closeSql, DB_NAME, getSql } from '../../src/lib/db.ts';
 import { grantStatements } from '../src/grants.ts';
 import { createHandler } from '../src/server.ts';
+import { CALLS, mcpPost } from './calls.ts';
 
 // The grants are the security boundary, so they are tested the only way that
 // proves anything: every tool runs as a LOCAL user that has exactly
@@ -18,7 +19,7 @@ function admin(): SQL {
     adapter: 'mysql',
     hostname: process.env.DB_HOST || '127.0.0.1',
     port: Number(process.env.DB_PORT || 3306),
-      username: saved.user || 'root',
+    username: saved.user || 'root',
     password: saved.password || '',
   });
 }
@@ -50,32 +51,9 @@ afterAll(async () => {
   await sql.end();
 });
 
-const CALLS: [string, Record<string, unknown>][] = [
-  ['list_editions', {}],
-  ['get_passage', { reference: 'John 3:16-18', editions: ['osen', 'osnb', 'sblgnt'], include_notes: true }],
-  ['search_bible', { query: 'love', testament: 'NT' }],
-  ['get_original_text', { reference: 'John 1:1' }],
-  ['search_original_word', { word: 'λόγος', limit: 3 }],
-  ['get_cross_references', { reference: 'John 3:16' }],
-  ['get_chapter_study', { reference: 'Matt 1' }],
-  ['get_book_overview', { book: 'Romans' }],
-  ['search_people', { query: 'ruth' }],
-  ['get_person', { id: 'tamar-juda' }],
-  ['search_topics', { query: 'prodigal' }],
-  ['get_topic', { kind: 'story', id: 'den-fortapte-sonn' }],
-  ['get_topic', { kind: 'theme', id: 'david' }],
-  ['get_daily_verse', {}],
-];
-
 test.each(CALLS)('%s runs with only the granted tables', async (name, args) => {
   const handler = createHandler({ maxConcurrent: 2, queueWaitMs: 1000, dbBudgetMs: 2000 });
-  const res = await handler(
-    new Request('http://localhost/mcp', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json', accept: 'application/json, text/event-stream' },
-      body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'tools/call', params: { name, arguments: args } }),
-    }),
-  );
+  const res = await mcpPost(handler, { jsonrpc: '2.0', id: 1, method: 'tools/call', params: { name, arguments: args } });
   const body = (await res.json()) as { result: { content: { text: string }[]; isError?: boolean } };
   expect(body.result.content[0]!.text).not.toMatch(/denied|command denied/i);
   expect(body.result.isError ?? false).toBe(false);

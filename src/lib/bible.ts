@@ -1710,21 +1710,6 @@ export async function getPersonsByEra(era: string, lang = currentContentLanguage
 
 // Chapter Insights types and functions
 
-export interface ChapterInsightBase {
-  type: string;
-  title: string;
-  buttonText: string;
-  hint: string;
-  intro: string;
-}
-
-export interface ChapterInsightDbRow {
-  book_id: number;
-  chapter: number;
-  type: string;
-  content: string;
-}
-
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function getChapterInsight(
   bookId: number,
@@ -2832,9 +2817,6 @@ export interface ReadingSlot {
 export interface ReadingTextWithSlots extends ReadingText {
   slots: ReadingSlot[];
 }
-
-/** @deprecated transitional alias — prefer ReadingTextWithSlots */
-export type ReadingTextWithRefs = ReadingTextWithSlots;
 
 export async function getAllReadingTexts(lang = currentContentLanguage()): Promise<ReadingText[]> {
   const sql = getSql();

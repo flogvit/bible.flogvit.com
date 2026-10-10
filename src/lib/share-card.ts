@@ -146,7 +146,7 @@ export function shareCard(): ShareCard {
  * `chapterCardPath()` — stien er rå der den brukes internt.
  */
 export function chapterShareCard(bookId: number, chapter: number, locale: Locale): ShareCard {
-  const [book, kapittel] = chapterCardText(bookId, chapter, locale);
+  const [book] = chapterCardText(bookId, chapter, locale);
   return {
     url: absoluteUrl(chapterCardPath(bookId, chapter, locale)),
     width: SHARE_CARD_WIDTH,

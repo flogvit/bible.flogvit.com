@@ -12,5 +12,3 @@
 // symptomet ville vært stille — en utgave med infoside som ikke er indeksert.
 
 export const IMPORTED_BIBLES = ['osnb', 'osnn', 'osen', 'sblgnt', 'tanach'] as const;
-
-export type ImportedBible = (typeof IMPORTED_BIBLES)[number];

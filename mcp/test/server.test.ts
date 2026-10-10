@@ -3,6 +3,7 @@ import { closeSql } from '../../src/lib/db.ts';
 import { LOCALES } from '../../src/lib/i18n.ts';
 import { createHandler, SERVER_NAME } from '../src/server.ts';
 import { MAX_VERSES } from '../src/tools.ts';
+import { CALLS, mcpPost } from './calls.ts';
 
 // Runs against the local database (`../.env`, DB_PORT=3326), like bibel's own
 // DB tests: the point is that the real getters answer, not that a stub does.
@@ -11,13 +12,7 @@ const handler = createHandler({ maxConcurrent: 4, queueWaitMs: 1000, dbBudgetMs:
 let id = 0;
 
 function post(body: unknown, h = handler): Promise<Response> {
-  return h(
-    new Request('http://localhost/mcp', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json', accept: 'application/json, text/event-stream' },
-      body: JSON.stringify(body),
-    }),
-  );
+  return mcpPost(h, body);
 }
 
 async function rpc(method: string, params?: unknown) {
@@ -50,27 +45,8 @@ test('every tool is declared read-only', async () => {
   for (const t of result.tools) expect(t.annotations?.readOnlyHint).toBe(true);
 });
 
-// One ordinary call per tool. The invariants below run over ALL of them, so a
-// new tool is held to them the moment it is added here.
-const CALLS: [string, Record<string, unknown>][] = [
-  ['list_editions', {}],
-  ['get_passage', { reference: 'John 3:16-18', editions: ['osen', 'osnb', 'sblgnt'], include_notes: true }],
-  ['get_passage', { reference: 'Ps 23', language: 'nb' }],
-  ['search_bible', { query: 'forgiv sins', testament: 'NT' }],
-  ['search_bible', { query: '"elske hverandre"', edition: 'osnb', book: 'Joh', language: 'nb' }],
-  ['get_original_text', { reference: 'John 1:1-2' }],
-  ['get_original_text', { reference: 'Gen 1:1', word_by_word: false }],
-  ['search_original_word', { word: 'ἀγάπη', limit: 5 }],
-  ['get_cross_references', { reference: 'John 3:16' }],
-  ['get_chapter_study', { reference: 'Matt 1' }],
-  ['get_book_overview', { book: 'Romerbrevet', language: 'nb' }],
-  ['search_people', { query: 'tamar' }],
-  ['get_person', { id: 'tamar-juda' }],
-  ['search_topics', { query: 'prodigal' }],
-  ['get_topic', { kind: 'story', id: 'den-fortapte-sonn' }],
-  ['get_topic', { kind: 'theme', id: 'david' }],
-  ['get_daily_verse', { language: 'nn' }],
-];
+// The invariants below run over ALL of `CALLS`, so a new tool is held to them
+// the moment it is added there.
 
 /** The licence statements require these links to follow the text. */
 const LICENCE_SOURCES = ['https://sblgnt.com', 'https://www.tanach.us'];

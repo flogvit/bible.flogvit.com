@@ -1,11 +1,11 @@
 import { Hono, type Context } from 'hono';
 import { getBibleStatistics, getTopOriginalWords, getTopWords, normalizeBibleId } from '../../lib/bible.ts';
-import { NO_CACHE, internFeil } from './util.ts';
+import { NO_CACHE, intParam, internFeil } from './util.ts';
 
 const r = new Hono();
 
 /** `?limit=` for ordlistene: 100 som standard, aldri over 500. */
-const limitParam = (c: Context) => Math.min(parseInt(c.req.query('limit') ?? '', 10) || 100, 500);
+const limitParam = (c: Context) => Math.min(intParam(c, 'limit') || 100, 500);
 
 /** GET /api/statistics — overordnet bibelstatistikk. */
 r.get('/', async (c) => {

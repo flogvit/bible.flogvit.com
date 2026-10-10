@@ -11,6 +11,7 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import { z } from 'zod';
 import {
+  defaultBibleForLanguage,
   getBibleEditionById,
   getBibleEditions,
   getBookSummary,
@@ -34,7 +35,6 @@ import {
   getThemesByChapter,
   getTimelineEventsForChapter,
   getVerses,
-  readableBibleCandidates,
   searchGospelParallels,
   searchOriginalWord,
   searchPersons,
@@ -152,11 +152,6 @@ async function passageVerses(p: Passage, bible: string): Promise<Verse[]> {
   return out;
 }
 
-async function defaultEdition(lang: string): Promise<string> {
-  const [first] = await readableBibleCandidates(lang);
-  return first?.id ?? 'osen';
-}
-
 // --- tools ---
 
 export function registerTools(server: McpServer): void {
@@ -205,7 +200,7 @@ export function registerTools(server: McpServer): void {
     async ({ reference, editions, include_notes, language }) => {
       const p = parsed(reference);
       if (p.error) return p.error;
-      const chosen = editions ?? [await defaultEdition(language)];
+      const chosen = editions ?? [await defaultBibleForLanguage(language)];
 
       const blocks: string[] = [];
       let remaining = MAX_VERSES;
@@ -607,7 +602,7 @@ export function registerTools(server: McpServer): void {
       annotations: READ_ONLY,
     },
     async ({ language, edition }) => {
-      const bible = edition ?? (await defaultEdition(language));
+      const bible = edition ?? (await defaultBibleForLanguage(language));
       const v = await getDailyVerse(bible, language);
       const book = v ? bookById(v.bookId) : undefined;
       if (!v || !book) return text('No verse of the day today.');
