@@ -2379,6 +2379,18 @@ historikk) og holdes utenfor tidslinje/ferskhet framfor å gjettes inn.
   tidspunkt, union på delvis leste vers), fordi nyeste-vinner ville latt én enhet
   slette en annens framdrift. Klienten fletter med SAMME funksjon (`spec.merge` i
   `sync.js` MAP).
+- **Singletons (`topics`, `settings`, `activePlan`, `readingPosition`,
+  `verseVersions`) er én blob, nyeste vinner — men FRAVÆR er aldri en sletting
+  (#132).** En ny enhet pushet før `null` for alt den ikke hadde, og slettet
+  emner og innstillinger på alle enheter. Klienten pusher nå bare singletons den
+  HAR, og en sletting bare fra `localStorage.removeItem` (merket i
+  `bible-sync-deleted`). Serveren avviser `null` over ekte data med mindre
+  klienten sender `baseUpdatedAt` ≥ serverens versjon (`bible-sync-base` holder
+  den) — forsvaret står også mot gamle klienter i service worker-cachen.
+  `topics` flettes IKKE: blobben har ingen slettemerker, så en union ville
+  vekket opp emner og koblinger brukeren har fjernet. Samtidige endringer på
+  to enheter er fortsatt nyeste-vinner; en ekte fletting krever at emnene blir
+  `items` med skygge, som listene.
 - **Måling: tid per VERS, ikke per side.** Total tid + total dekning som
   uavhengige betingelser kan oppfylles hver for seg (parker fanen, scroll til
   bunns). Per-vers-attribusjon + Page Visibility + tak per vers fjerner begge

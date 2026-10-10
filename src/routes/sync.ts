@@ -25,6 +25,8 @@ interface SyncChange {
   data: unknown;
   updatedAt: number;
   deleted?: boolean;
+  /** Serverens updatedAt for versjonen klienten baserte en sletting på (#132). */
+  baseUpdatedAt?: number;
 }
 
 interface SyncItemRow {
@@ -67,6 +69,27 @@ const MERGERS: Record<string, (client: unknown, server: unknown) => unknown> = {
   readingProgress: (client, server) => mergeProgress(client, server),
 };
 
+/**
+ * Er dette en `null`-singleton over ekte data fra en klient som ikke har lest
+ * den? (#132)
+ *
+ * En singleton er én blob, og «nyeste updatedAt vinner» lot en NY enhet — som
+ * bare manglet verdien lokalt — skrive null over brukerens emner og
+ * innstillinger, fordi `now` alltid er nyere. Klienten er rettet, men gamle
+ * klienter lever videre i service worker-cachen, og datatap skal ikke hvile på
+ * ett ledd. En sletting godtas derfor bare når klienten oppgir at den har SETT
+ * versjonen den sletter (`baseUpdatedAt` ≥ serverens). Vanlige skrivinger
+ * følger fortsatt nyeste-vinner; lister slettes per element ut fra hva enheten
+ * har sett (skyggen i sync.js), og records er aldri null — derfor bare
+ * singletons.
+ */
+function erBlindSletting(change: SyncChange, existing: SyncItemRow): boolean {
+  if (change.itemId !== '_singleton') return false;
+  if (!change.deleted && change.data != null) return false;
+  if (existing.deleted || parseData(existing.data) == null) return false;
+  return !(typeof change.baseUpdatedAt === 'number' && change.baseUpdatedAt >= Number(existing.updated_at));
+}
+
 const sync = new Hono<AppEnv>();
 
 // Husking (skylagring/sync) er en del av FLOGVIT.plus (2026-07-22).
@@ -97,6 +120,20 @@ sync.post('/', async (c) => {
           SELECT data, updated_at, deleted FROM sync_items
           WHERE user_id = ${userId} AND data_type = ${dataType} AND item_id = ${itemId}
         `) as SyncItemRow[];
+
+        if (existing && erBlindSletting(change, existing)) {
+          // Klienten har aldri sett denne versjonen, så den kan ikke ha ment å
+          // slette den. Serverversjonen står og sendes tilbake, så enheten
+          // fyller hullet framfor å stå med et tomt felt.
+          serverChanges.push({
+            dataType,
+            itemId,
+            data: parseData(existing.data),
+            updatedAt: Number(existing.updated_at),
+            deleted: false,
+          });
+          continue;
+        }
 
         if (!existing) {
           await tx`

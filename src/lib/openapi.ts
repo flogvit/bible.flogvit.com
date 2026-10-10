@@ -777,7 +777,10 @@ export const API_OPERATIONS: ApiOperation[] = [
       '`settings`, `readingPosition`, `verseVersions`, `activePlan`, `planProgress`, ' +
       '`readingProgress`.\n\n' +
       'Newest `updatedAt` wins, except for `readingProgress` and `planProgress`, which are merged ' +
-      'both ways so an offline device can never delete progress. Rate limit: 30 requests per minute.',
+      'both ways so an offline device can never delete progress. Deleting a singleton (`itemId: ' +
+      '"_singleton"`, `data: null`) requires `baseUpdatedAt` — the server `updatedAt` of the version ' +
+      'the client saw; a deletion of a version it never saw is refused and the server copy is ' +
+      'returned. Rate limit: 30 requests per minute.',
     auth: 'plus',
     body: {
       required: true,

@@ -11,6 +11,18 @@ const DEVICE_KEY = 'bible-device-id';
 const LAST_SYNC_KEY = 'bible-last-sync';
 const PENDING_KEY = 'bible-sync-pending';
 const SHADOW_KEY = 'bible-sync-shadow';
+// Singletons er én blob der siste skriver vinner, og en enhet som ikke HAR en
+// verdi lokalt kan ikke vite om den mangler fordi brukeren slettet den, eller
+// fordi enheten aldri har sett den (#132). Første synk på en ny enhet sendte
+// derfor null over brukerens emner og innstillinger på ALLE enheter. To merker
+// skiller tilfellene:
+// - BASE: serverens updatedAt for den versjonen enheten sist så, per type.
+//   Sendes med en sletting, så serveren kan avvise null over noe klienten
+//   aldri har lest.
+// - DELETED: singletons brukeren fjernet med vilje (removeItem utenfor
+//   applying). Bare de sendes som sletting — fravær alene sier ingenting.
+const BASE_KEY = 'bible-sync-base';
+const DELETED_KEY = 'bible-sync-deleted';
 
 import { mergeProgress } from './reading-progress.js';
 import { readStrings, intlLocale } from './locale.js';
@@ -38,6 +50,7 @@ const TYPE_TO_KEY = Object.fromEntries(Object.entries(MAP).map(([k, v]) => [v.ty
 
 let applying = false;
 const rawSetItem = localStorage.setItem.bind(localStorage);
+const rawRemoveItem = localStorage.removeItem.bind(localStorage);
 function writeRaw(key, value) {
   try {
     rawSetItem(key, JSON.stringify(value));
@@ -58,19 +71,53 @@ try {
     rawSetItem(key, value);
     if (!applying && key in MAP) markPending(key);
   };
+  // En bevisst fjerning (home.js' ×-knapp på leseposisjonen) er en endring som
+  // skal synkes. Før #132 gikk den forbi fangsten, og neste fulle synk hentet
+  // verdien tilbake fra serveren.
+  localStorage.removeItem = function (key) {
+    rawRemoveItem(key);
+    if (applying || MAP[key]?.kind !== 'singleton') return;
+    const deleted = new Set(readJSON(DELETED_KEY, []));
+    deleted.add(key);
+    writeRaw(DELETED_KEY, [...deleted]);
+    markPending(key);
+  };
 } catch {}
+
+function setBase(type, updatedAt) {
+  const base = readJSON(BASE_KEY, {}) || {};
+  if (updatedAt == null) delete base[type];
+  else base[type] = updatedAt;
+  writeRaw(BASE_KEY, base);
+}
 
 // ── Bygg changes fra pending nøkler ────────────────────────────────
 function buildChanges(pendingKeys) {
   const changes = [];
   const shadow = readJSON(SHADOW_KEY, {});
+  const base = readJSON(BASE_KEY, {}) || {};
+  const deleted = new Set(readJSON(DELETED_KEY, []));
   const now = Date.now();
   for (const key of pendingKeys) {
     const spec = MAP[key];
     if (!spec) continue;
     const data = readJSON(key, null);
     if (spec.kind === 'singleton') {
-      changes.push({ dataType: spec.type, itemId: '_singleton', data, updatedAt: now });
+      // Fravær er ikke en sletting: en enhet som aldri har hatt verdien, har
+      // ingenting å si om den — den skal HENTE, ikke skrive tomt over (#132).
+      let present = false;
+      try {
+        present = localStorage.getItem(key) !== null;
+      } catch {}
+      if (!present && !deleted.has(key)) continue;
+      const change = { dataType: spec.type, itemId: '_singleton', data, updatedAt: now };
+      if (data == null) {
+        change.deleted = true;
+        // Hvilken serverversjon slettingen gjelder. Serveren avviser null over
+        // en nyere versjon — da vinner den, og enheten får den tilbake.
+        change.baseUpdatedAt = base[spec.type] || 0;
+      }
+      changes.push(change);
     } else if (spec.kind === 'record') {
       for (const [id, value] of Object.entries(data || {})) {
         changes.push({ dataType: spec.type, itemId: id, data: value, updatedAt: now });
@@ -121,6 +168,7 @@ function applyServerChanges(changes) {
         const ch = list[list.length - 1];
         if (ch.deleted || ch.data == null) localStorage.removeItem(key);
         else writeRaw(key, ch.data);
+        setBase(type, ch.updatedAt);
       } else if (spec.kind === 'record') {
         const cur = readJSON(key, {}) || {};
         for (const ch of list) {
@@ -183,7 +231,9 @@ async function syncNow(full) {
     // og push utboksen i SAMME kall, så offline-endringer aldri overskrives.
     const lastSyncAt = full ? 0 : readJSON(LAST_SYNC_KEY, 0);
     let pending = readJSON(PENDING_KEY, []);
-    if (full && !readJSON(LAST_SYNC_KEY, 0)) pending = Object.keys(MAP); // helt førstegangs: push alt lokalt
+    // Helt førstegangs: push alt enheten HAR lokalt. Singletons den ikke har,
+    // hoppes over i buildChanges — ellers ble de null over serverens (#132).
+    if (full && !readJSON(LAST_SYNC_KEY, 0)) pending = Object.keys(MAP);
     const changes = buildChanges(pending);
     const res = await fetch('/api/sync', {
       method: 'POST',
@@ -204,6 +254,7 @@ async function syncNow(full) {
     } else if (Array.isArray(result.changes) && result.changes.length > 0) {
       applyServerChanges(result.changes);
     }
+    rememberPushed(changes, result.changes || []);
     writeRaw(LAST_SYNC_KEY, result.syncedAt || Date.now());
     writeRaw(PENDING_KEY, []);
     updateShadow();
@@ -215,6 +266,21 @@ async function syncNow(full) {
   } finally {
     syncing = false;
   }
+}
+
+// En pushet singleton som serveren IKKE sendte tilbake, ble godtatt — den er
+// nå versjonen enheten har sett. Sendte serveren sin egen, har gjenoppbyggingen
+// alt satt basen til den. Slettemerkene er levert i begge tilfeller.
+function rememberPushed(pushed, returned) {
+  const returnedTypes = new Set(returned.filter((ch) => ch.itemId === '_singleton').map((ch) => ch.dataType));
+  const delivered = new Set();
+  for (const ch of pushed) {
+    if (ch.itemId !== '_singleton') continue;
+    delivered.add(TYPE_TO_KEY[ch.dataType]);
+    if (!returnedTypes.has(ch.dataType)) setBase(ch.dataType, ch.updatedAt);
+  }
+  const deleted = readJSON(DELETED_KEY, []);
+  if (deleted.some((k) => delivered.has(k))) writeRaw(DELETED_KEY, deleted.filter((k) => !delivered.has(k)));
 }
 
 function scheduleSync() {
@@ -243,8 +309,10 @@ function rebuildFromServer(serverChanges, pushedChanges) {
         if (ch) {
           if (ch.deleted || ch.data == null) localStorage.removeItem(key);
           else writeRaw(key, ch.data);
+          setBase(spec.type, ch.updatedAt);
         } else if (!pushedIds.has(`${spec.type}:_singleton`)) {
           localStorage.removeItem(key);
+          setBase(spec.type, null);
         }
       } else if (spec.kind === 'record') {
         const cur = readJSON(key, {}) || {};
