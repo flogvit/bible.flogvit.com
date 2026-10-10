@@ -85,19 +85,13 @@ r.get('/', async (c) => {
       }));
 
       const originalVerses: { verse: number; text: string }[] = [];
+      const word4word: Record<number, unknown[]> = {};
+      const references: Record<number, unknown[]> = {};
       for (const m of mapped) {
         const orig = await getOriginalVerse(bookId, m.osnbChapter, m.osnbVerse);
         if (orig) originalVerses.push({ verse: m.displayVerse, text: orig.text });
-      }
-
-      const word4word: Record<number, unknown[]> = {};
-      for (const m of mapped) {
         const w4w = await getOriginalWord4Word(bookId, m.osnbChapter, m.osnbVerse, lang);
         if (w4w.length > 0) word4word[m.displayVerse] = w4w;
-      }
-
-      const references: Record<number, unknown[]> = {};
-      for (const m of mapped) {
         const refs = await getReferences(bookId, m.osnbChapter, m.osnbVerse, lang);
         if (refs.length > 0) references[m.displayVerse] = refs;
       }

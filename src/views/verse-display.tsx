@@ -27,18 +27,23 @@ export function VerseView({ data }: { data: VerseWithOriginal }) {
         {verse.text}
         {verse.footnotes && verse.footnotes.length > 0 && <Footnotes footnotes={verse.footnotes} />}
       </span>
-      {originalText && (
-        <div
-          class={`original-verse ${hebrew ? 'hebrew' : 'greek'}`}
-          dir={hebrew ? 'rtl' : 'ltr'}
-          lang={hebrew ? 'he' : 'el'}
-        >
-          <span class="undertekst-label" aria-hidden="true">
-            {tCtx()(hebrew ? 'lang.hebrewShort' : 'lang.greekShort')}
-          </span>
-          {originalText}
-        </div>
-      )}
+      {originalText && <OriginalVerseStrip text={originalText} hebrew={hebrew} />}
+    </div>
+  );
+}
+
+/** Grunnteksten under et vers, med «Hebr.»/«Gr.»-etiketten. Delt med lesesiden. */
+export function OriginalVerseStrip({ text, hebrew }: { text: string; hebrew: boolean }) {
+  return (
+    <div
+      class={`original-verse ${hebrew ? 'hebrew' : 'greek'}`}
+      dir={hebrew ? 'rtl' : 'ltr'}
+      lang={hebrew ? 'he' : 'el'}
+    >
+      <span class="undertekst-label" aria-hidden="true">
+        {tCtx()(hebrew ? 'lang.hebrewShort' : 'lang.greekShort')}
+      </span>
+      {text}
     </div>
   );
 }

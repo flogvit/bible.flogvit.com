@@ -12,7 +12,7 @@ import { Layout } from '../../views/layout.tsx';
 import { Breadcrumbs } from '../../views/breadcrumbs.tsx';
 import { layoutProps, makeT, tFor, type Locale, lhref } from '../../lib/i18n.ts';
 import { booksData, bookName, bookAbbr } from '../../lib/books-data.ts';
-import { offlineEditions } from '../../lib/bible.ts';
+import { getOriginalLanguage, offlineEditions } from '../../lib/bible.ts';
 import { toUrlSlug } from '../../lib/url-utils.ts';
 
 const r = new Hono<AppEnv>();
@@ -431,8 +431,8 @@ r.get('/offline-fallback', async (c) => {
     name: bookName(b),
     abbr: bookAbbr(b),
     chapters: b.chapters,
-    // Grunntekstens språk: GT er hebraisk (høyre-til-venstre), NT gresk.
-    hebrew: b.id <= 39,
+    // Grunntekstens språk: hebraisk (høyre-til-venstre) eller gresk.
+    hebrew: getOriginalLanguage(b.id) === 'hebrew',
   }));
   const editions = await offlineEditions();
   return c.html(

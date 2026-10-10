@@ -21,7 +21,7 @@ import { Footnotes } from '../../views/footnotes.tsx';
 import { InlineRefs } from '../../views/inline-refs.tsx';
 import { Markdown } from '../../views/markdown.tsx';
 import { ItemTagging } from '../../views/item-tagging.tsx';
-import { VerseView, verseUrl } from '../../views/verse-display.tsx';
+import { OriginalVerseStrip, VerseView, verseUrl } from '../../views/verse-display.tsx';
 import { booksData, getBookInfoBySlug, getBookInfoById, bookName, bookNameById, bookAbbr, bookAbbrById } from '../../lib/books-data.ts';
 import type { BookInfo } from '../../lib/books-data.ts';
 import { toUrlSlug } from '../../lib/url-utils.ts';
@@ -808,20 +808,8 @@ function VerseStrip({
   secondary: string | undefined;
   hebrew: boolean;
 }) {
-  const t = tCtx();
   if (secondary === 'original' && originalText) {
-    return (
-      <div
-        class={`original-verse ${hebrew ? 'hebrew' : 'greek'}`}
-        dir={hebrew ? 'rtl' : 'ltr'}
-        lang={hebrew ? 'he' : 'el'}
-      >
-        <span class="undertekst-label" aria-hidden="true">
-          {t(hebrew ? 'lang.hebrewShort' : 'lang.greekShort')}
-        </span>
-        {originalText}
-      </div>
-    );
+    return <OriginalVerseStrip text={originalText} hebrew={hebrew} />;
   }
   if (secondary && secondary !== 'original' && secondaryText) {
     return (

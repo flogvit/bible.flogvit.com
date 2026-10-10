@@ -1,8 +1,6 @@
 // Sync-API — port av gamle api/routes/sync.ts (Express/mysql2) til Hono +
 // Bun.sql, med EKSAKT samme JSON-kontrakt. user_id er nå konto-bruker-id
 // (requirePlus fra session.ts — husking er plus-gated); bibels egen users-tabell finnes ikke lenger.
-// ÅPEN BESLUTNING (ISSUES.md #6): ev. plus-gating — da legges én
-// entitlement-sjekk (c.var.user.plus) i middleware her.
 
 import { Hono } from 'hono';
 import type { SQL } from 'bun';
@@ -66,7 +64,7 @@ function mergeReadingPlanProgress(clientData: unknown, serverData: unknown): Pla
  */
 const MERGERS: Record<string, (client: unknown, server: unknown) => unknown> = {
   planProgress: mergeReadingPlanProgress,
-  readingProgress: (client, server) => mergeProgress(client, server),
+  readingProgress: mergeProgress,
 };
 
 /**
@@ -150,30 +148,22 @@ sync.post('/', async (c) => {
             WHERE user_id = ${userId} AND data_type = ${dataType} AND item_id = ${itemId}
           `;
         } else if (Number(existing.updated_at) > updatedAt) {
-          // Serveren er nyest — send serverversjonen tilbake.
-          const serverData = parseData(existing.data);
+          // Serveren er nyest — send serverversjonen tilbake (flettet, der
+          // typen flettes, og da lagres flettingen også).
           const merger = MERGERS[dataType];
+          const serverData = merger ? merger(data, parseData(existing.data)) : parseData(existing.data);
+          serverChanges.push({
+            dataType,
+            itemId,
+            data: serverData,
+            updatedAt: Number(existing.updated_at),
+            deleted: !!existing.deleted,
+          });
           if (merger) {
-            const merged = merger(data, serverData);
-            serverChanges.push({
-              dataType,
-              itemId,
-              data: merged,
-              updatedAt: Number(existing.updated_at),
-              deleted: !!existing.deleted,
-            });
             await tx`
-              UPDATE sync_items SET data = ${JSON.stringify(merged)}
+              UPDATE sync_items SET data = ${JSON.stringify(serverData)}
               WHERE user_id = ${userId} AND data_type = ${dataType} AND item_id = ${itemId}
             `;
-          } else {
-            serverChanges.push({
-              dataType,
-              itemId,
-              data: serverData,
-              updatedAt: Number(existing.updated_at),
-              deleted: !!existing.deleted,
-            });
           }
         }
         // Like tidsstempler = ingenting å gjøre.
@@ -230,6 +220,13 @@ interface UserBibleRow {
   deleted: number | boolean;
 }
 
+async function userBibleRows(sql: SQL, userId: number): Promise<UserBibleRow[]> {
+  return (await sql`
+    SELECT id, name, mapping_id, verse_counts, uploaded_at, deleted
+    FROM user_bibles WHERE user_id = ${userId}
+  `) as UserBibleRow[];
+}
+
 /** POST /user-bibles — sync av bibel-metadata (ikke kapitteldata). */
 sync.post('/user-bibles', async (c) => {
   const userId = c.var.user!.id;
@@ -239,11 +236,7 @@ sync.post('/user-bibles', async (c) => {
   const sql = getSql();
   try {
     const serverBibles = await sql.begin(async (tx: SQL) => {
-      const existingRows = (await tx`
-        SELECT id, name, mapping_id, verse_counts, uploaded_at, deleted
-        FROM user_bibles WHERE user_id = ${userId}
-      `) as UserBibleRow[];
-      const existingMap = new Map(existingRows.map((r) => [r.id, r]));
+      const existingMap = new Map((await userBibleRows(tx, userId)).map((r) => [r.id, r]));
 
       for (const bible of bibles ?? []) {
         const existing = existingMap.get(bible.id);
@@ -271,11 +264,7 @@ sync.post('/user-bibles', async (c) => {
         }
       }
 
-      const allRows = (await tx`
-        SELECT id, name, mapping_id, verse_counts, uploaded_at, deleted
-        FROM user_bibles WHERE user_id = ${userId}
-      `) as UserBibleRow[];
-      return allRows.map((row) => ({
+      return (await userBibleRows(tx, userId)).map((row) => ({
         id: row.id,
         name: row.name,
         mappingId: row.mapping_id,

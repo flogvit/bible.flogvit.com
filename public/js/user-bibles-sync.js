@@ -16,7 +16,7 @@ import {
   getUserBibles,
   getAllUserBibles,
   deleteUserBible,
-  storeChapters,
+  putAll,
   getAllChapterKeys,
   getChapter,
 } from './offline-db.js';
@@ -104,7 +104,7 @@ export async function syncUserBibles() {
     const res = await fetch(`/api/sync/user-bible-chapters/${encodeURIComponent(bible.id)}`);
     if (!res.ok) continue;
     const { chapters } = await res.json();
-    await storeChapters((chapters || []).map((ch) => ch.data).filter(Boolean));
+    await putAll('chapters', (chapters || []).map((ch) => ch.data).filter(Boolean));
     await addUserBible({
       id: bible.id,
       name: bible.name,

@@ -4,7 +4,7 @@
 // user-bibles-sync.js, fordi lesesiden må kjøre den samme (#134).
 
 import { parseBibleText } from './bible-text-parser.js';
-import { addUserBible, getUserBibles, deleteUserBible, storeChapters } from './offline-db.js';
+import { addUserBible, getUserBibles, deleteUserBible, putAll } from './offline-db.js';
 import { pushMetadata, pushChapters, syncUserBibles } from './user-bibles-sync.js';
 import { readStrings, intlLocale } from './locale.js';
 import { el } from './dom.js';
@@ -119,7 +119,7 @@ async function handleImport() {
   progress.hidden = false;
   const { chapters, bibleId, mappingId } = parsed;
   for (let i = 0; i < chapters.length; i += 100) {
-    await storeChapters(chapters.slice(i, i + 100));
+    await putAll('chapters', chapters.slice(i, i + 100));
     fill.style.width = `${Math.round(((i + 100) / chapters.length) * 100)}%`;
   }
   const verseCounts = {};

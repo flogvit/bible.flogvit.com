@@ -207,8 +207,7 @@ export async function getVerses(bookId: number, chapter: number, bible?: string)
 
 export async function getOriginalVerses(bookId: number, chapter: number): Promise<Verse[]> {
   const sql = getSql();
-  // GT (book 1-39) uses tanach (Hebrew), NT (book 40-66) uses sblgnt (Greek)
-  const bible = bookId <= 39 ? 'tanach' : 'sblgnt';
+  const bible = originalBibleId(bookId);
   return await sql`
     SELECT * FROM verses WHERE book_id = ${bookId} AND chapter = ${chapter} AND bible = ${bible} ORDER BY verse
   ` as Verse[];
@@ -216,6 +215,11 @@ export async function getOriginalVerses(bookId: number, chapter: number): Promis
 
 export function getOriginalLanguage(bookId: number): 'hebrew' | 'greek' {
   return bookId <= 39 ? 'hebrew' : 'greek';
+}
+
+/** Grunnteksten boka står i: GT (1–39) i tanach (hebraisk), NT i sblgnt (gresk). */
+export function originalBibleId(bookId: number): 'tanach' | 'sblgnt' {
+  return getOriginalLanguage(bookId) === 'hebrew' ? 'tanach' : 'sblgnt';
 }
 
 export interface VerseRef {
@@ -276,7 +280,7 @@ export async function getVerse(bookId: number, chapter: number, verseNum: number
 
 export async function getOriginalVerse(bookId: number, chapter: number, verseNum: number): Promise<Verse | undefined> {
   const sql = getSql();
-  const bible = bookId <= 39 ? 'tanach' : 'sblgnt';
+  const bible = originalBibleId(bookId);
   const [row] = await sql`
     SELECT * FROM verses WHERE book_id = ${bookId} AND chapter = ${chapter} AND verse = ${verseNum} AND bible = ${bible}
   ` as Verse[];
@@ -320,10 +324,8 @@ export async function getWord4Word(bookId: number, chapter: number, verse: numbe
 }
 
 export async function getOriginalWord4Word(bookId: number, chapter: number, verse: number, lang = 'nb'): Promise<Word4Word[]> {
-  // GT (book 1-39) uses tanach (Hebrew), NT (book 40-66) uses sblgnt (Greek)
-  // Combined with language: tanach-nb, tanach-nn, sblgnt-nb, sblgnt-nn
-  const original = bookId <= 39 ? 'tanach' : 'sblgnt';
-  const bible = `${original}-${lang}`;
+  // Grunnteksten med språket: tanach-nb, tanach-nn, sblgnt-nb, sblgnt-nn.
+  const bible = `${originalBibleId(bookId)}-${lang}`;
   return getWord4Word(bookId, chapter, verse, bible);
 }
 
@@ -355,8 +357,7 @@ export async function getOriginalWord4WordByVerse(
   const sql = getSql();
   // Samme sammensetning som getOriginalWord4Word: grunnteksten bærer språket i
   // bibel-id-en (tanach-nb, sblgnt-nn), så her er det ingen fallback-kjede.
-  const original = bookId <= 39 ? 'tanach' : 'sblgnt';
-  const bible = `${original}-${lang}`;
+  const bible = `${originalBibleId(bookId)}-${lang}`;
   const rows = await sql`
     SELECT verse, word_index, word, original, pronunciation, explanation FROM word4word
     WHERE book_id = ${bookId} AND chapter = ${chapter} AND bible = ${bible}
@@ -1932,7 +1933,7 @@ async function getBookStatistics(bookId: number, bible = 'osnb'): Promise<BookSt
   const allText = rows.map(r => r.text).join(' ');
 
   // Get original text word count
-  const originalBible = bookId <= 39 ? 'tanach' : 'sblgnt';
+  const originalBible = originalBibleId(bookId);
   const origRows = await sql`
     SELECT text FROM verses WHERE book_id = ${bookId} AND bible = ${originalBible}
   ` as { text: string }[];
@@ -1959,7 +1960,7 @@ async function getBookStatistics(bookId: number, bible = 'osnb'): Promise<BookSt
     verses: rows.length,
     words: countWords(allText),
     originalWords,
-    originalLanguage: bookId <= 39 ? 'hebrew' : 'greek'
+    originalLanguage: getOriginalLanguage(bookId),
   };
 }
 

@@ -57,19 +57,7 @@ function reqToPromise(request) {
   });
 }
 
-// ── Kapitler ─────────────────────────────────────────────────────────
-export async function storeChapter(chapterData) {
-  const db = await openDb();
-  return tx(db, 'chapters', 'readwrite', (st) => st.put(chapterData));
-}
-
-export async function storeChapters(list) {
-  const db = await openDb();
-  return tx(db, 'chapters', 'readwrite', (st) => {
-    for (const ch of list) st.put(ch);
-  });
-}
-
+// ── Kapitler (skrives med putAll('chapters', …)) ──────────────────────
 export async function getChapter(bookId, chapter, bible) {
   const db = await openDb();
   return reqToPromise(db.transaction('chapters').objectStore('chapters').get([bookId, chapter, bible]));
@@ -97,19 +85,7 @@ async function deleteChaptersByBible(bible) {
   });
 }
 
-// ── Bøker og støttedata ──────────────────────────────────────────────
-export async function storeBooks(books) {
-  const db = await openDb();
-  return tx(db, 'books', 'readwrite', (st) => {
-    for (const b of books) st.put(b);
-  });
-}
-
-export async function getBooks() {
-  const db = await openDb();
-  return reqToPromise(db.transaction('books').objectStore('books').getAll());
-}
-
+// ── Støttedata (og bøker og kapitler, via putAll/getAll) ─────────────
 /** timeline/prophecies lagres out-of-line under nøkkelen 'data'. */
 export async function putBlob(store, value) {
   const db = await openDb();

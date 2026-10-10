@@ -4,9 +4,6 @@
 // AbortController, 404 hoppes over.
 
 import {
-  storeChapter,
-  storeBooks,
-  getBooks,
   countChapters,
   getAllChapterKeys,
   putBlob,
@@ -67,7 +64,7 @@ async function renderStatus() {
 // ── Nedlastet innhold (per bok) ──────────────────────────────────────
 async function renderContent() {
   const keys = await getAllChapterKeys();
-  const books = await getBooks();
+  const books = await getAll('books');
   contentBox.textContent = '';
   const builtin = keys.filter(([, , bible]) => !String(bible).startsWith('user:'));
   if (builtin.length === 0) {
@@ -141,19 +138,18 @@ async function startDownload() {
 
   try {
     const books = await fetchBooks();
-    await storeBooks(books);
+    await putAll('books', books);
     const jobs = [];
     for (const bible of bibles) {
       for (const book of books) {
         for (let ch = 1; ch <= book.chapters; ch++) jobs.push({ book, ch, bible });
       }
     }
-    let done = 0;
     let skipped = 0;
     // Hopp over kapitler som alt er lastet (gjenopptak).
     const existing = new Set((await getAllChapterKeys()).map((k) => k.join('|')));
     const pending = jobs.filter((j) => !existing.has(`${j.book.id}|${j.ch}|${j.bible}`));
-    done = jobs.length - pending.length;
+    let done = jobs.length - pending.length;
 
     for (let i = 0; i < pending.length; i += 5) {
       if (signal.aborted) throw new DOMException('Aborted', 'AbortError');
@@ -172,7 +168,7 @@ async function startDownload() {
           }
           if (!res.ok) throw new Error(`HTTP ${res.status}`);
           const data = await res.json();
-          await storeChapter({
+          await putAll('chapters', [{
             bookId: book.id,
             chapter: ch,
             bible,
@@ -186,7 +182,7 @@ async function startDownload() {
             insight: data.insight ?? null,
             lang: document.documentElement.lang || null,
             cachedAt: Date.now(),
-          });
+          }]);
         }),
       );
       done += batch.length;

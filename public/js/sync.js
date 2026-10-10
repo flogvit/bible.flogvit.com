@@ -91,6 +91,13 @@ function setBase(type, updatedAt) {
   writeRaw(BASE_KEY, base);
 }
 
+/** En singleton fra serveren skrives lokalt, og versjonen huskes som basen (#132). */
+function applySingleton(key, type, ch) {
+  if (ch.deleted || ch.data == null) localStorage.removeItem(key);
+  else writeRaw(key, ch.data);
+  setBase(type, ch.updatedAt);
+}
+
 // ── Bygg changes fra pending nøkler ────────────────────────────────
 function buildChanges(pendingKeys) {
   const changes = [];
@@ -165,10 +172,7 @@ function applyServerChanges(changes) {
       const spec = key && MAP[key];
       if (!spec) continue;
       if (spec.kind === 'singleton') {
-        const ch = list[list.length - 1];
-        if (ch.deleted || ch.data == null) localStorage.removeItem(key);
-        else writeRaw(key, ch.data);
-        setBase(type, ch.updatedAt);
+        applySingleton(key, type, list[list.length - 1]);
       } else if (spec.kind === 'record') {
         const cur = readJSON(key, {}) || {};
         for (const ch of list) {
@@ -307,9 +311,7 @@ function rebuildFromServer(serverChanges, pushedChanges) {
       if (spec.kind === 'singleton') {
         const ch = serverItems.get('_singleton');
         if (ch) {
-          if (ch.deleted || ch.data == null) localStorage.removeItem(key);
-          else writeRaw(key, ch.data);
-          setBase(spec.type, ch.updatedAt);
+          applySingleton(key, spec.type, ch);
         } else if (!pushedIds.has(`${spec.type}:_singleton`)) {
           localStorage.removeItem(key);
           setBase(spec.type, null);

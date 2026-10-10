@@ -21,7 +21,6 @@ import {
   getGospelParallelById,
   getGospelParallelsForChapter,
   getImportantWords,
-  getOriginalLanguage,
   getOriginalVerses,
   getOriginalWord4WordByVerse,
   getPersonData,
@@ -35,6 +34,7 @@ import {
   getThemesByChapter,
   getTimelineEventsForChapter,
   getVerses,
+  originalBibleId,
   searchGospelParallels,
   searchOriginalWord,
   searchPersons,
@@ -292,7 +292,7 @@ export function registerTools(server: McpServer): void {
       let count = 0;
 
       outer: for (const passage of p.passages) {
-        const bible = getOriginalLanguage(passage.book.id) === 'hebrew' ? 'tanach' : 'sblgnt';
+        const bible = originalBibleId(passage.book.id);
         used.add(bible);
         const lines: string[] = [`## ${passageLabel(passage, language)} (${bible})\n${chapterUrl(passage.book, passage.chapter, language, passage.verseStart)}`];
         for (const chapter of chaptersOf(passage)) {
