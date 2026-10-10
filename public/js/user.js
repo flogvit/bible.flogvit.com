@@ -90,12 +90,14 @@ if (root) {
       const data = readJSON(KEYS.topics, { topics: [], verseTopics: [], itemTopics: [] });
       const topics = data.topics || [];
       showList(root, topics.length > 0);
-      topics.forEach((t) => {
+      // `topic`, ikke `t`: `t` er oversetteren, og skygget den, kastet
+      // `t('is.taggedCount')` på første emne — lista ble tom for alle som hadde ett.
+      topics.forEach((topic) => {
         const count =
-          (data.itemTopics || []).filter((it) => it.topicId === t.id).length +
-          (data.verseTopics || []).filter((vt) => vt.topicId === t.id).length;
+          (data.itemTopics || []).filter((it) => it.topicId === topic.id).length +
+          (data.verseTopics || []).filter((vt) => vt.topicId === topic.id).length;
         const card = el('div', 'user-card');
-        card.appendChild(el('span', 'user-card-title', t.name));
+        card.appendChild(el('span', 'user-card-title', topic.name));
         card.appendChild(el('span', 'user-card-meta', t('is.taggedCount', { n: count })));
         list.appendChild(card);
       });
