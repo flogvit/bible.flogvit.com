@@ -13,10 +13,14 @@ import { ACCOUNT_URL } from '../../lib/session.ts';
 import { Layout } from '../../views/layout.tsx';
 import { Breadcrumbs } from '../../views/breadcrumbs.tsx';
 import type { Child } from 'hono/jsx';
-import { bookNameByShort } from '../../lib/books-data.ts';
+import { bookNameByShort, booksData, bookName, getBookInfoBySlug } from '../../lib/books-data.ts';
+// @ts-expect-error — delt klient-modul uten typer (formen bor ett sted, se #133)
+import { parseVerseListRef } from '../../../public/js/verse-list.js';
+// @ts-expect-error — delt klient-modul uten typer (se #91)
+import { verseHash } from '../../../public/js/verse-hash.js';
 import { getUserItems, getUserSingleton, getReadingProgress } from '../../lib/user-data.ts';
 import { summarizeProgress, fullHeat, stalestBooks, suggestedPlans, planCoverage } from '../../lib/reading-map.ts';
-import { getBibleEditions, getFavoriteVerses, getAllReadingPlansList, getReadingPlanChapterSets, type BibleEdition } from '../../lib/bible.ts';
+import { getBibleEditions, getFavoriteVerses, getVersesWithOriginal, getAllReadingPlansList, getReadingPlanChapterSets, type BibleEdition } from '../../lib/bible.ts';
 import { getAvailableMappings } from '../../lib/verse-mapper.ts';
 import { layoutProps, makeT, tFor, tEnum, type Locale, type MessageKey, lhref } from '../../lib/i18n.ts';
 import { tCtx } from '../../lib/i18n.ts';
@@ -140,7 +144,7 @@ r.get('/notater', async (c) => {
 });
 
 // ---------- /lister ----------
-interface VerseListItem { id: string; name: string; refs?: unknown[]; updatedAt: number }
+interface VerseListItem { id: string; name: string; refs?: string[]; updatedAt: number }
 
 r.get('/lister', async (c) => {
   const t = tFor(c);
@@ -154,14 +158,83 @@ r.get('/lister', async (c) => {
       </form>
       <div class="user-list" data-list>
         {lists.map((l) => (
-          <div class="user-card">
+          <a class="user-card" href={lhref(`/lister/${encodeURIComponent(l.id)}`)}>
             <span class="user-card-title">{l.name}</span>
             <span class="user-card-meta">{t('is.verseCount', { n: (l.refs ?? []).length })}</span>
-          </div>
+          </a>
         ))}
       </div>
       <p class="user-empty" data-empty hidden={lists.length > 0}>{t('u.noLists')}</p>
     </UserPage>,
+  );
+});
+
+/** Ett kort per adresse i lista: etikett, lenke til stedet, og versteksten. */
+interface ListCard { href: string | null; label: string; text: string }
+
+async function verseListCards(refs: readonly string[]): Promise<ListCard[]> {
+  return Promise.all(
+    refs.map(async (ref) => {
+      const parsed: { slug: string; chapter: number; start: number; end: number } | null = parseVerseListRef(ref);
+      const book = parsed && getBookInfoBySlug(parsed.slug);
+      // En adresse vi ikke kan lese vises som den står, så den kan fjernes —
+      // å kaste den stille ville tatt bort noe brukeren har lagt der.
+      if (!parsed || !book) return { href: null, label: ref, text: '' };
+      const nums = Array.from({ length: Math.min(parsed.end - parsed.start + 1, 200) }, (_, i) => parsed.start + i);
+      const verses = await getVersesWithOriginal([{ bookId: book.id, chapter: parsed.chapter, verses: nums }]);
+      const span = parsed.end > parsed.start ? `${parsed.start}-${parsed.end}` : `${parsed.start}`;
+      return {
+        href: `/${book.short_name.toLowerCase()}/${parsed.chapter}${verseHash(parsed.start, parsed.end)}`,
+        label: `${bookName(book)} ${parsed.chapter}:${span}`,
+        text: verses.map((v) => v.verse.text).join(' '),
+      };
+    }),
+  );
+}
+
+// ---------- /lister/:id (#133) ----------
+// Lista bor hos brukeren (sync_items for plus, localStorage på enheten). For en
+// synket liste rendres versene her; user.js rendrer på nytt fra den lokale
+// kopien, så en liste som ikke er synket ennå også vises. Boktabellen følger
+// med på sida, ellers måtte øya slå opp alle 66 bøkene over nettet for å finne
+// bok-id-en til `joh`. `noindex`: en privat liste er aldri svaret på et søk.
+r.get('/lister/:id', async (c) => {
+  const t = tFor(c);
+  const user = c.var.user;
+  const id = c.req.param('id');
+  const list = user?.plus
+    ? (await getUserItems<VerseListItem>(user.id, 'verseLists')).find((l) => l.id === id)
+    : undefined;
+  const cards = list ? await verseListCards(list.refs ?? []) : [];
+  const books = booksData.map((b) => [b.short_name.toLowerCase(), b.id, bookName(b)]);
+  const { locale, path } = layoutProps(c);
+  return c.html(
+    <Layout locale={locale} path={path} noindex
+      title={`${list?.name ?? t('nav.verseLists')} — FLOGVIT.bible`}
+      description={t('u.listsIntro')}
+      styles={['user.css']}
+      scripts={['user.js']}
+    >
+      <div class="user-main">
+        <div class="reading-container">
+          <Breadcrumbs items={[{ label: t('nav.verseLists'), href: '/lister' }, { label: list?.name ?? id }]} />
+          <h1 data-list-name>{list?.name ?? t('nav.verseLists')}</h1>
+          <div data-user-page="verselist" data-list-id={id} data-books={JSON.stringify(books)}>
+            <div class="user-list" data-list>
+              {cards.map((card) => (
+                <div class="user-card">
+                  {card.href
+                    ? <a class="user-card-ref" href={lhref(card.href)}>{card.label}</a>
+                    : <span class="user-card-ref">{card.label}</span>}
+                  {card.text && <p class="user-card-text">{card.text}</p>}
+                </div>
+              ))}
+            </div>
+            <p class="user-empty" data-empty hidden={cards.length > 0}>{list ? t('u.listEmpty') : t('u.noLists')}</p>
+          </div>
+        </div>
+      </div>
+    </Layout>,
   );
 });
 

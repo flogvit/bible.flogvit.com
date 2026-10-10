@@ -7,6 +7,8 @@
 import { recordRead, mergeProgress, heatLevel } from './reading-progress.js';
 import { readStrings, localeHref } from './locale.js';
 import { el } from './dom.js';
+import { parseVerseListRef, withRef } from './verse-list.js';
+import { verseHash } from './verse-hash.js';
 import { readJSON, writeJSON } from './store.js';
 
 const t = readStrings(document.body);
@@ -114,7 +116,8 @@ if (root) {
         .slice()
         .sort((a, b) => b.updatedAt - a.updatedAt)
         .forEach((l) => {
-          const card = el('div', 'user-card');
+          const card = el('a', 'user-card');
+          card.href = localeHref(`/lister/${encodeURIComponent(l.id)}`);
           card.appendChild(el('span', 'user-card-title', l.name));
           card.appendChild(el('span', 'user-card-meta', t('is.verseCount', { n: (l.refs || []).length })));
           list.appendChild(card);
@@ -138,6 +141,75 @@ if (root) {
         render();
       });
     }
+  }
+
+  // ---- én verslist (#133) ----
+  // Rendres fra den lokale kopien, så en liste som ikke er synket ennå også
+  // vises. Finnes den ikke her, står det serveren rendret. Verstekstene hentes i
+  // ett kall; boktabellen (slug → id, navn) la serveren på sida.
+  if (page === 'verselist' && list) {
+    const id = root.dataset.listId;
+    let books = new Map();
+    try {
+      books = new Map(JSON.parse(root.dataset.books || '[]').map(([slug, bookId, name]) => [slug, { id: bookId, name }]));
+    } catch {}
+    const render = () => {
+      const l = readJSON(KEYS.verseLists, []).find((x) => x.id === id);
+      if (!l) return;
+      const heading = document.querySelector('[data-list-name]');
+      if (heading) heading.textContent = l.name;
+      list.textContent = '';
+      const refs = l.refs || [];
+      showList(root, refs.length > 0);
+      const wanted = [];
+      refs.forEach((ref) => {
+        const p = parseVerseListRef(ref);
+        const book = p && books.get(p.slug);
+        const card = el('div', 'user-card');
+        const span = p && p.end > p.start ? `${p.start}-${p.end}` : p && `${p.start}`;
+        if (book) {
+          const a = el('a', 'user-card-ref', `${book.name} ${p.chapter}:${span}`);
+          a.href = localeHref(`/${p.slug}/${p.chapter}${verseHash(p.start, p.end)}`);
+          card.appendChild(a);
+          const verses = [];
+          for (let v = p.start; v <= p.end && verses.length < 200; v++) verses.push(v);
+          wanted.push({ ref: { bookId: book.id, chapter: p.chapter, verses }, card });
+        } else {
+          card.appendChild(el('span', 'user-card-ref', ref));
+        }
+        const text = el('p', 'user-card-text');
+        text.hidden = true;
+        card.appendChild(text);
+        const del = el('button', 'user-card-remove', t('is.delete'));
+        del.type = 'button';
+        del.addEventListener('click', () => {
+          const all = readJSON(KEYS.verseLists, []);
+          writeJSON(KEYS.verseLists, all.map((x) => (x.id === id ? withRef(x, ref, false) : x)));
+          render();
+        });
+        card.appendChild(del);
+        list.appendChild(card);
+      });
+      if (wanted.length === 0) return;
+      fetch('/api/verses', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ refs: wanted.map((w) => w.ref) }),
+      })
+        .then((r) => r.json())
+        .then((verses) => {
+          const byKey = new Map(verses.map((v) => [`${v.verse.book_id}-${v.verse.chapter}-${v.verse.verse}`, v.verse.text]));
+          for (const { ref, card } of wanted) {
+            const text = ref.verses.map((v) => byKey.get(`${ref.bookId}-${ref.chapter}-${v}`)).filter(Boolean).join(' ');
+            const p = card.querySelector('.user-card-text');
+            p.textContent = text;
+            p.hidden = text === '';
+          }
+        })
+        .catch(() => {});
+    };
+    render();
+    document.addEventListener('bibel:sync-rebuilt', render);
   }
 
   // ---- manuskripter (liste) ----

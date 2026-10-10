@@ -475,8 +475,26 @@ html[data-font-size='large'] .verse-text {
   padding: 8px 16px;
   border-bottom: 1px solid var(--border);
   display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
   justify-content: flex-end;
+  gap: 8px;
 }
+
+/* Verslister (#133): en åpen liste tar en hel rad framfor å skyve knappene. */
+.vd-lists { font-size: 0.875rem; color: var(--muted); }
+.vd-lists[open] { flex-basis: 100%; }
+.vd-lists > summary {
+  cursor: pointer;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 4px 8px;
+  width: fit-content;
+  margin-left: auto;
+}
+.vd-lists-items { display: flex; flex-wrap: wrap; gap: 6px 14px; padding-top: 8px; }
+.vd-list-option { display: inline-flex; align-items: center; gap: 6px; color: var(--ink); cursor: pointer; }
+.vd-lists-empty { padding-top: 8px; }
 
 .favorite-toggle {
   background: none;
