@@ -12,6 +12,7 @@
 import { describe, expect, it } from 'bun:test';
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { PAGE_ISLAND_KEYS, islandKeysFor } from '../src/views/layout.tsx';
 
 const JS_DIR = join(import.meta.dir, '..', 'public', 'js');
 
@@ -24,6 +25,8 @@ const NORWEGIAN_WORDS = [
   'dette', 'denne', 'din', 'ditt', 'deg', 'kunne', 'vers', 'kapittel', 'kapitler',
   'lastet', 'laster', 'nedlasting', 'oversettelse', 'oversettelser', 'emne', 'emner',
   'favoritt', 'notater', 'manuskripter', 'leseplan', 'tittel', 'funnet', 'krever',
+  'slette', 'advarsler', 'lagringsplass', 'brukt', 'egen', 'tidslinje', 'profetier',
+  'personer', 'leseplaner',
 ];
 
 const WORD_RE = new RegExp(`\\b(${NORWEGIAN_WORDS.join('|')})\\b`, 'i');
@@ -61,7 +64,9 @@ const VISIBLE_TEXT = [
   /\.textContent\s*=\s*('[^'\n]+'|"[^"\n]+")/g,
   /\.(?:title|placeholder|innerText)\s*=\s*('[^'\n]+'|"[^"\n]+")/g,
   /setAttribute\(\s*'(?:aria-label|title|placeholder)'\s*,\s*('[^'\n]+'|"[^"\n]+")/g,
-  /\bel\([^,)]+,[^,)]+,\s*('[^'\n]+'|"[^"\n]+")/g,
+  /\bel\([^,)]+,[^,)]+,\s*('[^'\n]+'|"[^"\n]+"|`[^`\n]+`)/g,
+  // En dialog er like synlig som en node (#139).
+  /\b(?:confirm|alert|prompt)\(\s*('[^'\n]+'|"[^"\n]+"|`[^`\n]+`)/g,
 ];
 
 /**
@@ -79,7 +84,8 @@ describe('klient-øyene', () => {
       code.split('\n').forEach((line, i) => {
         for (const re of VISIBLE_TEXT) {
           for (const m of line.matchAll(re)) {
-            const value = m[1]!.slice(1, -1);
+            // `${…}` er kode; bare teksten rundt teller.
+            const value = m[1]!.slice(1, -1).replace(/\$\{[^}]*\}/g, ' ');
             if (!HAS_LETTERS.test(value)) continue;
             offenders.push(`${file}:${i + 1} — ${m[0]!.trim()}`);
           }
@@ -111,4 +117,68 @@ describe('klient-øyene', () => {
 
     expect(offenders).toEqual([]);
   });
+
+  // Et objekt som rendres med `Object.entries()` gjør NØKKELEN til tekst, og en
+  // nøkkel er ingen strengliteral — «Tidslinje» i offline.js gikk forbi begge
+  // sveipene over (#139). En nøkkel med stor forbokstav i en øy er et
+  // visningsnavn, ikke et feltnavn.
+  it('bruker ingen objektnøkkel som visningstekst', () => {
+    const offenders: string[] = [];
+    for (const file of readdirSync(JS_DIR).filter((f) => f.endsWith('.js')).sort()) {
+      const code = stripComments(readFileSync(join(JS_DIR, file), 'utf8'));
+      code.split('\n').forEach((line, i) => {
+        const m = line.match(/^\s*([A-ZÆØÅ][\p{Letter}]+)\s*:\s/u);
+        // `KeyH` er en KeyboardEvent.code, ikke tekst.
+        if (m && !/^(?:Key|Digit)[A-Z0-9]$/.test(m[1]!)) offenders.push(`${file}:${i + 1} — ${m[1]}:`);
+      });
+    }
+    expect(offenders).toEqual([]);
+  });
 });
+
+// `readStrings()` gir NØKKELEN tilbake når den mangler, så en nøkkel øya bruker
+// men siden aldri leverte vises som «is.supportData» — uten å feile noe sted
+// (#139). Ordboka hadde nøklene; det var `PAGE_ISLAND_KEYS` som ikke sendte dem.
+describe('nøklene øyene bruker', () => {
+  const BODY_READER = /\bconst t = readStrings\(document\.body\)/;
+  const files = readdirSync(JS_DIR).filter((f) => f.endsWith('.js'));
+  const source = (f: string) => readFileSync(join(JS_DIR, f), 'utf8');
+  const keysIn = (f: string) =>
+    new Set([...stripComments(source(f)).matchAll(/\bt\(\s*'([\w.]+)'/g)].map((m) => m[1]!));
+  const importsOf = (f: string) =>
+    [...source(f).matchAll(/from\s+'\.\/([\w.-]+\.js)'/g)].map((m) => m[1]!);
+
+  /** Modulene en side-øy drar inn, og som leser strengene fra <body> selv. */
+  function bodyReadersReachedFrom(start: string): string[] {
+    const seen = new Set<string>();
+    const queue = [start];
+    while (queue.length) {
+      const f = queue.pop()!;
+      if (seen.has(f) || !files.includes(f)) continue;
+      seen.add(f);
+      queue.push(...importsOf(f));
+    }
+    return [...seen].filter((f) => BODY_READER.test(source(f)));
+  }
+
+  it('leveres til hver side som laster øya', () => {
+    const missing: string[] = [];
+    for (const page of Object.keys(PAGE_ISLAND_KEYS).sort()) {
+      const delivered = new Set<string>(islandKeysFor([page]));
+      for (const f of bodyReadersReachedFrom(page)) {
+        for (const k of keysIn(f)) if (!delivered.has(k)) missing.push(`${page} → ${f}: ${k}`);
+      }
+    }
+    expect(missing).toEqual([]);
+  });
+
+  it('måler noe', () => {
+    // Uten treff ville sveipen over vært grønn av ingenting.
+    const reached = Object.keys(PAGE_ISLAND_KEYS).flatMap((p) => bodyReadersReachedFrom(p));
+    expect(reached).toContain('offline.js');
+    expect(reached).toContain('translations.js');
+    expect(reached).toContain('user-bibles.js');
+    expect(keysIn('offline.js').size).toBeGreaterThan(5);
+  });
+});
+

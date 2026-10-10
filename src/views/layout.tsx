@@ -57,13 +57,14 @@ const CHROME_ISLAND_KEYS = [
  * <body> overalt ville lagt flere kB på hver eneste sidevisning for strenger
  * de fleste sidene aldri bruker.
  */
-const PAGE_ISLAND_KEYS: Record<string, readonly MessageKey[]> = {
+export const PAGE_ISLAND_KEYS: Record<string, readonly MessageKey[]> = {
   'reading.js': [
     'is.favOn', 'is.favOff', 'is.delete', 'nav.favorites', 'nav.notes', 'is.readTracking',
     'nav.verseLists',
     // Fallbacker når en data-label mangler. De MÅ ligge her, ellers viser øya
     // nøkkelen — som er meningen, men bare hvis nøkkelen faktisk er en glipp.
     'rd.markRead', 'rd.read', 'rd.lastRead',
+    'is.noExplanation', 'is.untitled',
   ],
   'user.js': [
     'nav.verseLists', 'nav.manuscripts', 'is.readingMap', 'is.delete', 'is.activeCantHide', 'is.importFailed',
@@ -75,10 +76,14 @@ const PAGE_ISLAND_KEYS: Record<string, readonly MessageKey[]> = {
     'pub.publish', 'pub.publishHint', 'pub.republish', 'pub.withdraw', 'pub.withdrawn',
     'pub.viewInCatalog', 'pub.statusPending', 'pub.statusApproved', 'pub.statusRejected',
     'pub.error',
+    'is.importedDatasets', 'is.noKnownData', 'is.untitledDoc', 'common.edit',
   ],
   'offline.js': [
     'is.offlineDownload', 'is.downloadProgress', 'is.downloadSkipped', 'is.downloadingSupport',
     'is.downloadDone', 'is.downloadPaused', 'is.downloadFailed', 'is.nothingDownloaded',
+    'is.downloadedChapters', 'is.supportData', 'is.lastDownloaded', 'is.contentVersion',
+    'is.deleteAllConfirm', 'is.storageUsedOf',
+    'nav.timeline', 'nav.prophecies', 'nav.persons', 'nav.readingPlan',
   ],
   'offline-reader.js': [
     'is.chapterNotDownloaded', 'is.chapterN', 'is.offlineNotice', 'is.nothingDownloadedYet',
@@ -91,19 +96,24 @@ const PAGE_ISLAND_KEYS: Record<string, readonly MessageKey[]> = {
     'rd.prevChapter', 'rd.nextChapter', 'rd.verseAria', 'rd.verseDetails',
     'rd.day7', 'rd.rest', 'rd.day7Description', 'lang.hebrewShort', 'lang.greekShort',
   ],
-  'studium.js': ['is.noManuscriptsHere', 'is.searchTextFor', 'is.searchStudyFor'],
-  'tagging.js': ['is.removeTopic', 'is.newTopic', 'nav.topicsMine'],
+  'studium.js': ['is.noManuscriptsHere', 'is.searchTextFor', 'is.searchStudyFor', 'is.untitled'],
+  'tagging.js': [
+    'is.removeTopic', 'is.newTopic', 'nav.topicsMine', 'is.addTopic', 'is.addTopicPlaceholder',
+    'is.taggedCount',
+  ],
   'translations.js': [
     'is.ownTranslations', 'is.delete', 'is.noTextToParse', 'is.noVersesFound', 'is.parseFailed',
     'is.uploadingToAccount', 'is.syncedToAccount', 'is.uploadFailedRetry',
+    'is.uploadedMeta', 'is.numberingsFailed', 'is.parsedSummary', 'is.ownTranslation',
+    'is.importedTranslation', 'is.deleteNamedConfirm', 'is.warningsCount',
   ],
   'statistics.js': ['common.loading', 'is.noWords'],
   'publication.js': ['pub.reported', 'pub.reportFailed'],
   'person-filter.js': ['is.personCount'],
-  'user-bibles.js': ['is.chapterMissingInOwn', 'is.showingOwn'],
+  'user-bibles.js': ['is.chapterMissingInOwn', 'is.showingOwn', 'is.ownTranslation'],
 };
 
-function islandKeysFor(scripts: readonly string[]): MessageKey[] {
+export function islandKeysFor(scripts: readonly string[]): MessageKey[] {
   const keys = new Set<MessageKey>(CHROME_ISLAND_KEYS);
   for (const s of scripts) for (const k of PAGE_ISLAND_KEYS[s] ?? []) keys.add(k);
   return [...keys];

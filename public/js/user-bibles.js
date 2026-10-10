@@ -69,7 +69,7 @@ async function applyUserSecondary(userSecondaryId, bibles) {
   const stored = await getChapter(bookId, chapter, userSecondaryId);
   if (!stored) return;
   const meta = bibles.find((b) => b.id === userSecondaryId);
-  const label = meta ? meta.name : 'egen';
+  const label = meta ? meta.name : t('is.ownTranslation');
   const byVerse = new Map(stored.verses.map((v) => [v.verse, v.text]));
   document.querySelectorAll('.verse').forEach((verseEl) => {
     const n = parseInt(verseEl.dataset.verseNum || '', 10);

@@ -39,16 +39,16 @@ async function renderStatus() {
     getMeta('downloadedAt'),
     getMeta('syncVersion'),
   ]);
-  const support = {
-    Tidslinje: !!(await getBlob('timeline')),
-    Profetier: !!(await getBlob('prophecies')),
-    Personer: (await getAll('persons')).length > 0,
-    Leseplaner: (await getAll('readingPlans')).length > 0,
-  };
+  const support = [
+    [t('nav.timeline'), !!(await getBlob('timeline'))],
+    [t('nav.prophecies'), !!(await getBlob('prophecies'))],
+    [t('nav.persons'), (await getAll('persons')).length > 0],
+    [t('nav.readingPlan'), (await getAll('readingPlans')).length > 0],
+  ];
   statusBox.textContent = '';
   const list = el('ul', 'offline-status-list');
   list.append(el('li', '', t('is.downloadedChapters', { total, detail: perBible.join(', ') })));
-  const supportText = Object.entries(support)
+  const supportText = support
     .map(([name, ok]) => `${name} ${ok ? '✓' : '—'}`)
     .join(' · ');
   list.append(el('li', '', t('is.supportData', { detail: supportText })));
@@ -56,7 +56,7 @@ async function renderStatus() {
   if (syncVersion) list.append(el('li', '', t('is.contentVersion', { version: syncVersion })));
   if (navigator.storage?.estimate) {
     const est = await navigator.storage.estimate();
-    list.append(el('li', '', `Lagringsplass brukt: ${fmtBytes(est.usage)} av ${fmtBytes(est.quota)}`));
+    list.append(el('li', '', t('is.storageUsedOf', { used: fmtBytes(est.usage), quota: fmtBytes(est.quota) })));
   }
   statusBox.append(list);
 }

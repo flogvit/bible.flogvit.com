@@ -36,7 +36,7 @@ async function renderList() {
     const del = el('button', 'user-btn-ghost', t('is.delete'));
     del.type = 'button';
     del.addEventListener('click', async () => {
-      if (!confirm(`Slette «${bible.name}»?`)) return;
+      if (!confirm(t('is.deleteNamedConfirm', { name: bible.name }))) return;
       await deleteUserBible(bible.id);
       if (hasPlus()) pushMetadata().catch(() => {});
       renderList();
@@ -97,7 +97,7 @@ async function handleParse() {
     );
     if (parsed.warnings.length > 0) {
       const details = el('details', 'trans-warnings');
-      details.append(el('summary', '', `${parsed.warnings.length} advarsler`));
+      details.append(el('summary', '', t('is.warningsCount', { n: parsed.warnings.length })));
       const ul = el('ul');
       for (const w of parsed.warnings) ul.append(el('li', '', w));
       details.append(ul);
