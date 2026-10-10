@@ -892,6 +892,17 @@ function VerseDetailPanel({
         >
           ○ {t('rd.read')}
         </button>
+        {/* Verslister (#133) — avkrysningene bygges av reading.js fra
+            localStorage 'bible-verse-lists'. */}
+        {verseRef && (
+          <details class="vd-lists" data-verse-lists data-verse-ref={verseRef}>
+            <summary>{t('rd.addToList')}</summary>
+            <div class="vd-lists-items" data-verse-lists-items></div>
+            <div class="vd-lists-empty" data-verse-lists-empty>
+              {t('u.noLists')} <a href={lhref('/lister')}>{t('nav.verseLists')}</a>
+            </div>
+          </details>
+        )}
       </div>
 
       <div class="vd-tabs" role="tablist" aria-label={`${t('rd.verseDetails')} ${n}`}>

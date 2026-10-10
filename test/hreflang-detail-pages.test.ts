@@ -116,6 +116,7 @@ const IKKE_MÅLT: Record<string, string> = {
   '/manuskripter/katalog/:slug': 'brukerinnsendt tekst — én rad, ingen språkakse',
   '/manuskripter/:slug': 'brukerens eget manuskript, rendres av øya — tomt skall for andre',
   '/manuskripter/:slug/rediger': 'skriveflate bak innlogging — noindex (#60)',
+  '/lister/:id': 'brukerens egen verslist (#133), rendres av øya — noindex, tomt skall for andre',
   // Sidetallet finnes bare når katalogen er stor nok (#75), og innholdet er det
   // samme på alle åtte språk.
   '/manuskripter/katalog/side/:page': 'paginering av katalogen (#75) — ingen språkakse',

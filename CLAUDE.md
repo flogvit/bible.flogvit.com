@@ -2442,6 +2442,27 @@ grunntekst, ord for ord, kryssreferanser, sammendrag, kontekst og innsikt.
   serveren (nettverksemulering per fane rammer ikke SW-ens egne kall) og åpner et
   kapittel som aldri er besøkt, med bredde målt på 320/390 px og 100/150 % tekst.
 
+## Verslister (#133)
+
+En liste kunne opprettes og navnet synkes, men ingenting la et vers i den, og
+det fantes ingen `/lister/:id` — Plus lovte verslister, og hver liste var tom.
+
+- **`public/js/verse-list.js` eier adresseformen** (`joh-3-16`, eller
+  `joh-3-16-18` for en rekke) og importeres av lesesida, `user.js` og
+  `user.tsx`. Formen er gamle appens og manuskriptenes `verses`, og den ligger
+  alt i synkede lister — den kan ikke byttes.
+- **Fra verset:** «Legg i liste» i versdetaljen er én avkrysning per liste
+  (`renderVerseLists` i `reading.js`). Uten lister lenker den til `/lister`.
+- **`/lister/:id`** rendrer versene server-side for en synket liste, og
+  `user.js` rendrer på nytt fra den lokale kopien — ellers ville en liste som
+  ikke er synket ennå vært tom. Boktabellen (slug → id, navn) ligger på sida,
+  så øya slipper å hente alle 66 bøkene for å finne bok-id-en. `noindex`.
+- **En adresse som ikke kan leses vises som den står**, med «Slett», framfor å
+  forsvinne stille.
+- **Vakta er `test/verslister.test.ts`**: den legger verset i lista på den EKTE
+  kapittelsida (SSR fra appen, i happy-dom), synker lista slik øya skrev den og
+  leser verset på `/lister/<id>`, og rendrer en lokal-only liste med user.js.
+
 ## Testene — fire nivåer og hva hvert av dem faktisk fanger
 
 Kjør `bun test` og `bun run typecheck` før du ruller ut. FLOGVITs eget deploy-skript

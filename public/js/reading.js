@@ -16,6 +16,7 @@ import {
 } from './reading-progress.js';
 import { readStrings, intlLocale, localeHref } from './locale.js';
 import { parseVerseHash } from './verse-hash.js';
+import { withRef } from './verse-list.js';
 import { el } from './dom.js';
 import { readJSON, writeJSON } from './store.js';
 
@@ -26,6 +27,7 @@ const KEYS = {
   notes: 'bible-notes',
   settings: 'bible-settings',
   devotionals: 'bible-devotionals',
+  verseLists: 'bible-verse-lists',
   verseVersions: 'bible-verse-versions',
   position: 'bible-reading-position',
   progress: 'bible-reading-progress',
@@ -216,6 +218,41 @@ if (rootPage) {
     if (favBtn) paintFav(favBtn, isFav(favKeyOf(verse), readJSON(KEYS.favorites, [])));
     renderNotes(detail);
     renderDevotionals(detail);
+    renderVerseLists(detail);
+  }
+
+  // ── Verslister (bible-verse-lists: [{id, name, refs: ['joh-3-16'], …}]) (#133) ─
+  // Én avkrysning per liste: et vers er med eller ikke, og samme vers to ganger
+  // er ett vers. Uten lister står SSR-teksten med lenka til /lister.
+  function renderVerseLists(detail) {
+    const box = detail.querySelector('[data-verse-lists]');
+    const items = box && box.querySelector('[data-verse-lists-items]');
+    if (!items) return;
+    const ref = box.dataset.verseRef;
+    const lists = readJSON(KEYS.verseLists, []);
+    const empty = box.querySelector('[data-verse-lists-empty]');
+    if (empty) empty.hidden = lists.length > 0;
+    items.textContent = '';
+    lists
+      .slice()
+      .sort((a, b) => String(a.name).localeCompare(String(b.name)))
+      .forEach((l) => {
+        const label = el('label', 'vd-list-option');
+        const cb = el('input');
+        cb.type = 'checkbox';
+        cb.checked = (l.refs || []).includes(ref);
+        cb.addEventListener('change', () => {
+          if (!window.fvPlus?.gate(t('nav.verseLists'))) {
+            cb.checked = !cb.checked;
+            return;
+          }
+          const all = readJSON(KEYS.verseLists, []);
+          writeJSON(KEYS.verseLists, all.map((x) => (x.id === l.id ? withRef(x, ref, cb.checked) : x)));
+        });
+        label.appendChild(cb);
+        label.appendChild(el('span', null, l.name));
+        items.appendChild(label);
+      });
   }
 
   // ── Notater (bible-notes: [{id, bookId, chapter, verse, content, createdAt, updatedAt}]) ─
