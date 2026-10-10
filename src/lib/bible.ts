@@ -2246,6 +2246,40 @@ export async function defaultBibleForLanguage(lang = currentContentLanguage()): 
   return first?.id ?? 'osnb';
 }
 
+export interface OfflineEdition {
+  id: string;
+  /** Egennavn («OSEN (Open Source English)») — oversettes ikke. */
+  label: string;
+}
+
+/**
+ * Utgavene offline-nedlastingen og -leseren skal tilby, i språkets rekkefølge
+ * (#136): først det `readableBibleCandidates` sier for innholdsspråket, så de
+ * øvrige lesbare utgavene. Første element er den som er valgt fra før.
+ *
+ * Siden tilbød OSNB og OSNN hardkodet, også på /en/offline — en engelsk leser
+ * kunne ikke laste ned utgaven lesesiden viser hen. Grunntekstene står utenfor:
+ * de er hjelpetekster, og kommer uansett med i hvert kapittel som grunntekst.
+ */
+export async function offlineEditions(lang = currentContentLanguage()): Promise<OfflineEdition[]> {
+  const [candidates, editions] = await Promise.all([readableBibleCandidates(lang), getBibleEditions()]);
+  const readable = editions.filter((e) => e.philosophy !== 'source_text');
+  const byId = new Map(readable.map((e) => [e.id, e]));
+  const order = [...candidates.map((c) => c.id), ...readable.map((e) => e.id)];
+  const seen = new Set<string>();
+  const result: OfflineEdition[] = [];
+  for (const id of order) {
+    if (seen.has(id)) continue;
+    seen.add(id);
+    const e = byId.get(id);
+    // En nødkandidat (osen/osnb) som ikke er importert, kan ikke lastes ned.
+    if (!e) continue;
+    const abbr = e.abbreviation || id.toUpperCase();
+    result.push({ id, label: e.name_native && e.name_native !== abbr ? `${abbr} (${e.name_native})` : abbr });
+  }
+  return result;
+}
+
 export async function getBibleEditionById(id: string): Promise<
   (BibleEdition & { meta: BibleEditionMeta; license: BibleEditionLicense | null }) | undefined
 > {

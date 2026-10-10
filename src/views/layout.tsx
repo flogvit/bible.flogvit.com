@@ -81,7 +81,14 @@ const PAGE_ISLAND_KEYS: Record<string, readonly MessageKey[]> = {
   ],
   'offline-reader.js': [
     'is.chapterNotDownloaded', 'is.chapterN', 'is.offlineNotice', 'is.nothingDownloadedYet',
-    'is.youAreOffline', 'is.couldNotReadOffline',
+    'is.youAreOffline', 'is.couldNotReadOffline', 'is.chaptersAvailableOffline',
+    // Kapittelet i lesesidens form (#136): de samme etikettene som SSR-en
+    // bruker der, pluss de to som bare finnes offline.
+    'is.offlineEditionFallback', 'is.offlineDay', 'is.noExplanation',
+    'u.originalText', 'rd.wordByWord', 'common.references', 'rd.noRefs', 'rd.noWordData',
+    'rd.summary', 'rd.aboutBook', 'rd.historicalContext', 'common.chapter',
+    'rd.prevChapter', 'rd.nextChapter', 'rd.verseAria', 'rd.verseDetails',
+    'rd.day7', 'rd.rest', 'rd.day7Description', 'lang.hebrewShort', 'lang.greekShort',
   ],
   'studium.js': ['is.noManuscriptsHere', 'is.searchTextFor', 'is.searchStudyFor'],
   'tagging.js': ['is.removeTopic', 'is.newTopic', 'nav.topicsMine'],

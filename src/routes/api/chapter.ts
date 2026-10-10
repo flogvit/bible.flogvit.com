@@ -9,9 +9,12 @@ import {
   getChapterContext,
   getChapterInsight,
   getOriginalWord4Word,
+  getOriginalWord4WordByVerse,
   getReferences,
+  getReferencesByVerse,
   normalizeBibleId,
 } from '../../lib/bible.ts';
+import { currentContentLanguage } from '../../lib/lang.ts';
 import { mapChapter, resolveMappingId } from '../../lib/verse-mapper.ts';
 import { NO_CACHE, internFeil } from './util.ts';
 
@@ -40,7 +43,11 @@ r.get('/', async (c) => {
   const bible = normalizeBibleId(c.req.query('bible')) || 'osnb';
   const mapping = normalizeBibleId(c.req.query('mapping'));
   const secondary = c.req.query('secondary');
-  const lang = bible === 'osnn' ? 'nn' : 'nb';
+  // Ord-for-ord og kryssreferanser følger INNHOLDSSPRÅKET (`?lang=`), som på
+  // lesesiden — ikke utgaven. Sto som «nn for osnn, ellers nb», så en engelsk
+  // leser fikk norske kryssreferanser her mens lesesiden viste engelske, og
+  // offline-nedlastingen (#136), som bygger på dette svaret, lagret feil språk.
+  const lang = currentContentLanguage();
 
   if (!bookIdStr || !chapterStr) {
     return c.json({ error: 'Missing required parameters: book and chapter' }, 400);
@@ -142,16 +149,20 @@ r.get('/', async (c) => {
       }
     }
 
+    // Per KAPITTEL, ikke per vers (#19, samme som lesesiden): to spørringer i
+    // stedet for to per vers. Offline-nedlastingen (#136) henter alle 1189
+    // kapitlene, og per vers var det over 60 000 rundturer.
+    const [w4wByVerse, refsByVerse] = await Promise.all([
+      getOriginalWord4WordByVerse(bookId, chapter, lang),
+      getReferencesByVerse(bookId, chapter, lang),
+    ]);
     const word4word: Record<number, unknown[]> = {};
-    for (const verse of verses) {
-      const w4w = await getOriginalWord4Word(bookId, chapter, verse.verse, lang);
-      if (w4w.length > 0) word4word[verse.verse] = w4w;
-    }
-
     const references: Record<number, unknown[]> = {};
     for (const verse of verses) {
-      const refs = await getReferences(bookId, chapter, verse.verse, lang);
-      if (refs.length > 0) references[verse.verse] = refs;
+      const w4w = w4wByVerse.get(verse.verse);
+      if (w4w && w4w.length > 0) word4word[verse.verse] = w4w;
+      const refs = refsByVerse.get(verse.verse);
+      if (refs && refs.length > 0) references[verse.verse] = refs;
     }
 
     const meta = await chapterMeta(bookId, chapter, chapter);

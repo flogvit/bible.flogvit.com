@@ -11,6 +11,9 @@ import type { AppEnv } from '../../lib/session.ts';
 import { Layout } from '../../views/layout.tsx';
 import { Breadcrumbs } from '../../views/breadcrumbs.tsx';
 import { layoutProps, makeT, tFor, type Locale, lhref } from '../../lib/i18n.ts';
+import { booksData, bookName, bookAbbr } from '../../lib/books-data.ts';
+import { offlineEditions } from '../../lib/bible.ts';
+import { toUrlSlug } from '../../lib/url-utils.ts';
 
 const r = new Hono<AppEnv>();
 
@@ -412,13 +415,35 @@ r.get('/tilgjengelighet', (c) => {
 // Offline-fallback (#14): SW-en serverer denne siden for navigasjoner uten
 // nett. offline-reader.js rendrer nedlastede kapitler fra IndexedDB basert på
 // location.pathname (SW-en svarer med denne siden på original-URL-en).
-r.get('/offline-fallback', (c) => {
+//
+// Siden caches PER SPRÅK (`/<lang>/offline-fallback`, #136): den uprefiksede
+// formen svarer 302, og en omdirigert respons kan ikke besvare en navigasjon —
+// det var hele grunnen til at et ubesøkt kapittel ga Chromes feilside. Fordi
+// den caches per språk, kan den også bære det leseren trenger og som IndexedDB
+// ikke har: boknavnene på sidens språk (og slugen som skiller dem) og utgavene
+// i språkets rekkefølge. Lesesidens stilark er med, så kapittelet tegnes i
+// samme form som på nett.
+r.get('/offline-fallback', async (c) => {
   const t = tFor(c);
+  const books = booksData.map((b) => ({
+    id: b.id,
+    slug: toUrlSlug(b.short_name),
+    name: bookName(b),
+    abbr: bookAbbr(b),
+    chapters: b.chapters,
+    // Grunntekstens språk: GT er hebraisk (høyre-til-venstre), NT gresk.
+    hebrew: b.id <= 39,
+  }));
+  const editions = await offlineEditions();
   return c.html(
-    <Layout {...layoutProps(c)} title={`${t('foot.offline')} — FLOGVIT.bible`} description={t('off.youAreOffline')} styles={['offline.css']} scripts={['offline-reader.js']}>
+    <Layout {...layoutProps(c)} title={`${t('foot.offline')} — FLOGVIT.bible`} description={t('off.youAreOffline')} styles={['reading.css', 'studium.css', 'offline.css']} scripts={['offline-reader.js']}>
       <div class="offline-reader-main">
         <div class="reading-container">
-          <div data-offline-reader>
+          <div
+            data-offline-reader
+            data-books={JSON.stringify(books)}
+            data-editions={JSON.stringify(editions)}
+          >
             <h1>{t('off.youAreOffline')}</h1>
             <p class="user-note">{t('off.body')}</p>
             <noscript>

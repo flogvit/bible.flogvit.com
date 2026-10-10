@@ -2419,6 +2419,29 @@ historikk) og holdes utenfor tidslinje/ferskhet framfor å gjettes inn.
   - Upåbegynte planer foreslås ikke: forslaget skal si «du er nesten i mål»,
     ikke gjengi katalogen — den står på `/leseplan`.
 
+## Offline-lesing (#14, #136)
+
+`/<lang>/offline` laster hele utgaven ned til IndexedDB (`offline.js`); uten nett
+svarer service workeren (`public/sw.js`) med `/<lang>/offline-fallback`, og
+`offline-reader.js` tegner kapittelet fra IndexedDB i lesesidens form —
+grunntekst, ord for ord, kryssreferanser, sammendrag, kontekst og innsikt.
+
+- **Skallet caches PER SPRÅK, aldri uprefikset.** `/offline-fallback` svarer 302,
+  og en omdirigert respons kan ikke besvare en navigasjon — det var grunnen til at
+  hvert ubesøkt kapittel ga Chromes feilside. `cacheOfflineShell()` i SW-en henter
+  skallet, stilarkene og skriptene i HTML-en og modulene de importerer (rekursivt);
+  den kjøres i bakgrunnen ved hver navigasjon under et språk, og nedlastingen VENTER
+  på den (`CACHE_OFFLINE_SHELL`) før den sier «ferdig».
+- **Språket leses av stien, ikke av en liste** i SW-en — språklista har én sannhet.
+- **Skallet bærer det IndexedDB ikke har:** boknavnene på sidens språk og utgavene
+  i språkets rekkefølge (`data-books`, `data-editions`, fra `offlineEditions()`).
+  Samme funksjon gir avkryssingsboksene på `/offline`, så /en/ tilbyr OSEN.
+- **Nedlastingen går forbi SW-cachen** (`x-bibel-offline`-headeren). Uten den lå
+  alt dobbelt: 68 MB i IndexedDB og 147 MB i API-cachen.
+- **Vakta er `test/offline-les.test.ts`:** laster ned i ekte Chrome, STOPPER
+  serveren (nettverksemulering per fane rammer ikke SW-ens egne kall) og åpner et
+  kapittel som aldri er besøkt, med bredde målt på 320/390 px og 100/150 % tekst.
+
 ## Testene — fire nivåer og hva hvert av dem faktisk fanger
 
 Kjør `bun test` og `bun run typecheck` før du ruller ut. FLOGVITs eget deploy-skript

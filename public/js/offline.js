@@ -34,10 +34,11 @@ function fmtBytes(n) {
 
 // ── Status ───────────────────────────────────────────────────────────
 async function renderStatus() {
-  const [total, nb, nn, downloadedAt, syncVersion] = await Promise.all([
+  // Utgavene siden tilbyr (#136) — ikke OSNB/OSNN hardkodet.
+  const offered = [...document.querySelectorAll('[data-dl-bible]')].map((i) => i.dataset.dlBible);
+  const [total, perBible, downloadedAt, syncVersion] = await Promise.all([
     countChapters(),
-    countChapters('osnb'),
-    countChapters('osnn'),
+    Promise.all(offered.map(async (id) => `${id.toUpperCase()}: ${await countChapters(id)}`)),
     getMeta('downloadedAt'),
     getMeta('syncVersion'),
   ]);
@@ -49,7 +50,7 @@ async function renderStatus() {
   };
   statusBox.textContent = '';
   const list = el('ul', 'offline-status-list');
-  list.append(el('li', '', t('is.downloadedChapters', { total, detail: `OSNB: ${nb}, OSNN: ${nn}` })));
+  list.append(el('li', '', t('is.downloadedChapters', { total, detail: perBible.join(', ') })));
   const supportText = Object.entries(support)
     .map(([name, ok]) => `${name} ${ok ? '✓' : '—'}`)
     .join(' · ');
@@ -100,12 +101,20 @@ async function fetchBooks() {
   }));
 }
 
+/**
+ * Merket ber service workeren slippe forespørselen rett gjennom (#136). Alt
+ * nedlastingen henter lagres i IndexedDB; uten merket la SW-en en kopi av hvert
+ * svar i API-cachen også, og innholdet tok dobbelt så mye plass.
+ */
+const DIRECT = { 'x-bibel-offline': '1' };
+
 async function downloadSupportData(signal) {
+  const get = (path) => fetch(`${path}?${langParam()}`, { signal, headers: DIRECT }).then((r) => r.json());
   const [timeline, prophecies, persons, plans] = await Promise.all([
-    fetch(`/api/timeline?${langParam()}`, { signal }).then((r) => r.json()),
-    fetch(`/api/prophecies?${langParam()}`, { signal }).then((r) => r.json()),
-    fetch(`/api/persons?${langParam()}`, { signal }).then((r) => r.json()),
-    fetch(`/api/reading-plans?${langParam()}`, { signal }).then((r) => r.json()),
+    get('/api/timeline'),
+    get('/api/prophecies'),
+    get('/api/persons'),
+    get('/api/reading-plans'),
   ]);
   await putBlob('timeline', timeline);
   await putBlob('prophecies', prophecies);
@@ -151,7 +160,12 @@ async function startDownload() {
       const batch = pending.slice(i, i + 5);
       await Promise.all(
         batch.map(async ({ book, ch, bible }) => {
-          const res = await fetch(`/api/chapter?book=${book.id}&chapter=${ch}&bible=${bible}`, { signal });
+          // `lang`: sammendrag, kontekst, innsikt og kryssreferanser følger
+          // sidens språk, som på lesesiden — uten den kom de på gulvet.
+          const res = await fetch(`/api/chapter?book=${book.id}&chapter=${ch}&bible=${bible}&${langParam()}`, {
+            signal,
+            headers: DIRECT,
+          });
           if (res.status === 404) {
             skipped++;
             return;
@@ -166,9 +180,11 @@ async function startDownload() {
             originalVerses: data.originalVerses || [],
             word4word: data.word4word || {},
             references: data.references || {},
+            bookSummary: data.bookSummary ?? null,
             summary: data.summary ?? null,
             context: data.context ?? null,
             insight: data.insight ?? null,
+            lang: document.documentElement.lang || null,
             cachedAt: Date.now(),
           });
         }),
@@ -187,6 +203,7 @@ async function startDownload() {
       await setMeta('syncVersion', v.version);
     } catch {}
     await setMeta('downloadedAt', Date.now());
+    await cacheOfflineShell();
     if (navigator.storage?.persist) navigator.storage.persist().catch(() => {});
     text.textContent = t('is.downloadDone');
   } catch (err) {
@@ -202,6 +219,29 @@ async function startDownload() {
     renderStatus();
     renderContent();
   }
+}
+
+/**
+ * Be service workeren legge offline-skallet for dette språket klart, og vent
+ * på svaret (#136). Nedlastingen er ikke ferdig før et kapittel man aldri har
+ * åpnet faktisk kan vises uten nett — og det er skallet som viser det.
+ */
+async function cacheOfflineShell() {
+  const sw = navigator.serviceWorker;
+  if (!sw) return;
+  // `ready` løses aldri når registreringen feilet — derfor et tak.
+  const reg = await Promise.race([sw.ready, new Promise((r) => setTimeout(() => r(null), 5000))]);
+  const worker = sw.controller || reg?.active;
+  if (!worker) return;
+  await new Promise((resolve) => {
+    const channel = new MessageChannel();
+    const timer = setTimeout(resolve, 30_000);
+    channel.port1.onmessage = () => {
+      clearTimeout(timer);
+      resolve();
+    };
+    worker.postMessage({ type: 'CACHE_OFFLINE_SHELL', lang: document.documentElement.lang }, [channel.port2]);
+  });
 }
 
 async function clearAll() {

@@ -16,7 +16,7 @@ import type { Child } from 'hono/jsx';
 import { bookNameByShort } from '../../lib/books-data.ts';
 import { getUserItems, getUserSingleton, getReadingProgress } from '../../lib/user-data.ts';
 import { summarizeProgress, fullHeat, stalestBooks, suggestedPlans, planCoverage } from '../../lib/reading-map.ts';
-import { getBibleEditions, getFavoriteVerses, getAllReadingPlansList, getReadingPlanChapterSets, type BibleEdition } from '../../lib/bible.ts';
+import { getBibleEditions, offlineEditions, getFavoriteVerses, getAllReadingPlansList, getReadingPlanChapterSets, type BibleEdition } from '../../lib/bible.ts';
 import { getAvailableMappings } from '../../lib/verse-mapper.ts';
 import { layoutProps, makeT, tFor, tEnum, type Locale, type MessageKey, lhref } from '../../lib/i18n.ts';
 import { tCtx } from '../../lib/i18n.ts';
@@ -643,8 +643,9 @@ r.get('/innstillinger', async (c) => {
 });
 
 // ---------- /offline ----------
-r.get('/offline', (c) => {
+r.get('/offline', async (c) => {
   const t = tFor(c);
+  const editions = await offlineEditions();
   return c.html(
     <UserPage {...layoutProps(c)}
       title="Offline"
@@ -665,12 +666,14 @@ r.get('/offline', (c) => {
       <section class="offline-section">
         <h2>{t('u.download')}</h2>
         <div class="offline-download" data-offline-download>
-          <label class="settings-toggle">
-            <input type="checkbox" data-dl-bible="osnb" checked /> <span data-proper-names>OSNB (bokmål)</span>
-          </label>
-          <label class="settings-toggle">
-            <input type="checkbox" data-dl-bible="osnn" /> <span data-proper-names>OSNN (nynorsk)</span>
-          </label>
+          {/* Utgavene språket har, i språkets rekkefølge (#136). Sto som OSNB
+              og OSNN hardkodet på alle åtte språk, så /en/offline kunne ikke
+              laste ned OSEN. Den første er den lesesiden viser, og er valgt. */}
+          {editions.map((e, i) => (
+            <label class="settings-toggle">
+              <input type="checkbox" data-dl-bible={e.id} checked={i === 0} /> <span data-proper-names>{e.label}</span>
+            </label>
+          ))}
           <div class="offline-actions">
             <button type="button" class="user-btn" data-dl-start>{t('u.downloadOffline')}</button>
             <button type="button" class="user-btn-ghost" data-dl-pause hidden>{t('u.pause')}</button>
