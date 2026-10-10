@@ -60,12 +60,13 @@ const CHROME_ISLAND_KEYS = [
 const PAGE_ISLAND_KEYS: Record<string, readonly MessageKey[]> = {
   'reading.js': [
     'is.favOn', 'is.favOff', 'is.delete', 'nav.favorites', 'nav.notes', 'is.readTracking',
+    'nav.verseLists',
     // Fallbacker når en data-label mangler. De MÅ ligge her, ellers viser øya
     // nøkkelen — som er meningen, men bare hvis nøkkelen faktisk er en glipp.
     'rd.markRead', 'rd.read', 'rd.lastRead',
   ],
   'user.js': [
-    'nav.verseLists', 'nav.manuscripts', 'is.readingMap', 'is.activeCantHide', 'is.importFailed',
+    'nav.verseLists', 'nav.manuscripts', 'is.readingMap', 'is.delete', 'is.activeCantHide', 'is.importFailed',
     'is.storageUsed', 'is.storageUnavailable', 'is.untitled', 'is.taggedCount', 'is.verseCount',
     // Deling av manuskripter (#15). Glemmer du en nøkkel her, viser øya NØKKELEN.
     'u.share', 'u.shareHint', 'u.shareCreate', 'u.shareCopy', 'u.shareCopied',
