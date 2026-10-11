@@ -81,12 +81,12 @@ async function rader(uid: number): Promise<Record<string, number>> {
   const ut: Record<string, number> = {};
   for (const t of KONTO_TABELLER) {
     const r = (await sql.unsafe(`SELECT COUNT(*) AS n FROM ${t} WHERE user_id = ?`, [uid])) as { n: number }[];
-    ut[t] = Number(r[0].n);
+    ut[t] = Number(r[0]?.n);
   }
   const k = (await sql`SELECT COUNT(*) AS n FROM user_bible_chapters WHERE bible_id = ${BIBEL(uid)}`) as {
     n: number;
   }[];
-  ut.user_bible_chapters = Number(k[0].n);
+  ut.user_bible_chapters = Number(k[0]?.n);
   return ut;
 }
 
@@ -111,7 +111,7 @@ function strøm(svar: (after: number) => Response) {
 beforeAll(async () => {
   await ensureSchema(getSql());
   const r = (await getSql()`SELECT last_seq FROM deletion_cursor WHERE id = 1`) as { last_seq: number }[];
-  opprinneligMarkør = r.length ? Number(r[0].last_seq) : null;
+  opprinneligMarkør = r[0] ? Number(r[0].last_seq) : null;
 });
 
 beforeEach(async () => {
