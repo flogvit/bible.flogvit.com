@@ -9,7 +9,7 @@ import type { Context, Next } from 'hono';
 import type { Locale } from './i18n.ts';
 
 // Leses ved kall-tid så tester kan peke på en mock-server.
-function accountApiUrl(): string {
+export function accountApiUrl(): string {
   return (
     process.env.ACCOUNT_API_URL ||
     (process.env.NODE_ENV === 'production' ? 'http://konto:3020' : 'http://localhost:3020')

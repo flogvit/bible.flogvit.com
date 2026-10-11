@@ -5,6 +5,7 @@ import { createApp } from './app.ts';
 import { initBooks } from './lib/bible.ts';
 import { getSql, withRetryBudget } from './lib/db.ts';
 import { loggFeil } from './lib/error-handler.ts';
+import { startSlettestrømmen } from './lib/kontosletting.ts';
 import { setContentVersionReader } from './lib/page-cache.ts';
 
 // Bok-metadata (66 rader, statisk innhold) caches i minnet så parserne kan
@@ -36,6 +37,11 @@ setContentVersionReader(() =>
     return rows[0]?.value;
   }, 0),
 );
+
+// En slettet konto skal ta med seg det bibel har under uid-en (#140). Konto
+// varsler gjennom slettestrømmen, og ingen annen del av appen kjører i
+// bakgrunnen — lesingen starter derfor her, ved siden av serveren.
+startSlettestrømmen();
 
 const app = createApp();
 const port = Number(process.env.PORT || 8080);

@@ -637,6 +637,15 @@ export const TABLES: string[] = [
     UNIQUE KEY uq_devotional_publications_item (user_id, item_id),
     INDEX idx_devotional_publications_status (status, submitted_at)
   ) ENGINE=InnoDB ${CS}`,
+
+  // Hvor langt bibel har lest kontos slettestrøm (#140). Én rad. Egen tabell
+  // framfor en nøkkel i `db_meta`: den er importens bokholderi og står i
+  // `CONTENT_TABLES`, altså lesbar for MCP-brukeren og eid av importen.
+  `CREATE TABLE IF NOT EXISTS deletion_cursor (
+    id TINYINT PRIMARY KEY,
+    last_seq BIGINT NOT NULL DEFAULT 0,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+  ) ENGINE=InnoDB ${CS}`,
 ];
 
 // --- Migreringer ---------------------------------------------------------
