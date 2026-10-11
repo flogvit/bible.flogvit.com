@@ -2362,6 +2362,24 @@ bibelteksten og studiestoffet som MCP-verktøy. Runbook og verktøyliste:
   (`mcp/src/grants.ts`). Får importen en ny innholdstabell, må grantene kjøres
   på nytt i prod; til da svarer `/healthz` 503 og navngir tabellen.
 
+## Kontosletting — slettestrømmen (#140)
+
+Konto sletter bare sine egne tabeller. `src/lib/kontosletting.ts` (portet fra
+lab) leser `GET <konto>/api/account/deletions?after=<markør>` hvert 10. minutt
+fra `index.ts` og sletter alt bibel har under hver uid i én transaksjon.
+
+- **`KONTO_TABELLER` er hver tabell med `user_id`.** Vakta
+  (`test/kontosletting.test.ts`) leser DDL-en i `TABLES`, så en ny
+  brukertabell er rød til den står i lista OG slettes.
+- **Markøren er `deletion_cursor`**, ikke en nøkkel i `db_meta` (den er
+  importens og står i `CONTENT_TABLES`, lesbar for MCP-brukeren). Den flyttes
+  først når en side er ferdig, og aldri bakover.
+- **Publiserte manuskripter SLETTES, ikke anonymiseres** — uten konto kan
+  ingen trekke teksten tilbake. Begrunnelsen står ved `slettBrukerdata`.
+- **`DELETIONS_SECRET`** i env (samme verdi som `DELETIONS_SECRET_BIBEL` i
+  konto.env, provisjonert av flogvit-com-server#293). Mangler den, logger
+  appen det ved oppstart og leser ikke strømmen.
+
 ## Lesesporing (GitHub #16)
 
 `/lesekart` viser hvor i Bibelen brukeren faktisk leser. **Lesing er en HENDELSE,
