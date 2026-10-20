@@ -23,6 +23,7 @@
 import { afterAll, beforeAll, describe, expect, setDefaultTimeout, test } from 'bun:test';
 import { DB_TEST_TIMEOUT_MS } from './db-timeout.ts';
 import { createApp } from '../src/app.ts';
+import { configurePageCache, resetPageCache } from '../src/lib/page-cache.ts';
 import { initBooks } from '../src/lib/bible.ts';
 import { bookAbbr, bookName, booksData } from '../src/lib/books-data.ts';
 import { DEFAULT_LOCALE, href, LOCALES, type Locale } from '../src/lib/i18n.ts';
@@ -58,6 +59,8 @@ beforeAll(async () => {
   chrome = await Chrome.launch();
   page = await chrome.open('about:blank');
 }, 60_000);
+
+afterAll(resetPageCache);
 
 afterAll(async () => {
   await page?.close();
@@ -145,14 +148,45 @@ function pageUrl(locale: Locale, p: string): string {
   return `http://localhost:${server.port}${href(locale, path!)}${query ? `?${query}` : ''}`;
 }
 
+/** Statusen sida SKAL gi — `PAGES` oppgir den for 404- og 410-sidene. */
+const expectedStatus = (path: string): number => PAGES.find((p) => p.path === path)?.status ?? 200;
+
+/**
+ * Hent HTML-en og krev statusen sida skal gi (#82). En 503 fra lastvernet er en
+ * smal side fordi den er TOM; uten sjekken ble feilmeldingens ord rangert som
+ * sidas ord, og vakta målte ingenting og ble grønn.
+ */
+async function fetchHtml(url: string, status = 200): Promise<string> {
+  const res = await fetch(url);
+  const body = await res.text();
+  if (res.status !== status) {
+    throw new Error(`${url} svarte ${res.status}, ventet ${status} — vakta måler ikke en side den ikke fikk: «${body.slice(0, 80)}»`);
+  }
+  return body;
+}
+
+/**
+ * Åpne adressen i Chrome og krev statusen sida skal gi (#82). Statusen leses fra
+ * nettleserens EGEN navigasjon, så det er nettopp dokumentet som måles som sjekkes.
+ */
+async function open(url: string, status = 200): Promise<void> {
+  await page.navigate(url);
+  const got = await page.evaluate(
+    () => (performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming | undefined)?.responseStatus ?? 0,
+  );
+  if (got !== status) {
+    throw new Error(`${url} svarte ${got} i Chrome, ventet ${status} — vakta måler ikke en side den ikke fikk.`);
+  }
+}
+
 /**
  * Selve invarianten: åpne adressen og krev at ingen av de fire kombinasjonene
  * av viewport og tekstforstørrelse gjør sida bredere enn skjermen. `hvorfor`
  * havner i feilmeldingen — den som får rødt skal slippe å lure på hvorfor
  * nettopp denne adressen ble målt.
  */
-async function expectFits(url: string, navn: string, hvorfor = ''): Promise<void> {
-  await page.navigate(url);
+async function expectFits(url: string, navn: string, hvorfor = '', status = 200): Promise<void> {
+  await open(url, status);
   for (const vp of VIEWPORTS) {
     await page.setViewport(vp);
     for (const scale of SCALES) {
@@ -175,7 +209,7 @@ async function expectFits(url: string, navn: string, hvorfor = ''): Promise<void
 
 describe('mobil-layout: ingen side er bredere enn skjermen (#50)', () => {
   for (const p of PAGES) {
-    test(`${p.path} — ${p.name}`, () => expectFits(pageUrl(DEFAULT_LOCALE, p.path), p.path), 60_000);
+    test(`${p.path} — ${p.name}`, () => expectFits(pageUrl(DEFAULT_LOCALE, p.path), p.path, '', expectedStatus(p.path)), 60_000);
   }
 });
 
@@ -256,7 +290,7 @@ describe('mobil-layout: UI-strengene på hvert språks verste side (#70)', () =>
 
   const wordsFor = async (locale: Locale, path: string): Promise<string[]> => {
     const key = `${locale} ${path}`;
-    if (!words.has(key)) words.set(key, wordsIn(await (await fetch(pageUrl(locale, path))).text()));
+    if (!words.has(key)) words.set(key, wordsIn(await fetchHtml(pageUrl(locale, path), expectedStatus(path))));
     return words.get(key)!;
   };
 
@@ -287,7 +321,7 @@ describe('mobil-layout: UI-strengene på hvert språks verste side (#70)', () =>
         expect([locale, worst[0]!.word.length > 0]).toEqual([locale, true]);
 
         for (const { path, word } of worst) {
-          await expectFits(pageUrl(locale, path), `/${locale}${path}`, `Valgt fordi «${word}» (${word.length} tegn) er det lengste ordet siden har på ${locale}, men ikke på ${DEFAULT_LOCALE}.`);
+          await expectFits(pageUrl(locale, path), `/${locale}${path}`, `Valgt fordi «${word}» (${word.length} tegn) er det lengste ordet siden har på ${locale}, men ikke på ${DEFAULT_LOCALE}.`, expectedStatus(path));
         }
       },
       120_000,
@@ -316,7 +350,7 @@ describe('mobil-chrome: bare kontroller som betyr noe (#51)', () => {
   };
 
   test('☰ og ▥ er skjult på mobil, 📖 står igjen', async () => {
-    await page.navigate(`http://localhost:${server.port}${href(DEFAULT_LOCALE, '/1mos/1')}`);
+    await open(`http://localhost:${server.port}${href(DEFAULT_LOCALE, '/1mos/1')}`);
     for (const width of [320, 390, 768]) {
       await page.setViewport({ width, height: 800 });
       const vis = await page.evaluate(modeButtons);
@@ -325,7 +359,7 @@ describe('mobil-chrome: bare kontroller som betyr noe (#51)', () => {
   }, 60_000);
 
   test('alle tre finnes fortsatt på desktop, der modusene ER forskjellige', async () => {
-    await page.navigate(`http://localhost:${server.port}${href(DEFAULT_LOCALE, '/1mos/1')}`);
+    await open(`http://localhost:${server.port}${href(DEFAULT_LOCALE, '/1mos/1')}`);
     await page.setViewport({ width: 1280, height: 900 });
     expect(await page.evaluate(modeButtons)).toEqual({ normal: true, reading: true, panel: true });
 
@@ -442,7 +476,7 @@ describe('mobil-layout: ett toppinnrykk mellom header og innhold (#55)', () => {
       async () => {
         const [path, query] = p.path.split('?');
         const url = `http://localhost:${server.port}${href(DEFAULT_LOCALE, path!)}${query ? `?${query}` : ''}`;
-        await page.navigate(url);
+        await open(url, expectedStatus(p.path));
 
         await page.setViewport({ width: 390, height: 844 });
         const padders = await page.evaluate(topPadders);
@@ -549,7 +583,7 @@ describe('mobil-chrome: skinna gjentar ikke verktøylinja (#56)', () => {
   const url = (path: string) => `http://localhost:${server.port}${href(DEFAULT_LOCALE, path)}`;
 
   test('skinna er borte på mobil og står igjen på desktop', async () => {
-    await page.navigate(url('/1mos/12'));
+    await open(url('/1mos/12'));
     for (const width of [320, 390, 768]) {
       await page.setViewport({ width, height: 844 });
       expect([width, await page.evaluate(railDisplay)]).toEqual([width, 'none']);
@@ -559,7 +593,7 @@ describe('mobil-chrome: skinna gjentar ikke verktøylinja (#56)', () => {
   }, 60_000);
 
   test('hver handling i skinna er fortsatt innen rekkevidde på mobil', async () => {
-    await page.navigate(url('/1mos/12'));
+    await open(url('/1mos/12'));
 
     await page.setViewport({ width: 1280, height: 900 });
     const actions = await page.evaluate(railActions);
@@ -583,7 +617,7 @@ describe('mobil-chrome: skinna gjentar ikke verktøylinja (#56)', () => {
 
 describe('mobil-chrome: ikonknapper i headeren (#54)', () => {
   test('alt uten synlig tekst er minst 36×36 og har et tilgjengelig navn', async () => {
-    await page.navigate(`http://localhost:${server.port}${href(DEFAULT_LOCALE, '/1mos/1')}`);
+    await open(`http://localhost:${server.port}${href(DEFAULT_LOCALE, '/1mos/1')}`);
     await page.setViewport({ width: 390, height: 844 });
 
     const bad = await page.evaluate(() => {
@@ -611,5 +645,34 @@ describe('mobil-chrome: ikonknapper i headeren (#54)', () => {
     });
 
     expect(bad).toEqual([]);
+  }, 60_000);
+});
+
+/**
+ * #82: vakta over er bare verdt noe hvis den faktisk fikk SIDA. Med lastvernet
+ * skrudd helt ned svarer appen 503 på alt, og da skal både utvalget (HTML-en
+ * ordene telles i) og målingen i Chrome bli røde — ikke måle en tom feilside.
+ */
+describe('mobil-layout: en side vakta ikke fikk, er ikke målt (#82)', () => {
+  // En adresse ingen har hentet før: sidene sendes med offentlig Cache-Control,
+  // så Chrome ville ellers svart fra sin EGEN cache uten å spørre appen.
+  let n = 0;
+  const url = () => `${pageUrl(DEFAULT_LOCALE, '/1mos/1')}?vakt82=${Date.now()}-${n++}`;
+
+  test('en 503 feller både hentingen og målingen', async () => {
+    // Tom cache først: en cachet kopi ville svart 200 uten å trenge en plass.
+    resetPageCache();
+    configurePageCache({ maxConcurrentRenders: 0 });
+    try {
+      await expect(fetchHtml(url())).rejects.toThrow(/svarte 503/);
+      await expect(expectFits(url(), '/1mos/1')).rejects.toThrow(/svarte 503/);
+    } finally {
+      resetPageCache();
+    }
+  }, 60_000);
+
+  test('og en side som svarer, går fortsatt gjennom', async () => {
+    expect(await fetchHtml(url())).toContain('<body');
+    await expectFits(url(), '/1mos/1');
   }, 60_000);
 });
