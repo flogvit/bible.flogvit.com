@@ -1,5 +1,12 @@
 # Release notes
 
+## 2026-10-20 — Fewer errors during short database interruptions
+
+**Bug fixes**
+- Some pages could show an error when the database connection dropped for a moment. Those reads are now retried automatically, so a brief interruption no longer reaches you.
+
+**Behind the scenes**
+- Added a test covering the retry of these database reads on connection errors.
 ## 2026-10-10 — Read chapters offline without visiting them first, save verses to lists, and safer syncing
 
 **New features**
