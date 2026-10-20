@@ -135,41 +135,59 @@ function createPool(): SQL {
 }
 
 /**
- * Poolen pakket i en Proxy som kun fanger tagged-template-kallene
- * (``sql`SELECT …` ``) — de 48 kallstedene trenger derfor ingen endring.
+ * Poolen pakket i en Proxy som fanger LESNINGENE — både tagged-template-kallene
+ * (``sql`SELECT …` ``) og `sql.unsafe('SELECT …', […])`. Kallstedene trenger
+ * derfor ingen endring.
  *
- * `apply` er den ENESTE fellen: `sql.begin(…)`, `sql.unsafe(…).simple()` og alt
- * annet går på property-oppslag og treffer poolen direkte, uendret. Det er med
- * vilje — transaksjoner og migrasjoner er skrivinger, som ikke skal gjentas.
+ * `unsafe` sto lenge utenfor, under antakelsen om at den bare brukes til
+ * skrivinger og migrasjoner. Den brukes også til lesninger på kapittelsida
+ * (`blob-forfilter.ts`, `bible.ts`), og der ble vår egen maxLifetime en 503 til
+ * leseren på 0,03 s mens basen var frisk (#117). En `unsafe` som IKKE er en
+ * lesning går rett til poolen og returnerer poolens eget spørreobjekt, så
+ * `.simple()` i `schema.ts` virker som før. `sql.begin(…)` og alt annet treffer
+ * poolen direkte, uendret — transaksjoner er skrivinger, som ikke skal gjentas.
  *
- * Eksportert for vakta i `test/db-retry-budget.test.ts`: regelen skal kunne
- * måles mot en «pool» som bare er svaret sitt, uten en database som er nede.
+ * Eksportert for vaktene i `test/db-retry-budget.test.ts` og
+ * `test/db-retry-unsafe.test.ts`: regelen skal kunne måles mot en «pool» som
+ * bare er svaret sitt, uten en database som er nede.
  */
 export function withRetry(base: SQL): SQL {
+  const unsafe = (query: string, ...rest: unknown[]) => {
+    const run = () => (base.unsafe as (...a: unknown[]) => unknown).call(base, query, ...rest);
+    return typeof query === 'string' && isReadOnly(query) ? retryRead(run) : run();
+  };
   return new Proxy(base, {
     apply(target, thisArg, args: unknown[]) {
       const strings = args[0] as TemplateStringsArray | undefined;
       const run = () => Reflect.apply(target as unknown as (...a: unknown[]) => unknown, thisArg, args);
       if (!strings || !isReadOnly(strings[0] ?? '')) return run();
-      // Forespørselens deadline om vi er i en, ellers vår egen (skriptene).
-      // Leses her, i den synkrone delen av kallet, mens konteksten er vår.
-      const store = budsjett.getStore();
-      return (async () => {
-        const deadline = store ? store.deadline : Date.now() + retryBudgetMs();
-        let wait = 200;
-        for (;;) {
-          try {
-            return await run();
-          } catch (err) {
-            if (!isConnectionError(err)) throw err;
-            if (Date.now() + wait >= deadline) throw err;
-            await sleep(wait);
-            wait = Math.min(wait * 2, RETRY_BACKOFF_MAX_MS);
-          }
-        }
-      })();
+      return retryRead(run);
+    },
+    get(target, prop, receiver) {
+      return prop === 'unsafe' ? unsafe : Reflect.get(target, prop, receiver);
     },
   }) as SQL;
+}
+
+/** Gjentar en lesning så lenge feilen er en forbindelsesfeil og budsjettet rekker. */
+function retryRead(run: () => unknown): Promise<unknown> {
+  // Forespørselens deadline om vi er i en, ellers vår egen (skriptene).
+  // Leses her, i den synkrone delen av kallet, mens konteksten er vår.
+  const store = budsjett.getStore();
+  return (async () => {
+    const deadline = store ? store.deadline : Date.now() + retryBudgetMs();
+    let wait = 200;
+    for (;;) {
+      try {
+        return await run();
+      } catch (err) {
+        if (!isConnectionError(err)) throw err;
+        if (Date.now() + wait >= deadline) throw err;
+        await sleep(wait);
+        wait = Math.min(wait * 2, RETRY_BACKOFF_MAX_MS);
+      }
+    }
+  })();
 }
 
 export function getSql(): SQL {
