@@ -1,5 +1,12 @@
 # Release notes
 
+## 2026-10-20 — Fewer errors when the database blips
+
+**Bug fixes**
+- Pages no longer fail when the database connection drops briefly. Reads that were not retried before are now retried, so a short database interruption should no longer show up as an error page.
+
+**Behind the scenes**
+- Retry coverage for raw SQL reads in the database layer, with a new test.
 ## 2026-10-10 — Read chapters offline without visiting them first, save verses to lists, and safer syncing
 
 **New features**
