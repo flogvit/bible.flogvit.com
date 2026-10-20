@@ -1,5 +1,12 @@
 # Release notes
 
+## 2026-10-20 — Fewer error pages during short database interruptions
+
+**Bug fixes**
+- Pages that read from the database now recover on their own from brief connection interruptions, instead of showing an error. This covers the remaining kinds of lookups that were not retried before.
+
+**Behind the scenes**
+- Database reads made with `sql.unsafe` are now retried on connection errors, the same as other reads, and a new test covers it.
 ## 2026-10-10 — Read chapters offline without visiting them first, save verses to lists, and safer syncing
 
 **New features**
