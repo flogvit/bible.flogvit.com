@@ -1,5 +1,9 @@
 # Release notes
 
+## 2026-10-21 — Security upkeep
+
+**Behind the scenes**
+- Updated Hono and the MCP SDK to versions that fix the known advisories reported by `bun audit`.
 ## 2026-10-20 — Fewer errors when the database blips
 
 **Bug fixes**
