@@ -634,8 +634,8 @@ ubehandlet ENOENT-kast midt i parsingen — ordrett signaturen saken er meldt p�
   `OSNB_MAPPING_ID`, `915e2f6` legger vakta `api/lib/verse-mapper.test.ts`. De
   ~20 andre `osnb2`-stedene er BIBEL-id-en og skal bli stående — de to aksene
   delte en streng, ikke en betydning. **Ikke skriv fiksen på nytt.** Den er
-  ikke ROLLET UT: `.no` kjører fortsatt `bibel:20260818-112552-5154b48`, og hva
-  som skal skje med den frosne flata er avgjørelsen i #98.
+  rullet ut 2026-10-23 med Node 22-bumpen (#145, tagg `20261023-160240-6bba96f`).
+  Hva som skal skje med den frosne flata videre er avgjørelsen i #98.
 
 #### En fiks som bare finnes på ÉN disk er ikke levert (#111)
 
