@@ -1,5 +1,12 @@
 # Release notes
 
+## 2026-10-23 — Security update to the server runtime
+
+**Bug fixes**
+- When the database is briefly out of reach, pages answer "try again in a moment" instead of an error page again.
+
+**Behind the scenes**
+- The server runtime is updated to Bun 1.4.4, which fixes a security flaw in its Brotli decoder (CVE-2026-111497). The MCP server is updated with it, and one of its dependencies (ip-address) is lifted past a known advisory.
 ## 2026-10-21 — Security upkeep
 
 **Behind the scenes**
