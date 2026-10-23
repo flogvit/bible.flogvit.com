@@ -1,7 +1,7 @@
 # bibel.flogvit.com — Hono + Bun. Ingen byggesteg (Bun kjører TS direkte), så
 # dette bygger rent på VM-en. Bibelinnholdet bor i managed MySQL — ingen
 # 170MB bible.db i imaget lenger (import kjøres utenfra, se scripts/).
-FROM oven/bun:1.3-slim
+FROM oven/bun:1.4.4-slim
 WORKDIR /app
 COPY package.json bun.lock* ./
 # kvn-package er en vendored file:-dependency og må ligge der før bun install.

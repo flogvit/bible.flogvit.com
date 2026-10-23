@@ -5,7 +5,7 @@
 #
 # Dockerfile.dockerignore next to this file decides what reaches the build — a
 # whitelist, so bibel's node_modules and kvn-package (109 MB) never do.
-FROM oven/bun:1.3-slim
+FROM oven/bun:1.4.4-slim
 WORKDIR /app
 # One node_modules at /app serves both /app/mcp/src and /app/src/lib (which
 # imports hono).
