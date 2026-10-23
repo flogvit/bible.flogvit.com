@@ -7,6 +7,7 @@
 
 **Behind the scenes**
 - The server runtime is updated to Bun 1.4.4, which fixes a security flaw in its Brotli decoder (CVE-2026-111497). The MCP server is updated with it, and one of its dependencies (ip-address) is lifted past a known advisory.
+- bibel.flogvit.no, the older edition, moves from Node 20 (no longer supported) to Node 22.23.4 for the same security fix. It also gets the fix already written for it: reading with a parallel verse numbering no longer fails on its numbering file.
 ## 2026-10-21 — Security upkeep
 
 **Behind the scenes**
