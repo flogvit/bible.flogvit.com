@@ -90,7 +90,8 @@ export function retryBudgetRemainingMs(): number | null {
  * Bun legger koden på `err.code` (ERR_MYSQL_CONNECTION_CLOSED er den vi faktisk
  * så i prod), mens meldingsteksten varierer — derfor sjekkes begge, og
  * skilletegnet er `[ _]` siden koden bruker understrek der teksten bruker
- * mellomrom.
+ * mellomrom. Fra Bun 1.4 heter en NEKTET tilkobling
+ * ERR_MYSQL_CONNECTION_REFUSED («Failed to connect») (#146).
  *
  * «max lifetime» er VÅR EGEN maxLifetime som slår til: Bun kaster da en feil
  * til kalleren i stedet for å resirkulere stille. Den ER en forbindelsesfeil
@@ -100,7 +101,7 @@ export function retryBudgetRemainingMs(): number | null {
 export function isConnectionError(err: unknown): boolean {
   const e = err as { message?: unknown; code?: unknown } | null;
   const text = `${typeof e?.code === 'string' ? e.code : ''} ${typeof e?.message === 'string' ? e.message : String(err ?? '')}`;
-  return /connection[ _]closed|connection[ _]timeout|shutdown[ _]in[ _]progress|server[ _]has[ _]gone[ _]away|lost[ _]connection|not[ _]connected|ECONNREFUSED|ECONNRESET|EPIPE|too[ _]many[ _]connections|max[ _]lifetime/i.test(text);
+  return /connection[ _]closed|connection[ _]refused|connection[ _]timeout|shutdown[ _]in[ _]progress|server[ _]has[ _]gone[ _]away|lost[ _]connection|not[ _]connected|ECONNREFUSED|ECONNRESET|EPIPE|too[ _]many[ _]connections|max[ _]lifetime/i.test(text);
 }
 
 /**
