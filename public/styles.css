@@ -328,14 +328,13 @@ a.fvmenu-item:hover { background: color-mix(in oklab, var(--ink) 6%, var(--surfa
 .fvmenu-item.soon .fvmenu-wm { opacity: 0.5; }
 .fvmenu-chip { font-family: var(--font-mono); font-size: 11px; color: var(--ink-2); }
 
-/* produktaksenter i menyen (STYLE.md-lista) */
-.dotPuzzles { color: #2b5bb7; }
-.dotPhotosuite { color: #8a5d0b; }
-.dotImage { color: #6b21a8; }
-.dotFoto { color: #b7412b; }
-.dotLab { color: #0f766e; }
-.dotBooks { color: #2f7d43; }
-.dotBibel { color: var(--accent); }
+/* produktaksenter i menyen: verdiene står på prikken selv, fra
+   family-menu.json (portalens liste, #142) — ikke skrevet av her. */
+.fvmenu-dot[style] { color: var(--fv-dot); }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-fv-theme='light']) .fvmenu-dot[style] { color: var(--fv-dot-dark); }
+}
+:root[data-fv-theme='dark'] .fvmenu-dot[style] { color: var(--fv-dot-dark); }
 
 .fvmenu-prefs {
   display: flex;

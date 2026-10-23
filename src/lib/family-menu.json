@@ -1,0 +1,29 @@
+{
+  "_om": [
+    "KOPI av portal/design/family-menu.json — ÉN sannhet for hva FLOGVIT-menyen",
+    "lister, i hvilken rekkefølge, og hvilken prikkfarge hvert produkt har.",
+    "Samme mønster som locales.json og chrome-i18n.json: portalen eier fila,",
+    "hvert produkt har en kopi, og produktets egen test sammenligner dem.",
+    "",
+    "Lista sto skrevet av i elleve layouter, og ingenting sammenlignet dem",
+    "(flogvit-com#314). Endrer du noe, endrer du i PORTALEN og kopierer hit.",
+    "",
+    "href = null betyr «kommer»: produktet vises, men lenker ikke.",
+    "accent er STYLE.md-tabellen «Produktaksenter» (lys / mørk)."
+  ],
+  "home": { "href": "https://flogvit.com/" },
+  "products": [
+    { "id": "puzzles", "href": "https://puzzles.flogvit.com/", "accent": { "light": "#2b5bb7", "dark": "#7ea6ec" } },
+    { "id": "image", "href": "https://image.flogvit.com/", "accent": { "light": "#0f6e77", "dark": "#6fc7cd" } },
+    { "id": "photosuite", "href": "https://photosuite.flogvit.com/", "accent": { "light": "#8a5d0b", "dark": "#e0aa4f" } },
+    { "id": "dedup", "href": "https://dedup.flogvit.com/", "accent": { "light": "#24407a", "dark": "#b4bff7" } },
+    { "id": "lab", "href": "https://lab.flogvit.com/", "accent": { "light": "#6743b8", "dark": "#b39df0" } },
+    { "id": "books", "href": "https://books.flogvit.com/", "accent": { "light": "#2f7d43", "dark": "#85c795" } },
+    { "id": "bible", "href": "https://bible.flogvit.com/", "accent": { "light": "#7a4a21", "dark": "#d9a06b" } },
+    { "id": "hides", "href": "https://hides.flogvit.com/", "accent": { "light": "#8a4b22", "dark": "#e0996a" } },
+    { "id": "eventphotos", "href": "https://eventphotos.flogvit.com/", "accent": { "light": "#9c2f92", "dark": "#e79ae0" } },
+    { "id": "gallery", "href": "https://gallery.flogvit.com/", "accent": { "light": "#3f5b75", "dark": "#a3bdd4" } },
+    { "id": "photo", "href": null, "accent": { "light": "#b0355f", "dark": "#ef8fb1" } }
+  ],
+  "account": { "href": "https://flogvit.com/konto/" }
+}

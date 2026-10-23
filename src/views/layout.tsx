@@ -19,6 +19,7 @@ import { tCtx, islandStrings, type MessageKey } from '../lib/i18n.ts';
 import { absoluteUrl } from '../lib/site-url.ts';
 import { assetUrl } from '../lib/static-cache.ts';
 import { shareCard, type ShareCard } from '../lib/share-card.ts';
+import familyMenu from '../lib/family-menu.json' with { type: 'json' };
 
 /**
  * Strenger klient-øyene som lastes på HVER side trenger: plus-CTA-en (plus.js),
@@ -164,19 +165,20 @@ const PREFS_READ_SNIPPET = `<script>
   } catch (e) {}
 </script>`;
 
-// Produktvelgeren (portal-mønsteret, som photosuite). dot-klassene bærer
-// produktaksenten i menypanelet.
-const PRODUCTS: { prod: string; dot: string; href?: string; current?: boolean }[] = [
-  { prod: 'puzzles', dot: 'dotPuzzles', href: 'https://puzzles.flogvit.com/' },
-  { prod: 'photosuite', dot: 'dotPhotosuite', href: 'https://photosuite.flogvit.com/' },
-  { prod: 'image', dot: 'dotImage', href: 'https://image.flogvit.com/' },
-  { prod: 'photo', dot: 'dotFoto' },
-  { prod: 'lab', dot: 'dotLab', href: 'https://lab.flogvit.com/' },
-  { prod: 'books', dot: 'dotBooks', href: 'https://books.flogvit.com/' },
-  { prod: 'bible', dot: 'dotBibel', href: '/', current: true },
-];
+// Produktvelgeren leser portalens liste (src/lib/family-menu.json er en KOPI av
+// portal/design/family-menu.json, #142). Lista sto skrevet av her, og drev fra
+// de ti andre flatene fordi ingenting sammenlignet dem. Prikkfargene kommer fra
+// samme fil, som custom properties på prikken — ikke fra en liste i CSS-en.
+export const FAMILY_MENU = familyMenu as FamilyMenu;
+export const SELF_PRODUCT = 'bible';
 
-function FlogvitMenu({ t }: { t: Translator }) {
+export interface FamilyMenu {
+  home: { href: string };
+  products: { id: string; href: string | null; accent: { light: string; dark: string } }[];
+  account: { href: string };
+}
+
+export function FlogvitMenu({ t }: { t: Translator }) {
   return (
     <span class="wordmark">
       <details class="fvmenu">
@@ -194,18 +196,19 @@ function FlogvitMenu({ t }: { t: Translator }) {
           </svg>
         </summary>
         <nav class="fvmenu-panel" aria-label={t('chrome.menuAria')}>
-          <a class="fvmenu-item" href="https://flogvit.com/">
+          <a class="fvmenu-item" href={FAMILY_MENU.home.href}>
             <span class="fvmenu-wm">
               <span class="fvmenu-b">FLOGVIT</span>
               <span class="fvmenu-dot">.</span>
             </span>
           </a>
-          {PRODUCTS.map((p) => {
+          {FAMILY_MENU.products.map((p) => {
+            const self = p.id === SELF_PRODUCT;
             const wm = (
               <span class="fvmenu-wm">
                 <span class="fvmenu-b">FLOGVIT</span>
-                <span class={`fvmenu-dot ${p.dot}`}>.</span>
-                <span class="fvmenu-prod">{p.prod}</span>
+                <span class="fvmenu-dot" style={`--fv-dot:${p.accent.light};--fv-dot-dark:${p.accent.dark}`}>.</span>
+                <span class="fvmenu-prod">{p.id}</span>
               </span>
             );
             if (!p.href) {
@@ -217,14 +220,14 @@ function FlogvitMenu({ t }: { t: Translator }) {
               );
             }
             return (
-              <a class="fvmenu-item" href={p.href.startsWith('/') ? lhref(p.href) : p.href} aria-current={p.current ? 'true' : undefined}>
+              <a class="fvmenu-item" href={self ? lhref('/') : p.href} aria-current={self ? 'true' : undefined}>
                 {wm}
               </a>
             );
           })}
           {/* Uniform familie-oppføring (portal/STYLE.md): globale innstillinger
               — konto, språk — nås fra samme plass i alle produktene. */}
-          <a class="fvmenu-item fvmenu-kontoitem" href="https://flogvit.com/konto/">
+          <a class="fvmenu-item fvmenu-kontoitem" href={FAMILY_MENU.account.href}>
             {t('chrome.accountItem')}
           </a>
         </nav>
