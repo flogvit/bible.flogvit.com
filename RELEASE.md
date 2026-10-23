@@ -1,6 +1,9 @@
 # Release notes
 
-## 2026-10-23 — Security update to the server runtime
+## 2026-10-23 — Security update to the server runtime, and a FLOGVIT menu that matches the portal
+
+**Polish**
+- The FLOGVIT menu now shows the same products, with the same coloured dots, as the portal front page.
 
 **Bug fixes**
 - When the database is briefly out of reach, pages answer "try again in a moment" instead of an error page again.
@@ -8,6 +11,7 @@
 **Behind the scenes**
 - The server runtime is updated to Bun 1.4.4, which fixes a security flaw in its Brotli decoder (CVE-2026-111497). The MCP server is updated with it, and one of its dependencies (ip-address) is lifted past a known advisory.
 - bibel.flogvit.no, the older edition, moves from Node 20 (no longer supported) to Node 22.23.4 for the same security fix. It also gets the fix already written for it: reading with a parallel verse numbering no longer fails on its numbering file.
+- The FLOGVIT menu is rendered from a copy of the portal's product list instead of a hand-kept one, and a new test checks the two stay in step.
 ## 2026-10-21 — Security upkeep
 
 **Behind the scenes**
