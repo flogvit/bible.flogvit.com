@@ -7,6 +7,7 @@ import {
 } from '../../lib/bible.ts';
 import { withApiId, withApiIds } from '../../lib/api-ids.ts';
 import { NO_CACHE, internFeil } from './util.ts';
+import { STORY_SLUG_ALIASES } from '../../lib/story-slug-aliases.ts';
 
 const r = new Hono();
 
@@ -39,8 +40,14 @@ r.get('/search', async (c) => {
 /** GET /api/stories/:slug — én historie. */
 r.get('/:slug', async (c) => {
   try {
-    const story = await getStoryBySlug(c.req.param('slug'));
-    if (!story) return c.json({ error: 'Story not found' }, 404);
+    const requested = c.req.param('slug');
+    const story = await getStoryBySlug(requested);
+    if (!story) {
+      // Samme regel som `/historier/:slug` (#153): samme adresse, samme svar.
+      const alias = STORY_SLUG_ALIASES[requested];
+      if (alias) return c.redirect(`${PATH}/${alias}${new URL(c.req.url).search}`, 301);
+      return c.json({ error: 'Story not found' }, 404);
+    }
     return c.json(withApiId(PATH, story), 200, NO_CACHE);
   } catch (error) {
     return internFeil(c, 'Error fetching story', error);
