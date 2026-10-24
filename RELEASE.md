@@ -5,6 +5,9 @@
 **Polish**
 - The FLOGVIT menu no longer lists hides, which isn't live yet.
 
+**Behind the scenes**
+- robots.txt now asks Anthropic's ClaudeBot to wait two seconds between requests, as it already asked PerplexityBot. In one night it fetched 62,000 pages at up to four a second, and the share it was refused showed up as server errors.
+
 ## 2026-10-24 — New content from free-bible: a proofread New Testament and many more cross-references
 
 **Polish**
