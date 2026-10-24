@@ -471,6 +471,27 @@ GET /api/number-symbolism/351 -> 404      (adressen er `number`)
   ender av lista. Sju mutasjoner kjørt.
 - **Dette flytter fortsatt ikke `.no`**, av samme grunn som avsnittet over.
 
+#### En historie som fikk NY SLUG i korrekturen 301-er fra den gamle (#153)
+
+`/en/historier/pasken-og-uttogget` 404-et etter at korrekturen ga historien
+slugen `pasken-og-uttoget` — den gamle formen sto i free-bibles første
+historie-commit og ligger i crawlernes indekser.
+
+- **`src/lib/story-slug-aliases.ts` er kartet**, og begge flatene
+  (`/historier/:slug` og `/api/stories/:slug`) honorerer det — samme lærdom som
+  personaliasene: samme adresse, samme svar. Oppslaget skjer ETTER basen, så en
+  levende historie alltid vinner. Queryen bæres over (#24).
+- **Kilden er `proofread_stories/nb/<nåværende>.json` → `revisedStory.slug`**,
+  men metadataen er ikke ren: tre par peker på en annen historie
+  (`peters-tale-i-salomos-soylegang` → `josefs-far-jakob-kommer-til-egypt`). Et
+  par kom bare med når målet finnes, den gamle slugen IKKE er en levende
+  historie, og referansene overlapper — 16 av 76.
+- **Den gjetter aldri.** De andre stiene i saken (`samuelsdommen-over-israel`,
+  `/personer/maaka` …) står ikke som tidligere versjon av noe og 404-er fortsatt.
+- **Vakta er `test/story-slug-aliases.test.ts`:** KARTET mot basen på hvert
+  språk, FLATA (301 på alle åtte prefikser og i API-et, og målet svarer 200),
+  QUERYEN og GJETTER ALDRI.
+
 ### En innholdstabell hvis KILDE er borte skal ikke bli stående (#58)
 
 Samme klasse som #46 og #61, men én etasje opp: der handler det om en ADRESSE

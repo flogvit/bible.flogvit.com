@@ -27,6 +27,7 @@ import {
   themeTitle,
 } from '../../lib/bible.ts';
 import { getBookInfoById, bookName } from '../../lib/books-data.ts';
+import { STORY_SLUG_ALIASES } from '../../lib/story-slug-aliases.ts';
 import { layoutProps, tFor, lhref, currentIntlTag, tEnum, type Translator } from '../../lib/i18n.ts';
 import { tCtx } from '../../lib/i18n.ts';
 
@@ -229,8 +230,16 @@ r.get('/historier', async (c) => {
 
 r.get('/historier/:slug', async (c) => {
   const t = tFor(c);
-  const story = await getStoryBySlug(c.req.param('slug'));
-  if (!story) return c.notFound();
+  const requested = c.req.param('slug');
+  const story = await getStoryBySlug(requested);
+  if (!story) {
+    // En slug historien hadde før korrekturen 301-er til den nåværende (#153).
+    // Slås opp først ETTER basen, så en levende adresse alltid vinner. Queryen
+    // bæres over (#24).
+    const alias = STORY_SLUG_ALIASES[requested];
+    if (alias) return c.redirect(lhref(`/historier/${alias}`) + new URL(c.req.url).search, 301);
+    return c.notFound();
+  }
   let data: StoryData;
   try {
     data = JSON.parse(story.content) as StoryData;
