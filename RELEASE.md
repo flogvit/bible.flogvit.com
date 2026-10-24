@@ -1,5 +1,11 @@
 # Release notes
 
+## 2026-10-24 — Maintenance round: FLOGVIT menu schema and dependency updates
+
+**Behind the scenes**
+
+- The FLOGVIT menu copy now follows the portal's schema (`name`/`status`/`dot`), with the layout and test updated to match.
+- Updated dependencies: happy-dom 21.0.4, zod 4.6.7, body-parser 2.4.0 and fast-uri 3.1.9.
 ## 2026-10-23 — Security update to the server runtime, and a FLOGVIT menu that matches the portal
 
 **Polish**
