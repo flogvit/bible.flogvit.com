@@ -1,13 +1,17 @@
 # Release notes
 
-## 2026-10-24 — The FLOGVIT menu no longer lists hides
+## 2026-10-24 — Old story links keep working, and more garbled chapter links find their chapter
 
 **Polish**
 - The FLOGVIT menu no longer lists hides, which isn't live yet.
 
+**Bug fixes**
+- Stories whose address changed after proofreading now redirect from their old address to the new one, so bookmarks and shared links to them still open the story instead of a dead page.
+- Chapter links damaged in transit now open the right chapter in two more cases: the `?` form of an alias, and text garbled twice over by a character-encoding mix-up.
+
 **Behind the scenes**
 - robots.txt now asks Anthropic's ClaudeBot to wait two seconds between requests, as it already asked PerplexityBot. In one night it fetched 62,000 pages at up to four a second, and the share it was refused showed up as server errors.
-
+- Tests and project notes were added for the story redirects and the damaged-address handling.
 ## 2026-10-24 — New content from free-bible: a proofread New Testament and many more cross-references
 
 **Polish**
