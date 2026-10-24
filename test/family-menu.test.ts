@@ -98,11 +98,11 @@ describe('MENYEN lister nøyaktig kopien', () => {
       const forventet: Oppføring[] = [
         { tekst: 'FLOGVIT.', href: FAMILY_MENU.home.href, current: false, soon: false, dot: null },
         ...FAMILY_MENU.products.map((p) => ({
-          tekst: `FLOGVIT.${p.id}`,
-          href: p.href === null ? null : p.id === SELF_PRODUCT ? href(locale, '/') : p.href,
-          current: p.id === SELF_PRODUCT,
-          soon: p.href === null,
-          dot: `--fv-dot:${p.accent.light};--fv-dot-dark:${p.accent.dark}`,
+          tekst: `FLOGVIT.${p.name}`,
+          href: p.status === 'coming' ? null : p.name === SELF_PRODUCT ? href(locale, '/') : p.href!,
+          current: p.name === SELF_PRODUCT,
+          soon: p.status === 'coming',
+          dot: `--fv-dot:${p.dot.light};--fv-dot-dark:${p.dot.dark}`,
         })),
         { tekst: t('chrome.accountItem').replace(/&/g, '&amp;'), href: FAMILY_MENU.account.href, current: false, soon: false, dot: null },
       ];
@@ -126,7 +126,7 @@ describe('FARGENE kommer fra kopien', () => {
 
 describe('FORMEN på kopien', () => {
   test('har produkter, flata selv står der, og id-ene er unike', () => {
-    const ids = FAMILY_MENU.products.map((p) => p.id);
+    const ids = FAMILY_MENU.products.map((p) => p.name);
     expect(ids.length).toBeGreaterThan(1);
     expect(ids).toContain(SELF_PRODUCT);
     expect(new Set(ids).size).toBe(ids.length);
@@ -134,8 +134,10 @@ describe('FORMEN på kopien', () => {
 
   test('hver aksent er en hex-farge i begge moduser', () => {
     for (const p of FAMILY_MENU.products) {
-      expect(p.accent.light).toMatch(/^#[0-9a-f]{6}$/);
-      expect(p.accent.dark).toMatch(/^#[0-9a-f]{6}$/);
+      expect(p.dot.light).toMatch(/^#[0-9a-f]{6}$/);
+      expect(p.dot.dark).toMatch(/^#[0-9a-f]{6}$/);
+      // Et produkt lenker eller er «kommer» — aldri begge, aldri ingen.
+      expect(p.status === 'coming').toBe(!p.href);
     }
   });
 });

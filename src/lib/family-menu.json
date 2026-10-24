@@ -1,29 +1,37 @@
 {
   "_om": [
-    "KOPI av portal/design/family-menu.json — ÉN sannhet for hva FLOGVIT-menyen",
-    "lister, i hvilken rekkefølge, og hvilken prikkfarge hvert produkt har.",
-    "Samme mønster som locales.json og chrome-i18n.json: portalen eier fila,",
-    "hvert produkt har en kopi, og produktets egen test sammenligner dem.",
+    "ENESTE SANNHET for hva FLOGVIT-menyen lister, i hvilken rekkefølge, og hvilken",
+    "farge prikken i hvert produkts wordmark har. Samme mønster som locales.json og",
+    "chrome-i18n.json: hvert produkt har en KOPI av denne fila, rendrer menyen fra",
+    "kopien, og produktets egen test feller når kopien avviker fra portalens.",
     "",
-    "Lista sto skrevet av i elleve layouter, og ingenting sammenlignet dem",
-    "(flogvit-com#314). Endrer du noe, endrer du i PORTALEN og kopierer hit.",
+    "Fram til 2026-10-22 sto lista skrevet av i elleve layouter, og ingen av dem var",
+    "like (flogvit-com#314): de eldste flatene manglet alt som kom etter juli, og",
+    "prikkfargene i CSS-en hadde drevet fra STYLE.md. Ingenting sammenlignet dem.",
     "",
-    "href = null betyr «kommer»: produktet vises, men lenker ikke.",
-    "accent er STYLE.md-tabellen «Produktaksenter» (lys / mørk)."
+    "Rekkefølgen er menyens: FLOGVIT. (home) først, så products i rekkefølge, så",
+    "account sist. status=coming betyr uten lenke, med «kommer»-merket",
+    "(chrome-i18n: menu.coming). account.label er en chrome-i18n-nøkkel.",
+    "",
+    "dot.light/dot.dark er produktets aksent fra STYLE.md (lys/mørk palett), og",
+    "portalens test/familiemeny.test.ts holder dem like. accent er navnet på",
+    "CSS-variabelen portalen selv bruker for fargen.",
+    "",
+    "Nytt produkt i menyen: én linje HER, så kopien i hvert produkt."
   ],
   "home": { "href": "https://flogvit.com/" },
   "products": [
-    { "id": "puzzles", "href": "https://puzzles.flogvit.com/", "accent": { "light": "#2b5bb7", "dark": "#7ea6ec" } },
-    { "id": "image", "href": "https://image.flogvit.com/", "accent": { "light": "#0f6e77", "dark": "#6fc7cd" } },
-    { "id": "photosuite", "href": "https://photosuite.flogvit.com/", "accent": { "light": "#8a5d0b", "dark": "#e0aa4f" } },
-    { "id": "dedup", "href": "https://dedup.flogvit.com/", "accent": { "light": "#24407a", "dark": "#b4bff7" } },
-    { "id": "lab", "href": "https://lab.flogvit.com/", "accent": { "light": "#6743b8", "dark": "#b39df0" } },
-    { "id": "books", "href": "https://books.flogvit.com/", "accent": { "light": "#2f7d43", "dark": "#85c795" } },
-    { "id": "bible", "href": "https://bible.flogvit.com/", "accent": { "light": "#7a4a21", "dark": "#d9a06b" } },
-    { "id": "hides", "href": "https://hides.flogvit.com/", "accent": { "light": "#8a4b22", "dark": "#e0996a" } },
-    { "id": "eventphotos", "href": "https://eventphotos.flogvit.com/", "accent": { "light": "#9c2f92", "dark": "#e79ae0" } },
-    { "id": "gallery", "href": "https://gallery.flogvit.com/", "accent": { "light": "#3f5b75", "dark": "#a3bdd4" } },
-    { "id": "photo", "href": null, "accent": { "light": "#b0355f", "dark": "#ef8fb1" } }
+    { "name": "puzzles", "href": "https://puzzles.flogvit.com/", "accent": "blaa", "dot": { "light": "#2b5bb7", "dark": "#7ea6ec" } },
+    { "name": "image", "href": "https://image.flogvit.com/", "accent": "teal", "dot": { "light": "#0f6e77", "dark": "#6fc7cd" } },
+    { "name": "photosuite", "href": "https://photosuite.flogvit.com/", "accent": "rav", "dot": { "light": "#8a5d0b", "dark": "#e0aa4f" } },
+    { "name": "dedup", "href": "https://dedup.flogvit.com/", "accent": "marine", "dot": { "light": "#24407a", "dark": "#b4bff7" } },
+    { "name": "lab", "href": "https://lab.flogvit.com/", "accent": "fiolett", "dot": { "light": "#6743b8", "dark": "#b39df0" } },
+    { "name": "books", "href": "https://books.flogvit.com/", "accent": "groenn", "dot": { "light": "#2f7d43", "dark": "#85c795" } },
+    { "name": "bible", "href": "https://bible.flogvit.com/", "accent": "laer", "dot": { "light": "#7a4a21", "dark": "#d9a06b" } },
+    { "name": "hides", "href": "https://hides.flogvit.com/", "accent": "glo", "dot": { "light": "#8a4b22", "dark": "#e0996a" } },
+    { "name": "eventphotos", "href": "https://eventphotos.flogvit.com/", "accent": "magenta", "dot": { "light": "#9c2f92", "dark": "#e79ae0" } },
+    { "name": "gallery", "href": "https://gallery.flogvit.com/", "accent": "skifer", "dot": { "light": "#3f5b75", "dark": "#a3bdd4" } },
+    { "name": "photo", "status": "coming", "accent": "baer", "dot": { "light": "#b0355f", "dark": "#ef8fb1" } }
   ],
-  "account": { "href": "https://flogvit.com/konto/" }
+  "account": { "href": "https://flogvit.com/konto/", "label": "menu.accountSettings" }
 }

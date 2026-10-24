@@ -174,8 +174,11 @@ export const SELF_PRODUCT = 'bible';
 
 export interface FamilyMenu {
   home: { href: string };
-  products: { id: string; href: string | null; accent: { light: string; dark: string } }[];
-  account: { href: string };
+  // status 'coming' = vises uten lenke, med «snart»-merket. accent er
+  // portalens CSS-variabelnavn; prikken farges av dot.light/dot.dark.
+  products: { name: string; href?: string; status?: 'coming'; accent: string; dot: { light: string; dark: string } }[];
+  // label er en nøkkel i portalens chrome-i18n; her rendres chrome.accountItem.
+  account: { href: string; label: string };
 }
 
 export function FlogvitMenu({ t }: { t: Translator }) {
@@ -203,15 +206,15 @@ export function FlogvitMenu({ t }: { t: Translator }) {
             </span>
           </a>
           {FAMILY_MENU.products.map((p) => {
-            const self = p.id === SELF_PRODUCT;
+            const self = p.name === SELF_PRODUCT;
             const wm = (
               <span class="fvmenu-wm">
                 <span class="fvmenu-b">FLOGVIT</span>
-                <span class="fvmenu-dot" style={`--fv-dot:${p.accent.light};--fv-dot-dark:${p.accent.dark}`}>.</span>
-                <span class="fvmenu-prod">{p.id}</span>
+                <span class="fvmenu-dot" style={`--fv-dot:${p.dot.light};--fv-dot-dark:${p.dot.dark}`}>.</span>
+                <span class="fvmenu-prod">{p.name}</span>
               </span>
             );
-            if (!p.href) {
+            if (p.status === 'coming' || !p.href) {
               return (
                 <span class="fvmenu-item soon">
                   {wm}
