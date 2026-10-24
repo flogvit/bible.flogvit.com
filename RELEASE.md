@@ -1,5 +1,10 @@
 # Release notes
 
+## 2026-10-24 — The FLOGVIT menu no longer lists hides
+
+**Polish**
+- The FLOGVIT menu no longer lists hides, which isn't live yet.
+
 ## 2026-10-24 — New content from free-bible: a proofread New Testament and many more cross-references
 
 **Polish**
