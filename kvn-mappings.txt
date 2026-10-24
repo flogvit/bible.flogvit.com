@@ -1,0 +1,24 @@
+# Nummereringene .no-appen er bygget for — og de ENESTE deploy-bibel.sh
+# kopierer inn i kvn-package/mappings (bible.flogvit.com#148).
+#
+# free-bible/kvn/mappings har vokst til over tusen filer for bible.flogvit.com
+# etter at denne flata ble frosset. `/api/mappings/kvn/all` laster hver fil i
+# katalogen inn i minnet og sender alle på hver sidelasting, så den katalogen
+# bestemmer både minnet og svaret her. Lista er MAPPING_META, pluss
+# kildetekstene og den gamle .kvn-fila `loadMapping()` faller tilbake på.
+osnb.ukvn.json
+osnn.ukvn.json
+dnb2024_nb.ukvn.json
+dnb2024_nn.ukvn.json
+dnb2011_nb.ukvn.json
+dnb30.ukvn.json
+dnb1978_nb.ukvn.json
+nb88_nb.ukvn.json
+nb94_nn.ukvn.json
+english_kj.ukvn.json
+norwegian1921.ukvn.json
+norwegian1938.ukvn.json
+norwegian_bgo.ukvn.json
+sblgnt.ukvn.json
+tanach.ukvn.json
+dnb_2011_nb.kvn.json
