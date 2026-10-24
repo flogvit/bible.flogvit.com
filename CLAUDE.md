@@ -1565,6 +1565,13 @@ MJ12bot   GET /fr/1kr?n/20              17 av 17          tegnet byttet mot `?`
   ellers ville «301 på alt som ikke finnes» bestått). Formene BYGGES slik
   klienten bygger dem (UTF-8-bytes lest som latin-1, tegnet byttet mot `?`),
   ikke slik fiksen regner dem tilbake. Sju mutasjoner kjørt.
+- **To former slapp gjennom, og begge var en asymmetri i regelen (#152).**
+  `?`-grenen prøvde bare SLUGENE mens mojibake-grenen gikk gjennom
+  `getBookInfoBySlug()` og dermed aliasene — så `/fr/h?y/1` (aliaset `høy`)
+  404-et. Begge prøver nå de samme leddene, og en `?`-form som gir flere bøker
+  gjettes ikke. Og andre runde mojibake kan være lest som **windows-1252**
+  (`0x83` → `ƒ`, U+0192), så `ÃƒÂ¸` var et tegn over 0xFF latin-1-veien
+  avviste; `CP1252_TIL_BYTE` regner de 32 tegnene tilbake til byten.
 - **UMÅLT ER IKKE GRØNT.** Symptomet lever i prod, og verifiseringen må være
   tidsavgrenset til utrullingen OG kreve at aktøren har vært innom etterpå —
   ellers er den rød av historikken og grønn av stillhet (#86):

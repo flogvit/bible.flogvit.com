@@ -110,6 +110,34 @@ describe('en skadet kapitteladresse regnes tilbake (#118)', () => {
 
     // Den gjetter aldri (#61): en adresse som ikke regner seg tilbake til en bok
     // vi HAR, blir stående som den er.
+    // #152: `?`-formen av et ALIAS. Mojibake-grenen slo alt opp gjennom
+    // aliasene, plassholder-grenen bare mot slugene — så `/fr/h?y/1` (aliaset
+    // `høy`) 404-et mens `/fr/h%C3%83%C2%B8y/1` 301-et. Aliasene velges av
+    // dataene: hvert alias med et tegn utenfor ASCII.
+    test('?-formen av et alias gir boka aliaset peker på', () => {
+      const aliaser = Object.entries(bookAliases).filter(([a]) => /[^\x00-\x7f]/.test(a));
+      expect(aliaser.length).toBeGreaterThan(0);
+      const feil = aliaser
+        .map(([alias, id]) => ({ alias, id, fikk: bokFraSkadetLedd(plassholder(alias))?.id }))
+        .filter((r) => r.fikk !== r.id);
+      expect(feil).toEqual([]);
+    });
+
+    // #152: mojibake gjort TO ganger, og andre runde lest som windows-1252
+    // (0x83 → `ƒ`, U+0192) — ikke latin-1. WHATWG-dekoderen bak `mojibake()`
+    // ER windows-1252 (etiketten «latin1» peker dit), så formen bygges slik
+    // klienten bygger den.
+    test('dobbel mojibake via windows-1252 gir den publiserte adressen', () => {
+      for (const bok of SKADBARE) {
+        const slug = toUrlSlug(bok.short_name);
+        const skadet = encodeURI(`/nb/${mojibake(mojibake(slug))}/2`);
+        expect({ skadet, mal: skadetKapitteladresse(new URL(skadet, 'http://x')) }).toEqual({
+          skadet,
+          mal: encodeURI(`/nb/${slug}/2`),
+        });
+      }
+    });
+
     test('en ukjent bok gjetter den ikke fram', () => {
       for (const path of ['/nb/1kr?x/2', '/nb/gnistrende/2', '/nb/1kr%C3%83%C2%B8nx/2', '/nb/matt/x']) {
         expect({ path, mal: skadetKapitteladresse(new URL(path, 'http://x')) }).toEqual({ path, mal: null });
@@ -123,6 +151,23 @@ describe('en skadet kapitteladresse regnes tilbake (#118)', () => {
     test('formene vakta bygger er dem loggen viser', () => {
       expect(skadedeAdresser('1krøn', 'en', 14)[0]).toBe('/en/1kr%C3%83%C2%B8n/14');
       expect(skadedeAdresser('1krøn', 'fr', 20)[1]).toBe('/fr/1kr?n/20');
+      expect(encodeURI(`/nn/${mojibake(mojibake('2krøn'))}/15`)).toBe('/nn/2kr%C3%83%C6%92%C3%82%C2%B8n/15');
+      expect(`/fr/${plassholder('høy')}/1`).toBe('/fr/h?y/1');
+    });
+
+    // #152, ordrett fra prod: MJ12bot og bingbot, begge 404 etter #118.
+    test('?-aliaset og den doble mojibaken 301-er til sida', async () => {
+      for (const [path, mal] of [
+        ['/fr/h?y/1', '/fr/h%C3%B8ys/1'],
+        ['/nn/2kr%C3%83%C6%92%C3%82%C2%B8n/15', '/nn/2kr%C3%B8n/15'],
+      ] as const) {
+        const res = await hopp(path);
+        expect({ path, status: res.status, videre: res.headers.get('location') }).toEqual({
+          path,
+          status: 301,
+          videre: mal,
+        });
+      }
     });
 
     test('bingbots og MJ12bots adresser 301-er til sida', async () => {

@@ -35,6 +35,7 @@
  * mikrosekunder.
  */
 
+import { bookAliases } from './book-aliases.ts';
 import { booksData, getBookInfoBySlug, type BookInfo } from './books-data.ts';
 import { isLocale } from './i18n.ts';
 import { toUrlSlug } from './url-utils.ts';
@@ -51,7 +52,19 @@ const IKKE_ASCII = /[^\x00-\x7f]/;
 const PLASSHOLDERE = ['?', '\ufffd'];
 
 /**
- * UTF-8-bytene lest som latin-1, regnet tilbake.
+ * Tegnene windows-1252 legger i 0x80–0x9F, regnet tilbake til byten (#152).
+ *
+ * Der latin-1 har kontrolltegn, har windows-1252 typografi: 0x83 er `ƒ`
+ * (U+0192). En klient som leser mojibaken som windows-1252 i andre runde gir
+ * derfor `ÃƒÂ¸` for `ø` — et tegn over 0xFF som latin-1-veien alene måtte
+ * avvise. Bygget av WHATWG-dekoderen selv, ikke ført opp for hånd.
+ */
+const CP1252_TIL_BYTE = new Map<string, number>(
+  Array.from({ length: 0x20 }, (_, i) => [new TextDecoder('windows-1252').decode(Uint8Array.of(0x80 + i)), 0x80 + i]),
+);
+
+/**
+ * UTF-8-bytene lest som latin-1 (eller windows-1252), regnet tilbake.
  *
  * `1krøn` sendes som bytene `C3 B8` for `ø`; leses de som latin-1 blir de to
  * tegn (`Ã¸`), og kodes strengen så opp igjen som UTF-8, står det
@@ -61,9 +74,15 @@ const PLASSHOLDERE = ['?', '\ufffd'];
  */
 function fraMojibake(seg: string): string | null {
   if (!/[\u0080-\u00ff]/.test(seg)) return null;
-  for (const tegn of seg) if (tegn.codePointAt(0)! > 0xff) return null;
+  const bytes: number[] = [];
+  for (const tegn of seg) {
+    const kode = tegn.codePointAt(0)!;
+    const byte = kode <= 0xff ? kode : CP1252_TIL_BYTE.get(tegn);
+    if (byte === undefined) return null;
+    bytes.push(byte);
+  }
   try {
-    const ut = new TextDecoder('utf-8', { fatal: true }).decode(Uint8Array.from(seg, (c) => c.charCodeAt(0)));
+    const ut = new TextDecoder('utf-8', { fatal: true }).decode(Uint8Array.from(bytes));
     return ut === seg ? null : ut;
   } catch {
     return null;
@@ -96,16 +115,25 @@ export function bokFraSkadetLedd(seg: string): BookInfo | undefined {
     }
   }
 
-  for (const bok of booksData) {
-    const slug = toUrlSlug(bok.short_name);
-    if (!IKKE_ASCII.test(slug)) continue;
+  // Plassholderen prøves mot de SAMME leddene mojibake-grenen når gjennom
+  // `getBookInfoBySlug()`: slugene OG aliasene (#152 — `/fr/h?y/1` er aliaset
+  // `høy`). Gir formen flere bøker, gjettes det ikke.
+  const ledd = seg.toLowerCase();
+  const treff = new Set<BookInfo>();
+  for (const kjent of KJENTE_LEDD) {
     for (const tegn of PLASSHOLDERE) {
-      if (slug.replace(new RegExp(IKKE_ASCII.source, 'g'), tegn) === seg.toLowerCase()) return bok;
+      if (kjent.replace(IKKE_ASCII_ALLE, tegn) === ledd) treff.add(getBookInfoBySlug(kjent)!);
     }
   }
-
-  return undefined;
+  return treff.size === 1 ? [...treff][0] : undefined;
 }
+
+const IKKE_ASCII_ALLE = new RegExp(IKKE_ASCII.source, 'g');
+
+/** Hvert bokledd `getBookInfoBySlug()` kjenner som bærer et tegn utenfor ASCII. */
+const KJENTE_LEDD = [...booksData.map((b) => toUrlSlug(b.short_name)), ...Object.keys(bookAliases)].filter((l) =>
+  IKKE_ASCII.test(l),
+);
 
 /**
  * De to måtene å lese adressen på, og begge trengs.

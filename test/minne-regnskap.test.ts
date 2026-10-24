@@ -82,6 +82,7 @@ const UTELATT: Record<string, string> = {
   'books-data/booksById': 'bygget av booksData ved import — 66 bøker',
   'books-data/booksBySlug': 'bygget av booksData ved import — 66 bøker',
   'person-refs/REF_KEYS': 'literal nøkkelliste, bygget ved import',
+  'skadet-adresse/CP1252_TIL_BYTE': 'de 32 tegnene windows-1252 har i 0x80–0x9F, bygget ved import (#152)',
   'page-cache/heldBySender':
     'en avsender står bare der mens den holder en render- eller køplass — høyst tak + kø oppføringer (#126)',
 };
