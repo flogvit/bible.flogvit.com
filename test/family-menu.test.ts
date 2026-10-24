@@ -34,7 +34,25 @@ function portalDir(): string | null {
 
 const PORTAL = portalDir();
 const PORTAL_FILE = PORTAL ? resolve(PORTAL, 'design/family-menu.json') : null;
-const HAR_PORTALFIL = !!PORTAL_FILE && existsSync(PORTAL_FILE);
+
+/**
+ * Fasiten er fila på portalens MAIN, ikke det som tilfeldigvis ligger i
+ * utsjekken. Den står gjerne noen commits bak (eller på en arbeidsgren), og da
+ * holdt testen kopien fast i en liste portalen alt hadde forlatt — #149: hides
+ * var fjernet på portal/main, mens utsjekken fortsatt hadde den, så kopien
+ * kunne ikke følge uten at testen ble rød. Uten en main-ref leses fila.
+ */
+function portalFasit(): string | null {
+  if (!PORTAL || !PORTAL_FILE) return null;
+  for (const ref of ['origin/main', 'main']) {
+    const vis = Bun.spawnSync(['git', 'show', `${ref}:design/family-menu.json`], { cwd: PORTAL });
+    if (vis.exitCode === 0) return vis.stdout.toString();
+  }
+  return existsSync(PORTAL_FILE) ? readFileSync(PORTAL_FILE, 'utf8') : null;
+}
+
+const PORTAL_FASIT = portalFasit();
+const HAR_PORTALFIL = PORTAL_FASIT !== null;
 const KOPI = JSON.parse(readFileSync(resolve(ROOT, 'src/lib/family-menu.json'), 'utf8'));
 
 describe('KOPIEN er portalens fil', () => {
@@ -47,7 +65,7 @@ describe('KOPIEN er portalens fil', () => {
   test.skipIf(!HAR_PORTALFIL)(
     'src/lib/family-menu.json er portal/design/family-menu.json, felt for felt (hoppet over: portalfila finnes ikke ennå — flogvit-com#314)',
     () => {
-      const portal = JSON.parse(readFileSync(PORTAL_FILE!, 'utf8'));
+      const portal = JSON.parse(PORTAL_FASIT!);
       const { _om: _a, ...kopi } = KOPI;
       const { _om: _b, ...fasit } = portal;
       expect(kopi).toEqual(fasit);
