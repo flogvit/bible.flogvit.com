@@ -1,5 +1,15 @@
 # Release notes
 
+## 2026-10-24 — New content from free-bible: a proofread New Testament and many more cross-references
+
+**Polish**
+- The New Testament in both Norwegian translations (OSNB and OSNN) has been proofread: a second translation pass corrected places where the meaning had drifted, while grammar and style were left alone.
+- Many more cross-references: from 140,854 to 219,375. New ones cover Leviticus to Deuteronomy, Joshua 1–15 and 1 Samuel to 1 Chronicles, and the English edition now has cross-references for John.
+- People who share a name are now told apart verse by verse, so a verse links to the right person rather than to a namesake.
+
+**Bug fixes**
+- Joel chapter 4 was missing from the Hebrew original text. It is there now, all 21 verses.
+- A spelling error in 1 Peter 2:12 in the nynorsk translation is corrected.
 ## 2026-10-24 — Maintenance round: FLOGVIT menu schema and dependency updates
 
 **Behind the scenes**
