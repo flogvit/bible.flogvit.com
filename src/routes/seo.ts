@@ -98,8 +98,14 @@ const DISALLOW = [
  * den ene vi helst vil ha inn. Hjelper det ikke, er neste håndtak en
  * UA-basert rate-limit i Caddy (flogvit-com-server) — et dyrere valg, og et
  * som koster synlighet.
+ *
+ * ClaudeBot (#150) er samme klasse: 62 372 forespørsler fra én adresse på 14
+ * timer 2026-10-22/23, topp 3,7 req/s, og 310 × 503 fra per-avsender-taket
+ * (#126) — som gjorde jobben sin, men bare demper en aktør vi aldri hadde bedt
+ * om noe. Den henter robots.txt hver time, og Anthropic dokumenterer at den
+ * respekterer `Crawl-delay`.
  */
-const CRAWL_DELAYS: Record<string, number> = { PerplexityBot: 2 };
+const CRAWL_DELAYS: Record<string, number> = { PerplexityBot: 2, ClaudeBot: 2 };
 
 /**
  * En navngitt gruppe ERSTATTER `*`-gruppa for den crawleren (RFC 9309

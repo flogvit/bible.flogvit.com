@@ -30,14 +30,18 @@ setDefaultTimeout(DB_TEST_TIMEOUT_MS);
 const app = createApp();
 
 /**
- * User-Agent-strengen slik den står uavkortet i Caddys access-logg i
- * bygevinduet. Produkt-tokenet vi skriver i robots.txt må finnes i den —
- * «Perplexity» eller «PerplexityBot/1.0» matcher ingen gruppe, og da er
- * seksjonen en stille no-op.
+ * Bygeaktørene, hver med User-Agent-strengen slik den står uavkortet i Caddys
+ * access-logg i sitt bygevindu. Produkt-tokenet vi skriver i robots.txt må
+ * finnes i den — «Perplexity» eller «PerplexityBot/1.0» matcher ingen gruppe,
+ * og da er seksjonen en stille no-op.
  */
-const MÅLT_UA =
-  'Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; PerplexityBot/1.0; +https://perplexity.ai/perplexitybot)';
-const BYGEAKTØREN = 'PerplexityBot';
+const BYGEAKTØRENE: Record<string, string> = {
+  // #86, 2026-08-07: 7 req/s fra sju sammenhengende adresser.
+  PerplexityBot:
+    'Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; PerplexityBot/1.0; +https://perplexity.ai/perplexitybot)',
+  // #150, 2026-10-22/23: 62 372 forespørsler på 14 timer fra 216.73.217.110.
+  ClaudeBot: 'Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; ClaudeBot/1.0; +claudebot@anthropic.com)',
+};
 
 /**
  * Taket for ÉN aktør, i forespørsler per sekund.
@@ -109,9 +113,9 @@ describe('crawl-delay (#86)', () => {
   // 2. AKTØREN — bygeaktøren fra målingen er faktisk navngitt, og tokenet er
   //    det hun kaller seg i loggen. Uten denne ville «fjern seksjonen helt»
   //    bestått alt det andre i stillhet.
-  test('bygeaktøren har sin egen seksjon, med tokenet fra loggen', () => {
-    expect(namedAgents(robots)).toContain(BYGEAKTØREN);
-    expect(MÅLT_UA.toLowerCase()).toContain(BYGEAKTØREN.toLowerCase());
+  test.each(Object.entries(BYGEAKTØRENE))('%s har sin egen seksjon, med tokenet fra loggen', (aktør, målt_ua) => {
+    expect(namedAgents(robots)).toContain(aktør);
+    expect(målt_ua.toLowerCase()).toContain(aktør.toLowerCase());
   });
 
   test('det FINNES en navngitt seksjon — ellers måler de to under ingenting', () => {

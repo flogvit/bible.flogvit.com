@@ -2134,6 +2134,18 @@ rask, og med taket på 6 holder én slik aktør til å fylle semaforen alene.
   slengen: `parseRobots(txt, agent)` velger gruppe som RFC-en, `namedAgents()`
   og `crawlDelayFor()` leser resten. Åtte mutasjoner kjørt.
 
+#### ClaudeBot er den andre aktøren i kartet (#150)
+
+Samme klasse, målt 2026-10-22T18Z–10-23T08Z: 62 372 forespørsler fra
+216.73.217.110 (`ClaudeBot/1.0`) på 14 timer, topp 3,7 req/s, og 310 av de
+361 × 503 flata ga på to uker. Per-avsender-taket (#126) holdt avvisningene på
+avsenderen, så ingen leser merket noe — men 503-ene sto som «5xx» overalt der
+noen teller dem, og vi hadde aldri bedt aktøren om noe. Den henter robots.txt
+hver time, og Anthropic dokumenterer at den respekterer `Crawl-delay`
+(support.claude.com, artikkel 8896518). `CRAWL_DELAYS` fikk `ClaudeBot: 2`;
+`BYGEAKTØRENE` i vakta bærer hver aktørs målte UA. Verifiseres som #86, med
+`/ClaudeBot/` i awk-en og `fra` = utrullingen av #150.
+
 ### Taket ser AVSENDEREN — én adresse får ikke ta alle plassene (#126)
 
 Fjerde gang (flogvit-com-server#255, #260, #268): én adresse, 13.140.37.198,
