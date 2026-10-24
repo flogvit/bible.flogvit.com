@@ -108,8 +108,6 @@ describe('en skadet kapitteladresse regnes tilbake (#118)', () => {
       }
     });
 
-    // Den gjetter aldri (#61): en adresse som ikke regner seg tilbake til en bok
-    // vi HAR, blir stående som den er.
     // #152: `?`-formen av et ALIAS. Mojibake-grenen slo alt opp gjennom
     // aliasene, plassholder-grenen bare mot slugene — så `/fr/h?y/1` (aliaset
     // `høy`) 404-et mens `/fr/h%C3%83%C2%B8y/1` 301-et. Aliasene velges av
@@ -138,6 +136,8 @@ describe('en skadet kapitteladresse regnes tilbake (#118)', () => {
       }
     });
 
+    // Den gjetter aldri (#61): en adresse som ikke regner seg tilbake til en bok
+    // vi HAR, blir stående som den er.
     test('en ukjent bok gjetter den ikke fram', () => {
       for (const path of ['/nb/1kr?x/2', '/nb/gnistrende/2', '/nb/1kr%C3%83%C2%B8nx/2', '/nb/matt/x']) {
         expect({ path, mal: skadetKapitteladresse(new URL(path, 'http://x')) }).toEqual({ path, mal: null });
