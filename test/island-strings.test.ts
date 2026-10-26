@@ -29,6 +29,15 @@ const NORWEGIAN_WORDS = [
   'personer', 'leseplaner',
 ];
 
+/**
+ * Kopier av PORTALENS filer, ikke øyer vi skriver. `ny-versjon.js`
+ * (flogvit-com#339) bærer sin egen ordbok over åtte språk, valgt etter
+ * `<html lang>` — norsk står der med vilje, ved siden av de sju andre. Strengene
+ * er `version.*` i portalens `chrome-i18n.json` og holdes like av portalens
+ * test; kopien holdes lik portalen av `ny-versjon.test.ts`.
+ */
+const PORTAL_COPIES = new Set(['ny-versjon.js']);
+
 const WORD_RE = new RegExp(`\\b(${NORWEGIAN_WORDS.join('|')})\\b`, 'i');
 const NORDIC_RE = /[æøåÆØÅ]/;
 
@@ -99,7 +108,7 @@ describe('klient-øyene', () => {
   it('har ingen norsk tekst i strenglitteraler', () => {
     const offenders: string[] = [];
 
-    for (const file of readdirSync(JS_DIR).filter((f) => f.endsWith('.js')).sort()) {
+    for (const file of readdirSync(JS_DIR).filter((f) => f.endsWith('.js') && !PORTAL_COPIES.has(f)).sort()) {
       const code = stripComments(readFileSync(join(JS_DIR, file), 'utf8'));
       code.split('\n').forEach((line, i) => {
         for (const s of stringLiterals(line)) {

@@ -18,12 +18,13 @@ import { DEFAULT_LOCALE, LOCALES, href, makeT, ogLocale, type Locale, type Trans
 import { tCtx, islandStrings, type MessageKey } from '../lib/i18n.ts';
 import { absoluteUrl } from '../lib/site-url.ts';
 import { assetUrl } from '../lib/static-cache.ts';
+import { buildId } from '../lib/build-id.ts';
 import { shareCard, type ShareCard } from '../lib/share-card.ts';
 import familyMenu from '../lib/family-menu.json' with { type: 'json' };
 
 /**
  * Strenger klient-øyene som lastes på HVER side trenger: plus-CTA-en (plus.js),
- * kommandopaletten (cmdk.js), oppdaterings-banneret (pwa.js) og
+ * kommandopaletten (cmdk.js), nettstatus-merket (pwa.js) og
  * versforhåndsvisningen (ref-preview.js). Alle fire bygger DOM selv og sto
  * dermed utenfor ordboka — de var norske på alle åtte språk (#33).
  */
@@ -39,7 +40,7 @@ const CHROME_ISLAND_KEYS = [
   'nav.timeline', 'nav.readingTexts', 'nav.statistics', 'nav.translations',
   'pub.catalog',
   'foot.home', 'foot.about', 'foot.a11y', 'foot.offline',
-  'pwa.newVersion', 'pwa.updateNow', 'pwa.later', 'pwa.offline', 'pwa.backOnline',
+  'pwa.offline', 'pwa.backOnline',
   'ref.notFound',
   // Hurtigtast-hjelpen (shortcuts.js) — «?» virker på hver side.
   'kbd.title', 'kbd.general', 'kbd.toggleHelp', 'kbd.gotoSearch', 'kbd.normalView',
@@ -520,6 +521,22 @@ export interface LayoutProps {
   wide?: boolean;
 }
 
+/**
+ * «Ny versjon er lagt ut» (flogvit-com#339, portal/VERSJON.md): bygget siden
+ * ble rendret fra, og skriptet som spør `/versjon.json` om det som serveres nå.
+ * Én komponent, så sider med eget `<head>` (`/api/docs`) bærer det samme.
+ * Skriptet er en KOPI av portalens fil — `test/ny-versjon.test.ts` feller når
+ * den avviker. Klassisk `defer`, ikke modul: den har ingen import.
+ */
+export function VersionHead() {
+  return (
+    <>
+      <meta name="fv-versjon" content={buildId()} data-url="/versjon.json" />
+      <script src={assetUrl('/js/ny-versjon.js')} defer />
+    </>
+  );
+}
+
 /** Fullt HTML-dokument med familie-chromen. */
 export function Layout(props: LayoutProps) {
   const t = makeT(props.locale);
@@ -573,6 +590,7 @@ export function Layout(props: LayoutProps) {
           {(props.styles ?? []).map((s) => (
             <link rel="stylesheet" href={assetUrl(`/css/${s}`)} />
           ))}
+          <VersionHead />
         </head>
         {/* Strenger øyer som finnes på HVER side trenger (plus-CTA-en). Uten
             dem var CTA-en norsk på alle åtte språk — samme hull som #33: en

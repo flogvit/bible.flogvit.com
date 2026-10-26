@@ -38,6 +38,7 @@ import {
   type ApiParam,
 } from '../../lib/openapi.ts';
 import { absoluteUrl } from '../../lib/site-url.ts';
+import { VersionHead } from '../../views/layout.tsx';
 
 const r = new Hono();
 
@@ -195,6 +196,7 @@ function DocsPage() {
         <link rel="canonical" href={absoluteUrl('/api/docs')} />
         <link rel="stylesheet" href={assetUrl('/css/api-docs.css')} />
         <script type="module" src={assetUrl('/js/api-docs.js')} />
+        <VersionHead />
       </head>
       <body>
         <header class="doc-header">

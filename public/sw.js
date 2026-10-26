@@ -7,6 +7,8 @@
 //   fra IndexedDB på klientsiden — SW-en rører aldri IndexedDB selv).
 // - Utvalgte GET-API-er: network-first med cache-fallback; øvrige API-kall går
 //   alltid på nett.
+// - `/versjon.json` (flogvit-com#339): alltid nett, aldri cache. En ny worker
+//   venter til leseren ber om den — se install-handleren.
 
 const VERSION = 'v1';
 const STATIC_CACHE = `bibel-static-${VERSION}`;
@@ -93,13 +95,12 @@ async function cacheOfflineShell(lang, force = false) {
   return true;
 }
 
+// Ingen skipWaiting() her (flogvit-com#339): en ny worker VENTER til leseren
+// trykker «Last inn på nytt» på felles linje (pwa.js sender SKIP_WAITING), eller
+// til alle fanene er lukket. Tok den over av seg selv, lastet siden seg på nytt
+// midt i lesingen — og knappen hadde ingen ventende worker å ta i bruk.
 self.addEventListener('install', (event) => {
-  event.waitUntil(
-    caches
-      .open(STATIC_CACHE)
-      .then((cache) => cache.addAll(PRECACHE))
-      .then(() => self.skipWaiting()),
-  );
+  event.waitUntil(caches.open(STATIC_CACHE).then((cache) => cache.addAll(PRECACHE)));
 });
 
 self.addEventListener('activate', (event) => {
@@ -218,6 +219,9 @@ self.addEventListener('fetch', (event) => {
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return;
   if (request.headers.has(BYPASS_HEADER)) return; // nedlastingen: rett på nett, ingen kopi
+  // Bygget som serveres NÅ (flogvit-com#339). Et svar fra cache ville sagt at
+  // fanen er oppdatert når den ikke er det — alltid rett på nett.
+  if (url.pathname === '/versjon.json') return;
 
   if (isStatic(url)) {
     event.respondWith(staleWhileRevalidate(request));

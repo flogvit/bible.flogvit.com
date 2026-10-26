@@ -1,50 +1,50 @@
-// Global PWA-øy (#14): registrerer service worker, viser oppdaterings-banner
-// når en ny versjon er installert, og en offline/online-indikator.
+// Global PWA-øy (#14): registrerer service worker, melder en ny versjon som
+// er installert på FLOGVITs felles linje (ny-versjon.js, flogvit-com#339), og
+// viser en offline/online-indikator.
 
 import { readStrings } from './locale.js';
 
 const t = readStrings(document.body);
 
 if ('serviceWorker' in navigator) {
+  // Siden lastes på nytt BARE når leseren har bedt om det. `controllerchange`
+  // fyrer også når den første service workeren tar over en fane som aldri har
+  // hatt en (clients.claim), og en omlasting da ville kastet det leseren har
+  // skrevet — på første besøk.
+  let asked = false;
+
+  /** Den ventende workeren meldes på felles linje; knappen tar den i bruk. */
+  const announce = (reg) => {
+    window.dispatchEvent(
+      new CustomEvent('fv-ny-versjon', {
+        detail: {
+          last: () => {
+            if (!reg.waiting) return location.reload();
+            asked = true;
+            reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+          },
+        },
+      }),
+    );
+  };
+
   navigator.serviceWorker.register('/sw.js', { scope: '/' }).then((reg) => {
+    // Lagt klar i et tidligere besøk, og venter fortsatt.
+    if (reg.waiting && navigator.serviceWorker.controller) announce(reg);
     reg.addEventListener('updatefound', () => {
       const worker = reg.installing;
       if (!worker) return;
       worker.addEventListener('statechange', () => {
-        if (worker.state === 'installed' && navigator.serviceWorker.controller) showUpdateBanner(reg);
+        if (worker.state === 'installed' && navigator.serviceWorker.controller) announce(reg);
       });
     });
   }).catch(() => {});
 
-  let reloaded = false;
   navigator.serviceWorker.addEventListener('controllerchange', () => {
-    if (reloaded) return;
-    reloaded = true;
+    if (!asked) return;
+    asked = false;
     location.reload();
   });
-}
-
-function showUpdateBanner(reg) {
-  if (document.querySelector('.pwa-update')) return;
-  const bar = document.createElement('div');
-  bar.className = 'pwa-update';
-  bar.setAttribute('role', 'status');
-  const text = document.createElement('span');
-  text.textContent = t('pwa.newVersion');
-  const update = document.createElement('button');
-  update.type = 'button';
-  update.className = 'pwa-update-btn';
-  update.textContent = t('pwa.updateNow');
-  update.addEventListener('click', () => {
-    reg.waiting?.postMessage({ type: 'SKIP_WAITING' });
-  });
-  const later = document.createElement('button');
-  later.type = 'button';
-  later.className = 'pwa-update-later';
-  later.textContent = t('pwa.later');
-  later.addEventListener('click', () => bar.remove());
-  bar.append(text, update, later);
-  document.body.append(bar);
 }
 
 // ── Offline/online-indikator ─────────────────────────────────────────

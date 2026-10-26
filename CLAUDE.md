@@ -2488,6 +2488,29 @@ grunntekst, ord for ord, kryssreferanser, sammendrag, kontekst og innsikt.
   serveren (nettverksemulering per fane rammer ikke SW-ens egne kall) og åpner et
   kapittel som aldri er besøkt, med bredde målt på 320/390 px og 100/150 % tekst.
 
+## «Ny versjon er lagt ut» (#161, flogvit-com#339)
+
+Kontrakten er `portal/VERSJON.md`. `public/js/ny-versjon.js` er en KOPI av
+portalens `design/ny-versjon.js`, byte for byte — endres i portalen, skrives med
+`bun versjonskopi.ts --skriv` i meta-repoet. `VersionHead` i `layout.tsx` legger
+`<meta name="fv-versjon" content="<buildId()>">` og skriptet i hvert `<head>`
+(også `/api/docs`, som har sitt eget). `/versjon.json` svarer bygget som
+serveres nå, `no-store`, før sesjon og retry-budsjett. `buildId()`
+(`lib/build-id.ts`) hasher `public/js`, `public/css`, `public/styles.css` og
+`public/sw.js` — serverkode ber ingen laste på nytt.
+
+- **PWA-banneret er foldet inn i felles linje.** En ventende worker sender
+  `fv-ny-versjon` (pwa.js); knappen sender `SKIP_WAITING`, og siden lastes på
+  nytt BARE etter det klikket. `sw.js` kaller derfor ikke `skipWaiting()` ved
+  install — før lastet siden seg selv når workeren tok over, også ved første
+  besøk.
+- **Vakta er `test/ny-versjon.test.ts`:** kopien mot portalens `origin/main`,
+  bygg-id-en, hver side i `PAGES` + `/api/docs` + uprefikset 404, at hvert
+  skript og stilark sidene laster ligger under det som hashes, at SW-en aldri
+  svarer `/versjon.json`, og PWA-ens «last bare når leseren ba om det». Fire
+  mutasjoner kjørt. `island-strings.test.ts` hopper over kopien (den bærer
+  portalens ordbok på åtte språk).
+
 ## Verslister (#133)
 
 En liste kunne opprettes og navnet synkes, men ingenting la et vers i den, og
