@@ -70,7 +70,7 @@ meny.use(contextStorage());
 meny.get('/:locale', (c) => {
   const locale = c.req.param('locale') as Locale;
   c.set('locale', locale);
-  return c.html(FlogvitMenu({ t: makeT(locale) }));
+  return c.html(FlogvitMenu({ t: makeT(locale), locale }));
 });
 
 async function rendreMeny(locale: Locale): Promise<Oppføring[]> {
@@ -97,7 +97,7 @@ describe('MENYEN lister nøyaktig kopien', () => {
       const items = await rendreMeny(locale);
       const forventet: Oppføring[] = [
         { tekst: 'FLOGVIT.', href: FAMILY_MENU.home.href, current: false, soon: false, dot: null },
-        ...FAMILY_MENU.products.map((p) => ({
+        ...FAMILY_MENU.products.filter((p: { locales?: string[] }) => !p.locales || p.locales.includes(locale)).map((p) => ({
           tekst: `FLOGVIT.${p.name}`,
           href: p.status === 'coming' ? null : p.name === SELF_PRODUCT ? href(locale, '/') : p.href!,
           current: p.name === SELF_PRODUCT,
@@ -139,5 +139,12 @@ describe('FORMEN på kopien', () => {
       // Et produkt lenker eller er «kommer» — aldri begge, aldri ingen.
       expect(p.status === 'coming').toBe(!p.href);
     }
+  });
+});
+
+describe('en oppføring med locales vises bare på de språkene (flogvit-com#335)', () => {
+  test('menyen på nb viser menighet, på en gjør den ikke', async () => {
+    expect((await rendreMeny('nb')).map((o) => o.tekst)).toContain('FLOGVIT.menighet');
+    expect((await rendreMeny('en')).map((o) => o.tekst)).not.toContain('FLOGVIT.menighet');
   });
 });
