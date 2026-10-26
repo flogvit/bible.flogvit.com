@@ -27,6 +27,7 @@
 import { describe, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { instruksjonsfiler } from './instruksjonsfiler';
 
 const ROOT = resolve(import.meta.dir, '..');
 
@@ -167,9 +168,15 @@ const fakta: GitFakta = {
       .some(erArbeidsgren),
 };
 
-/** SHA-ene CLAUDE.md navngir. Deploy-tagger bærer også en («…-091af4e»). */
+/**
+ * SHA-ene dokumentasjonen navngir. Deploy-tagger bærer også en («…-091af4e»).
+ * Sakene står ordrett i prosjektskillene (#164), så alle instruksjonsfilene
+ * leses — ikke bare rotas `CLAUDE.md`.
+ */
 function shaerIClaudeMd(): string[] {
-  const tekst = readFileSync(resolve(ROOT, 'CLAUDE.md'), 'utf8');
+  const tekst = instruksjonsfiler()
+    .map((fil) => readFileSync(resolve(ROOT, fil), 'utf8'))
+    .join('\n');
   return [...new Set(tekst.match(/\b[0-9a-f]{7,40}\b/g) ?? [])];
 }
 
