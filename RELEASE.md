@@ -1,5 +1,19 @@
 # Release notes
 
+## 2026-10-26 — The Bible in your AI assistant: a guide to the MCP server
+
+**New features**
+- A new page, "The Bible in your AI assistant" (/mcp), in all eight languages: how to connect Claude, ChatGPT, Claude Code, Cursor, VS Code, Gemini CLI, Windsurf and other MCP clients to the site's MCP server, what the assistant can look up with example questions, and how to credit the CC BY 4.0 translations. It is linked from the footer and the About page.
+- Opening mcp.bible.flogvit.com in a browser now shows a short version of that guide in your language, instead of three lines of plain text. Assistants connected to the server notice no difference.
+- The server is listed in the official MCP Registry as io.github.flogvit/bible.
+
+**Polish**
+- The FLOGVIT menu shows the menighet entry only on the Norwegian pages, where it is useful.
+
+**Behind the scenes**
+- A new llms.txt points language models to the MCP server, the guide and the HTTP API.
+- The guide, the server's landing page and the registry entry are rendered from one source, and a test fails if the server gains a tool the guide does not describe.
+
 ## 2026-10-24 — Old story links keep working, and more garbled chapter links find their chapter
 
 **Polish**
