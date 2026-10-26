@@ -2401,6 +2401,12 @@ bibelteksten og studiestoffet som MCP-verktøy. Runbook og verktøyliste:
 - **Egen db-bruker med SELECT på `CONTENT_TABLES` og ingenting annet**
   (`mcp/src/grants.ts`). Får importen en ny innholdstabell, må grantene kjøres
   på nytt i prod; til da svarer `/healthz` 503 og navngir tabellen.
+- **Sida om den er `/<lang>/mcp`** (#157), og landingssida på
+  `mcp.bible.flogvit.com/` rendres fra de SAMME kildene: `src/lib/mcp-info.ts`
+  (adresse, verktøy, kodesnutter) og `mcp.*` i `src/lib/dictionaries-mcp.ts`.
+  **Nytt verktøy ⇒ ny rad i `TOOL_ROWS`**, ellers er `mcp/test/landing.test.ts`
+  rød. Registeroppføringen er `mcp/server.json`; hvor serveren er oppført og
+  hvordan den tas ned står i `mcp/README.md`.
 
 ## Lesesporing (GitHub #16)
 

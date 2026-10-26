@@ -432,6 +432,7 @@ function Footer({ t }: { t: Translator }) {
           <a href={lhref('/offline')}>{t('foot.offline')}</a>
           <a href={lhref('/tilgjengelighet')}>{t('foot.a11y')}</a>
           <a href={lhref('/changes')}>{t('foot.changes')}</a>
+          <a href={lhref('/mcp')}>{t('foot.mcp')}</a>
         </nav>
 
         {/* Fast legal-rad (portal/FOOTER.md): FLOGVIT.bible · Vilkår · Personvern ·

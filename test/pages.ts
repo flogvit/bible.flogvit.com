@@ -65,6 +65,8 @@ export const PAGES: { path: string; name: string; status?: number }[] = [
   { path: '/manuskripter/et-manuskript/rediger', name: 'manuskript-editor (rediger)' },
   { path: '/tilgjengelighet', name: 'tilgjengelighet' },
   { path: '/changes', name: 'endringslogg' },
+  // MCP-veiledningen (#157): kodeblokkene er den bredeste flata på sida.
+  { path: '/mcp', name: 'MCP-veiledning' },
   { path: '/finnes-ikke', name: '404-siden', status: 404 },
   // 410-siden (#58). En fjernet side RENDRES fortsatt — den skal si at den er
   // borte — og en side som ikke står her står utenfor alle invariantene.

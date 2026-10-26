@@ -13,6 +13,7 @@ import catalog from './pages/catalog.tsx';
 import user from './pages/user.tsx';
 import contrib from './pages/contrib.tsx';
 import misc from './pages/misc.tsx';
+import mcp from './pages/mcp.tsx';
 import changes from './pages/changes.tsx';
 import shared from './pages/shared.tsx';
 import reading from './pages/reading.tsx';
@@ -30,6 +31,7 @@ pages.route('/', user);
 pages.route('/', contrib);
 pages.route('/', changes);
 pages.route('/', shared);
+pages.route('/', mcp);
 pages.route('/', misc);
 pages.route('/', reading);
 

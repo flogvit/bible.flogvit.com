@@ -6,6 +6,8 @@
 // (sammendrag, kontekst, temaer) er egne pipelines med sin egen språkakse i
 // lib/lang.ts, og oversettes ikke herfra (Vegard 2026-07-25).
 
+import { MCP_DICTS, MCP_EN } from './dictionaries-mcp.ts';
+
 const en = {
   "chrome.menuAria": "FLOGVIT — all products",
   "chrome.homeAria": "FLOGVIT.bible — to the front page",
@@ -1062,6 +1064,7 @@ const en = {
   "ref.err.missingChapter": "Missing chapter",
   "ref.err.chapterCount": "{book} has {count} chapters",
   "ref.err.verseCount": "{book} {chapter} has {count} verses",
+  ...MCP_EN,
 };
 
 type Dict = Record<keyof typeof en, string>;
@@ -2120,6 +2123,7 @@ const nb: Dict = {
   "ref.err.missingChapter": "Mangler kapittel",
   "ref.err.chapterCount": "{book} har {count} kapitler",
   "ref.err.verseCount": "{book} {chapter} har {count} vers",
+  ...MCP_DICTS.nb,
 };
 
 const nn: Dict = {
@@ -3176,6 +3180,7 @@ const nn: Dict = {
   "ref.err.missingChapter": "Manglar kapittel",
   "ref.err.chapterCount": "{book} har {count} kapittel",
   "ref.err.verseCount": "{book} {chapter} har {count} vers",
+  ...MCP_DICTS.nn,
 };
 
 const sv: Dict = {
@@ -4232,6 +4237,7 @@ const sv: Dict = {
   "ref.err.missingChapter": "Kapitel saknas",
   "ref.err.chapterCount": "{book} har {count} kapitel",
   "ref.err.verseCount": "{book} {chapter} har {count} verser",
+  ...MCP_DICTS.sv,
 };
 
 const fr: Dict = {
@@ -5288,6 +5294,7 @@ const fr: Dict = {
   "ref.err.missingChapter": "Chapitre manquant",
   "ref.err.chapterCount": "{book} compte {count} chapitres",
   "ref.err.verseCount": "{book} {chapter} compte {count} versets",
+  ...MCP_DICTS.fr,
 };
 
 const es: Dict = {
@@ -6344,6 +6351,7 @@ const es: Dict = {
   "ref.err.missingChapter": "Falta el capítulo",
   "ref.err.chapterCount": "{book} tiene {count} capítulos",
   "ref.err.verseCount": "{book} {chapter} tiene {count} versículos",
+  ...MCP_DICTS.es,
 };
 
 const fi: Dict = {
@@ -7402,6 +7410,7 @@ const fi: Dict = {
   // etter kolon framfor i en setning som ville krevd genitiv av «{book}».
   "ref.err.chapterCount": "{book}: {count} lukua",
   "ref.err.verseCount": "{book} {chapter}: {count} jaetta",
+  ...MCP_DICTS.fi,
 };
 
 const de: Dict = {
@@ -8458,6 +8467,7 @@ const de: Dict = {
   "ref.err.missingChapter": "Kapitel fehlt",
   "ref.err.chapterCount": "{book} hat {count} Kapitel",
   "ref.err.verseCount": "{book} {chapter} hat {count} Verse",
+  ...MCP_DICTS.de,
 };
 
 export const DICTIONARIES = { en, nb, nn, sv, fr, es, fi, de };

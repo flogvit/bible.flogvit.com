@@ -16,6 +16,7 @@ import { Hono } from 'hono';
 import { DEFAULT_LOCALE, LOCALES, href, type Locale } from '../lib/i18n.ts';
 import { localesForPath, sitemapLocales, sitemapPaths } from '../lib/sitemap-paths.ts';
 import { absoluteUrl } from '../lib/site-url.ts';
+import { MCP_REGISTRY_NAME, MCP_URL } from '../lib/mcp-info.ts';
 
 export const seoRoutes = new Hono();
 
@@ -126,6 +127,40 @@ const ROBOTS = [
 
 seoRoutes.get('/robots.txt', (c) =>
   c.body(ROBOTS, 200, { 'content-type': 'text/plain; charset=utf-8' }),
+);
+
+/**
+ * llms.txt (llmstxt.org, #157): what the site is, for a language model that
+ * reads it — and above all the two ways to take the text with you without
+ * scraping the pages: the MCP server and the HTTP API. Uprefixed and English,
+ * like robots.txt: one file for every language.
+ */
+const LLMS_TXT = `# FLOGVIT.bible
+
+> The Bible in eight languages: the open OSEN (English), OSNB (Norwegian Bokmål) and OSNN (Norwegian Nynorsk) translations, made directly from the Hebrew and Greek under CC BY 4.0, the Hebrew and Greek source texts, and study material for every chapter — people, themes, stories, prophecies, cross-references.
+
+Quote Bible text with its source line: the translations are CC BY 4.0, and credit to the SBL Greek New Testament (https://sblgnt.com) and tanach.us must follow the text.
+
+## For AI assistants
+
+- [MCP server](${MCP_URL}): Streamable HTTP, no account or key. Add it as a custom connector in Claude, ChatGPT or any MCP client. In the MCP Registry as ${MCP_REGISTRY_NAME}.
+- [How to connect each client](${absoluteUrl('/en/mcp')}): Claude, ChatGPT, Claude Code, Cursor, VS Code and others; the tools, and the licence.
+
+## Data
+
+- [HTTP API reference](${absoluteUrl('/api/docs')}): every endpoint, with a request you can run.
+- [OpenAPI document](${absoluteUrl('/api/openapi.json')})
+- [The editions and their licences](${absoluteUrl('/en/oversettelser')})
+- [Source data (free-bible)](https://github.com/flogvit/free-bible)
+
+## Optional
+
+- [About the site](${absoluteUrl('/en/om')})
+- [Source code](https://github.com/flogvit/bible.flogvit.com)
+`;
+
+seoRoutes.get('/llms.txt', (c) =>
+  c.body(LLMS_TXT, 200, { 'content-type': 'text/plain; charset=utf-8' }),
 );
 
 seoRoutes.get('/sitemap.xml', (c) =>

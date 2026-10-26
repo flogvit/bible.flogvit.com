@@ -14,6 +14,7 @@ import { layoutProps, makeT, tFor, type Locale, lhref } from '../../lib/i18n.ts'
 import { booksData, bookName, bookAbbr } from '../../lib/books-data.ts';
 import { getOriginalLanguage, offlineEditions } from '../../lib/bible.ts';
 import { toUrlSlug } from '../../lib/url-utils.ts';
+import { MCP_URL } from '../../lib/mcp-info.ts';
 
 const r = new Hono<AppEnv>();
 
@@ -54,10 +55,10 @@ r.get('/om', (c) => {
             {/* MCP-serveren (#127): den fjerde veien, for den som spør en
                 KI-assistent framfor å lese sida. Adressen står som kode fordi
                 den skal LIMES INN i Claude eller ChatGPT, ikke klikkes; lenken
-                går til tjenestens egen side, som sier det samme. */}
+                går til veiledningen på /mcp (#157), med oppsett per klient. */}
             <p>
-              <a href="https://mcp.bible.flogvit.com/" target="_blank" rel="noopener noreferrer">
-                <code>https://mcp.bible.flogvit.com/mcp</code>
+              <a href={lhref('/mcp')}>
+                <code>{MCP_URL}</code>
               </a>{' '}
               &ndash; {t('about.mcp')}
             </p>

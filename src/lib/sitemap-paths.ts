@@ -55,6 +55,9 @@ export const STATIC_PATHS: readonly string[] = [
   // og en sitemap full av adresser som forsvinner er verre enn ingen.
   '/manuskripter/katalog',
   '/tilgjengelighet',
+  // Hvordan man kobler en KI-assistent til MCP-serveren (#157). Lenket fra
+  // bunnteksten og fra /om, på alle åtte språk.
+  '/mcp',
   // Lesetekstene (#77). Den er IKKE en side på alle åtte språk — se
   // `LANGUAGE_SCOPED_PATHS` under, som avgjør hvilke sitemaps den havner i.
   '/lesetekster',

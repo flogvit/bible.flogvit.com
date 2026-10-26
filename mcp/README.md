@@ -9,6 +9,13 @@ no key.
 
 ## Connect an assistant
 
+The full guide, for every client and in all eight languages, is
+[bible.flogvit.com/en/mcp](https://bible.flogvit.com/en/mcp). A browser that
+opens `https://mcp.bible.flogvit.com/` gets the short version of it. Both are
+rendered from `../src/lib/mcp-info.ts` and the `mcp.*` keys in
+`../src/lib/dictionaries-mcp.ts`, and `test/landing.test.ts` holds the tool
+list there against `tools/list`.
+
 **Claude (desktop app and claude.ai):** Settings → Connectors → *Add custom
 connector*. Paste the address, leave authentication empty.
 
@@ -60,6 +67,41 @@ book names in all eight site languages, plus the Norwegian letter names
 
 Quoted Bible text carries its source line. The translations are CC BY 4.0, and
 the attribution has to follow the text wherever the assistant puts it.
+
+## Where it is listed, and how to take it down
+
+`server.json` is the entry in the official MCP Registry. Its `version` must be
+the server's `SERVER_VERSION` (`src/server.ts`), and the registry never accepts
+the same version twice: **change the entry ⇒ raise both**, then publish.
+
+```sh
+cd mcp
+mcp-publisher validate                                # checks against the live registry
+mcp-publisher login github --token "$(gh auth token)" # gh must be logged in as flogvit
+mcp-publisher publish
+curl -s 'https://registry.modelcontextprotocol.io/v0/servers?search=io.github.flogvit/bible'
+```
+
+`mcp-publisher` is `brew install mcp-publisher`. The namespace is GitHub
+(`io.github.flogvit/…`), not DNS (`com.flogvit/…`): flogvit.com's DNS is edited
+by hand at Domeneshop, and a GitHub login is something a script can do.
+
+| Where | How it got there | Take it down |
+|---|---|---|
+| [MCP Registry](https://registry.modelcontextprotocol.io/v0/servers?search=io.github.flogvit/bible) | `mcp-publisher publish` (above) | `mcp-publisher status --status deleted --all-versions --message "<why>" io.github.flogvit/bible` — hides it; `--status active` brings it back. The registry never deletes metadata. |
+| [Glama](https://glama.ai/mcp/connectors) | reads the registry by itself | goes with the registry entry |
+| PulseMCP | reads the registry by itself (its own form is closed) | goes with the registry entry |
+| [mcp.so](https://mcp.so) | an issue on `chatmcp/mcpso` | close the issue and ask there |
+| [Smithery](https://smithery.ai) | `smithery.ai/new`, logged in as flogvit | delete the server in Smithery's settings |
+| [awesome-remote-mcp-servers](https://github.com/punkpeye/awesome-remote-mcp-servers) | a PR adding one entry under Knowledge & Memory | close the PR; once merged, a PR removing the lines. Remote-only servers go in this list, not in `awesome-mcp-servers` — its CONTRIBUTING says so. |
+| Claude's connector directory | `claude.ai/directory/manage`, as the owner | remove the listing in the same portal |
+
+What each one got, and when, is in issue #157 on GitHub.
+
+The guide page is `/mcp` in `../src/routes/pages/mcp.tsx`. Removing it means
+removing the route, the footer link in `../src/views/layout.tsx`, `/mcp` in
+`../src/lib/sitemap-paths.ts` and `test/pages.ts`, and the pointer in
+`llms.txt` (`../src/routes/seo.ts`) — then deploying bibel.
 
 ## Run it locally
 

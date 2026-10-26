@@ -15,9 +15,10 @@ import { getVerse } from '../../src/lib/bible.ts';
 import { CONTENT_TABLES } from '../../src/lib/content-sources.ts';
 import { getSql, withRetryBudget } from '../../src/lib/db.ts';
 import { registerTools } from './tools.ts';
+import { ABOUT, landingHtml, wantsHtml } from './landing.ts';
 
 export const SERVER_NAME = 'flogvit-bible';
-const SERVER_VERSION = '1.0.0';
+export const SERVER_VERSION = '1.0.0';
 
 const INSTRUCTIONS = `Bible text and study material from bible.flogvit.com.
 
@@ -72,13 +73,6 @@ export function limitsFromEnv(): Limits {
     dbBudgetMs: 10_000,
   };
 }
-
-const ABOUT = `This is the MCP server for bible.flogvit.com.
-
-Add https://mcp.bible.flogvit.com/mcp as a custom connector in Claude, ChatGPT
-or any other MCP client to read and search the Bible from the assistant.
-No account or key is needed.
-`;
 
 /** Content tables this database user cannot read. */
 async function ungranted(): Promise<string[]> {
@@ -147,7 +141,13 @@ export function createHandler(limits: Limits): (req: Request) => Promise<Respons
   return async (req: Request): Promise<Response> => {
     const { pathname } = new URL(req.url);
     if (pathname === '/healthz') return withRetryBudget(health, limits.dbBudgetMs);
-    if (pathname === '/') return new Response(ABOUT, { headers: { 'content-type': 'text/plain; charset=utf-8' } });
+    if (pathname === '/') {
+      // A browser gets the landing page (#157); everything else the text it always got.
+      const vary = { vary: 'Accept, Accept-Language' };
+      if (!wantsHtml(req)) return new Response(ABOUT, { headers: { 'content-type': 'text/plain; charset=utf-8', ...vary } });
+      const { html, locale } = landingHtml(req);
+      return new Response(html, { headers: { 'content-type': 'text/html; charset=utf-8', 'content-language': locale, ...vary } });
+    }
     const icon = ICONS.find((i) => i.path === pathname);
     if (icon) {
       return new Response(Bun.file(PUBLIC_DIR + icon.path), {
