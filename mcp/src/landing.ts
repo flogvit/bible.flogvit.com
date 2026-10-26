@@ -58,7 +58,7 @@ h2 { font-size: 1.125rem; margin: 2rem 0 .5rem; }
 .addr small { color: var(--ink-2); }
 .addr code { font-size: 1.125rem; overflow-wrap: anywhere; user-select: all; }
 ol { padding-left: 1.5rem; } li { margin-bottom: .5rem; }
-pre { overflow-x: auto; margin: 0; padding: .75rem 1rem; background: var(--paper-2); border: 1px solid var(--border); border-radius: 6px; font-size: .875rem; }
+pre { overflow-x: auto; white-space: pre-wrap; overflow-wrap: anywhere; margin: 0; padding: .75rem 1rem; background: var(--paper-2); border: 1px solid var(--border); border-radius: 6px; font-size: .875rem; }
 a { color: var(--gold); }
 .more { margin-top: 2.5rem; padding-top: 1.5rem; border-top: 1px solid var(--border); }
 .more a { font-weight: 600; }
