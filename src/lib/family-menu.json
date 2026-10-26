@@ -21,8 +21,10 @@
     "",
     "locales (valgfri) er språkene oppføringen vises på, med kodene fra",
     "locales.json. Uten feltet vises den på alle. Hver flate filtrerer på sidas",
-    "språk, så ingen flate har et eget unntak for et produkt: menighet er bare",
-    "norsk (flogvit-com#335) og står derfor med [\"nb\", \"nn\"]."
+    "språk, så ingen flate har et eget unntak for et produkt (flogvit-com#335).",
+    "",
+    "menighet står ikke her før eieren har sagt «Send ut» (portal#44,",
+    "flogvit-com-menighet#16). Da kommer den tilbake med [\"nb\", \"nn\"]."
   ],
   "home": { "href": "https://flogvit.com/" },
   "products": [
@@ -35,7 +37,6 @@
     { "name": "bible", "href": "https://bible.flogvit.com/", "accent": "laer", "dot": { "light": "#7a4a21", "dark": "#d9a06b" } },
     { "name": "eventphotos", "href": "https://eventphotos.flogvit.com/", "accent": "magenta", "dot": { "light": "#9c2f92", "dark": "#e79ae0" } },
     { "name": "gallery", "href": "https://gallery.flogvit.com/", "accent": "skifer", "dot": { "light": "#3f5b75", "dark": "#a3bdd4" } },
-    { "name": "menighet", "href": "https://menighet.flogvit.com/", "accent": "furu", "dot": { "light": "#2d6a5a", "dark": "#7fc9b0" }, "locales": ["nb", "nn"] },
     { "name": "photo", "status": "coming", "accent": "baer", "dot": { "light": "#b0355f", "dark": "#ef8fb1" } }
   ],
   "account": { "href": "https://flogvit.com/konto/", "label": "menu.accountSettings" }
