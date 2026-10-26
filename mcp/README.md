@@ -86,15 +86,22 @@ curl -s 'https://registry.modelcontextprotocol.io/v0/servers?search=io.github.fl
 (`io.github.flogvit/…`), not DNS (`com.flogvit/…`): flogvit.com's DNS is edited
 by hand at Domeneshop, and a GitHub login is something a script can do.
 
-| Where | How it got there | Take it down |
+| Where | Status (2026-10-26) | Take it down |
 |---|---|---|
-| [MCP Registry](https://registry.modelcontextprotocol.io/v0/servers?search=io.github.flogvit/bible) | `mcp-publisher publish` (above) | `mcp-publisher status --status deleted --all-versions --message "<why>" io.github.flogvit/bible` — hides it; `--status active` brings it back. The registry never deletes metadata. |
-| [Glama](https://glama.ai/mcp/connectors) | reads the registry by itself | goes with the registry entry |
+| [MCP Registry](https://registry.modelcontextprotocol.io/v0/servers?search=io.github.flogvit/bible) | published, 1.0.0 | `mcp-publisher status --status deleted --all-versions --message "<why>" io.github.flogvit/bible` — hides it; `--status active` brings it back. The registry never deletes metadata. |
+| [Glama](https://glama.ai/mcp/connectors/io.github.flogvit/bible) | listed, read from the registry | goes with the registry entry |
 | PulseMCP | reads the registry by itself (its own form is closed) | goes with the registry entry |
-| [mcp.so](https://mcp.so) | an issue on `chatmcp/mcpso` | close the issue and ask there |
-| [Smithery](https://smithery.ai) | `smithery.ai/new`, logged in as flogvit | delete the server in Smithery's settings |
-| [awesome-remote-mcp-servers](https://github.com/punkpeye/awesome-remote-mcp-servers) | a PR adding one entry under Knowledge & Memory | close the PR; once merged, a PR removing the lines. Remote-only servers go in this list, not in `awesome-mcp-servers` — its CONTRIBUTING says so. |
-| Claude's connector directory | `claude.ai/directory/manage`, as the owner | remove the listing in the same portal |
+| [mcp.so](https://mcp.so) | submitted: chatmcp/mcpso#6153 | close the issue and ask there |
+| [mcpservers.org](https://mcpservers.org/remote-mcp-servers) | submitted through the free form (review within two weeks) | email contact@mcpservers.org |
+| [awesome-remote-mcp-servers](https://github.com/punkpeye/awesome-remote-mcp-servers) | PR punkpeye/awesome-remote-mcp-servers#2991, from the fork `flogvit/awesome-remote-mcp-servers` | close the PR; once merged, a PR removing the three lines. Remote-only servers go in this list, not in `awesome-mcp-servers` — its CONTRIBUTING says so. |
+| [Smithery](https://smithery.ai/new) | **not submitted** — needs a login as flogvit | delete the server in Smithery's settings |
+| [cursor.directory](https://cursor.directory/mcp/new) | **not submitted** — needs a login | remove it there |
+| Claude's connector directory | **not submitted** — only a Pro/Max/Team account can submit, at `claude.ai/directory/manage` → Submit new → MCP connector | remove the listing in the same portal |
+
+The three that are not submitted need nothing but the login: the address, the
+description and every field Anthropic's form asks for (one-liner, description,
+documentation and privacy URLs, support contact, use cases, example prompts)
+are written out in issue #157.
 
 What each one got, and when, is in issue #157 on GitHub.
 
