@@ -122,6 +122,8 @@
 
   async function sjekk() {
     if (!bygg || document.visibilityState === 'hidden') return;
+    // Står linja alt der, kan ikke noe svar endre noe før leseren har valgt.
+    if (document.querySelector('.fv-ny-versjon')) return;
     const naa = Date.now();
     if (naa - sist < PUSTEROM_MS) return;
     sist = naa;
