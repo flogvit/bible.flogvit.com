@@ -16,6 +16,8 @@
 - The guide, the server's landing page and the registry entry are rendered from one source, and a test fails if the server gains a tool the guide does not describe.
 - The new-version notice works from a build id the server exposes and the service worker checks. The shared notice script replaces the old banner styles and strings, and a new test suite covers it.
 - The MCP README now records which registry listings have been submitted and which are waiting on a login.
+- Once the new-version bar is showing, the tab stops asking whether there is a new version until you reload or choose «Later».
+
 ## 2026-10-24 — Old story links keep working, and more garbled chapter links find their chapter
 
 **Polish**
