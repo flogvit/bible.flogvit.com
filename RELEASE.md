@@ -1,15 +1,21 @@
 # Release notes
 
-## 2026-10-26 — The Bible in your AI assistant, and open tabs that tell you when there is a new version
+## 2026-10-26 — The Bible in your AI assistant, open tabs that tell you about a new version, and a new accessibility statement
 
 **New features**
 - A new page, "The Bible in your AI assistant" (/mcp), in all eight languages: how to connect Claude, ChatGPT, Claude Code, Cursor, VS Code, Gemini CLI, Windsurf and other MCP clients to the site's MCP server, what the assistant can look up with example questions, and how to credit the CC BY 4.0 translations. It is linked from the footer and the About page.
 - Opening mcp.bible.flogvit.com in a browser now shows a short version of that guide in your language, instead of three lines of plain text. Assistants connected to the server notice no difference.
 - The server is listed in the official MCP Registry as io.github.flogvit/bible.
 - A tab you left open now tells you when a new version of the site has been released, so you don't keep reading on an outdated page.
+- A new accessibility statement ("Accessibility" in the footer), the same on every FLOGVIT site and in all eight languages: how the site meets WCAG 2.1 AA, what does not yet, and how to tell us. The old statement contradicted itself about which WCAG version it followed.
 
 **Polish**
 - The FLOGVIT menu no longer lists the menighet entry for now. When it returns, it will show only on the Norwegian pages, where it is useful.
+- Screen readers now read Hebrew and Greek Bible text (Tanach, SBLGNT, and the gospel parallels) in Hebrew and Greek, and an English Bible shown on a page in another language in English.
+- Voice control and screen readers now get the same name for the search button and the account button as the one you see. The account button no longer says "Konto" in every language, and "(du leser)" in the gospel parallels is now translated.
+
+**Bug fixes**
+- In dark mode, several controls were light grey with light text and almost unreadable: the active chapter in the table of contents, the "Delete downloaded content" button, and the fields and sign-in button on the contribution form. The links in the FLOGVIT.plus prompt were too faint in light mode. All now meet the contrast requirement.
 
 **Behind the scenes**
 - A new llms.txt points language models to the MCP server, the guide and the HTTP API.
@@ -17,6 +23,7 @@
 - The new-version notice works from a build id the server exposes and the service worker checks. The shared notice script replaces the old banner styles and strings, and a new test suite covers it.
 - The MCP README now records which registry listings have been submitted and which are waiting on a login.
 - Once the new-version bar is showing, the tab stops asking whether there is a new version until you reload or choose «Later».
+- A new test checks every page type in a real browser against WCAG 2.1 AA with axe-core, visible keyboard focus and the language of Hebrew and Greek text, in light and dark mode, signed out and signed in, and turns red a year after the last review. One known gap remains and is listed in the statement: Hebrew and Greek words quoted inside explanations are not yet marked with their language.
 
 ## 2026-10-24 — Old story links keep working, and more garbled chapter links find their chapter
 
