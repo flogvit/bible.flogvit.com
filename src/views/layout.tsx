@@ -176,12 +176,12 @@ export interface FamilyMenu {
   home: { href: string };
   // status 'coming' = vises uten lenke, med «snart»-merket. accent er
   // portalens CSS-variabelnavn; prikken farges av dot.light/dot.dark.
-  products: { name: string; href?: string; status?: 'coming'; accent: string; dot: { light: string; dark: string } }[];
+  products: { name: string; href?: string; status?: 'coming'; accent: string; dot: { light: string; dark: string }; locales?: string[] }[];
   // label er en nøkkel i portalens chrome-i18n; her rendres chrome.accountItem.
   account: { href: string; label: string };
 }
 
-export function FlogvitMenu({ t }: { t: Translator }) {
+export function FlogvitMenu({ t, locale }: { t: Translator; locale: Locale }) {
   return (
     <span class="wordmark">
       <details class="fvmenu">
@@ -205,7 +205,8 @@ export function FlogvitMenu({ t }: { t: Translator }) {
               <span class="fvmenu-dot">.</span>
             </span>
           </a>
-          {FAMILY_MENU.products.map((p) => {
+          {/* An entry with `locales` is shown only in those languages (flogvit-com#335). */}
+          {FAMILY_MENU.products.filter((p) => !p.locales || p.locales.includes(locale)).map((p) => {
             const self = p.name === SELF_PRODUCT;
             const wm = (
               <span class="fvmenu-wm">
@@ -317,11 +318,11 @@ function AccountChip({ t }: { t: Translator }) {
   );
 }
 
-function Header({ t }: { t: Translator }) {
+function Header({ t, locale }: { t: Translator; locale: Locale }) {
   return (
     <header class="site-header">
       <div class="site-header-inner">
-        <FlogvitMenu t={t} />
+        <FlogvitMenu t={t} locale={locale} />
 
         {/* Hurtigsøk — åpner CommandPalette (øy, ISSUES.md #11). Uten JS
             faller den tilbake til søkesiden. */}
@@ -580,7 +581,7 @@ export function Layout(props: LayoutProps) {
           <a class="skip-link" href="#innhold">
             {tCtx()('common.skipToContent')}
           </a>
-          <Header t={t} />
+          <Header t={t} locale={props.locale} />
           <main id="innhold" class={props.wide ? 'site-main site-main-wide' : 'site-main'}>
             {props.children}
           </main>
