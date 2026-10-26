@@ -252,8 +252,12 @@ describe('upushet arbeid (#111)', () => {
 
     // Fila som IKKE er endringsloggen velges av treet, ikke av en literal:
     // en fil som forsvinner ville ellers gjort halvdelen til en tom påstand.
-    const annen = git('ls-tree', '--name-only', base)
+    // En FIL, ikke en katalog (#167): `.claude/` ble første oppføring i treet,
+    // og en katalog byttet ut med en blob i `mktree` gir ingen diff.
+    const annen = git('ls-tree', base)
       .ut.split('\n')
+      .filter((l) => l.split(' ')[1] === 'blob')
+      .map((l) => l.split('\t')[1]!)
       .filter((f) => f && f !== ENDRINGSLOGG)[0];
     expect(annen, 'fant ingen annen fil i treet å måle mot').toBeTruthy();
 
