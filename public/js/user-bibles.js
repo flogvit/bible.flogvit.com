@@ -56,6 +56,8 @@ async function applyUserPrimary(userBibleId, bibles) {
     const text = byVerse.get(n);
     if (text !== undefined) {
       plain.textContent = text;
+      // `lang` var osnb-tekstens; en egen bibels språk vet vi ikke (3.1.2, #163).
+      plain.removeAttribute('lang');
       verseEl.querySelector('.footnotes')?.remove(); // fotnotene hører til osnb-teksten
     } else {
       verseEl.classList.add('user-bible-missing');

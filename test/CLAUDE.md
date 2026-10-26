@@ -143,3 +143,36 @@ måler ingenting. Målt: fire samtidige hentinger etter `page-cache.test.ts` ga
 **Grense:** happy-dom lar seg ikke patche der `plus.js` overstyrer
 `localStorage.setItem`, så den stille skrivesperren for gratisbrukere må verifiseres i
 en ekte nettleser. Den brukersynlige porten (klikk registrerer ingenting) er dekket.
+
+## Tilgjengelighet — erklæringen og WCAG 2.1 AA-porten (#163)
+
+`/<lang>/tilgjengelighet` er FLOGVITs felles erklæring (kontrakten:
+`portal/TILGJENGELIGHET.md`). To filer er KOPIER av portalen, byte for byte —
+rediger dem aldri her: `src/lib/tilgjengelighet.ts` (siden, strengene,
+`kontroller()`) og `test/tilgjengelighet-sjekk.ts` (axe-core, fokus).
+Endres de i portalen: `bun tilgjengelighetkopi.ts --skriv` i meta-repoet.
+Bibels egne DATA står i `src/lib/tilgjengelighet-erklaering.ts`.
+
+**Porten:** `bun test test/tilgjengelighet.test.ts` (inngår i `bun test`).
+Den kjører axe (WCAG 2.0/2.1 A+AA), synlig fokus og `lang` på hebraisk/gresk
+i ekte Chrome, lys og mørk, utlogget og innlogget med Plus — matrisen står
+øverst i fila. Én nettleser, to faner. Rød betyr én av tre ting:
+
+1. **Et nytt brudd** — feilmeldingen sier side, regel og element. Rett det.
+   Kan det ikke rettes nå: eget issue merket `dux`, før det opp i `brudd` i
+   datafila (kriterium + tekst på en og nb), og ta akkurat den siden/regelen ut
+   av sjekken med en kommentar som peker på saken. Ingen unntaksliste.
+2. **«sist testet …, N dager siden»** — den årlige gjennomgangen. Gå gjennom
+   sidene med bare tastatur (Tab, Shift+Tab, Enter, Esc), 200 % zoom og 150 %
+   tekst på 320/390 px, rett det som er galt, og sett `testet` og `oppdatert`
+   til dagens dato. Deploy.
+3. **«kunne ikke måles»** — nettleseren svarte ikke (to forsøk). Det er
+   maskinen, ikke siden: kjør på nytt når lasten er nede.
+
+Ny sidetype ⇒ legg den i `test/pages.ts` (eller `SIDETYPER` i testen), og
+oppdater `omfang` i datafila. Temaet settes med `fv-prefs`-cookien FØR lasting:
+å bytte `data-fv-theme` etterpå målte farger midt i en `transition`.
+Kjente brudd nå: 3.1.2 for hebraiske/greske ord inne i forklarende prosa
+(#166) — derfor teller lang-sjekken bare tekstnoder uten latinske bokstaver.
+Footer-lenka står i den FASTE raden, med fellesdelens `lenketekst()`;
+kommandopalettens `foot.a11y` holdes lik den av testen.

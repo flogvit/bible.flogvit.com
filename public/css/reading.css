@@ -91,7 +91,9 @@
 }
 .toc-chapter-cell.is-active {
   background: var(--gold);
-  color: #fff8e4;
+  /* Temaets egen «tekst på aksent»: #fff8e4 sto fast og ga 2,15:1 mot den
+     lyse aksenten i mørk modus (1.4.3, #163). */
+  color: var(--on-accent);
   font-weight: 600;
 }
 
@@ -267,7 +269,7 @@
   padding: 6px 14px;
   border: 1px solid currentColor;
   border-radius: 999px;
-  background: var(--bg, #fff);
+  background: var(--surface);
   color: inherit;
   font-size: 0.85rem;
   cursor: pointer;
@@ -1679,7 +1681,7 @@ a.ins-hero-name:hover {
 
 .vd-work-meta {
   font-size: 0.85rem;
-  color: var(--text-muted, #6b6355);
+  color: var(--ink-2);
 }
 
 .vd-work-row {
@@ -1691,6 +1693,6 @@ a.ins-hero-name:hover {
 
 .vd-work-level {
   font-size: 0.8rem;
-  color: var(--text-muted, #6b6355);
+  color: var(--ink-2);
   white-space: nowrap;
 }

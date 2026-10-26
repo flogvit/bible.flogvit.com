@@ -301,6 +301,16 @@ export class Page {
     );
   }
 
+  /**
+   * Lar fanen oppføre seg som om den har fokus, også når den ikke er den
+   * fremste. To faner i samme nettleser deler ett vindusfokus: uten dette får
+   * bakgrunnsfanen aldri `:focus-visible`, og en fokussjekk der måler ingenting
+   * (#163).
+   */
+  async emulateFocus() {
+    await this.chrome.call('Emulation.setFocusEmulationEnabled', { enabled: true }, this.sessionId);
+  }
+
   /** Kjører `fn` i siden og gir tilbake returverdien (må være JSON-bar). */
   async evaluate<T, A extends unknown[]>(fn: (...args: A) => T, ...args: A): Promise<T> {
     const expression = `(${fn.toString()})(${args.map((a) => JSON.stringify(a)).join(',')})`;

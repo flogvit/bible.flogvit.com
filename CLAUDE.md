@@ -385,6 +385,14 @@ bibelteksten og studiestoffet som MCP-verktøy. Runbook og verktøyliste:
   3.1, `/api/docs`, vakta); hvert `prove.url` hentes av `test/api-docs.test.ts`.
   Ny rute ⇒ dokumentert eller rød. Ingen `swagger-ui-dist`, ingen CDN.
 
+## Tilgjengelighet (#163) — runbook i `test/CLAUDE.md`
+
+`/<lang>/tilgjengelighet` er FLOGVITs felles erklæring (`portal/TILGJENGELIGHET.md`).
+`src/lib/tilgjengelighet.ts` og `test/tilgjengelighet-sjekk.ts` er KOPIER av
+portalen — rediger dem aldri her. Bibels data: `src/lib/tilgjengelighet-erklaering.ts`.
+Porten er `test/tilgjengelighet.test.ts`; hva rødt betyr og hva du gjør med det
+står i `test/CLAUDE.md` → «Tilgjengelighet».
+
 ## Testene
 
 Kjør `bun test` og `bun run typecheck` før du ruller ut. FLOGVITs eget

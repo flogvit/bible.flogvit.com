@@ -7,7 +7,7 @@
 
 .contrib-help {
   margin: 0.25rem 0 0.75rem;
-  color: var(--text-muted, #666);
+  color: var(--ink-2);
   font-size: 0.9rem;
 }
 
@@ -33,7 +33,7 @@
 [data-credit-name-row] span {
   display: block;
   font-size: 0.85rem;
-  color: var(--text-muted, #666);
+  color: var(--ink-2);
   margin-bottom: 0.15rem;
 }
 
@@ -47,7 +47,7 @@
   padding: 0.4rem 0.5rem;
   border: 1px solid var(--border, #ccc);
   border-radius: 6px;
-  background: var(--bg, #fff);
+  background: var(--surface);
   color: inherit;
   font: inherit;
 }
@@ -58,7 +58,7 @@
 
 .contrib-freetext summary {
   cursor: pointer;
-  color: var(--text-muted, #666);
+  color: var(--ink-2);
 }
 
 .contrib-ref {
@@ -79,7 +79,7 @@
   padding: 0.4rem 0.5rem;
   border: 1px solid var(--border, #ccc);
   border-radius: 6px;
-  background: var(--bg, #fff);
+  background: var(--surface);
   color: inherit;
   font: inherit;
 }
@@ -88,7 +88,7 @@
   padding: 0.3rem;
   border: 1px solid var(--border, #ccc);
   border-radius: 6px;
-  background: var(--bg, #fff);
+  background: var(--surface);
   color: inherit;
 }
 
@@ -98,7 +98,7 @@
   font-size: 1.2rem;
   line-height: 1;
   cursor: pointer;
-  color: var(--text-muted, #888);
+  color: var(--ink-2);
   padding: 0 0.35rem;
 }
 
@@ -113,7 +113,7 @@
   padding: 0.3rem 0.45rem;
   border: 1px solid var(--border, #ccc);
   border-radius: 6px;
-  background: var(--bg, #fff);
+  background: var(--surface);
   color: inherit;
   font-size: 0.85rem;
 }
@@ -135,7 +135,7 @@
 .contrib-ref-preview {
   margin: 0.4rem 0 0;
   font-size: 0.85rem;
-  color: var(--text-muted, #555);
+  color: var(--ink-2);
 }
 
 .contrib-preview-unparsed {
@@ -151,7 +151,10 @@
   padding: 0.45rem 0.9rem;
   border: 1px solid var(--border, #bbb);
   border-radius: 8px;
-  background: var(--bg-raised, #f4f4f4);
+  /* `--bg-raised` finnes ikke: reserven #f4f4f4 ga lys knapp med lys tekst
+     i mørk modus (1.4.3, #163). Det samme gjaldt `--bg` (#fff bak skjemafeltene)
+     og `--text-muted` i hele fila: de er byttet til temaets egne variabler. */
+  background: var(--surface);
   color: inherit;
   font: inherit;
   cursor: pointer;
@@ -168,7 +171,7 @@
 }
 
 .contrib-status-error {
-  color: var(--danger, #b3261e);
+  color: var(--bad);
 }
 
 .contrib-review-note {
@@ -186,7 +189,7 @@
   padding: 0.4rem 0.5rem;
   border: 1px solid var(--border, #ccc);
   border-radius: 6px;
-  background: var(--bg, #fff);
+  background: var(--surface);
   color: inherit;
   font: inherit;
 }

@@ -15,6 +15,9 @@ import { booksData, bookName, bookAbbr } from '../../lib/books-data.ts';
 import { getOriginalLanguage, offlineEditions } from '../../lib/bible.ts';
 import { toUrlSlug } from '../../lib/url-utils.ts';
 import { MCP_URL } from '../../lib/mcp-info.ts';
+import { raw } from 'hono/html';
+import { STI, beskrivelse, lenketekst, side, tittel } from '../../lib/tilgjengelighet.ts';
+import { ERKLAERING } from '../../lib/tilgjengelighet-erklaering.ts';
 
 const r = new Hono<AppEnv>();
 
@@ -273,140 +276,22 @@ r.get('/om', (c) => {
   );
 });
 
-r.get('/tilgjengelighet', (c) => {
-  const t = tFor(c);
+// Tilgjengelighetserklæringen (#163, flogvit-com#341). Siden er FELLESSIDEN
+// (`lib/tilgjengelighet.ts`, en kopi av portalens fil) — samme tekst på alle
+// FLOGVIT-flatene, på åtte språk, etter EU-malen uutilsynet bygger på. Det som
+// er bibels eget, er dataene i `lib/tilgjengelighet-erklaering.ts`: status,
+// datoer og kjente brudd. Den gamle håndskrevne erklæringen sa «WCAG 2.2 AA» i
+// metabeskrivelsen og «2.1» i teksten, og datoene var fritekst ingen test
+// kunne holde den til.
+r.get(STI, (c) => {
+  const lp = layoutProps(c);
+  const locale = lp.locale;
   return c.html(
-    <Layout {...layoutProps(c)} title={`${t('foot.a11y')} — FLOGVIT.bible`} description={t('a11y.meta')} styles={['about.css']}>
+    <Layout {...lp} title={`${tittel(locale)} — FLOGVIT.bible`} description={beskrivelse(locale, ERKLAERING)} styles={['about.css']}>
       <div class="about-main">
         <div class="reading-container">
-          <Breadcrumbs items={[{ label: t('foot.a11y') }]} />
-
-          <h1>{t('a11y.h1')}</h1>
-
-          <section class="about-section">
-            <h2>{t('a11y.about')}</h2>
-            <p>{t('a11y.aboutBody')}</p>
-          </section>
-
-          <section class="about-section">
-            <h2>{t('a11y.status')}</h2>
-            <p>
-              <strong>{t('a11y.conformance')}</strong> {t('a11y.partial')}
-            </p>
-            <p>{t('a11y.tested')}</p>
-          </section>
-
-          <section class="about-section">
-            <h2>{t('a11y.limits')}</h2>
-            <p>{t('a11y.limitsIntro')}</p>
-            <ul>
-              <li>{t('a11y.lim1')}</li>
-              <li>{t('a11y.lim2')}</li>
-              <li>{t('a11y.lim3')}</li>
-            </ul>
-            <p>{t('a11y.limitsOutro')}</p>
-          </section>
-
-          <section class="about-section">
-            <h2>{t('a11y.whatWeDo')}</h2>
-            <h3>{t('a11y.structure')}</h3>
-            <ul>
-              <li>{t('a11y.s1')}</li>
-              <li>{t('a11y.s2')}</li>
-              <li>{t('a11y.s3')}</li>
-              <li>{t('a11y.s4')}</li>
-              <li>{t('a11y.s5')}</li>
-              <li>{t('a11y.s6')}</li>
-              <li>{t('a11y.s7')}</li>
-              <li>{t('a11y.s8')}</li>
-            </ul>
-
-            <h3>{t('a11y.visual')}</h3>
-            <ul>
-              <li>{t('a11y.v1')}</li>
-              <li>{t('a11y.v2')}</li>
-              <li>{t('a11y.v3')}</li>
-              <li>{t('a11y.v4')}</li>
-              <li>{t('a11y.v5')}</li>
-              <li>{t('a11y.v6')}</li>
-              <li>{t('a11y.v7')}</li>
-              <li>{t('a11y.v8')}</li>
-            </ul>
-
-            <h3>{t('about.navigation')}</h3>
-            <ul>
-              <li>{t('a11y.n1')}</li>
-              <li>{t('a11y.n2')}</li>
-              <li>{t('a11y.n3')}</li>
-              <li>{t('a11y.n4')}</li>
-              <li>{t('a11y.n5')}</li>
-            </ul>
-
-            <h3>{t('a11y.keyboard')}</h3>
-            <ul>
-              <li>{t('a11y.k1')}</li>
-              <li>{t('a11y.k2')}</li>
-              <li>{t('a11y.k3')}</li>
-              <li>{t('a11y.k4')}</li>
-            </ul>
-
-            <h3>{t('about.shortcuts')}</h3>
-            <p>{t('about.pressKey1')} <kbd>?</kbd> {t('a11y.pressKey2')}</p>
-            <ul>
-              <li><kbd>?</kbd> - {t('a11y.scHelp')}</li>
-              <li><kbd>/</kbd> {t('common.or')} <kbd>Ctrl</kbd>+<kbd>K</kbd> - {t('a11y.scSearch')}</li>
-              <li><kbd>←</kbd> / <kbd>→</kbd> - {t('about.sc.prevNextChapter')}</li>
-              <li><kbd>1-9</kbd> - {t('about.sc.jumpVerse')}</li>
-              <li><kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>H</kbd> - {t('a11y.scHome')}</li>
-            </ul>
-
-            <h3>{t('a11y.forms')}</h3>
-            <ul>
-              <li>{t('a11y.f1')}</li>
-              <li>{t('a11y.f2')}</li>
-              <li>{t('a11y.f3')}</li>
-            </ul>
-
-            <h3>{t('a11y.testing')}</h3>
-            <ul>
-              <li>{t('a11y.t1')}</li>
-              <li>{t('a11y.t2')}</li>
-              <li>{t('a11y.t3')}</li>
-            </ul>
-          </section>
-
-          <section class="about-section">
-            <h2>{t('a11y.feedback')}</h2>
-            <p>{t('a11y.feedbackBody')}</p>
-            <p>
-              <strong>{t('about.contact')}:</strong>
-            </p>
-            <p>
-              {t('about.email')} <a href="mailto:support@flogvit.com">support@flogvit.com</a>
-            </p>
-            <p>
-              {t('a11y.reportGitHub')}{' '}
-              <a href="https://github.com/flogvit/free-bible/issues" target="_blank" rel="noopener noreferrer">
-                github.com/flogvit/free-bible/issues
-              </a>
-            </p>
-          </section>
-
-          <section class="about-section">
-            <h2>{t('a11y.authority')}</h2>
-            <p>{t('a11y.authorityBody')}</p>
-            <p>
-              <a href="https://uutilsynet.no/" target="_blank" rel="noopener noreferrer">
-                uutilsynet.no
-              </a>
-            </p>
-          </section>
-
-          <section class="about-section">
-            <p>
-              <em>{t('a11y.lastUpdated')}</em>
-            </p>
-          </section>
+          <Breadcrumbs items={[{ label: lenketekst(locale) }]} />
+          <div class="about-section">{raw(side(locale, ERKLAERING))}</div>
         </div>
       </div>
     </Layout>,

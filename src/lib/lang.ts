@@ -187,3 +187,18 @@ export function pickLocalisedText(
   }
   return null;
 }
+
+/**
+ * Språket en GRUNNTEKST-streng står på, ut fra skriften: `he` for hebraisk,
+ * `el` for gresk (samme koder som lesesida bruker), ellers `undefined`.
+ *
+ * For tekst som kommer fra dataene uten et språkfelt som passer — et
+ * utgavenavn som «תנ"ך» står i `name_native`, mens utgavens `lang` sier noe om
+ * BIBELTEKSTEN, ikke om navnet (SBLGNT heter «SBL Greek New Testament»).
+ * WCAG 3.1.2: uten `lang` leser skjermleseren hebraisk med sidens uttale (#163).
+ */
+export function originalScriptLang(text: string): 'he' | 'el' | undefined {
+  if (/[֐-׿]/.test(text)) return 'he';
+  if (/[Ͱ-Ͽἀ-῿]/.test(text)) return 'el';
+  return undefined;
+}

@@ -682,11 +682,14 @@ async function GospelColumn({
   gospel,
   passage,
   bible,
+  lang,
   isCurrentGospel,
 }: {
   gospel: Gospel;
   passage: GospelParallelPassage | undefined;
   bible: string;
+  /** Utgavens språk, som versteksten (3.1.2, #163). */
+  lang: string;
   isCurrentGospel: boolean;
 }) {
   const t = tCtx();
@@ -707,7 +710,7 @@ async function GospelColumn({
       <div class="gospel-column-header">
         <span class="gospel-badge">
           {gospelName(gospel)}
-          {isCurrentGospel && <span class="gospel-current-label">(du leser)</span>}
+          {isCurrentGospel && <span class="gospel-current-label">({t('rd.youAreReading')})</span>}
         </span>
         {!isCurrentGospel && (
           <a href={lhref(verseUrl(passage.book_short_name || '', passage.chapter, passage.verse_start, passage.verse_end))} class="gospel-reference-link">
@@ -719,7 +722,7 @@ async function GospelColumn({
         {verses.map((v) => (
           <p class="gospel-verse">
             <span class="gospel-verse-num">{v.verse}</span>
-            {v.text}
+            <span lang={lang}>{v.text}</span>
           </p>
         ))}
       </div>
@@ -732,12 +735,14 @@ function ChapterParallels({
   chapter,
   parallels,
   bible,
+  lang,
   t,
 }: {
   bookId: number;
   chapter: number;
   parallels: GospelParallel[];
   bible: string;
+  lang: string;
   t: Translator;
 }) {
   const currentGospel = BOOK_ID_TO_GOSPEL[bookId];
@@ -782,6 +787,7 @@ function ChapterParallels({
                       gospel={g}
                       passage={parallel.passages?.[g]}
                       bible={bible}
+                      lang={lang}
                       isCurrentGospel={g === currentGospel}
                     />
                   ))}
@@ -1146,11 +1152,14 @@ function VerseBlock({
   data,
   bookId,
   secondary,
+  lang,
 }: {
   t: Translator;
   data: DisplayVerse;
   bookId: number;
   secondary: string | undefined;
+  /** Utgavens språk (3.1.2, #163) — på selve versteksten, ikke på knappene rundt. */
+  lang?: string;
 }) {
   const v = data.verse;
   const n = v.verse;
@@ -1169,7 +1178,7 @@ function VerseBlock({
         {n}
       </button>
       <span class="verse-text" data-verse-text>
-        <span data-verse-plain>{v.text}</span>
+        <span data-verse-plain lang={lang}>{v.text}</span>
         {v.footnotes && v.footnotes.length > 0 && <Footnotes footnotes={v.footnotes} />}
       </span>
       <VerseStrip
@@ -1783,6 +1792,14 @@ r.get('/:book/:chapter', async (c) => {
   );
   if (!data) return c.notFound();
   const bible = served.id;
+  // Språket versteksten står på (3.1.2, #163). Grunntekstene har faste koder
+  // (de samme som `lang` på grunnteksten ellers på sida); en leseutgave har
+  // språket fra `bible_editions`, som kandidatlista alt har lest — ingen ny
+  // spørring. En egen bibel (user:) er osnb på serveren.
+  const verseLang =
+    bible === 'tanach' ? 'he'
+    : bible === 'sblgnt' ? 'el'
+    : (candidates.find((x) => x.id === bible)?.lang ?? served.lang);
   // Hint når leseren ba om ett språk og fikk et annet (utgaven/kapittelet
   // er ikke oversatt ennå). Aldri ved eksplisitt valg.
   const untranslated = !explicitBible && !userBible && served.lang !== contentLang;
@@ -1949,7 +1966,7 @@ r.get('/:book/:chapter', async (c) => {
 
             <ChapterInsights t={t} insight={data.insight} />
 
-            <ChapterParallels t={t} bookId={book.id} chapter={chapter} parallels={data.parallels} bible={bible} />
+            <ChapterParallels t={t} bookId={book.id} chapter={chapter} parallels={data.parallels} bible={bible} lang={verseLang} />
 
             {/* Vises kun mens et utvalg står inne i versene (reading.js). */}
             <button type="button" class="mark-selection-read" data-mark-selection-read hidden>
@@ -1958,7 +1975,7 @@ r.get('/:book/:chapter', async (c) => {
 
             <section class="verses" data-verses>
               {data.verses.map((v) => (
-                <VerseBlock t={t} data={v} bookId={book.id} secondary={secondary} />
+                <VerseBlock t={t} data={v} bookId={book.id} secondary={secondary} lang={verseLang} />
               ))}
             </section>
 

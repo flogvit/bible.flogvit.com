@@ -9,6 +9,7 @@
 // innstillinger-knapp. Source Serif 4 beholdes som langlesningstypografi
 // (STYLE.md tillater det for langlesnings-produkter).
 
+import { STI, lenketekst } from '../lib/tilgjengelighet.ts';
 import { raw } from 'hono/html';
 import type { Child } from 'hono/jsx';
 import { getContext } from 'hono/context-storage';
@@ -307,12 +308,10 @@ function AccountChip({ t }: { t: Translator }) {
   }
   const name = user.displayName || user.email;
   return (
-    <a
-      class="account-chip account-chip-in"
-      href={ACCOUNT_URL}
-      aria-label={`Konto: ${name}`}
-      title={user.email}
-    >
+    // Navnet er det SYNLIGE: navnet og «plus» (WCAG 2.5.3, #163). Den gamle
+    // aria-labelen «Konto: <navn>» var norsk på alle åtte språk og utelot
+    // plus-merket leseren ser.
+    <a class="account-chip account-chip-in" href={ACCOUNT_URL} title={user.email}>
       <span class="account-chip-name">{name}</span>
       {user.plus && <span class="account-chip-plus">plus</span>}
     </a>
@@ -326,9 +325,13 @@ function Header({ t, locale }: { t: Translator; locale: Locale }) {
         <FlogvitMenu t={t} locale={locale} />
 
         {/* Hurtigsøk — åpner CommandPalette (øy, ISSUES.md #11). Uten JS
-            faller den tilbake til søkesiden. */}
+            faller den tilbake til søkesiden.
+            Navnet er den SYNLIGE etiketten, ikke en egen aria-label (WCAG
+            2.5.3, #163): den som styrer med tale sier det hun ser. På mobil
+            er etiketten skjult visuelt, men står fortsatt som knappens navn;
+            hurtigtast-merket er pynt for øyet og holdes utenfor navnet. */}
         <form class="cmdk-form" action="/sok" method="get">
-          <button type="submit" class="cmdk-trigger" id="cmdk-trigger" aria-label={t('chrome.quickSearch')}>
+          <button type="submit" class="cmdk-trigger" id="cmdk-trigger">
             <svg
               width="14"
               height="14"
@@ -342,7 +345,7 @@ function Header({ t, locale }: { t: Translator; locale: Locale }) {
               <path d="M21 21l-4.3-4.3" />
             </svg>
             <span class="cmdk-label">{t('chrome.searchPlaceholder')}</span>
-            <kbd class="cmdk-kbd" id="cmdk-kbd">
+            <kbd class="cmdk-kbd" id="cmdk-kbd" aria-hidden="true">
               Ctrl K
             </kbd>
           </button>
@@ -420,7 +423,7 @@ function Header({ t, locale }: { t: Translator; locale: Locale }) {
   );
 }
 
-function Footer({ t }: { t: Translator }) {
+function Footer({ t, locale }: { t: Translator; locale: Locale }) {
   return (
     <footer class="site-footer">
       <div class="site-footer-inner">
@@ -432,13 +435,14 @@ function Footer({ t }: { t: Translator }) {
           <a href={lhref('/innstillinger')}>{t('chrome.settings')}</a>
           <a href="https://flogvit.com/konto/">{t('foot.account')}</a>
           <a href={lhref('/offline')}>{t('foot.offline')}</a>
-          <a href={lhref('/tilgjengelighet')}>{t('foot.a11y')}</a>
           <a href={lhref('/changes')}>{t('foot.changes')}</a>
           <a href={lhref('/mcp')}>{t('foot.mcp')}</a>
         </nav>
 
         {/* Fast legal-rad (portal/FOOTER.md): FLOGVIT.bible · Vilkår · Personvern ·
-            Konto · © år. Ingen Refusjon — bibel tar ikke betaling. */}
+            Tilgjengelighet · Konto · © år. Ingen Refusjon — bibel tar ikke
+            betaling. Tilgjengelighet er flatas EGEN erklæring, med fellesdelens
+            lenketekst (portal/TILGJENGELIGHET.md, #163). */}
         <div class="site-footer-legal">
           {/* Merke + lenker er ÉN gruppe, så copyright-en er den eneste andre
               flex-posten i raden. Da kan `space-between` holde den til høyre så
@@ -457,6 +461,7 @@ function Footer({ t }: { t: Translator }) {
             <nav class="site-footer-legalnav" aria-label={t('chrome.legalAria')}>
               <a href="https://flogvit.com/vilkar">{t('foot.terms')}</a>
               <a href="https://flogvit.com/personvern">{t('foot.privacy')}</a>
+              <a href={lhref(STI)}>{lenketekst(locale)}</a>
               <a href="https://flogvit.com/konto/">{t('foot.account')}</a>
             </nav>
           </div>
@@ -603,7 +608,7 @@ export function Layout(props: LayoutProps) {
           <main id="innhold" class={props.wide ? 'site-main site-main-wide' : 'site-main'}>
             {props.children}
           </main>
-          <Footer t={t} />
+          <Footer t={t} locale={props.locale} />
           <script type="module" src={assetUrl('/js/chrome.js')} />
           <script type="module" src={assetUrl('/js/shortcuts.js')} />
           <script type="module" src={assetUrl('/js/plus.js')} />

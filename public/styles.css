@@ -585,7 +585,13 @@ a.fvmenu-item:hover { background: color-mix(in oklab, var(--ink) 6%, var(--surfa
   .site-header-inner { padding: 8px 12px; gap: 6px; flex-wrap: wrap; }
   .header-controls { gap: 6px; }
   .site-nav { display: none; }
-  .cmdk-label, .cmdk-kbd { display: none; }
+  .cmdk-kbd { display: none; }
+  /* Etiketten er knappens NAVN (2.5.3, #163) — skjult for øyet, ikke for
+     skjermleseren. Samme regel som `.sr-only`. */
+  .cmdk-label {
+    position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+    overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; flex: none;
+  }
   /* `flex: 0` ga skjemaet bredde NULL, mens søkeknappen inni beholdt sin egen
      bredde og stakk ut til høyre for det. Det gikk upåaktet så lenge naboene
      dyttet den innover; da kontrollene ble en egen klynge, sto den igjen ytterst
@@ -1125,9 +1131,11 @@ a.fvmenu-item:hover { background: color-mix(in oklab, var(--ink) 6%, var(--surfa
   max-width: min(92vw, 640px);
 }
 .plus-cta-link {
-  color: var(--gold);
+  /* Boksen er invertert (--ink bak, --paper tekst): aksentfargen ga 2,3:1 mot
+     den i lys modus (1.4.3, #163). Lenka skilles med understrek, ikke farge. */
+  color: var(--paper);
   font-weight: 600;
-  text-decoration: none;
+  text-decoration: underline;
   white-space: nowrap;
 }
 .plus-cta-link:hover { text-decoration: underline; }

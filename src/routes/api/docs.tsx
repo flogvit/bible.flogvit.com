@@ -39,6 +39,9 @@ import {
 } from '../../lib/openapi.ts';
 import { absoluteUrl } from '../../lib/site-url.ts';
 import { VersionHead } from '../../views/layout.tsx';
+import { href } from '../../lib/i18n.ts';
+import { originalScriptLang } from '../../lib/lang.ts';
+import { STI, lenketekst } from '../../lib/tilgjengelighet.ts';
 
 const r = new Hono();
 
@@ -92,7 +95,8 @@ function Params({ params }: { params: ApiParam[] }) {
                 <Prose text={p.description} />
                 {p.example !== undefined && (
                   <p class="doc-example">
-                    Example: <code>{p.example}</code>
+                    {/* Et eksempel kan være et hebraisk eller gresk ord (3.1.2, #163). */}
+                    Example: <code lang={originalScriptLang(String(p.example))}>{p.example}</code>
                   </p>
                 )}
               </td>
@@ -246,6 +250,11 @@ function DocsPage() {
         <footer class="doc-footer">
           <p>
             {API_OPERATIONS.length} endpoints. Version {API_VERSION}.
+          </p>
+          {/* Hver side lenker erklæringen (portal/TILGJENGELIGHET.md, #163) —
+              også denne, som har sin egen layout. Sida er engelsk. */}
+          <p>
+            <a href={href('en', STI)}>{lenketekst('en')}</a>
           </p>
         </footer>
       </body>

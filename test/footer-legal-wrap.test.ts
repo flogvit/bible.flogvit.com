@@ -183,10 +183,10 @@ const LOCALES_MEASURED: Locale[] = WIDEST === 'nb' ? ['nb'] : ['nb', WIDEST];
 describe('legal-raden i footeren brekkes ikke skjevt (#93)', () => {
   // ROLLENE: uten alle tre måler de to halvdelene under ingenting — en rad uten
   // copyright har heller ingen linje som kan henge feil.
-  test('raden har merke, de tre legal-lenkene og copyright', async () => {
+  test('raden har merke, de fire legal-lenkene (Vilkår, Personvern, Tilgjengelighet, Konto — portal/FOOTER.md) og copyright', async () => {
     const m = await measure('nb', MOBILE[1]!, 1);
     expect(m.wordmarkLine).toBeGreaterThanOrEqual(0);
-    expect(m.legalLinks).toBe(3);
+    expect(m.legalLinks).toBe(4);
     expect(m.noteText).toMatch(/©\s*\d{4}\s*FLOGVIT/);
     expect(m.noteLine).toBeGreaterThanOrEqual(0);
   });

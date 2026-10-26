@@ -24,6 +24,7 @@ import { getBibleEditions, offlineEditions, getFavoriteVerses, getVersesWithOrig
 import { getAvailableMappings } from '../../lib/verse-mapper.ts';
 import { layoutProps, makeT, tFor, tEnum, type Locale, type MessageKey, lhref } from '../../lib/i18n.ts';
 import { tCtx } from '../../lib/i18n.ts';
+import { originalScriptLang } from '../../lib/lang.ts';
 
 const r = new Hono<AppEnv>();
 
@@ -799,7 +800,7 @@ r.get('/oversettelser', async (c) => {
           {editions.map((e) => (
             <li>
               <a href={lhref(`/oversettelser/${e.id}`)}>
-                {e.name_native}
+                <span lang={originalScriptLang(e.name_native)}>{e.name_native}</span>
                 {e.abbreviation ? ` (${e.abbreviation})` : ''}
               </a>
               {e.license_name ? <span class="trans-license"> {e.license_name}</span> : null}
