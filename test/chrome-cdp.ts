@@ -251,8 +251,9 @@ export class Page {
    *
    * To feller ligger her. `Page.loadEventFired` sier ikke HVILKEN navigasjon
    * det gjaldt, så et load fra forrige side kan kvittere ut denne. Og appen
-   * laster seg selv på nytt av seg selv: `pwa.js` kaller `location.reload()`
-   * når service workeren tar over, altså rett etter første load. Måler man i
+   * kunne laste seg selv på nytt: `pwa.js` kalte `location.reload()` når
+   * service workeren tok over, altså rett etter første load (nå bare etter at
+   * leseren har trykket, flogvit-com#339 — vernet står likevel). Måler man i
    * det vinduet, svarer Chrome «Inspected target navigated or closed» — eller,
    * verre, man måler et dokument som er på vei ut.
    *

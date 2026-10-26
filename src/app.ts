@@ -51,6 +51,7 @@ import { ogRoutes } from './routes/og.ts';
 import { seoRoutes } from './routes/seo.ts';
 import { skadetKapitteladresse } from './lib/skadet-adresse.ts';
 import { minneRegnskap } from './lib/minne-regnskap.ts';
+import { buildId } from './lib/build-id.ts';
 
 /**
  * Bok-metadataen MÅ være der før en side eller et API-svar som slår opp en bok
@@ -77,6 +78,13 @@ export function createApp() {
   const app = new Hono<AppEnv>();
 
   app.get('/api/health', (c) => c.json({ ok: true }));
+
+  // Bygget som serveres NÅ (flogvit-com#339, portal/VERSJON.md). En åpen fane
+  // sammenligner det med `<meta name="fv-versjon">` den ble rendret med. Øverst,
+  // før sesjonen og retry-budsjettet: svaret leser ingen database og ingen
+  // konto, og en fane spør hvert femte minutt. Uprefikset, som `/sitemap.xml`
+  // — det er ikke en side.
+  app.get('/versjon.json', (c) => c.json({ build: buildId() }, 200, { 'Cache-Control': 'no-store' }));
 
   // HVA HOLDER DEN PÅ? — svaret som fire saker har manglet (#19, #105, #106,
   // #216). Se `lib/minne-regnskap.ts` for hvorfor den finnes.
