@@ -143,8 +143,8 @@ describe('FORMEN på kopien', () => {
 });
 
 describe('en oppføring med locales vises bare på de språkene (flogvit-com#335)', () => {
-  test('menyen på nb viser menighet, på en gjør den ikke', async () => {
-    expect((await rendreMeny('nb')).map((o) => o.tekst)).toContain('FLOGVIT.menighet');
+  test('menighet står ikke i menyen på nb eller en før eieren sier «Send ut» (flogvit-com-menighet#16)', async () => {
+    expect((await rendreMeny('nb')).map((o) => o.tekst)).not.toContain('FLOGVIT.menighet');
     expect((await rendreMeny('en')).map((o) => o.tekst)).not.toContain('FLOGVIT.menighet');
   });
 });
