@@ -36,6 +36,7 @@ export const TOOL_ROWS: readonly { tools: readonly string[]; what: MessageKey; a
   { tools: ['search_people', 'get_person'], what: 'mcp.tool.people', ask: 'mcp.ask.people' },
   { tools: ['search_topics', 'get_topic'], what: 'mcp.tool.topics', ask: 'mcp.ask.topics' },
   { tools: ['get_daily_verse'], what: 'mcp.tool.daily', ask: 'mcp.ask.daily' },
+  { tools: ['check_references'], what: 'mcp.tool.check', ask: 'mcp.ask.check' },
   { tools: ['list_editions'], what: 'mcp.tool.editions', ask: 'mcp.ask.editions' },
 ];
 
