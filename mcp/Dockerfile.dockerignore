@@ -8,4 +8,7 @@
 !public/favicon.svg
 !public/favicon.ico
 !public/apple-touch-icon.png
+!kvn-package/package.json
+!kvn-package/src
+!kvn-package/mappings
 src/lib/**/*.test.ts
