@@ -1087,9 +1087,9 @@ type TimelineEventRow = TimelineEvent & {
   language?: string;
 };
 
-type TimelineType = 'bible' | 'world';
+export type TimelineType = 'bible' | 'world';
 
-function timelinePeriodsOf(type: TimelineType, lang: string): Promise<TimelinePeriod[]> {
+export function timelinePeriodsOf(type: TimelineType, lang = currentContentLanguage()): Promise<TimelinePeriod[]> {
   const sql = getSql();
   return inLanguage(lang, (language) => sql`
     SELECT * FROM timeline_periods
@@ -1097,9 +1097,9 @@ function timelinePeriodsOf(type: TimelineType, lang: string): Promise<TimelinePe
   ` as Promise<TimelinePeriod[]>);
 }
 
-async function timelineEventsOf(type: TimelineType, lang: string): Promise<TimelineEvent[]> {
+function timelineEventRows(type: TimelineType, lang: string): Promise<TimelineEventRow[]> {
   const sql = getSql();
-  const events = await inLanguage(lang, (language) => sql`
+  return inLanguage(lang, (language) => sql`
     SELECT e.*, p.name as period_name, p.color as period_color
     FROM timeline_events e
     LEFT JOIN timeline_periods p ON e.period_id = p.id AND p.timeline_type = e.timeline_type
@@ -1107,8 +1107,26 @@ async function timelineEventsOf(type: TimelineType, lang: string): Promise<Timel
     WHERE e.timeline_type = ${type} AND e.language = ${language}
     ORDER BY p.sort_order, e.year IS NULL DESC, e.year, e.sort_order, e.seq
   ` as Promise<TimelineEventRow[]>);
+}
 
-  return attachReferencesToEvents(events);
+async function timelineEventsOf(type: TimelineType, lang: string): Promise<TimelineEvent[]> {
+  return attachReferencesToEvents(await timelineEventRows(type, lang));
+}
+
+/**
+ * The events of one timeline that `keep` accepts, in timeline order. `events`
+ * are the first `limit` of them with their references; `matched` is all of them
+ * without. The references are one query per event, so the MCP server's lookups
+ * (#169) filter BEFORE fetching them rather than paying for all 447.
+ */
+export async function getTimelineEventsWhere(
+  type: TimelineType,
+  keep: (event: TimelineEvent) => boolean,
+  limit: number,
+  lang = currentContentLanguage(),
+): Promise<{ events: TimelineEvent[]; matched: TimelineEvent[] }> {
+  const matched = (await timelineEventRows(type, lang)).filter(keep);
+  return { events: await attachReferencesToEvents(matched.slice(0, limit)), matched };
 }
 
 export async function getTimelinePeriods(lang = currentContentLanguage()): Promise<TimelinePeriod[]> {

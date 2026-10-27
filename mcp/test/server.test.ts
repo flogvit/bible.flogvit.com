@@ -2,7 +2,7 @@ import { afterAll, describe, expect, test } from 'bun:test';
 import { closeSql } from '../../src/lib/db.ts';
 import { LOCALES } from '../../src/lib/i18n.ts';
 import { createHandler, SERVER_NAME } from '../src/server.ts';
-import { MAX_VERSES } from '../src/tools.ts';
+import { MAX_VERSES } from '../src/answer.ts';
 import { CALLS, mcpPost } from './calls.ts';
 
 // Runs against the local database (`../.env`, DB_PORT=3326), like bibel's own

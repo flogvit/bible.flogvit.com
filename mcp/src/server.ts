@@ -19,6 +19,7 @@ import { WebStandardStreamableHTTPServerTransport } from '@modelcontextprotocol/
 import { getVerse } from '../../src/lib/bible.ts';
 import { CONTENT_TABLES } from '../../src/lib/content-sources.ts';
 import { getSql, withRetryBudget } from '../../src/lib/db.ts';
+import { registerLookupTools } from './lookups.ts';
 import { registerTools } from './tools.ts';
 import { ABOUT, landingHtml, wantsHtml } from './landing.ts';
 
@@ -60,6 +61,7 @@ export function createMcpServer(): McpServer {
     { instructions: INSTRUCTIONS },
   );
   registerTools(server);
+  registerLookupTools(server);
   return server;
 }
 

@@ -8,7 +8,6 @@
 // obligation follows the text wherever the model puts it.
 
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import { z } from 'zod';
 import {
   defaultBibleForLanguage,
@@ -33,7 +32,6 @@ import {
   getThemeByName,
   getThemesByChapter,
   getTimelineEventsForChapter,
-  getVerses,
   originalBibleId,
   searchGospelParallels,
   searchOriginalWord,
@@ -43,21 +41,43 @@ import {
   searchThemes,
   searchTimelineEvents,
   themeTitle,
-  type ProphecyReference,
   type StoryData,
   type ThemeData,
-  type Verse,
 } from '../../src/lib/bible.ts';
-import { bookName, getBookInfoById as bookById, type BookInfo } from '../../src/lib/books-data.ts';
+import { bookName, getBookInfoById as bookById } from '../../src/lib/books-data.ts';
 import { IMPORTED_BIBLES } from '../../src/lib/editions.ts';
-import { LOCALES } from '../../src/lib/i18n.ts';
+import { getAvailableMappings } from '../../src/lib/verse-mapper.ts';
 import { findReferences } from './find-references.ts';
 import { chapterUrl, pageUrl } from './links.ts';
-import { chaptersOf, contains, parseReferences, type Passage } from './reference.ts';
+import { parseReferences } from './reference.ts';
 import { searchVerseText } from './search.ts';
+import {
+  attribution,
+  failure,
+  inMapping,
+  label,
+  language,
+  MAX_VERSES,
+  parsed,
+  passageAt,
+  passageLabel,
+  labelMapping,
+  mapping,
+  numberedAs,
+  passageVerses,
+  resolveMapping,
+  plain,
+  prophecyRefLabel,
+  quote,
+  quoteEdition,
+  READ_ONLY,
+  READABLE,
+  reference,
+  refLabel,
+  text,
+  toOsnb,
+} from './answer.ts';
 
-/** Most verses one call returns per edition. Psalm 119 (176) fits. */
-export const MAX_VERSES = 200;
 /** Word-by-word is ~15 lines per verse; past this the answer drowns the model. */
 const MAX_WORD_BY_WORD_VERSES = 20;
 const MAX_CROSS_REFERENCE_VERSES = 50;
@@ -70,20 +90,6 @@ const MAX_CHECK_VERSES_PER_REFERENCE = 10;
  */
 export const MAX_CHECK_TEXT = 20_000;
 
-const READABLE = ['osnb', 'osnn', 'osen'] as const;
-
-const language = z
-  .enum(LOCALES)
-  .default('en')
-  .describe(
-    'Language for names, notes and study content, and for the links to bible.flogvit.com: en (English), nb (Norwegian Bokmål), nn (Norwegian Nynorsk), sv (Swedish), fr (French), es (Spanish), fi (Finnish), de (German). Content missing in a language falls back to English. Default: en.',
-  );
-const reference = z
-  .string()
-  .min(2)
-  .describe(
-    'Bible reference in English or Norwegian style, e.g. "John 3:16", "Joh 3,16-18", "1 Cor 13:4-7", "Ps 23", "Gen 1:1-2:3". Several separated by ";": "Rom 8:28; 9:1; John 3:16".',
-  );
 const limit = z.number().int().min(1).max(100).default(20).describe('Most verses to return, 1-100. Default: 20.');
 const offset = z
   .number()
@@ -102,80 +108,11 @@ const checkedReference = z.object({
   problem: z.string().optional().describe('Why the reference does not exist, e.g. a verse past the end of the chapter.'),
 });
 
-const READ_ONLY = { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false } as const;
-
-// --- formatting ---
-
-// The generated study text links with the site's own markup,
-// `[ref:Gen 22:2|Genesis 22:2]`, `[person:abraham]` (see `src/views/inline-refs.tsx`).
-// A model needs the words, not the envelope: the label if there is one, else
-// the value without its `@edition` suffix.
-const MARKUP = /\[(?:vers|ref|manuskript|andakt|tema|person|profeti|parallell|historie):([^\]|]+)(?:\|([^\]]+))?\]/g;
-
-function plain(body: string): string {
-  return body.replace(MARKUP, (_, value: string, shown?: string) => shown ?? value.replace(/@[\w-]+$/, '').trim());
-}
-
-function text(body: string): CallToolResult {
-  return { content: [{ type: 'text', text: plain(body) }] };
-}
-
-function failure(body: string): CallToolResult {
-  return { content: [{ type: 'text', text: body }], isError: true };
-}
-
-/** "John 3:16-18", "John 3", "Genesis 1:1-2:3" — in the requested language. */
-function label(book: BookInfo, chapter: number, from: number | null, endChapter: number, to: number | null, lang: string): string {
-  const name = bookName(book, lang);
-  if (from === null || to === null) return endChapter === chapter ? `${name} ${chapter}` : `${name} ${chapter}-${endChapter}`;
-  if (endChapter !== chapter) return `${name} ${chapter}:${from}-${endChapter}:${to}`;
-  return from === to ? `${name} ${chapter}:${from}` : `${name} ${chapter}:${from}-${to}`;
-}
-
 function firstSentence(s: string): string {
   const m = s.match(/^.{20,240}?[.!?](?=\s|$)/s);
   return m ? m[0] : s.slice(0, 240);
 }
 
-const passageLabel = (p: Passage, lang: string) => label(p.book, p.chapter, p.verseStart, p.endChapter, p.verseEnd, lang);
-
-function refLabel(bookId: number, chapter: number, from: number, to: number, lang: string): string {
-  const book = bookById(bookId);
-  return book ? label(book, chapter, from, chapter, to, lang) : `${bookId} ${chapter}:${from}-${to}`;
-}
-
-const prophecyRefLabel = (r: ProphecyReference, lang: string) => refLabel(r.book_id, r.chapter, r.verse_start, r.verse_end, lang);
-
-type Parsed = { passages: Passage[]; notes: string; error?: undefined } | { error: CallToolResult };
-
-function parsed(input: string): Parsed {
-  const { passages, errors } = parseReferences(input);
-  if (passages.length === 0) {
-    return { error: failure(`Could not read the reference. ${errors.join(' ')}`.trim()) };
-  }
-  return { passages, notes: errors.length ? `\n\nSkipped: ${errors.join(' ')}` : '' };
-}
-
-async function attribution(editions: string[], lang: string): Promise<string> {
-  const lines: string[] = [];
-  for (const id of editions) {
-    const e = await getBibleEditionById(id);
-    if (!e) continue;
-    lines.push(`${e.name_en} (${e.abbreviation ?? e.id}), ${e.license_spdx ?? e.license_name ?? ''}: ${pageUrl(lang, `/oversettelser/${e.id}`)}`);
-  }
-  return lines.length ? `\n\nSource: ${lines.join('; ')}` : '';
-}
-
-/** Verses of a passage in one edition, one query per chapter. */
-async function passageVerses(p: Passage, bible: string): Promise<Verse[]> {
-  const out: Verse[] = [];
-  for (const chapter of chaptersOf(p)) {
-    for (const v of await getVerses(p.book.id, chapter, bible)) {
-      if (contains(p, v.chapter, v.verse)) out.push(v);
-    }
-  }
-  return out;
-}
 
 // --- tools ---
 
@@ -204,6 +141,38 @@ export function registerTools(server: McpServer): void {
   );
 
   server.registerTool(
+    'list_verse_mappings',
+    {
+      title: 'List verse numberings',
+      description:
+        "The verse numberings (KVN mappings) the tools can read references in and number answers in, for the mapping argument of get_passage, get_original_text, get_cross_references, check_references and others. Bible editions number some verses differently — whether a psalm heading is a verse, where a chapter breaks — and a reference copied from one edition can point at another verse in the site's own numbering (osnb). Find the id by the edition's name or language, e.g. \"king james\", \"dnb2024\", \"german\", \"swahili\".",
+      inputSchema: {
+        query: z
+          .string()
+          .min(2)
+          .optional()
+          .describe('Words the id or the name must contain, e.g. "king james", "dnb", "nynorsk", "german", "spanish". Default: none, which lists the named numberings and then every id.'),
+      },
+      annotations: READ_ONLY,
+    },
+    async ({ query }) => {
+      // The same list /api/mappings/kvn serves.
+      const all = getAvailableMappings();
+      const row = (m: (typeof all)[number]) => `- **${m.id}**${m.displayName !== m.id ? ` — ${m.displayName} (short name ${m.shortname})` : ''}`;
+      if (query) {
+        const words = query.toLowerCase().split(/\s+/).filter(Boolean);
+        const hits = all.filter((m) => words.every((w) => `${m.id} ${m.displayName} ${m.shortname}`.toLowerCase().replace(/_/g, ' ').includes(w)));
+        if (hits.length === 0) return text(`No verse numbering matches "${query}". Call without query for every id.`);
+        return text(`${hits.length} verse numberings match "${query}":\n\n${hits.map(row).join('\n')}`);
+      }
+      const named = all.filter((m) => m.displayName !== m.id);
+      return text(
+        `${all.length} verse numberings. osnb is the site's own (Hebrew and Greek numbering) and the default.\n\n## With a name\n${named.map(row).join('\n')}\n\n## Every id\n${all.map((m) => m.id).join(', ')}`,
+      );
+    },
+  );
+
+  server.registerTool(
     'get_passage',
     {
       title: 'Read a Bible passage',
@@ -223,22 +192,27 @@ export function registerTools(server: McpServer): void {
           .boolean()
           .default(false)
           .describe("true adds the translators' footnotes and alternative renderings under each verse. Default: false."),
+        mapping,
         language,
       },
       annotations: READ_ONLY,
     },
-    async ({ reference, editions, include_notes, language }) => {
-      const p = parsed(reference);
+    async ({ reference, editions, include_notes, mapping, language }) => {
+      const numbering = resolveMapping(mapping);
+      if (numbering.error) return numbering.error;
+      const p = parsed(reference, numbering.id);
       if (p.error) return p.error;
       const chosen = editions ?? [await defaultBibleForLanguage(language)];
 
       const blocks: string[] = [];
       let remaining = MAX_VERSES;
       for (const passage of p.passages) {
-        const parts = [`## ${passageLabel(passage, language)}\n${chapterUrl(passage.book, passage.chapter, language, passage.verseStart, chosen[0])}`];
+        const parts = [`## ${passageLabel(passage, language)}`];
         let shown = 0;
         for (const bible of chosen) {
-          const verses = (await passageVerses(passage, bible)).slice(0, remaining);
+          const verses = (await passageVerses(passage, bible, numbering.id)).slice(0, remaining);
+          // The link goes to the chapter on the site, which is numbered in osnb.
+          if (parts.length === 1 && verses[0]) parts[0] += `\n${chapterUrl(passage.book, verses[0].osnbChapter, language, verses[0].osnbVerse, chosen[0])}`;
           shown = Math.max(shown, verses.length);
           if (verses.length === 0) {
             parts.push(`**${bible}**: no text for this passage${bible === 'tanach' || bible === 'sblgnt' ? ' (tanach covers the Old Testament, sblgnt the New)' : ''}.`);
@@ -261,7 +235,7 @@ export function registerTools(server: McpServer): void {
           break;
         }
       }
-      return text(blocks.join('\n\n') + p.notes + (await attribution(chosen, language)));
+      return text(blocks.join('\n\n') + p.notes + numberedAs(numbering.id) + (await attribution(chosen, language)));
     },
   );
 
@@ -281,11 +255,14 @@ export function registerTools(server: McpServer): void {
         testament: z.enum(['OT', 'NT']).optional().describe('Limit to the Old (OT) or New (NT) Testament. Ignored when book is given. Default: both.'),
         limit,
         offset,
+        mapping: labelMapping,
         language,
       },
       annotations: READ_ONLY,
     },
-    async ({ query, edition, book, testament, limit, offset, language }) => {
+    async ({ query, edition, book, testament, limit, offset, mapping, language }) => {
+      const numbering = resolveMapping(mapping);
+      if (numbering.error) return numbering.error;
       let range = testament === 'OT' ? { from: 1, to: 39 } : testament === 'NT' ? { from: 40, to: 66 } : { from: 1, to: 66 };
       if (book) {
         const found = parseReferences(`${book} 1`).passages[0]?.book;
@@ -296,10 +273,10 @@ export function registerTools(server: McpServer): void {
       if (total === 0) return text(`No verses in ${edition} contain all of: ${query}`);
       const lines = hits.map((h) => {
         const b = bookById(h.book_id)!;
-        return `- **${label(b, h.chapter, h.verse, h.chapter, h.verse, language)}** ${h.text}\n  ${chapterUrl(b, h.chapter, language, h.verse, edition)}`;
+        return `- **${refLabel(b.id, h.chapter, h.verse, h.verse, language, numbering.id)}** ${h.text}\n  ${chapterUrl(b, h.chapter, language, h.verse, edition)}`;
       });
       const more = offset + hits.length < total ? `\n\n${total - offset - hits.length} more — call again with offset ${offset + hits.length}.` : '';
-      return text(`${total} verses in ${edition}, showing ${offset + 1}-${offset + hits.length}:\n\n${lines.join('\n')}${more}`);
+      return text(`${total} verses in ${edition}, showing ${offset + 1}-${offset + hits.length}:\n\n${lines.join('\n')}${more}${numberedAs(numbering.id)}`);
     },
   );
 
@@ -315,12 +292,15 @@ export function registerTools(server: McpServer): void {
           .boolean()
           .default(true)
           .describe(`true lists every word with pronunciation and explanation (at most ${MAX_WORD_BY_WORD_VERSES} verses); false gives the text alone (at most ${MAX_VERSES} verses). Default: true.`),
+        mapping,
         language,
       },
       annotations: READ_ONLY,
     },
-    async ({ reference, word_by_word, language }) => {
-      const p = parsed(reference);
+    async ({ reference, word_by_word, mapping, language }) => {
+      const numbering = resolveMapping(mapping);
+      if (numbering.error) return numbering.error;
+      const p = parsed(reference, numbering.id);
       if (p.error) return p.error;
       const max = word_by_word ? MAX_WORD_BY_WORD_VERSES : MAX_VERSES;
       const blocks: string[] = [];
@@ -330,25 +310,33 @@ export function registerTools(server: McpServer): void {
       outer: for (const passage of p.passages) {
         const bible = originalBibleId(passage.book.id);
         used.add(bible);
-        const lines: string[] = [`## ${passageLabel(passage, language)} (${bible})\n${chapterUrl(passage.book, passage.chapter, language, passage.verseStart)}`];
-        for (const chapter of chaptersOf(passage)) {
-          const words = word_by_word ? await getOriginalWord4WordByVerse(passage.book.id, chapter, 'nb') : null;
-          for (const v of await getOriginalVerses(passage.book.id, chapter)) {
-            if (!contains(passage, v.chapter, v.verse)) continue;
-            if (count++ >= max) {
-              blocks.push(lines.join('\n'));
-              blocks.push(`(Stopped at ${max} verses${word_by_word ? ' with word_by_word' : ''}. Ask for a shorter passage, or set word_by_word to false.)`);
-              break outer;
-            }
-            lines.push(`\n${v.chapter}:${v.verse} ${v.text}`);
-            for (const w of words?.get(v.verse) ?? []) {
-              lines.push(`   - ${w.word}${w.pronunciation ? ` [${w.pronunciation}]` : ''}${w.explanation ? `: ${w.explanation}` : ''}`);
-            }
+        // The verses are found in osnb (or through the mapping), and the source
+        // text and its words are looked up where each one stands in osnb.
+        const shown = await passageVerses(passage, 'osnb', numbering.id);
+        const first = shown[0];
+        const lines: string[] = [`## ${passageLabel(passage, language)} (${bible})${first ? `\n${chapterUrl(passage.book, first.osnbChapter, language, first.osnbVerse)}` : ''}`];
+        const originals = new Map<number, Map<number, string>>();
+        const words = new Map<number, Awaited<ReturnType<typeof getOriginalWord4WordByVerse>>>();
+        for (const v of shown) {
+          if (!originals.has(v.osnbChapter)) {
+            originals.set(v.osnbChapter, new Map((await getOriginalVerses(passage.book.id, v.osnbChapter)).map((o) => [o.verse, o.text])));
+            if (word_by_word) words.set(v.osnbChapter, await getOriginalWord4WordByVerse(passage.book.id, v.osnbChapter, 'nb'));
+          }
+          const original = originals.get(v.osnbChapter)!.get(v.osnbVerse);
+          if (!original) continue;
+          if (count++ >= max) {
+            blocks.push(lines.join('\n'));
+            blocks.push(`(Stopped at ${max} verses${word_by_word ? ' with word_by_word' : ''}. Ask for a shorter passage, or set word_by_word to false.)`);
+            break outer;
+          }
+          lines.push(`\n${v.chapter}:${v.verse} ${original}`);
+          for (const w of words.get(v.osnbChapter)?.get(v.osnbVerse) ?? []) {
+            lines.push(`   - ${w.word}${w.pronunciation ? ` [${w.pronunciation}]` : ''}${w.explanation ? `: ${w.explanation}` : ''}`);
           }
         }
         blocks.push(lines.join('\n'));
       }
-      return text(blocks.join('\n\n') + p.notes + (await attribution([...used], language)));
+      return text(blocks.join('\n\n') + p.notes + numberedAs(numbering.id) + (await attribution([...used], language)));
     },
   );
 
@@ -366,20 +354,23 @@ export function registerTools(server: McpServer): void {
           .describe('Translation to show next to the source text: osen (English), osnb (Norwegian Bokmål), osnn (Norwegian Nynorsk). Default: osen.'),
         limit,
         offset,
+        mapping: labelMapping,
         language,
       },
       annotations: READ_ONLY,
     },
-    async ({ word, edition, limit, offset, language }) => {
+    async ({ word, edition, limit, offset, mapping, language }) => {
+      const numbering = resolveMapping(mapping);
+      if (numbering.error) return numbering.error;
       const r = await searchOriginalWord(word, limit, offset, edition);
       if (r.total === 0) return text(`"${word}" does not occur in the ${r.language === 'hebrew' ? 'Hebrew' : 'Greek'} text.`);
       const lines = r.results.map((h) => {
         const b = bookById(h.book_id)!;
-        return `- **${label(b, h.chapter, h.verse, h.chapter, h.verse, language)}** ${h.original_text}\n  ${h.text}\n  ${chapterUrl(b, h.chapter, language, h.verse, edition)}`;
+        return `- **${refLabel(b.id, h.chapter, h.verse, h.verse, language, numbering.id)}** ${h.original_text}\n  ${h.text}\n  ${chapterUrl(b, h.chapter, language, h.verse, edition)}`;
       });
       const more = r.hasMore ? `\n\nMore — call again with offset ${offset + r.results.length}.` : '';
       return text(
-        `${r.total} verses with ${r.matchingWords.join(', ')} (${r.language}), showing ${offset + 1}-${offset + r.results.length}:\n\n${lines.join('\n')}${more}`,
+        `${r.total} verses with ${r.matchingWords.join(', ')} (${r.language}), showing ${offset + 1}-${offset + r.results.length}:\n\n${lines.join('\n')}${more}${numberedAs(numbering.id)}`,
       );
     },
   );
@@ -390,27 +381,33 @@ export function registerTools(server: McpServer): void {
       title: 'Cross-references',
       description:
         'Other passages that relate to each verse of a passage, with a short note on how. Read them with get_passage (several references in one call, separated by ";").',
-      inputSchema: { reference, language },
+      inputSchema: { reference, mapping, language },
       annotations: READ_ONLY,
     },
-    async ({ reference, language }) => {
-      const p = parsed(reference);
+    async ({ reference, mapping, language }) => {
+      const numbering = resolveMapping(mapping);
+      if (numbering.error) return numbering.error;
+      const p = parsed(reference, numbering.id);
       if (p.error) return p.error;
       const blocks: string[] = [];
       let count = 0;
-      for (const passage of p.passages) {
-        for (const chapter of chaptersOf(passage)) {
-          const byVerse = await getReferencesByVerse(passage.book.id, chapter, language);
-          for (const [verse, refs] of [...byVerse].sort((a, b) => a[0] - b[0])) {
-            if (!contains(passage, chapter, verse) || refs.length === 0) continue;
-            if (count++ >= MAX_CROSS_REFERENCE_VERSES) break;
-            const items = refs.map((r) => `   - ${refLabel(r.to_book_id, r.to_chapter, r.to_verse_start, r.to_verse_end, language)}${r.description ? `: ${r.description}` : ''}`);
-            blocks.push(`**${label(passage.book, chapter, verse, chapter, verse, language)}**\n${items.join('\n')}`);
-          }
+      outer: for (const passage of p.passages) {
+        // The references are stored by osnb verse; each is shown under the
+        // verse as numbered, and its target in the same numbering.
+        const byChapter = new Map<number, Awaited<ReturnType<typeof getReferencesByVerse>>>();
+        for (const v of await passageVerses(passage, 'osnb', numbering.id)) {
+          if (!byChapter.has(v.osnbChapter)) byChapter.set(v.osnbChapter, await getReferencesByVerse(passage.book.id, v.osnbChapter, language));
+          const refs = byChapter.get(v.osnbChapter)!.get(v.osnbVerse) ?? [];
+          if (refs.length === 0) continue;
+          if (count++ >= MAX_CROSS_REFERENCE_VERSES) break outer;
+          const items = refs.map(
+            (r) => `   - ${refLabel(r.to_book_id, r.to_chapter, r.to_verse_start, r.to_verse_end, language, numbering.id)}${r.description ? `: ${r.description}` : ''}`,
+          );
+          blocks.push(`**${label(passage.book, v.chapter, v.verse, v.chapter, v.verse, language)}**\n${items.join('\n')}`);
         }
       }
       if (blocks.length === 0) return text(`No cross-references recorded for ${reference}.`);
-      return text(blocks.join('\n\n') + p.notes);
+      return text(blocks.join('\n\n') + p.notes + numberedAs(numbering.id));
     },
   );
 
@@ -420,13 +417,18 @@ export function registerTools(server: McpServer): void {
       title: 'Study notes for a chapter',
       description:
         'Everything bible.flogvit.com has about one chapter: summary, historical context, key words, the people in it, themes, stories, prophecies, gospel parallels and timeline events. Give a chapter ("Rom 8"); verses are ignored.',
-      inputSchema: { reference, language },
+      inputSchema: { reference, mapping, language },
       annotations: READ_ONLY,
     },
-    async ({ reference, language }) => {
-      const p = parsed(reference);
+    async ({ reference, mapping, language }) => {
+      const numbering = resolveMapping(mapping);
+      if (numbering.error) return numbering.error;
+      const p = parsed(reference, numbering.id);
       if (p.error) return p.error;
-      const { book, chapter } = p.passages[0]!;
+      const asked = p.passages[0]!;
+      const [osnb] = await toOsnb([{ ...asked, verseStart: null, verseEnd: null, endChapter: asked.chapter }], numbering.id);
+      if (!osnb) return text(`${passageLabel(asked, language)} has no verses in the ${numbering.id} numbering.`);
+      const { book, chapter } = osnb;
       const id = book.id;
       const lang = language;
 
@@ -442,7 +444,8 @@ export function registerTools(server: McpServer): void {
         await getTimelineEventsForChapter(id, chapter, lang),
       ];
 
-      const s: string[] = [`# ${label(book, chapter, null, chapter, null, lang)}\n${chapterUrl(book, chapter, lang)}`];
+      const heading = label(book, asked.chapter, null, asked.chapter, null, lang);
+      const s: string[] = [`# ${heading}${numbering.id && asked.chapter !== chapter ? ` (chapter ${chapter} in osnb, the numbering the notes are written for)` : ''}\n${chapterUrl(book, chapter, lang)}`];
       if (summary) s.push(`## Summary\n${summary}`);
       if (context) s.push(`## Context\n${context}`);
       if (words.length) s.push(`## Key words\n${words.map((w) => `- **${w.word}**: ${w.explanation}`).join('\n')}`);
@@ -454,14 +457,14 @@ export function registerTools(server: McpServer): void {
       if (prophecies.length) {
         s.push(
           `## Prophecies\n${prophecies
-            .map((x) => `- ${x.title}: ${prophecyRefLabel(x.prophecy, lang)} → ${x.fulfillments.map((f) => prophecyRefLabel(f, lang)).join(', ')}${x.explanation ? ` — ${x.explanation}` : ''}`)
+            .map((x) => `- ${x.title}: ${prophecyRefLabel(x.prophecy, lang, numbering.id)} → ${x.fulfillments.map((f) => prophecyRefLabel(f, lang, numbering.id)).join(', ')}${x.explanation ? ` — ${x.explanation}` : ''}`)
             .join('\n')}`,
         );
       }
       if (parallels.length) {
         s.push(
           `## Gospel parallels\n${parallels
-            .map((x) => `- ${x.title}: ${Object.values(x.passages ?? {}).map((g) => refLabel(g.book_id, g.chapter, g.verse_start, g.verse_end, lang)).join(' | ')}`)
+            .map((x) => `- ${x.title}: ${Object.values(x.passages ?? {}).map((g) => refLabel(g.book_id, g.chapter, g.verse_start, g.verse_end, lang, numbering.id)).join(' | ')}`)
             .join('\n')}`,
         );
       }
@@ -469,7 +472,7 @@ export function registerTools(server: McpServer): void {
         s.push(`## Timeline\n${timeline.map((x) => `- ${x.year_display ?? ''} ${x.title}${x.description ? `: ${x.description}` : ''}`.trim()).join('\n')}`);
       }
       if (s.length === 1) s.push('No study notes for this chapter yet.');
-      return text(s.join('\n\n'));
+      return text(s.join('\n\n') + numberedAs(numbering.id));
     },
   );
 
@@ -519,17 +522,19 @@ export function registerTools(server: McpServer): void {
     {
       title: 'A person in the Bible',
       description: 'One person: summary, family, related people and key events with the passages where they happen.',
-      inputSchema: { id: z.string().describe('Person id from search_people or get_chapter_study, e.g. "tamar-juda".'), language },
+      inputSchema: { id: z.string().describe('Person id from search_people or get_chapter_study, e.g. "tamar-juda".'), mapping: labelMapping, language },
       annotations: READ_ONLY,
     },
-    async ({ id, language }) => {
+    async ({ id, mapping, language }) => {
+      const numbering = resolveMapping(mapping);
+      if (numbering.error) return numbering.error;
       const x = await getPersonData(id, language);
       if (!x) return failure(`No person with id "${id}". Use search_people to find the id.`);
       const verseRefs = (refs: { bookId: number; chapter: number; verse?: number; verses?: number[] }[]) =>
         refs
           .map((r) => {
             const vs = r.verses ?? (r.verse ? [r.verse] : []);
-            return vs.length ? refLabel(r.bookId, r.chapter, Math.min(...vs), Math.max(...vs), language) : refLabel(r.bookId, r.chapter, 1, 1, language).replace(/:1$/, '');
+            return vs.length ? refLabel(r.bookId, r.chapter, Math.min(...vs), Math.max(...vs), language, numbering.id) : refLabel(r.bookId, r.chapter, 1, 1, language).replace(/:1$/, '');
           })
           .join(', ');
       const f = x.family ?? {};
@@ -548,7 +553,7 @@ export function registerTools(server: McpServer): void {
       if (family.length) s.push(`## Family (person ids)\n${family.join('\n')}`);
       if (x.relatedPersons?.length) s.push(`## Related (person ids)\n${x.relatedPersons.join(', ')}`);
       if (x.keyEvents?.length) s.push(`## Key events\n${x.keyEvents.map((e) => `- **${e.title}** (${verseRefs(e.verses)}): ${e.description}`).join('\n')}`);
-      return text(s.join('\n\n'));
+      return text(s.join('\n\n') + numberedAs(numbering.id));
     },
   );
 
@@ -592,21 +597,24 @@ export function registerTools(server: McpServer): void {
           .enum(['story', 'theme', 'prophecy', 'parallel'])
           .describe('What the id names: story (a Bible story), theme, prophecy (with its fulfilment) or parallel (a gospel parallel). search_topics gives it next to each id.'),
         id: z.string().describe('The id search_topics or get_chapter_study gives, e.g. "den-fortapte-sonn" for a story or "david" for a theme.'),
+        mapping: labelMapping,
         language,
       },
       annotations: READ_ONLY,
     },
-    async ({ kind, id, language }) => {
+    async ({ kind, id, mapping, language }) => {
+      const numbering = resolveMapping(mapping);
+      if (numbering.error) return numbering.error;
       const missing = failure(`No ${kind} with id "${id}". Use search_topics to find the id.`);
       if (kind === 'story') {
         const row = await getStoryBySlug(id, language);
         if (!row) return missing;
         const data = JSON.parse(row.content) as StoryData;
         const refs = data.references.map((r) => {
-          const b = bookById(r.bookId);
-          return b ? label(b, r.startChapter, r.startVerse, r.endChapter, r.endVerse, language) : '';
+          const at = passageAt(r.bookId, r.startChapter, r.startVerse, r.endChapter, r.endVerse);
+          return at ? passageLabel(inMapping(at, numbering.id), language) : '';
         });
-        return text(`# ${data.title}\n${pageUrl(language, `/historier/${row.slug}`)}\n\n${data.description}\n\nPassages: ${refs.join('; ')}`);
+        return text(`# ${data.title}\n${pageUrl(language, `/historier/${row.slug}`)}\n\n${data.description}\n\nPassages: ${refs.join('; ')}${numberedAs(numbering.id)}`);
       }
       if (kind === 'theme') {
         const row = await getThemeByName(id, language);
@@ -620,23 +628,23 @@ export function registerTools(server: McpServer): void {
         const sections = data.sections.map((sec) => {
           const refs = sec.verses.map((v) => {
             const vs = v.verses ?? (v.verse ? [v.verse] : []);
-            return vs.length ? refLabel(v.bookId, v.chapter, Math.min(...vs), Math.max(...vs), language) : '';
+            return vs.length ? refLabel(v.bookId, v.chapter, Math.min(...vs), Math.max(...vs), language, numbering.id) : '';
           });
           return `## ${sec.title}\n${sec.description ?? ''}\nPassages: ${refs.filter(Boolean).join('; ')}`;
         });
-        return text(`# ${data.title}\n${pageUrl(language, `/temaer/${row.name}`)}\n\n${data.introduction ?? ''}\n\n${sections.join('\n\n')}`);
+        return text(`# ${data.title}\n${pageUrl(language, `/temaer/${row.name}`)}\n\n${data.introduction ?? ''}\n\n${sections.join('\n\n')}${numberedAs(numbering.id)}`);
       }
       if (kind === 'prophecy') {
         const x = await getProphecyById(id, language);
         if (!x) return missing;
         return text(
-          `# ${x.title}\n${pageUrl(language, '/profetier')}\n\nProphecy: ${prophecyRefLabel(x.prophecy, language)}\nFulfilment: ${x.fulfillments.map((f) => prophecyRefLabel(f, language)).join('; ')}\n\n${x.explanation ?? ''}`,
+          `# ${x.title}\n${pageUrl(language, '/profetier')}\n\nProphecy: ${prophecyRefLabel(x.prophecy, language, numbering.id)}\nFulfilment: ${x.fulfillments.map((f) => prophecyRefLabel(f, language, numbering.id)).join('; ')}\n\n${x.explanation ?? ''}${numberedAs(numbering.id)}`,
         );
       }
       const x = await getGospelParallelById(id, language);
       if (!x) return missing;
-      const passages = Object.values(x.passages ?? {}).map((g) => refLabel(g.book_id, g.chapter, g.verse_start, g.verse_end, language));
-      return text(`# ${x.title}\n${pageUrl(language, '/paralleller')}\n\nPassages: ${passages.join('; ')}${x.notes ? `\n\n${x.notes}` : ''}`);
+      const passages = Object.values(x.passages ?? {}).map((g) => refLabel(g.book_id, g.chapter, g.verse_start, g.verse_end, language, numbering.id));
+      return text(`# ${x.title}\n${pageUrl(language, '/paralleller')}\n\nPassages: ${passages.join('; ')}${x.notes ? `\n\n${x.notes}` : ''}${numberedAs(numbering.id)}`);
     },
   );
 
@@ -651,16 +659,20 @@ export function registerTools(server: McpServer): void {
           .enum(READABLE)
           .optional()
           .describe('Edition to quote the verse from: osen (English), osnb (Norwegian Bokmål), osnn (Norwegian Nynorsk). Default: the edition for `language`.'),
+        mapping: labelMapping,
       },
       annotations: READ_ONLY,
     },
-    async ({ language, edition }) => {
+    async ({ language, edition, mapping }) => {
+      const numbering = resolveMapping(mapping);
+      if (numbering.error) return numbering.error;
       const bible = edition ?? (await defaultBibleForLanguage(language));
       const v = await getDailyVerse(bible, language);
       const book = v ? bookById(v.bookId) : undefined;
       if (!v || !book) return text('No verse of the day today.');
       return text(
-        `**${label(book, v.chapter, v.verseStart, v.chapter, v.verseEnd, language)}** (${bible})\n${v.text}${v.note ? `\n\n${v.note}` : ''}\n\n${chapterUrl(book, v.chapter, language, v.verseStart, bible)}` +
+        `**${refLabel(book.id, v.chapter, v.verseStart, v.verseEnd, language, numbering.id)}** (${bible})\n${v.text}${v.note ? `\n\n${v.note}` : ''}\n\n${chapterUrl(book, v.chapter, language, v.verseStart, bible)}` +
+          numberedAs(numbering.id) +
           (await attribution([bible], language)),
       );
     },
@@ -674,11 +686,15 @@ export function registerTools(server: McpServer): void {
       inputSchema: {
         text: z.string().min(1).max(MAX_CHECK_TEXT).describe(`The text to check, at most ${MAX_CHECK_TEXT} characters. Split a longer text by lines and pass first_line.`),
         first_line: z.number().int().min(1).default(1).describe('Line number of the first line of `text`, when it is a part of a longer file. Default: 1.'),
-        edition: z
-          .enum(IMPORTED_BIBLES)
-          .optional()
-          .describe('Edition to quote the verses from: osnb, osnn, osen, sblgnt (Greek New Testament) or tanach (Hebrew Old Testament). Default: the edition for `language`.'),
+        edition: quoteEdition,
         include_text: z.boolean().default(true).describe('true quotes the verses each reference points at; false gives only where each reference stands and whether it exists. Default: true.'),
+        mapping: z
+          .string()
+          .min(2)
+          .optional()
+          .describe(
+            'Verse numbering the text cites in, so a reference is checked against that numbering and its verses quoted from it: a mapping id from list_verse_mappings, e.g. "english_kj" or "dnb2024_nb", or a short name such as "kjv". A sermon citing the King James Version has a Malachi 4; osnb does not. Default: osnb.',
+          ),
         language,
       },
       outputSchema: {
@@ -688,9 +704,11 @@ export function registerTools(server: McpServer): void {
       },
       annotations: READ_ONLY,
     },
-    async ({ text: input, first_line, edition, include_text, language }) => {
+    async ({ text: input, first_line, edition, include_text, mapping, language }) => {
+      const numbering = resolveMapping(mapping);
+      if (numbering.error) return numbering.error;
       const bible = edition ?? (await defaultBibleForLanguage(language));
-      const found = findReferences(input, first_line, language);
+      const found = findReferences(input, first_line, language, numbering.id !== null);
       const references: z.infer<typeof checkedReference>[] = [];
       const blocks: string[] = [];
       let remaining = MAX_VERSES;
@@ -700,7 +718,21 @@ export function registerTools(server: McpServer): void {
         const at = `line ${f.line}, column ${f.column}: ${f.written}`;
         const first = f.passages[0];
         const reference = f.passages.length ? f.passages.map((p) => passageLabel(p, language)).join('; ') : undefined;
-        const url = first ? chapterUrl(first.book, first.chapter, language, first.verseStart, bible) : undefined;
+        // In another numbering the mapping decides whether the verses exist,
+        // and the link goes where the first one stands in osnb.
+        let at0 = first ? { chapter: first.chapter, verse: first.verseStart } : null;
+        if (numbering.id && !f.problem) {
+          for (const p of f.passages) {
+            const verses = await passageVerses(p, 'osnb', numbering.id);
+            const has = (chapter: number, verse: number | null) => verse === null || verses.some((v) => v.chapter === chapter && v.verse === verse);
+            if (verses.length === 0 || !has(p.chapter, p.verseStart) || !has(p.endChapter, p.verseEnd)) {
+              f.problem = `${passageLabel(p, language)} does not exist in the ${numbering.id} numbering.`;
+              break;
+            }
+            if (p === first) at0 = { chapter: verses[0]!.osnbChapter, verse: verses[0]!.osnbVerse };
+          }
+        }
+        const url = first && at0 ? chapterUrl(first.book, at0.chapter, language, at0.verse, bible) : undefined;
         references.push({ line: f.line, column: f.column, written: f.written, reference, url, problem: f.problem });
         if (f.problem) {
           blocks.push(`${at} — PROBLEM: ${f.problem}`);
@@ -709,12 +741,10 @@ export function registerTools(server: McpServer): void {
         const lines = [`${at} → ${reference}`, `  ${url}`];
         if (include_text && remaining > 0) {
           for (const p of f.passages) {
-            const verses = await passageVerses(p, bible);
-            const shown = verses.slice(0, Math.min(MAX_CHECK_VERSES_PER_REFERENCE, remaining));
-            remaining -= shown.length;
-            quoted ||= shown.length > 0;
-            for (const v of shown) lines.push(`  ${p.endChapter !== p.chapter ? `${v.chapter}:` : ''}${v.verse} ${v.text}`);
-            if (verses.length > shown.length) lines.push(`  (${verses.length - shown.length} more verses — read them with get_passage)`);
+            const q = await quote(p, bible, Math.min(MAX_CHECK_VERSES_PER_REFERENCE, remaining), language, numbering.id);
+            remaining -= q.shown;
+            quoted ||= q.shown > 0;
+            lines.push(...q.lines);
           }
         }
         blocks.push(lines.join('\n'));
@@ -724,7 +754,7 @@ export function registerTools(server: McpServer): void {
       const summary = found.length
         ? `${found.length} Bible references, ${problems} with problems.`
         : 'No Bible references found. Book names must be capitalised ("Joh 3,16", "John 3:16").';
-      const body = plain(blocks.join('\n\n')) + (quoted ? await attribution([bible], language) : '');
+      const body = plain(blocks.join('\n\n')) + (found.length ? numberedAs(numbering.id) : '') + (quoted ? await attribution([bible], language) : '');
       return {
         content: [...(body ? [{ type: 'text' as const, text: body }] : []), { type: 'text' as const, text: summary }],
         structuredContent: { references, checked: found.length, problems },

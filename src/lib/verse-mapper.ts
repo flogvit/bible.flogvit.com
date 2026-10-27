@@ -47,13 +47,23 @@ const mappingData = new Map<
   { id: string; name: string; bookNames: Record<string, number>; verseMap: Record<string, string> }
 >();
 
-// INGEN AV DE FIRE HAR TAK, og det er et bevisst valg med en kjent pris: å
-// slippe dem igjen koster ~300 ms på neste kapittelrender (#19), mens å beholde
-// dem koster minne som aldri gis tilbake. Prisen er målt for den fulle
-// mengden — alle 1158 gjennom fil-cachen er 93 MB heap og 409 MB RSS — men
-// ingen har noensinne kunnet lese hvor langt opp den kurven vi FAKTISK er.
-// Derfor meldes antallet: veksten i det er svaret på om det er disse som
-// vokser, eller noe annet. Se `minne-regnskap.ts` og #110.
+// Å slippe en mapping igjen koster ~300 ms på neste kapittelrender (#19), mens
+// å beholde den koster minne som aldri gis tilbake — alle 1158 gjennom
+// fil-cachen er 93 MB heap og 409 MB RSS. Siden når bare de 14 id-ene
+// `resolveMappingId()` svarer på, men MCP-serveren (#169) slår opp hvilken som
+// helst av de 1158 filene, og en klient som går gjennom katalogen ville fylt
+// alle fire. Derfor et TAK over det siden bruker: på siden nås det aldri, i
+// MCP-prosessen holder det en gjennomgang av katalogen nede. Antallet meldes
+// som før, se
+// `minne-regnskap.ts` og #110.
+const MAX_CACHED_MAPPINGS = 32;
+
+/** Map.set med tak: den eldste oppføringen går ut når taket er nådd. */
+function remember<K, V>(cache: Map<K, V>, key: K, value: V): V {
+  if (cache.size >= MAX_CACHED_MAPPINGS) cache.delete(cache.keys().next().value as K);
+  cache.set(key, value);
+  return value;
+}
 registrerMinnekilde('verse-mapper/mappingFiles', () => ({ oppforinger: mappingFiles.size }));
 registrerMinnekilde('verse-mapper/mappers', () => ({ oppforinger: mappers.size }));
 registrerMinnekilde('verse-mapper/crossMappers', () => ({ oppforinger: crossMappers.size }));
@@ -70,33 +80,27 @@ registrerMinnekilde('verse-mapper/mappingData', () => ({ oppforinger: mappingDat
  * ~350 ms per sidevisning, uavhengig av hvor mange vers kapittelet har (#19).
  */
 function mappingFile(id: string): UkvnMappingFile {
-  let file = mappingFiles.get(id);
-  if (!file) {
-    file = loadUkvnMapping(id);
-    mappingFiles.set(id, file);
-  }
-  return file;
+  return mappingFiles.get(id) ?? remember(mappingFiles, id, loadUkvnMapping(id));
 }
 
 function getMapper(mappingId: string): UkvnMapper {
-  let mapper = mappers.get(mappingId);
-  if (!mapper) {
-    mapper = new UkvnMapper(mappingFile(mappingId));
-    mappers.set(mappingId, mapper);
-  }
-  return mapper;
+  return mappers.get(mappingId) ?? remember(mappers, mappingId, new UkvnMapper(mappingFile(mappingId)));
 }
 
 function getCrossMapper(mappingId: string): CrossMapper {
   const key = `osnb->${mappingId}`;
-  let cross = crossMappers.get(key);
-  if (!cross) {
-    const osnbMapper = getMapper('osnb');
-    const targetMapper = getMapper(mappingId);
-    cross = new CrossMapper(osnbMapper, targetMapper);
-    crossMappers.set(key, cross);
-  }
-  return cross;
+  return crossMappers.get(key) ?? remember(crossMappers, key, new CrossMapper(getMapper('osnb'), getMapper(mappingId)));
+}
+
+/**
+ * Hvor et osnb-vers står i en annen nummerering — samme kryssmapping som
+ * `getKvnMappingData()` bygger verseMap av, for ett vers. `mappingId` er en
+ * fil-id fra `listMappingIds()`.
+ */
+export function osnbToMapping(mappingId: string, bookId: number, chapter: number, verse: number): { chapter: number; verse: number } {
+  if (mappingId === 'osnb') return { chapter, verse };
+  const target = ukvnDecode(getCrossMapper(mappingId).map(ukvnEncode(bookId, chapter, verse)).tkvn);
+  return { chapter: target.chapter, verse: target.verse };
 }
 
 /** Rå UkvnMappingFile for en mapping-id (serveres til frontend). */
@@ -177,7 +181,6 @@ export function getKvnMappingData(
 
   const file = mappingFile(resolved);
   const meta = MAPPING_META[resolved];
-  const cross = getCrossMapper(resolved);
   const verseMap: Record<string, string> = {};
 
   const osnbFile = mappingFile('osnb');
@@ -187,9 +190,7 @@ export function getKvnMappingData(
     const bookId = decoded.book;
     if (bookId < 1 || bookId > 66) continue;
 
-    const osnbKvn = ukvnEncode(bookId, decoded.chapter, decoded.verse);
-    const result = cross.map(osnbKvn);
-    const target = ukvnDecode(result.tkvn);
+    const target = osnbToMapping(resolved, bookId, decoded.chapter, decoded.verse);
 
     if (target.chapter !== decoded.chapter || target.verse !== decoded.verse) {
       const targetKey = `${bookId}-${target.chapter}-${target.verse}`;

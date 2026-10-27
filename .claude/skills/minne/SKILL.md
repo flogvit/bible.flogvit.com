@@ -332,3 +332,9 @@ ordrett signaturen saken er meldt på: `FATAL ERROR: Reached heap limit`.
   mikrocachen har tak (48 MB), kortcachen i `routes/og.ts` har tak (256), og
   mapping-cachene kan i praksis bare vokse til de 14 id-ene som resolver. Denne
   ene ruta var det eneste stedet én forespørsel kunne ta heapen alene.
+- **MCP-serveren (#169) når ALLE 1158 filene**, ikke bare de 14 — `mapping`
+  tar enhver fil-id. Derfor har de tre fil-cachene i `verse-mapper.ts` et tak
+  (`MAX_CACHED_MAPPINGS`, 32), over det siden bruker. Taket måles i MCP-ens
+  egen prosess (`mcp/test/mapping.test.ts`), ikke i bibels suite: der ville 40
+  ukjente id-er blitt liggende for `minne-vekst.test.ts`, som teller hele
+  prosessen.

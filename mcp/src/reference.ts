@@ -29,7 +29,13 @@ export interface ParsedReferences {
 const BOOK_AND_REST = /^((?:[1-5]\s*\.?\s*)?\p{L}[^\d]*?)\s*(\d.*)?$/u;
 const NUMBERS_ONLY = /^\d/;
 
-export function parseReferences(input: string): ParsedReferences {
+/**
+ * `anyChapter`: the reference is in another verse numbering (a KVN mapping,
+ * #169), where a book can have a chapter osnb does not — Malachi 4 in the
+ * King James numbering is osnb's Malachi 3:19-24. The mapping decides then
+ * whether the chapter exists.
+ */
+export function parseReferences(input: string, { anyChapter = false } = {}): ParsedReferences {
   const passages: Passage[] = [];
   const errors: string[] = [];
   let book: BookInfo | undefined;
@@ -60,7 +66,7 @@ export function parseReferences(input: string): ParsedReferences {
       rest = m![2];
     }
 
-    const result = parseNumbers(book, rest.replace(/\s+/g, '').replace(/[–—]/g, '-'));
+    const result = parseNumbers(book, rest.replace(/\s+/g, '').replace(/[–—]/g, '-'), anyChapter ? MAX_ANY_CHAPTER : book.chapters);
     if (typeof result === 'string') errors.push(`"${part}": ${result}`);
     else passages.push(...result);
   }
@@ -68,7 +74,10 @@ export function parseReferences(input: string): ParsedReferences {
   return { passages, errors };
 }
 
-function parseNumbers(book: BookInfo, spec: string): Passage[] | string {
+/** Psalm 151 is the highest chapter any numbering has. */
+const MAX_ANY_CHAPTER = 151;
+
+function parseNumbers(book: BookInfo, spec: string, maxChapter: number): Passage[] | string {
   const single = book.chapters === 1;
 
   // No chapter/verse separator: a chapter or a chapter range — or, in a
@@ -77,8 +86,8 @@ function parseNumbers(book: BookInfo, spec: string): Passage[] | string {
   if (plain) {
     const a = Number(plain[1]);
     const b = plain[2] ? Number(plain[2]) : a;
-    if (single) return checked(book, [{ book, chapter: 1, verseStart: a, endChapter: 1, verseEnd: b }]);
-    return checked(book, [{ book, chapter: a, verseStart: null, endChapter: b, verseEnd: null }]);
+    if (single) return checked(book, [{ book, chapter: 1, verseStart: a, endChapter: 1, verseEnd: b }], maxChapter);
+    return checked(book, [{ book, chapter: a, verseStart: null, endChapter: b, verseEnd: null }], maxChapter);
   }
 
   const withVerses = spec.match(/^(\d+)([:,])(.+)$/);
@@ -98,13 +107,13 @@ function parseNumbers(book: BookInfo, spec: string): Passage[] | string {
       passages.push({ book, chapter, verseStart: from, endChapter: chapter, verseEnd: to });
     }
   }
-  return checked(book, passages);
+  return checked(book, passages, maxChapter);
 }
 
-function checked(book: BookInfo, passages: Passage[]): Passage[] | string {
+function checked(book: BookInfo, passages: Passage[], maxChapter: number): Passage[] | string {
   for (const p of passages) {
     for (const c of [p.chapter, p.endChapter]) {
-      if (c < 1 || c > book.chapters) return `chapter ${c} does not exist (the book has ${book.chapters}).`;
+      if (c < 1 || c > maxChapter) return `chapter ${c} does not exist (the book has ${maxChapter}).`;
     }
     if (p.endChapter < p.chapter) return 'the range runs backwards.';
     if (p.endChapter === p.chapter && p.verseStart !== null && p.verseEnd !== null && p.verseEnd < p.verseStart) {

@@ -37,7 +37,14 @@ export const TOOL_ROWS: readonly { tools: readonly string[]; what: MessageKey; a
   { tools: ['search_topics', 'get_topic'], what: 'mcp.tool.topics', ask: 'mcp.ask.topics' },
   { tools: ['get_daily_verse'], what: 'mcp.tool.daily', ask: 'mcp.ask.daily' },
   { tools: ['check_references'], what: 'mcp.tool.check', ask: 'mcp.ask.check' },
+  { tools: ['get_church_year_readings'], what: 'mcp.tool.churchYear', ask: 'mcp.ask.churchYear' },
+  { tools: ['get_timeline'], what: 'mcp.tool.timeline', ask: 'mcp.ask.timeline' },
+  { tools: ['get_prophecies'], what: 'mcp.tool.prophecies', ask: 'mcp.ask.prophecies' },
+  { tools: ['get_story'], what: 'mcp.tool.story', ask: 'mcp.ask.story' },
+  { tools: ['get_number'], what: 'mcp.tool.number', ask: 'mcp.ask.number' },
+  { tools: ['get_gospel_parallels'], what: 'mcp.tool.parallels', ask: 'mcp.ask.parallels' },
   { tools: ['list_editions'], what: 'mcp.tool.editions', ask: 'mcp.ask.editions' },
+  { tools: ['list_verse_mappings'], what: 'mcp.tool.mappings', ask: 'mcp.ask.mappings' },
 ];
 
 export const MCP_TOOL_NAMES: readonly string[] = TOOL_ROWS.flatMap((r) => r.tools);

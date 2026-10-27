@@ -63,12 +63,30 @@ Claude Code plugin around it: `../cli/README.md`.
 | `search_topics`, `get_topic` | Stories, themes, prophecies and gospel parallels |
 | `get_daily_verse` | Today's verse |
 | `check_references` | Every Bible reference in a piece of text — line, column, the verses, and a problem for one that does not exist |
+| `get_church_year_readings` | The Church of Norway's readings for a Sunday or feast day, by date or by the day's name (Norwegian, or English for the major feasts), optionally quoted |
+| `get_timeline` | Timeline events for a period, a span of years, or a person or place named in them; the Bible's timeline or the world's alongside it |
+| `get_prophecies` | Prophecies made or fulfilled in a passage, or in a category, with their fulfilment and optionally both texts |
+| `get_story` | A Bible story by name, where it is told, and the text |
+| `get_number` | What a number means in the Bible and where it occurs; with no number, every number that has an entry |
+| `get_gospel_parallels` | The gospel parallels that cover a passage, every Gospel's passage side by side, optionally quoted one after the other |
 | `list_editions` | The editions and their licences |
+| `list_verse_mappings` | The 1158 verse numberings (KVN mappings) the `mapping` argument takes, found by edition name or language |
 
 References are read in English and Norwegian style alike — `John 3:16-18`,
 `Joh 3,16.18`, `1 Cor 13:4-7`, `Gen 1:1-2:3`, several separated by `;` — and
 book names in all eight site languages, plus the Norwegian letter names
 («Romerbrevet»).
+
+**Verse numbering.** Every tool that takes or gives a verse reference has a
+`mapping` argument: an id from `list_verse_mappings` (`english_kj`,
+`dnb2024_nb`, …) or a short name (`kjv`, `dnb2024`). A reference is read in
+that numbering and the answer is numbered in it, so "Mal 4:5" with `kjv` is
+osnb's Malachi 3:23. The tools do no remapping of their own: a reference goes
+through `mapChapter()`, as `/api/chapter?mapping=` does, and an osnb address
+comes out through `osnbToMapping()`, the cross mapping `/api/mappings/kvn/:id`
+builds its verseMap from (`src/lib/verse-mapper.ts`). Unlike the API, which
+only knows the 13 named numberings, the MCP takes any of the 1158 mapping
+files. That is why the caches in `verse-mapper.ts` have a cap (32).
 
 Quoted Bible text carries its source line. The translations are CC BY 4.0, and
 the attribution has to follow the text wherever the assistant puts it.
@@ -155,6 +173,10 @@ site shows, in every language, finds its own book. `test/find-references.test.ts
 finds every book by every name inside a sentence, and its last verse as the
 last. `test/cli.test.ts` runs the command line client (`../cli/`) as its own
 program, with node and bun, against a listening server.
+`test/lookups.test.ts` holds the six direct lookups to every row of their
+tables. `test/mapping.test.ts` holds `mapping` to `mapChapter()` over every
+chapter where the King James numbering differs from osnb, plus Malachi 4,
+cross-references in and out, and `check_references`.
 `test/tool-quality.test.ts` reads `tools/list` and fails on a tool without a
 title, a description or all four annotation hints, an argument or output field
 without a description, an optional argument that does not say its default, or
