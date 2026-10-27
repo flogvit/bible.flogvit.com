@@ -8,7 +8,6 @@
 // obligation follows the text wherever the model puts it.
 
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import { z } from 'zod';
 import {
   defaultBibleForLanguage,
@@ -33,7 +32,6 @@ import {
   getThemeByName,
   getThemesByChapter,
   getTimelineEventsForChapter,
-  getVerses,
   originalBibleId,
   searchGospelParallels,
   searchOriginalWord,
@@ -43,21 +41,35 @@ import {
   searchThemes,
   searchTimelineEvents,
   themeTitle,
-  type ProphecyReference,
   type StoryData,
   type ThemeData,
-  type Verse,
 } from '../../src/lib/bible.ts';
-import { bookName, getBookInfoById as bookById, type BookInfo } from '../../src/lib/books-data.ts';
+import { bookName, getBookInfoById as bookById } from '../../src/lib/books-data.ts';
 import { IMPORTED_BIBLES } from '../../src/lib/editions.ts';
-import { LOCALES } from '../../src/lib/i18n.ts';
 import { findReferences } from './find-references.ts';
 import { chapterUrl, pageUrl } from './links.ts';
 import { chaptersOf, contains, parseReferences, type Passage } from './reference.ts';
 import { searchVerseText } from './search.ts';
+import {
+  attribution,
+  failure,
+  label,
+  language,
+  MAX_VERSES,
+  parsed,
+  passageLabel,
+  passageVerses,
+  plain,
+  prophecyRefLabel,
+  quote,
+  quoteEdition,
+  READ_ONLY,
+  READABLE,
+  reference,
+  refLabel,
+  text,
+} from './answer.ts';
 
-/** Most verses one call returns per edition. Psalm 119 (176) fits. */
-export const MAX_VERSES = 200;
 /** Word-by-word is ~15 lines per verse; past this the answer drowns the model. */
 const MAX_WORD_BY_WORD_VERSES = 20;
 const MAX_CROSS_REFERENCE_VERSES = 50;
@@ -70,20 +82,6 @@ const MAX_CHECK_VERSES_PER_REFERENCE = 10;
  */
 export const MAX_CHECK_TEXT = 20_000;
 
-const READABLE = ['osnb', 'osnn', 'osen'] as const;
-
-const language = z
-  .enum(LOCALES)
-  .default('en')
-  .describe(
-    'Language for names, notes and study content, and for the links to bible.flogvit.com: en (English), nb (Norwegian Bokmål), nn (Norwegian Nynorsk), sv (Swedish), fr (French), es (Spanish), fi (Finnish), de (German). Content missing in a language falls back to English. Default: en.',
-  );
-const reference = z
-  .string()
-  .min(2)
-  .describe(
-    'Bible reference in English or Norwegian style, e.g. "John 3:16", "Joh 3,16-18", "1 Cor 13:4-7", "Ps 23", "Gen 1:1-2:3". Several separated by ";": "Rom 8:28; 9:1; John 3:16".',
-  );
 const limit = z.number().int().min(1).max(100).default(20).describe('Most verses to return, 1-100. Default: 20.');
 const offset = z
   .number()
@@ -102,80 +100,11 @@ const checkedReference = z.object({
   problem: z.string().optional().describe('Why the reference does not exist, e.g. a verse past the end of the chapter.'),
 });
 
-const READ_ONLY = { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false } as const;
-
-// --- formatting ---
-
-// The generated study text links with the site's own markup,
-// `[ref:Gen 22:2|Genesis 22:2]`, `[person:abraham]` (see `src/views/inline-refs.tsx`).
-// A model needs the words, not the envelope: the label if there is one, else
-// the value without its `@edition` suffix.
-const MARKUP = /\[(?:vers|ref|manuskript|andakt|tema|person|profeti|parallell|historie):([^\]|]+)(?:\|([^\]]+))?\]/g;
-
-function plain(body: string): string {
-  return body.replace(MARKUP, (_, value: string, shown?: string) => shown ?? value.replace(/@[\w-]+$/, '').trim());
-}
-
-function text(body: string): CallToolResult {
-  return { content: [{ type: 'text', text: plain(body) }] };
-}
-
-function failure(body: string): CallToolResult {
-  return { content: [{ type: 'text', text: body }], isError: true };
-}
-
-/** "John 3:16-18", "John 3", "Genesis 1:1-2:3" — in the requested language. */
-function label(book: BookInfo, chapter: number, from: number | null, endChapter: number, to: number | null, lang: string): string {
-  const name = bookName(book, lang);
-  if (from === null || to === null) return endChapter === chapter ? `${name} ${chapter}` : `${name} ${chapter}-${endChapter}`;
-  if (endChapter !== chapter) return `${name} ${chapter}:${from}-${endChapter}:${to}`;
-  return from === to ? `${name} ${chapter}:${from}` : `${name} ${chapter}:${from}-${to}`;
-}
-
 function firstSentence(s: string): string {
   const m = s.match(/^.{20,240}?[.!?](?=\s|$)/s);
   return m ? m[0] : s.slice(0, 240);
 }
 
-const passageLabel = (p: Passage, lang: string) => label(p.book, p.chapter, p.verseStart, p.endChapter, p.verseEnd, lang);
-
-function refLabel(bookId: number, chapter: number, from: number, to: number, lang: string): string {
-  const book = bookById(bookId);
-  return book ? label(book, chapter, from, chapter, to, lang) : `${bookId} ${chapter}:${from}-${to}`;
-}
-
-const prophecyRefLabel = (r: ProphecyReference, lang: string) => refLabel(r.book_id, r.chapter, r.verse_start, r.verse_end, lang);
-
-type Parsed = { passages: Passage[]; notes: string; error?: undefined } | { error: CallToolResult };
-
-function parsed(input: string): Parsed {
-  const { passages, errors } = parseReferences(input);
-  if (passages.length === 0) {
-    return { error: failure(`Could not read the reference. ${errors.join(' ')}`.trim()) };
-  }
-  return { passages, notes: errors.length ? `\n\nSkipped: ${errors.join(' ')}` : '' };
-}
-
-async function attribution(editions: string[], lang: string): Promise<string> {
-  const lines: string[] = [];
-  for (const id of editions) {
-    const e = await getBibleEditionById(id);
-    if (!e) continue;
-    lines.push(`${e.name_en} (${e.abbreviation ?? e.id}), ${e.license_spdx ?? e.license_name ?? ''}: ${pageUrl(lang, `/oversettelser/${e.id}`)}`);
-  }
-  return lines.length ? `\n\nSource: ${lines.join('; ')}` : '';
-}
-
-/** Verses of a passage in one edition, one query per chapter. */
-async function passageVerses(p: Passage, bible: string): Promise<Verse[]> {
-  const out: Verse[] = [];
-  for (const chapter of chaptersOf(p)) {
-    for (const v of await getVerses(p.book.id, chapter, bible)) {
-      if (contains(p, v.chapter, v.verse)) out.push(v);
-    }
-  }
-  return out;
-}
 
 // --- tools ---
 
@@ -674,10 +603,7 @@ export function registerTools(server: McpServer): void {
       inputSchema: {
         text: z.string().min(1).max(MAX_CHECK_TEXT).describe(`The text to check, at most ${MAX_CHECK_TEXT} characters. Split a longer text by lines and pass first_line.`),
         first_line: z.number().int().min(1).default(1).describe('Line number of the first line of `text`, when it is a part of a longer file. Default: 1.'),
-        edition: z
-          .enum(IMPORTED_BIBLES)
-          .optional()
-          .describe('Edition to quote the verses from: osnb, osnn, osen, sblgnt (Greek New Testament) or tanach (Hebrew Old Testament). Default: the edition for `language`.'),
+        edition: quoteEdition,
         include_text: z.boolean().default(true).describe('true quotes the verses each reference points at; false gives only where each reference stands and whether it exists. Default: true.'),
         language,
       },
@@ -709,12 +635,10 @@ export function registerTools(server: McpServer): void {
         const lines = [`${at} → ${reference}`, `  ${url}`];
         if (include_text && remaining > 0) {
           for (const p of f.passages) {
-            const verses = await passageVerses(p, bible);
-            const shown = verses.slice(0, Math.min(MAX_CHECK_VERSES_PER_REFERENCE, remaining));
-            remaining -= shown.length;
-            quoted ||= shown.length > 0;
-            for (const v of shown) lines.push(`  ${p.endChapter !== p.chapter ? `${v.chapter}:` : ''}${v.verse} ${v.text}`);
-            if (verses.length > shown.length) lines.push(`  (${verses.length - shown.length} more verses — read them with get_passage)`);
+            const q = await quote(p, bible, Math.min(MAX_CHECK_VERSES_PER_REFERENCE, remaining), language);
+            remaining -= q.shown;
+            quoted ||= q.shown > 0;
+            lines.push(...q.lines);
           }
         }
         blocks.push(lines.join('\n'));
