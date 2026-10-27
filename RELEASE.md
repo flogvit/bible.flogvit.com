@@ -1,6 +1,6 @@
 # Release notes
 
-## 2026-10-27 — Church year readings, prophecies and a command line client for the Bible MCP
+## 2026-10-27 — Church year readings, prophecies, verse numbering and a command line client for the Bible MCP
 
 **New features**
 - Your AI assistant can now look up the church year readings, the timeline, prophecies, Bible stories, numbers and gospel parallels directly, without searching around for them.
@@ -12,14 +12,17 @@
 - Every MCP tool argument now says what it is, which values are allowed and what the default is, so assistants call the tools correctly more often.
 - The command line client tells you when a line has been cut short.
 - The MCP page lists `check_references`, and /om and the MCP runbook point to the command line client.
+- The MCP page now counts its tools itself, so the number shown always matches the server.
 
 **Bug fixes**
 - References written as "4. Mosebok" or "5 Mos" are now recognized.
+- The published MCP server image now carries the verse numbering package, so choosing a verse numbering (KVN) works there too.
 
 **Behind the scenes**
+- MCP 1.1.0: the MCP directory listings now follow each release, kept in step by a script.
 - MCP internals reorganized (shared schemas and answer helpers moved to one module).
 - Verse-mapping caches now have a size cap, measured through the MCP in its own process.
-- Added tests for the new lookups, verse numbering, tool quality and the command line client.
+- Added tests for the new lookups, verse numbering, tool quality, the command line client and the MCP image, which is now checked against the packages the server imports.
 - Updated the `minne` skill and the MCP and CLI docs.
 ## 2026-10-26 — The Bible in your AI assistant, open tabs that tell you about a new version, and a new accessibility statement
 
