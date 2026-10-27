@@ -76,7 +76,7 @@ const language = z
   .enum(LOCALES)
   .default('en')
   .describe(
-    'Language for names, notes and study content: en, nb (Norwegian Bokmål), nn (Norwegian Nynorsk), sv, fr, es, fi, de. Content missing in a language falls back to English.',
+    'Language for names, notes and study content, and for the links to bible.flogvit.com: en (English), nb (Norwegian Bokmål), nn (Norwegian Nynorsk), sv (Swedish), fr (French), es (Spanish), fi (Finnish), de (German). Content missing in a language falls back to English. Default: en.',
   );
 const reference = z
   .string()
@@ -84,15 +84,22 @@ const reference = z
   .describe(
     'Bible reference in English or Norwegian style, e.g. "John 3:16", "Joh 3,16-18", "1 Cor 13:4-7", "Ps 23", "Gen 1:1-2:3". Several separated by ";": "Rom 8:28; 9:1; John 3:16".',
   );
+const limit = z.number().int().min(1).max(100).default(20).describe('Most verses to return, 1-100. Default: 20.');
+const offset = z
+  .number()
+  .int()
+  .min(0)
+  .default(0)
+  .describe('How many verses to skip, for the next page: pass the offset the previous answer names. Default: 0.');
 
 /** One reference check_references found, in its structured answer. */
 const checkedReference = z.object({
-  line: z.number(),
-  column: z.number(),
-  written: z.string(),
-  reference: z.string().optional(),
-  url: z.string().optional(),
-  problem: z.string().optional(),
+  line: z.number().describe('Line the reference stands on, counted from first_line.'),
+  column: z.number().describe('Column where the reference starts, from 1.'),
+  written: z.string().describe('The reference as it is written in the text.'),
+  reference: z.string().optional().describe('The passage it points at, written out; absent when it could not be read.'),
+  url: z.string().optional().describe('The chapter on bible.flogvit.com.'),
+  problem: z.string().optional().describe('Why the reference does not exist, e.g. a verse past the end of the chapter.'),
 });
 
 const READ_ONLY = { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false } as const;
@@ -209,8 +216,13 @@ export function registerTools(server: McpServer): void {
           .min(1)
           .max(5)
           .optional()
-          .describe('Editions to show: osnb, osnn, osen, sblgnt (Greek NT), tanach (Hebrew OT). Default: the edition for `language`.'),
-        include_notes: z.boolean().default(false).describe('Add footnotes and alternative renderings under each verse.'),
+          .describe(
+            'Editions to show side by side, 1-5 of: osnb (Norwegian Bokmål), osnn (Norwegian Nynorsk), osen (English), sblgnt (Greek New Testament), tanach (Hebrew Old Testament). Default: the edition for `language`.',
+          ),
+        include_notes: z
+          .boolean()
+          .default(false)
+          .describe("true adds the translators' footnotes and alternative renderings under each verse. Default: false."),
         language,
       },
       annotations: READ_ONLY,
@@ -261,11 +273,14 @@ export function registerTools(server: McpServer): void {
         'Finds verses containing ALL the given words in one edition. Words match as substrings, so a stem finds its forms ("forgiv" finds forgive, forgiven, forgiveness). Put a phrase in double quotes to match it exactly. Search the edition in the language of the words: osen for English, osnb/osnn for Norwegian, sblgnt/tanach for Greek/Hebrew spellings.',
       inputSchema: {
         query: z.string().min(2).describe('Words to find, e.g. `forgiv sins` or `"love one another"`.'),
-        edition: z.enum(IMPORTED_BIBLES).default('osen'),
-        book: z.string().optional().describe('Limit to one book, e.g. "John" or "Sal".'),
-        testament: z.enum(['OT', 'NT']).optional().describe('Limit to the Old or New Testament.'),
-        limit: z.number().int().min(1).max(100).default(20),
-        offset: z.number().int().min(0).default(0),
+        edition: z
+          .enum(IMPORTED_BIBLES)
+          .default('osen')
+          .describe('Edition to search, in the language of the words: osen (English), osnb (Norwegian Bokmål), osnn (Norwegian Nynorsk), sblgnt (Greek), tanach (Hebrew). Default: osen.'),
+        book: z.string().optional().describe('Limit to one book, by name or abbreviation in any language, e.g. "John", "Joh" or "Sal". Default: the whole Bible.'),
+        testament: z.enum(['OT', 'NT']).optional().describe('Limit to the Old (OT) or New (NT) Testament. Ignored when book is given. Default: both.'),
+        limit,
+        offset,
         language,
       },
       annotations: READ_ONLY,
@@ -296,7 +311,10 @@ export function registerTools(server: McpServer): void {
         'The Hebrew (Old Testament, Leningrad Codex) or Greek (New Testament, SBLGNT) text of a passage, optionally word by word with an explanation of each word. The word explanations are written in Norwegian; translate them for the user when needed.',
       inputSchema: {
         reference,
-        word_by_word: z.boolean().default(true),
+        word_by_word: z
+          .boolean()
+          .default(true)
+          .describe(`true lists every word with pronunciation and explanation (at most ${MAX_WORD_BY_WORD_VERSES} verses); false gives the text alone (at most ${MAX_VERSES} verses). Default: true.`),
         language,
       },
       annotations: READ_ONLY,
@@ -341,10 +359,13 @@ export function registerTools(server: McpServer): void {
       description:
         'Finds every verse where a Hebrew or Greek word occurs, ignoring accents and cantillation (e.g. ἀγάπη, λόγος, חֶסֶד). Returns the source text and the translation side by side.',
       inputSchema: {
-        word: z.string().min(1).describe('The word in Hebrew or Greek script.'),
-        edition: z.enum(READABLE).default('osen').describe('Translation to show next to the source text.'),
-        limit: z.number().int().min(1).max(100).default(20),
-        offset: z.number().int().min(0).default(0),
+        word: z.string().min(1).describe('The word in Hebrew or Greek script, with or without accents and vowel points, e.g. "ἀγάπη" or "חסד".'),
+        edition: z
+          .enum(READABLE)
+          .default('osen')
+          .describe('Translation to show next to the source text: osen (English), osnb (Norwegian Bokmål), osnn (Norwegian Nynorsk). Default: osen.'),
+        limit,
+        offset,
         language,
       },
       annotations: READ_ONLY,
@@ -473,7 +494,10 @@ export function registerTools(server: McpServer): void {
     {
       title: 'Find people in the Bible',
       description: 'Finds people by name or by what is said about them ("king Judah", "prophetess"). Returns ids for get_person.',
-      inputSchema: { query: z.string().min(2), language },
+      inputSchema: {
+        query: z.string().min(2).describe('A name or words about the person, at least 2 characters, e.g. "Tamar", "king of Judah", "prophetess".'),
+        language,
+      },
       annotations: READ_ONLY,
     },
     async ({ query, language }) => {
@@ -534,7 +558,10 @@ export function registerTools(server: McpServer): void {
       title: 'Find stories, themes and prophecies',
       description:
         'Searches the study material: Bible stories (e.g. "prodigal son"), themes (e.g. "forgiveness"), prophecies and their fulfilment, gospel parallels and timeline events. Returns ids for get_topic.',
-      inputSchema: { query: z.string().min(2), language },
+      inputSchema: {
+        query: z.string().min(2).describe('Words to look for in titles and descriptions, at least 2 characters, e.g. "prodigal son", "forgiveness", "exodus".'),
+        language,
+      },
       annotations: READ_ONLY,
     },
     async ({ query, language }) => {
@@ -561,8 +588,10 @@ export function registerTools(server: McpServer): void {
       title: 'A story, theme, prophecy or gospel parallel',
       description: 'The full entry for an id from search_topics or get_chapter_study, with the passages it is built on.',
       inputSchema: {
-        kind: z.enum(['story', 'theme', 'prophecy', 'parallel']),
-        id: z.string(),
+        kind: z
+          .enum(['story', 'theme', 'prophecy', 'parallel'])
+          .describe('What the id names: story (a Bible story), theme, prophecy (with its fulfilment) or parallel (a gospel parallel). search_topics gives it next to each id.'),
+        id: z.string().describe('The id search_topics or get_chapter_study gives, e.g. "den-fortapte-sonn" for a story or "david" for a theme.'),
         language,
       },
       annotations: READ_ONLY,
@@ -616,7 +645,13 @@ export function registerTools(server: McpServer): void {
     {
       title: 'Verse of the day',
       description: "Today's verse on bible.flogvit.com, with a short note.",
-      inputSchema: { language, edition: z.enum(READABLE).optional() },
+      inputSchema: {
+        language,
+        edition: z
+          .enum(READABLE)
+          .optional()
+          .describe('Edition to quote the verse from: osen (English), osnb (Norwegian Bokmål), osnn (Norwegian Nynorsk). Default: the edition for `language`.'),
+      },
       annotations: READ_ONLY,
     },
     async ({ language, edition }) => {
@@ -638,20 +673,23 @@ export function registerTools(server: McpServer): void {
         'Finds every Bible reference in a piece of running text — a sermon, a manuscript, an article — and says for each one where it stands (line and column), whether it exists, and what the verses say, so a quotation can be compared with the text it cites. A reference that points past the end of a chapter or book is reported as a problem. Book names must be capitalised, as in text written for a reader.',
       inputSchema: {
         text: z.string().min(1).max(MAX_CHECK_TEXT).describe(`The text to check, at most ${MAX_CHECK_TEXT} characters. Split a longer text by lines and pass first_line.`),
-        first_line: z.number().int().min(1).default(1).describe('Line number of the first line of `text`, when it is a part of a longer file.'),
-        edition: z.enum(IMPORTED_BIBLES).optional().describe('Edition to quote the verses from. Default: the edition for `language`.'),
-        include_text: z.boolean().default(true).describe('Quote the verses each reference points at.'),
+        first_line: z.number().int().min(1).default(1).describe('Line number of the first line of `text`, when it is a part of a longer file. Default: 1.'),
+        edition: z
+          .enum(IMPORTED_BIBLES)
+          .optional()
+          .describe('Edition to quote the verses from: osnb, osnn, osen, sblgnt (Greek New Testament) or tanach (Hebrew Old Testament). Default: the edition for `language`.'),
+        include_text: z.boolean().default(true).describe('true quotes the verses each reference points at; false gives only where each reference stands and whether it exists. Default: true.'),
         language,
       },
       outputSchema: {
-        references: z.array(checkedReference),
-        checked: z.number(),
-        problems: z.number(),
+        references: z.array(checkedReference).describe('Every reference found, in the order it stands in the text.'),
+        checked: z.number().describe('How many references were found.'),
+        problems: z.number().describe('How many of them do not exist.'),
       },
       annotations: READ_ONLY,
     },
     async ({ text: input, first_line, edition, include_text, language }) => {
-      const bible = edition ?? (await defaultEdition(language));
+      const bible = edition ?? (await defaultBibleForLanguage(language));
       const found = findReferences(input, first_line, language);
       const references: z.infer<typeof checkedReference>[] = [];
       const blocks: string[] = [];
