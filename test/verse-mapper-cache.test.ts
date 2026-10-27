@@ -18,13 +18,10 @@
 
 import { describe, expect, setDefaultTimeout, test } from 'bun:test';
 import { DB_TEST_TIMEOUT_MS } from './db-timeout.ts';
-import { minneRegnskap } from '../src/lib/minne-regnskap.ts';
 import {
   getAvailableMappings,
   getKvnMappingData,
   getKvnMappingRaw,
-  listMappingIds,
-  MAPPING_META,
   osnbToMapping,
 } from '../src/lib/verse-mapper.ts';
 
@@ -73,20 +70,6 @@ describe('mapping-filene leses én gang', () => {
     // 232 MB heap / 925 MB RSS målt). Listebyggingen var det TREDJE stedet, og
     // den åpner ikke lenger en fil (#106). Import-linja treffer ikke `(`.
     expect(calls.length).toBe(2);
-  });
-
-  // MCP-serveren (#169) slår opp hvilken som helst av de 1158 filene, og en
-  // klient som går gjennom katalogen skal ikke fylle cachene med alle. Taket
-  // ligger over de 14 siden når, så siden merker det aldri.
-  test('en gjennomgang av katalogen holder cachene under taket', () => {
-    const ids = listMappingIds().filter((id) => !MAPPING_META[id]).slice(0, 40);
-    expect(ids.length).toBe(40);
-    for (const id of ids) osnbToMapping(id, 39, 3, 23);
-    const kilder = minneRegnskap().kilder;
-    for (const navn of ['verse-mapper/mappingFiles', 'verse-mapper/mappers', 'verse-mapper/crossMappers']) {
-      expect(kilder[navn]!.oppforinger).toBeLessThanOrEqual(32);
-      expect(kilder[navn]!.oppforinger).toBeGreaterThan(14);
-    }
   });
 
   test('osnbToMapping er samme kryssmapping som verseMap bygges av', () => {

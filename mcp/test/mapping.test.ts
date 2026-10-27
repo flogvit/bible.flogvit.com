@@ -2,6 +2,7 @@ import { afterAll, describe, expect, test } from 'bun:test';
 import { getVerses } from '../../src/lib/bible.ts';
 import { bookName, getBookInfoById } from '../../src/lib/books-data.ts';
 import { closeSql, getSql } from '../../src/lib/db.ts';
+import { minneRegnskap } from '../../src/lib/minne-regnskap.ts';
 import { listMappingIds, MAPPING_META, mapChapter, osnbToMapping } from '../../src/lib/verse-mapper.ts';
 import { createHandler } from '../src/server.ts';
 import { mcpPost } from './calls.ts';
@@ -88,6 +89,19 @@ describe('get_passage reads and numbers through mapChapter', () => {
     const { text } = await call('get_passage', { reference: 'Ps 51', mapping: other, editions: ['osen'] });
     for (const m of expected) expect(text).toContain(`\n${m.displayVerse} ${m.text}`);
   });
+
+  test('a client walking the catalogue keeps the mapping caches under their cap', async () => {
+    // The site only reaches the ids resolveMappingId() knows; the MCP reaches
+    // every file, so the caches in verse-mapper.ts have a cap (32).
+    const ids = listMappingIds().filter((m) => !MAPPING_META[m]).slice(0, 40);
+    expect(ids.length).toBe(40);
+    for (const m of ids) expect((await call('get_passage', { reference: 'Mal 3:23', mapping: m, editions: ['osen'] })).isError).toBe(false);
+    const kilder = minneRegnskap().kilder;
+    for (const navn of ['verse-mapper/mappingFiles', 'verse-mapper/mappers', 'verse-mapper/crossMappers']) {
+      expect(kilder[navn]!.oppforinger).toBeLessThanOrEqual(32);
+      expect(kilder[navn]!.oppforinger).toBeGreaterThan(14);
+    }
+  }, 120_000);
 
   test('an unknown numbering is an error that points to the list', async () => {
     const { text, isError } = await call('get_passage', { reference: 'John 3:16', mapping: 'no-such-numbering' });
