@@ -18,10 +18,14 @@
 
 import { describe, expect, setDefaultTimeout, test } from 'bun:test';
 import { DB_TEST_TIMEOUT_MS } from './db-timeout.ts';
+import { minneRegnskap } from '../src/lib/minne-regnskap.ts';
 import {
   getAvailableMappings,
   getKvnMappingData,
   getKvnMappingRaw,
+  listMappingIds,
+  MAPPING_META,
+  osnbToMapping,
 } from '../src/lib/verse-mapper.ts';
 
 setDefaultTimeout(DB_TEST_TIMEOUT_MS);
@@ -69,5 +73,32 @@ describe('mapping-filene leses én gang', () => {
     // 232 MB heap / 925 MB RSS målt). Listebyggingen var det TREDJE stedet, og
     // den åpner ikke lenger en fil (#106). Import-linja treffer ikke `(`.
     expect(calls.length).toBe(2);
+  });
+
+  // MCP-serveren (#169) slår opp hvilken som helst av de 1158 filene, og en
+  // klient som går gjennom katalogen skal ikke fylle cachene med alle. Taket
+  // ligger over de 14 siden når, så siden merker det aldri.
+  test('en gjennomgang av katalogen holder cachene under taket', () => {
+    const ids = listMappingIds().filter((id) => !MAPPING_META[id]).slice(0, 40);
+    expect(ids.length).toBe(40);
+    for (const id of ids) osnbToMapping(id, 39, 3, 23);
+    const kilder = minneRegnskap().kilder;
+    for (const navn of ['verse-mapper/mappingFiles', 'verse-mapper/mappers', 'verse-mapper/crossMappers']) {
+      expect(kilder[navn]!.oppforinger).toBeLessThanOrEqual(32);
+      expect(kilder[navn]!.oppforinger).toBeGreaterThan(14);
+    }
+  });
+
+  test('osnbToMapping er samme kryssmapping som verseMap bygges av', () => {
+    // Malaki 3:23 i osnb er 4:5 i King James-nummereringen.
+    expect(osnbToMapping('english_kj', 39, 3, 23)).toEqual({ chapter: 4, verse: 5 });
+    expect(osnbToMapping('osnb', 39, 3, 23)).toEqual({ chapter: 3, verse: 23 });
+    const { verseMap } = getKvnMappingData('kjv')!;
+    expect(Object.keys(verseMap).length).toBeGreaterThan(100);
+    for (const [target, osnb] of Object.entries(verseMap)) {
+      const [book, chapter, verse] = osnb.split('-').map(Number) as [number, number, number];
+      const t = osnbToMapping('english_kj', book, chapter, verse);
+      expect(`${book}-${t.chapter}-${t.verse}`).toBe(target);
+    }
   });
 });
