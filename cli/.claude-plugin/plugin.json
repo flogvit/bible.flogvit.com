@@ -1,0 +1,9 @@
+{
+  "name": "flogvit-bible",
+  "description": "Read, search and quote the Bible from bible.flogvit.com — English and Norwegian translations, the Hebrew and Greek source texts, study notes — and check the Bible references in a manuscript.",
+  "version": "1.0.0",
+  "author": { "name": "FLOGVIT" },
+  "homepage": "https://bible.flogvit.com",
+  "repository": "https://github.com/flogvit/bible.flogvit.com",
+  "keywords": ["bible", "scripture", "hebrew", "greek", "cli"]
+}

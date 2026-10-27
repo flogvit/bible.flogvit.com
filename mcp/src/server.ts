@@ -8,6 +8,11 @@
 // traffic comes in bursts — one question can be ten tool calls — and it must
 // never take the reading site with it. The cap is GLOBAL, not per IP: Claude
 // and ChatGPT call connectors from their own servers, so one IP is many users.
+//
+// The command line client (`cli/`) is the one caller we can tell apart, by its
+// User-Agent, and the one most likely to arrive in a loop: a script checking a
+// book's worth of files. It gets a cap of its own INSIDE the global one, so a
+// script can never hold every slot the assistants share.
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { WebStandardStreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js';
@@ -60,6 +65,8 @@ export function createMcpServer(): McpServer {
 
 export interface Limits {
   maxConcurrent: number;
+  /** Of `maxConcurrent`, how many the command line client may hold. */
+  maxConcurrentCli: number;
   /** How long a request waits for a free slot before it gets 503. */
   queueWaitMs: number;
   /** One DB retry budget for everything a request does (`db.ts`, #107). */
@@ -69,6 +76,7 @@ export interface Limits {
 export function limitsFromEnv(): Limits {
   return {
     maxConcurrent: Number(process.env.MCP_MAX_CONCURRENT || 4),
+    maxConcurrentCli: Number(process.env.MCP_MAX_CONCURRENT_CLI || 2),
     queueWaitMs: 5000,
     dbBudgetMs: 10_000,
   };
@@ -111,31 +119,59 @@ function jsonRpcError(status: number, message: string, headers: Record<string, s
   return Response.json({ jsonrpc: '2.0', error: { code: -32000, message }, id: null }, { status, headers });
 }
 
-export function createHandler(limits: Limits): (req: Request) => Promise<Response> {
+/** The User-Agent `cli/flogvit-bible.mjs` sends. */
+export const CLI_USER_AGENT = /^flogvit-bible-cli\//;
+
+interface Semaphore {
+  acquire(): Promise<boolean>;
+  release(): void;
+}
+
+function semaphore(max: number, waitMs: number): Semaphore {
   let active = 0;
   const waiting: (() => void)[] = [];
-
-  const acquire = (): Promise<boolean> => {
-    if (active < limits.maxConcurrent) {
-      active++;
-      return Promise.resolve(true);
-    }
-    return new Promise((resolve) => {
-      const grant = () => {
-        clearTimeout(timer);
+  return {
+    acquire() {
+      if (active < max) {
         active++;
-        resolve(true);
-      };
-      const timer = setTimeout(() => {
-        waiting.splice(waiting.indexOf(grant), 1);
-        resolve(false);
-      }, limits.queueWaitMs);
-      waiting.push(grant);
-    });
+        return Promise.resolve(true);
+      }
+      return new Promise((resolve) => {
+        const grant = () => {
+          clearTimeout(timer);
+          active++;
+          resolve(true);
+        };
+        const timer = setTimeout(() => {
+          waiting.splice(waiting.indexOf(grant), 1);
+          resolve(false);
+        }, waitMs);
+        waiting.push(grant);
+      });
+    },
+    release() {
+      active--;
+      waiting.shift()?.();
+    },
   };
-  const release = () => {
-    active--;
-    waiting.shift()?.();
+}
+
+export function createHandler(limits: Limits): (req: Request) => Promise<Response> {
+  const all = semaphore(limits.maxConcurrent, limits.queueWaitMs);
+  const cli = semaphore(limits.maxConcurrentCli, limits.queueWaitMs);
+
+  /** The slots a request holds, in the order to give them back — or null when it gets none. */
+  const acquire = async (req: Request): Promise<Semaphore[] | null> => {
+    const held: Semaphore[] = [];
+    const needs = CLI_USER_AGENT.test(req.headers.get('user-agent') ?? '') ? [cli, all] : [all];
+    for (const s of needs) {
+      if (!(await s.acquire())) {
+        for (const h of held) h.release();
+        return null;
+      }
+      held.push(s);
+    }
+    return held;
   };
 
   return async (req: Request): Promise<Response> => {
@@ -158,7 +194,8 @@ export function createHandler(limits: Limits): (req: Request) => Promise<Respons
     // Stateless: no server-initiated stream to open, no session to delete.
     if (req.method !== 'POST') return jsonRpcError(405, 'Method not allowed.', { allow: 'POST' });
 
-    if (!(await acquire())) return jsonRpcError(503, 'Busy — try again shortly.', { 'retry-after': '10' });
+    const held = await acquire(req);
+    if (!held) return jsonRpcError(503, 'Busy — try again shortly.', { 'retry-after': '10' });
     const server = createMcpServer();
     const transport = new WebStandardStreamableHTTPServerTransport({
       sessionIdGenerator: undefined,
@@ -169,7 +206,7 @@ export function createHandler(limits: Limits): (req: Request) => Promise<Respons
       await server.connect(transport);
       return await withRetryBudget(() => transport.handleRequest(req), limits.dbBudgetMs);
     } finally {
-      release();
+      for (const h of held) h.release();
       await transport.close();
       await server.close();
     }

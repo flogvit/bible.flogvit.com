@@ -20,6 +20,7 @@ export const CALLS: [string, Record<string, unknown>][] = [
   ['get_topic', { kind: 'story', id: 'den-fortapte-sonn' }],
   ['get_topic', { kind: 'theme', id: 'david' }],
   ['get_daily_verse', { language: 'nn' }],
+  ['check_references', { text: 'Som det står i Joh 3,16.\nSal 23,9 finnes ikke.', language: 'nb' }],
 ];
 
 /** A JSON-RPC message POSTed to /mcp, as a Streamable HTTP client sends it. */

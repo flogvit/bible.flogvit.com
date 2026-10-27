@@ -9,7 +9,7 @@ import { mcpPost } from './calls.ts';
 // short; an MCP client on /mcp gets exactly what it got before. And what the
 // site and the registry SAY about the server is held against what it IS.
 
-const handler = createHandler({ maxConcurrent: 2, queueWaitMs: 100, dbBudgetMs: 2000 });
+const handler = createHandler({ maxConcurrent: 2, maxConcurrentCli: 2, queueWaitMs: 100, dbBudgetMs: 2000 });
 const root = (headers: Record<string, string>) => handler(new Request('http://localhost/', { headers }));
 
 test('a browser opening the address gets the landing page in its language', async () => {

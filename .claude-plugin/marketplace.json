@@ -1,0 +1,15 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "flogvit-bible",
+  "description": "The Bible on bible.flogvit.com for Claude Code.",
+  "owner": { "name": "FLOGVIT" },
+  "plugins": [
+    {
+      "name": "flogvit-bible",
+      "description": "Read, search and quote the Bible from bible.flogvit.com, and check the Bible references in a manuscript.",
+      "source": "./cli",
+      "category": "productivity",
+      "homepage": "https://github.com/flogvit/bible.flogvit.com/tree/main/cli"
+    }
+  ]
+}
