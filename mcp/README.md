@@ -91,31 +91,64 @@ files. That is why the caches in `verse-mapper.ts` have a cap (32).
 Quoted Bible text carries its source line. The translations are CC BY 4.0, and
 the attribution has to follow the text wherever the assistant puts it.
 
+## Releasing a new version
+
+Every change a client can see — a tool added or removed, an argument, a
+description — is a release, and the directories that list the server have to
+follow it. They do not all get their data the same way:
+
+| Directory | Where its data comes from | What a release needs |
+|---|---|---|
+| MCP Registry | `server.json`, published by us | publish the new version |
+| [mcptry.com](https://mcptry.com/servers/io.github.flogvit/bible) | name, description and version copied from the registry every 30 minutes; the tool list from its own scheduled `tools/list` check of the live server | nothing to submit — it follows the registry and the server |
+| Glama, PulseMCP | the registry | nothing |
+| [mcpservers.org](https://mcpservers.org/servers/bible-flogvit-com-en-mcp) | a form submitted by hand once; the page text is a copy of `websiteUrl` (`https://bible.flogvit.com/en/mcp`) | press **Request update** on the listing (no login, one click, sent at once) after the site is out |
+
+1. **In the PR that changes the tools, raise the version** — `SERVER_VERSION` in
+   `src/server.ts` and `version` in `server.json`, which `test/landing.test.ts`
+   holds equal. The registry never accepts the same version twice. A new tool
+   or argument is a minor version (1.1.0 → 1.2.0); a removed tool or argument a
+   major one. Change `description` in `server.json` too if what the server does
+   has changed: it is what every directory shows, and at most 100 characters.
+2. **Merge.** The orchestra's deployer rolls out bibel and `bibel-mcp` from the
+   same commit.
+3. **After the rollout, publish to the registry:**
+   ```sh
+   cd mcp && bun --env-file=../.env scripts/listings.ts publish
+   ```
+   It refuses while the live server still runs another version or other tools,
+   so it cannot announce what is not out. It logs in with `gh auth token`
+   (gh must be logged in as `flogvit`; the namespace is `io.github.flogvit`)
+   and needs nothing installed.
+4. **Press Request update** on https://mcpservers.org/servers/bible-flogvit-com-en-mcp.
+   It is anonymous and takes effect at once, so press it only after the site
+   is out — pressed earlier, they re-read the old page. Their review takes up to
+   two weeks. The short description there is the one submitted in the form;
+   whether Request update refreshes it too is not known. To change it, email
+   contact@mcpservers.org.
+5. **Check, about 30 minutes later:**
+   ```sh
+   cd mcp && bun --env-file=../.env scripts/listings.ts check
+   ```
+   Every line should say `ok`. `mcptry tools` follows mcptry's own schedule and
+   can lag; "Connect live" on its page refreshes it. mcpservers.org sits behind
+   a Cloudflare check and cannot be read by the script: open the page and see
+   that the tool list matches.
+
 ## Where it is listed, and how to take it down
 
-`server.json` is the entry in the official MCP Registry. Its `version` must be
-the server's `SERVER_VERSION` (`src/server.ts`), and the registry never accepts
-the same version twice: **change the entry ⇒ raise both**, then publish.
-
-```sh
-cd mcp
-mcp-publisher validate                                # checks against the live registry
-mcp-publisher login github --token "$(gh auth token)" # gh must be logged in as flogvit
-mcp-publisher publish
-curl -s 'https://registry.modelcontextprotocol.io/v0/servers?search=io.github.flogvit/bible'
-```
-
-`mcp-publisher` is `brew install mcp-publisher`. The namespace is GitHub
-(`io.github.flogvit/…`), not DNS (`com.flogvit/…`): flogvit.com's DNS is edited
-by hand at Domeneshop, and a GitHub login is something a script can do.
+The namespace is GitHub (`io.github.flogvit/…`), not DNS (`com.flogvit/…`):
+flogvit.com's DNS is edited by hand at Domeneshop, and a GitHub login is
+something a script can do.
 
 | Where | Status (2026-10-26) | Take it down |
 |---|---|---|
-| [MCP Registry](https://registry.modelcontextprotocol.io/v0/servers?search=io.github.flogvit/bible) | published, 1.0.0 | `mcp-publisher status --status deleted --all-versions --message "<why>" io.github.flogvit/bible` — hides it; `--status active` brings it back. The registry never deletes metadata. |
+| [MCP Registry](https://registry.modelcontextprotocol.io/v0/servers?search=io.github.flogvit/bible) | published; the current version is what `scripts/listings.ts check` reports | `mcp-publisher status --status deleted --all-versions --message "<why>" io.github.flogvit/bible` (`brew install mcp-publisher`, `mcp-publisher login github --token "$(gh auth token)"`) — hides it; `--status active` brings it back. The registry never deletes metadata. |
 | [Glama](https://glama.ai/mcp/connectors/io.github.flogvit/bible) | listed, read from the registry | goes with the registry entry |
 | PulseMCP | reads the registry by itself (its own form is closed) | goes with the registry entry |
+| [mcptry.com](https://mcptry.com/servers/io.github.flogvit/bible) | listed, read from the registry; checks the live server on a schedule | goes with the registry entry |
 | [mcp.so](https://mcp.so) | submitted: chatmcp/mcpso#6153 | close the issue and ask there |
-| [mcpservers.org](https://mcpservers.org/remote-mcp-servers) | submitted through the free form (review within two weeks) | email contact@mcpservers.org |
+| [mcpservers.org](https://mcpservers.org/servers/bible-flogvit-com-en-mcp) | listed (submitted through the free form) | email contact@mcpservers.org |
 | [awesome-remote-mcp-servers](https://github.com/punkpeye/awesome-remote-mcp-servers) | PR punkpeye/awesome-remote-mcp-servers#2991, from the fork `flogvit/awesome-remote-mcp-servers` | close the PR; once merged, a PR removing the three lines. Remote-only servers go in this list, not in `awesome-mcp-servers` — its CONTRIBUTING says so. |
 | [Smithery](https://smithery.ai/new) | **not submitted** — needs a login as flogvit | delete the server in Smithery's settings |
 | [cursor.directory](https://cursor.directory/mcp/new) | **not submitted** — needs a login | remove it there |
@@ -193,6 +226,13 @@ this package has its own dependencies.
   from the repo root (`docker build -f mcp/Dockerfile .`) because the server
   reads the database through the site's own getters in `src/lib/` — an answer
   here is the page there.
+- **The image carries the vendored `@free-bible/kvn`** (`kvn-package/`, 109 MB
+  of mapping files), for the verse numberings. Stage it first —
+  `bun run oppsett` in bibel, which bibel's deploy does before it builds — or
+  the build stops at the `COPY`. `test/image.test.ts` follows every import from
+  `src/index.ts` and fails when the image would lack a file or a package; the
+  tests themselves cannot see it, since they resolve through bibel's own
+  `node_modules`.
 - **Its own database user, read-only on content.** `src/grants.ts` grants
   SELECT on the tables the import owns (`CONTENT_TABLES`) and nothing else, so
   users' notes, manuscripts and shares are out of reach.
