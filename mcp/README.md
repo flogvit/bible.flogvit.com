@@ -226,6 +226,13 @@ this package has its own dependencies.
   from the repo root (`docker build -f mcp/Dockerfile .`) because the server
   reads the database through the site's own getters in `src/lib/` — an answer
   here is the page there.
+- **The image carries the vendored `@free-bible/kvn`** (`kvn-package/`, 109 MB
+  of mapping files), for the verse numberings. Stage it first —
+  `bun run oppsett` in bibel, which bibel's deploy does before it builds — or
+  the build stops at the `COPY`. `test/image.test.ts` follows every import from
+  `src/index.ts` and fails when the image would lack a file or a package; the
+  tests themselves cannot see it, since they resolve through bibel's own
+  `node_modules`.
 - **Its own database user, read-only on content.** `src/grants.ts` grants
   SELECT on the tables the import owns (`CONTENT_TABLES`) and nothing else, so
   users' notes, manuscripts and shares are out of reach.
