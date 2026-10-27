@@ -24,7 +24,7 @@ import { registerTools } from './tools.ts';
 import { ABOUT, landingHtml, wantsHtml } from './landing.ts';
 
 export const SERVER_NAME = 'flogvit-bible';
-export const SERVER_VERSION = '1.0.0';
+export const SERVER_VERSION = '1.1.0';
 
 const INSTRUCTIONS = `Bible text and study material from bible.flogvit.com.
 

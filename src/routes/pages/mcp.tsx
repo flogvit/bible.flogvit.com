@@ -11,7 +11,7 @@ import { Layout } from '../../views/layout.tsx';
 import { Breadcrumbs } from '../../views/breadcrumbs.tsx';
 import { layoutProps, tFor, lhref, type Translator, type MessageKey } from '../../lib/i18n.ts';
 import {
-  MCP_EDITIONS, MCP_REGISTRY_NAME, MCP_SOURCE_URL, MCP_URL, SNIPPETS, SUPPORT_EMAIL, TOOL_ROWS,
+  MCP_EDITIONS, MCP_REGISTRY_NAME, MCP_SOURCE_URL, MCP_TOOL_NAMES, MCP_URL, SNIPPETS, SUPPORT_EMAIL, TOOL_ROWS,
 } from '../../lib/mcp-info.ts';
 
 const r = new Hono<AppEnv>();
@@ -96,7 +96,7 @@ r.get('/mcp', (c) => {
 
           <section class="about-section" id="tools">
             <h2>{t('mcp.toolsH')}</h2>
-            <p>{t('mcp.toolsIntro')}</p>
+            <p>{t('mcp.toolsIntro', { n: MCP_TOOL_NAMES.length })}</p>
             <ul class="mcp-tools">
               {TOOL_ROWS.map((row) => (
                 <li>
