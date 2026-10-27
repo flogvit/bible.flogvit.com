@@ -21,6 +21,19 @@ export const CALLS: [string, Record<string, unknown>][] = [
   ['get_topic', { kind: 'theme', id: 'david' }],
   ['get_daily_verse', { language: 'nn' }],
   ['check_references', { text: 'Som det står i Joh 3,16.\nSal 23,9 finnes ikke.', language: 'nb' }],
+  ['get_church_year_readings', { date: '2026-03-25' }],
+  ['get_church_year_readings', { name: 'Pinsedag', date: '2026-01-01', include_text: true, language: 'nb' }],
+  ['get_timeline', {}],
+  ['get_timeline', { period: 'exile' }],
+  ['get_timeline', { timeline: 'world', from_year: -600, to_year: -500, language: 'nb' }],
+  ['get_prophecies', { reference: 'Isa 53', include_text: true }],
+  ['get_prophecies', {}],
+  ['get_story', { name: 'The Prodigal Son' }],
+  ['get_story', { name: 'David og Goliat', language: 'nb', include_text: false }],
+  ['get_number', { number: 40 }],
+  ['get_number', {}],
+  ['get_gospel_parallels', { reference: 'Mark 4:35-41', include_text: true }],
+  ['get_gospel_parallels', {}],
 ];
 
 /** A JSON-RPC message POSTed to /mcp, as a Streamable HTTP client sends it. */

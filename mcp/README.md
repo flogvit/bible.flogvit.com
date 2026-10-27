@@ -63,6 +63,12 @@ Claude Code plugin around it: `../cli/README.md`.
 | `search_topics`, `get_topic` | Stories, themes, prophecies and gospel parallels |
 | `get_daily_verse` | Today's verse |
 | `check_references` | Every Bible reference in a piece of text — line, column, the verses, and a problem for one that does not exist |
+| `get_church_year_readings` | The Church of Norway's readings for a Sunday or feast day, by date or by the day's name (Norwegian, or English for the major feasts), optionally quoted |
+| `get_timeline` | Timeline events for a period, a span of years, or a person or place named in them; the Bible's timeline or the world's alongside it |
+| `get_prophecies` | Prophecies made or fulfilled in a passage, or in a category, with their fulfilment and optionally both texts |
+| `get_story` | A Bible story by name, where it is told, and the text |
+| `get_number` | What a number means in the Bible and where it occurs; with no number, every number that has an entry |
+| `get_gospel_parallels` | The gospel parallels that cover a passage, every Gospel's passage side by side, optionally quoted one after the other |
 | `list_editions` | The editions and their licences |
 
 References are read in English and Norwegian style alike — `John 3:16-18`,
