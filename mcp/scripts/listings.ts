@@ -108,8 +108,16 @@ async function publish(): Promise<void> {
     body: JSON.stringify(entry),
   });
   if (!res.ok) throw new Error(`publish: ${res.status} ${await res.text()}`);
-  const after = await registry();
-  console.log(`Published ${entry.version}; the registry now says ${after?.version}. mcptry copies it within 30 minutes: run check then.`);
+  // The registry's search index lags the publish by a few seconds: read it
+  // until it shows the new version, rather than report the first, stale read.
+  for (let i = 0; i < 12; i++) {
+    if ((await registry())?.version === entry.version) {
+      console.log(`Published ${entry.version}, and the registry lists it as the latest. mcptry copies it within 30 minutes: run check then.`);
+      return;
+    }
+    await Bun.sleep(5000);
+  }
+  console.log(`Published ${entry.version}, but after a minute the registry's search still lists another version as the latest. Run check in a few minutes.`);
 }
 
 const command = process.argv[2];
