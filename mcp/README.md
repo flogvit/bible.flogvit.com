@@ -155,6 +155,11 @@ site shows, in every language, finds its own book. `test/find-references.test.ts
 finds every book by every name inside a sentence, and its last verse as the
 last. `test/cli.test.ts` runs the command line client (`../cli/`) as its own
 program, with node and bun, against a listening server.
+`test/tool-quality.test.ts` reads `tools/list` and fails on a tool without a
+title, a description or all four annotation hints, an argument or output field
+without a description, an optional argument that does not say its default, or
+an allowed value its description does not name — what a client, and mcptry.com's
+Tool quality score, read before calling anything.
 
 bibel's own `bun test` in the repo root does not run these (`bunfig.toml`):
 this package has its own dependencies.
