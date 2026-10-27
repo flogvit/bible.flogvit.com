@@ -1,5 +1,23 @@
 # Release notes
 
+## 2026-10-27 — Use the Bible from your terminal, and look things up directly through the MCP
+
+**New features**
+- You can now use the Bible from a terminal or an AI coding assistant. The new `flogvit-bible` command line client and skill installs as a Claude Code plugin. A SKILL.md tells Codex and Gemini CLI where to find it.
+- Your assistant can check a list of verse references and tell you which ones are valid (`check_references`).
+- Church year readings, the timeline, prophecies, stories, numbers and gospel parallels can now be looked up directly through the MCP, without searching for them.
+- Every MCP tool that takes or gives a verse reference now supports a verse numbering (KVN) of your choice, so references line up with the edition you read.
+
+**Polish**
+- Every MCP tool argument now says what it is, which values it allows and its default, so assistants call the tools correctly on the first try.
+- The command line client now says when a line has been cut short.
+- The MCP page, /om and the runbooks now describe `check_references` and the command line client.
+
+**Bug fixes**
+- Book names written as "4. Mosebok" or "5 Mos" are now read as references.
+
+**Behind the scenes**
+- The MCP's shared schemas and answer helpers moved to `answer.ts`. `verse-mapper` got `osnbToMapping` for a single verse and a cap on its mapping caches. The cap is now measured through the MCP in its own process. A new `tool-quality` test holds the tool list to the argument rules above. The `minne` skill and the MCP README document the changes.
 ## 2026-10-26 — The Bible in your AI assistant, open tabs that tell you about a new version, and a new accessibility statement
 
 **New features**
