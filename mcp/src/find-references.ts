@@ -66,7 +66,12 @@ function verseProblem(p: Passage, lang: string): string | undefined {
   return undefined;
 }
 
-export function findReferences(text: string, firstLine = 1, lang = 'en'): FoundReference[] {
+/**
+ * `inMapping`: the text is in another verse numbering (#169). Every chapter
+ * number is read then, and verse counts are not checked against osnb — the
+ * caller checks each passage against the mapping.
+ */
+export function findReferences(text: string, firstLine = 1, lang = 'en', inMapping = false): FoundReference[] {
   const found: FoundReference[] = [];
   text.split(/\r?\n/).forEach((lineText, i) => {
     CANDIDATE.lastIndex = 0;
@@ -81,10 +86,12 @@ export function findReferences(text: string, firstLine = 1, lang = 'en'): FoundR
       const column = m.index! + book.offset + 1;
       const written = lineText.slice(column - 1, m.index! + m[0].length);
       const spec = m[2]!.replace(/(\d)[a-c]/g, '$1');
-      const { passages, errors } = parseReferences(`${book.name} ${spec}`);
+      const { passages, errors } = parseReferences(`${book.name} ${spec}`, { anyChapter: inMapping });
       const problem = errors.length
         ? errors.map((e) => e.replace(/^"[^"]*": /, '')).join(' ')
-        : passages.map((p) => verseProblem(p, lang)).find(Boolean);
+        : inMapping
+          ? undefined
+          : passages.map((p) => verseProblem(p, lang)).find(Boolean);
       found.push({ line: firstLine + i, column, written, passages, ...(problem ? { problem } : {}) });
     }
   });

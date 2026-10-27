@@ -36,8 +36,12 @@ import { makeT, tEnum, type Locale } from '../../src/lib/i18n.ts';
 import {
   attribution,
   failure,
+  inMapping,
+  labelMapping,
   language,
+  mapping,
   MAX_VERSES,
+  numberedAs,
   overlaps,
   parsed,
   passageAt,
@@ -46,7 +50,9 @@ import {
   quoteEdition,
   READ_ONLY,
   refLabel,
+  resolveMapping,
   text,
+  toOsnb,
 } from './answer.ts';
 import { pageUrl } from './links.ts';
 import type { Passage } from './reference.ts';
@@ -161,11 +167,14 @@ export function registerLookupTools(server: McpServer): void {
           ),
         include_text: includeText('the verses of every reading', false, MAX_VERSES),
         edition: quoteEdition,
+        mapping: labelMapping,
         language,
       },
       annotations: READ_ONLY,
     },
-    async ({ date, name, include_text, edition, language }) => {
+    async ({ date, name, include_text, edition, mapping, language }) => {
+      const numbering = resolveMapping(mapping);
+      if (numbering.error) return numbering.error;
       // The lectionary is Norwegian content (#26): on a language that does
       // not have it, answer from the language that does, and say so.
       let lang: string = language;
@@ -217,12 +226,12 @@ export function registerLookupTools(server: McpServer): void {
             // number goes on the first, an alternative is marked "or".
             for (const [k, part] of option.parts.entries()) {
               const passages = readingPassages(part);
-              const where = passages.map((p) => passageLabel(p, language)).join('; ');
+              const where = passages.map((p) => passageLabel(inMapping(p, numbering.id), language)).join('; ');
               const mark = k > 0 ? '     ' : j === 0 ? `${i + 1}.` : '   or:';
               lines.push(`${mark} ${part.title ? `${part.title} — ` : ''}${where}`);
               if (!include_text) continue;
               for (const p of passages) {
-                const q = await quote(p, bible, remaining, language);
+                const q = await quote(inMapping(p, numbering.id), bible, remaining, language, numbering.id);
                 remaining -= q.shown;
                 quoted ||= q.shown > 0;
                 lines.push(...q.lines);
@@ -233,7 +242,7 @@ export function registerLookupTools(server: McpServer): void {
         blocks.push(lines.join('\n'));
       }
       if (lang !== language) blocks.push('(The church year readings are only on bible.flogvit.com in Norwegian.)');
-      return text(blocks.join('\n\n') + (quoted ? await attribution([bible], language) : ''));
+      return text(blocks.join('\n\n') + numberedAs(numbering.id) + (quoted ? await attribution([bible], language) : ''));
     },
   );
 
@@ -260,11 +269,14 @@ export function registerLookupTools(server: McpServer): void {
           .enum(['bible', 'world'])
           .default('bible')
           .describe('bible (the events the Bible tells) or world (world history in the same periods). Default: bible.'),
+        mapping: labelMapping,
         language,
       },
       annotations: READ_ONLY,
     },
-    async ({ period, from_year, to_year, query, timeline, language }) => {
+    async ({ period, from_year, to_year, query, timeline, mapping, language }) => {
+      const numbering = resolveMapping(mapping);
+      if (numbering.error) return numbering.error;
       const periods = await timelinePeriodsOf(timeline, language);
       const url = pageUrl(language, '/tidslinje');
       let chosen = null as (typeof periods)[number] | null;
@@ -300,11 +312,11 @@ export function registerLookupTools(server: McpServer): void {
       ].filter(Boolean);
       const lines = events.map((e) => {
         const when = e.year_display ?? (e.year !== null ? yearText(e.year) : '');
-        const refs = (e.references ?? []).map((r) => refLabel(r.book_id, r.chapter, r.verse_start, r.verse_end, language)).join('; ');
+        const refs = (e.references ?? []).map((r) => refLabel(r.book_id, r.chapter, r.verse_start, r.verse_end, language, numbering.id)).join('; ');
         return `- ${when ? `${when} — ` : ''}**${e.title}**${e.importance === 'major' ? ' (major)' : ''}${e.description ? `: ${e.description}` : ''}${refs ? `\n  ${refs}` : ''}`;
       });
       const more = matched.length > events.length ? `\n\n${matched.length - events.length} more events — narrow with from_year/to_year or query.` : '';
-      return text(`${head.join('\n')}\n\n${count(matched.length, 'event')}:\n\n${lines.join('\n')}${more}`);
+      return text(`${head.join('\n')}\n\n${count(matched.length, 'event')}:\n\n${lines.join('\n')}${more}${numberedAs(numbering.id)}`);
     },
   );
 
@@ -327,18 +339,21 @@ export function registerLookupTools(server: McpServer): void {
           .describe('A category, by id or by words from its name, e.g. "messiah", "birth", "passion". Call with no arguments to see the categories. Default: all.'),
         include_text: includeText('the prophecy and its fulfilment', false, MAX_VERSES),
         edition: quoteEdition,
+        mapping,
         language,
       },
       annotations: READ_ONLY,
     },
-    async ({ reference, category, include_text, edition, language }) => {
+    async ({ reference, category, include_text, edition, mapping, language }) => {
+      const numbering = resolveMapping(mapping);
+      if (numbering.error) return numbering.error;
       let list = await getProphecies(language);
       let target: Passage[] | null = null;
       let notes = '';
       if (reference) {
-        const p = parsed(reference);
+        const p = parsed(reference, numbering.id);
         if (p.error) return p.error;
-        target = p.passages;
+        target = await toOsnb(p.passages, numbering.id);
         notes = p.notes;
       }
       if (category) {
@@ -361,8 +376,8 @@ export function registerLookupTools(server: McpServer): void {
         const prophecy = passageAt(x.prophecy.book_id, x.prophecy.chapter, x.prophecy.verse_start, x.prophecy.chapter, x.prophecy.verse_end);
         const lines = [
           `### ${x.title} [id: ${x.id}]`,
-          `Prophecy: ${refLabel(x.prophecy.book_id, x.prophecy.chapter, x.prophecy.verse_start, x.prophecy.verse_end, language)}`,
-          `Fulfilled: ${x.fulfillments.map((f) => refLabel(f.book_id, f.chapter, f.verse_start, f.verse_end, language)).join('; ')}`,
+          `Prophecy: ${refLabel(x.prophecy.book_id, x.prophecy.chapter, x.prophecy.verse_start, x.prophecy.verse_end, language, numbering.id)}`,
+          `Fulfilled: ${x.fulfillments.map((f) => refLabel(f.book_id, f.chapter, f.verse_start, f.verse_end, language, numbering.id)).join('; ')}`,
         ];
         if (explain && x.explanation) lines.push(x.explanation);
         if (include_text) {
@@ -371,10 +386,10 @@ export function registerLookupTools(server: McpServer): void {
             ...x.fulfillments.map((f) => ['Fulfilment', passageAt(f.book_id, f.chapter, f.verse_start, f.chapter, f.verse_end)] as const),
           ] as const) {
             if (!p) continue;
-            const q = await quote(p, bible, remaining, language);
+            const q = await quote(inMapping(p, numbering.id), bible, remaining, language, numbering.id);
             remaining -= q.shown;
             quoted ||= q.shown > 0;
-            lines.push(`${role}, ${passageLabel(p, language)}:`, ...q.lines);
+            lines.push(`${role}, ${passageLabel(inMapping(p, numbering.id), language)}:`, ...q.lines);
           }
         }
         const key = x.category?.name || x.category_id;
@@ -383,7 +398,7 @@ export function registerLookupTools(server: McpServer): void {
       const body = [...groups].map(([name, items]) => `## ${name}\n\n${items.join('\n\n')}`).join('\n\n');
       const hint = explain ? '' : '\n\nFor the explanation of one, ask with its passage or use get_topic with kind "prophecy" and the id.';
       return text(
-        `# ${count(list.length, 'prophecy', 'prophecies')}\n${pageUrl(language, '/profetier')}\n\n${body}${hint}${notes}` + (quoted ? await attribution([bible], language) : ''),
+        `# ${count(list.length, 'prophecy', 'prophecies')}\n${pageUrl(language, '/profetier')}\n\n${body}${hint}${notes}${numberedAs(numbering.id)}` + (quoted ? await attribution([bible], language) : ''),
       );
     },
   );
@@ -401,11 +416,14 @@ export function registerLookupTools(server: McpServer): void {
           .describe('The story\'s title or id, or words from it, e.g. "The Prodigal Son", "den-fortapte-sonn", "Goliath", "Den barmhjertige samaritan".'),
         include_text: includeText('the passages the story is told in', true, MAX_STORY_VERSES),
         edition: quoteEdition,
+        mapping: labelMapping,
         language,
       },
       annotations: READ_ONLY,
     },
-    async ({ name, include_text, edition, language }) => {
+    async ({ name, include_text, edition, mapping, language }) => {
+      const numbering = resolveMapping(mapping);
+      if (numbering.error) return numbering.error;
       const bySlug = await getStoryBySlug(name.trim().toLowerCase(), language);
       let others: Story[] = [];
       let story = bySlug;
@@ -426,21 +444,21 @@ export function registerLookupTools(server: McpServer): void {
       const lines = [
         `# ${data.title}\n${pageUrl(language, `/historier/${story.slug}`)}`,
         `${category}. ${data.description}`,
-        `Told in: ${passages.map((p) => passageLabel(p, language)).join('; ')}`,
+        `Told in: ${passages.map((p) => passageLabel(inMapping(p, numbering.id), language)).join('; ')}`,
       ];
       const bible = edition ?? (await defaultBibleForLanguage(language));
       let quoted = false;
       if (include_text) {
         let remaining = MAX_STORY_VERSES;
         for (const p of passages) {
-          const q = await quote(p, bible, remaining, language);
+          const q = await quote(inMapping(p, numbering.id), bible, remaining, language, numbering.id);
           remaining -= q.shown;
           quoted ||= q.shown > 0;
-          lines.push(`**${passageLabel(p, language)}**\n${q.lines.join('\n')}`);
+          lines.push(`**${passageLabel(inMapping(p, numbering.id), language)}**\n${q.lines.join('\n')}`);
         }
       }
       if (others.length) lines.push(`Other stories that match: ${others.map((s) => `${s.title} [id: ${s.slug}]`).join('; ')}`);
-      return text(lines.join('\n\n') + (quoted ? await attribution([bible], language) : ''));
+      return text(lines.join('\n\n') + numberedAs(numbering.id) + (quoted ? await attribution([bible], language) : ''));
     },
   );
 
@@ -457,11 +475,14 @@ export function registerLookupTools(server: McpServer): void {
           .min(0)
           .optional()
           .describe('The number, e.g. 3, 7, 12, 40, 666, 1000. Default: none, which lists every number that has an entry.'),
+        mapping: labelMapping,
         language,
       },
       annotations: READ_ONLY,
     },
-    async ({ number, language }) => {
+    async ({ number, mapping, language }) => {
+      const numbering = resolveMapping(mapping);
+      if (numbering.error) return numbering.error;
       const parse = (content: string) => {
         try {
           return JSON.parse(content) as NumberSymbolismData;
@@ -483,7 +504,7 @@ export function registerLookupTools(server: McpServer): void {
           .sort((a, b) => a - b);
         return failure(`No entry for ${number}. The nearest numbers that have one: ${near.join(', ')}.`);
       }
-      const refs = data.references.map((r) => refLabel(r.bookId, r.chapterId, r.fromVerseId, r.toVerseId, language));
+      const refs = data.references.map((r) => refLabel(r.bookId, r.chapterId, r.fromVerseId, r.toVerseId, language, numbering.id));
       const shown = refs.slice(0, MAX_NUMBER_REFERENCES);
       const lines = [
         `# ${data.number} — ${data.meaning}\n${pageUrl(language, `/tall/${data.number}`)}`,
@@ -491,7 +512,7 @@ export function registerLookupTools(server: McpServer): void {
         `Where it occurs (${count(refs.length, 'passage')}): ${shown.join('; ')}${refs.length > shown.length ? `; and ${refs.length - shown.length} more` : ''}`,
       ];
       if (data.footnotes?.length) lines.push(`Notes:\n${data.footnotes.map((f) => `- ${f.text}${f.source ? ` (${f.source})` : ''}`).join('\n')}`);
-      return text(lines.join('\n\n'));
+      return text(lines.join('\n\n') + numberedAs(numbering.id));
     },
   );
 
@@ -509,11 +530,14 @@ export function registerLookupTools(server: McpServer): void {
           .describe('A passage in Matthew, Mark, Luke or John, e.g. "Mark 4:35-41", "Luke 15", "Joh 6,1-15"; gives the parallels that cover it. Default: none, which lists them all.'),
         include_text: includeText("each Gospel's text of the parallels found, one after the other", false, MAX_VERSES),
         edition: quoteEdition,
+        mapping,
         language,
       },
       annotations: READ_ONLY,
     },
-    async ({ reference, include_text, edition, language }) => {
+    async ({ reference, include_text, edition, mapping, language }) => {
+      const numbering = resolveMapping(mapping);
+      if (numbering.error) return numbering.error;
       const all = await getGospelParallels(language);
       const url = pageUrl(language, '/paralleller');
       const passagesOf = (x: (typeof all)[number]) =>
@@ -522,7 +546,7 @@ export function registerLookupTools(server: McpServer): void {
           const p = r && passageAt(r.book_id, r.chapter, r.verse_start, r.chapter, r.verse_end);
           return p ? [p] : [];
         });
-      const row = (x: (typeof all)[number]) => passagesOf(x).map((q) => passageLabel(q, language)).join(' | ');
+      const row = (x: (typeof all)[number]) => passagesOf(x).map((q) => passageLabel(inMapping(q, numbering.id), language)).join(' | ');
 
       if (!reference) {
         const sections = new Map<string, string[]>();
@@ -530,12 +554,13 @@ export function registerLookupTools(server: McpServer): void {
           const key = x.section?.name || x.section_id;
           sections.set(key, [...(sections.get(key) ?? []), `- ${x.title}: ${row(x)} [id: ${x.id}]`]);
         }
-        return text(`# ${count(all.length, 'gospel parallel')}\n${url}\n\n${[...sections].map(([s, items]) => `## ${s}\n${items.join('\n')}`).join('\n\n')}`);
+        return text(`# ${count(all.length, 'gospel parallel')}\n${url}\n\n${[...sections].map(([s, items]) => `## ${s}\n${items.join('\n')}`).join('\n\n')}${numberedAs(numbering.id)}`);
       }
 
-      const p = parsed(reference);
+      const p = parsed(reference, numbering.id);
       if (p.error) return p.error;
-      const found = all.filter((x) => passagesOf(x).some((q) => p.passages.some((t) => overlaps(q, t))));
+      const targets = await toOsnb(p.passages, numbering.id);
+      const found = all.filter((x) => passagesOf(x).some((q) => targets.some((t) => overlaps(q, t))));
       if (found.length === 0) return text(`No gospel parallel covers ${reference}. Try get_cross_references for related passages.${p.notes}`);
 
       const bible = edition ?? (await defaultBibleForLanguage(language));
@@ -544,19 +569,19 @@ export function registerLookupTools(server: McpServer): void {
       const blocks: string[] = [];
       for (const x of found) {
         const lines = [`## ${x.title}${x.section?.name ? ` (${x.section.name})` : ''} [id: ${x.id}]`];
-        for (const q of passagesOf(x)) lines.push(`- ${passageLabel(q, language)}`);
+        for (const q of passagesOf(x)) lines.push(`- ${passageLabel(inMapping(q, numbering.id), language)}`);
         if (x.notes) lines.push(x.notes);
         if (include_text) {
           for (const q of passagesOf(x)) {
-            const quoteLines = await quote(q, bible, remaining, language);
+            const quoteLines = await quote(inMapping(q, numbering.id), bible, remaining, language, numbering.id);
             remaining -= quoteLines.shown;
             quoted ||= quoteLines.shown > 0;
-            lines.push(`**${passageLabel(q, language)}**`, ...quoteLines.lines);
+            lines.push(`**${passageLabel(inMapping(q, numbering.id), language)}**`, ...quoteLines.lines);
           }
         }
         blocks.push(lines.join('\n'));
       }
-      return text(`# ${count(found.length, 'gospel parallel')} for ${reference}\n${url}\n\n${blocks.join('\n\n')}${p.notes}` + (quoted ? await attribution([bible], language) : ''));
+      return text(`# ${count(found.length, 'gospel parallel')} for ${reference}\n${url}\n\n${blocks.join('\n\n')}${p.notes}${numberedAs(numbering.id)}` + (quoted ? await attribution([bible], language) : ''));
     },
   );
 }

@@ -44,6 +44,7 @@ export const TOOL_ROWS: readonly { tools: readonly string[]; what: MessageKey; a
   { tools: ['get_number'], what: 'mcp.tool.number', ask: 'mcp.ask.number' },
   { tools: ['get_gospel_parallels'], what: 'mcp.tool.parallels', ask: 'mcp.ask.parallels' },
   { tools: ['list_editions'], what: 'mcp.tool.editions', ask: 'mcp.ask.editions' },
+  { tools: ['list_verse_mappings'], what: 'mcp.tool.mappings', ask: 'mcp.ask.mappings' },
 ];
 
 export const MCP_TOOL_NAMES: readonly string[] = TOOL_ROWS.flatMap((r) => r.tools);

@@ -34,6 +34,10 @@ export const CALLS: [string, Record<string, unknown>][] = [
   ['get_number', {}],
   ['get_gospel_parallels', { reference: 'Mark 4:35-41', include_text: true }],
   ['get_gospel_parallels', {}],
+  ['list_verse_mappings', { query: 'king james' }],
+  ['get_passage', { reference: 'Mal 4:5-6', mapping: 'kjv' }],
+  ['get_cross_references', { reference: 'Luke 1:78', mapping: 'english_kj' }],
+  ['check_references', { text: 'Elia kommer, Mal 4,5.', mapping: 'kjv', language: 'nb' }],
 ];
 
 /** A JSON-RPC message POSTed to /mcp, as a Streamable HTTP client sends it. */
