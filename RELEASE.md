@@ -19,7 +19,7 @@
 - The published MCP server image now carries the verse numbering package, so choosing a verse numbering (KVN) works there too.
 
 **Behind the scenes**
-- MCP 1.1.0: the MCP directory listings now follow each release, kept in step by a script.
+- MCP 1.1.0: the MCP directory listings now follow each release, kept in step by a script. Publishing now waits until the registry actually lists the new version before it finishes.
 - MCP internals reorganized (shared schemas and answer helpers moved to one module).
 - Verse-mapping caches now have a size cap, measured through the MCP in its own process.
 - Added tests for the new lookups, verse numbering, tool quality, the command line client and the MCP image, which is now checked against the packages the server imports.
