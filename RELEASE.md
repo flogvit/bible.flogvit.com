@@ -1,9 +1,17 @@
 # Release notes
 
-## 2026-10-28 — Security maintenance update
+## 2026-10-28 — Choose your Bible edition and keep it, plus a security update
+
+**New features**
+- Your chosen Bible edition is now shown whatever the interface language is, so reading in one language with another language's edition works on every page and in the verse API.
+- The edition choice in Settings is saved with your other preferences (`fv-prefs`), so it follows you across FLOGVIT. You can also set it back to follow the interface language.
+
+**Bug fixes**
+- A chosen edition no longer gets lost for a logged-in reader without Plus.
 
 **Behind the scenes**
 - Updated the `qs` dependency in the MCP server to 6.16.1, which fixes security advisory GHSA-6pq8-jhm2-2vcw.
+- Added tests covering the edition choice on every surface, including the combination that failed, and documented in CLAUDE.md that the reader's chosen edition beats the interface language.
 ## 2026-10-27 — Church year readings, prophecies, verse numbering and a command line client for the Bible MCP
 
 **New features**
