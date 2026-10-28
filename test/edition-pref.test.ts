@@ -64,9 +64,24 @@ describe('a choice saved before the fix', () => {
   test('a cookie that will not stick does not reload for ever', async () => {
     localStorage.setItem('bible-settings', JSON.stringify({ bible: 'osen' }));
     const m = await load();
-    sessionStorage.setItem('bible-edition-moved', '1');
+    // The move already ran in this session and left this cookie behind
+    // ({} — nothing stuck): no second move, no second reload.
+    sessionStorage.setItem('bible-edition-moved', '{}');
     m.moveSavedChoiceToCookie();
     expect(reloads).toBe(0);
+  });
+
+  test('a login that rewrote the cookie in the same session gets the choice back', async () => {
+    localStorage.setItem('bible-settings', JSON.stringify({ bible: 'osen' }));
+    setCookie({ lang: 'nb' });
+    const m = await load();
+    m.moveSavedChoiceToCookie();
+    expect(reloads).toBe(1);
+    // konto at login: the cookie from the account, without the product key.
+    setCookie({ lang: 'nb', theme: 'system', units: 'metric' });
+    m.moveSavedChoiceToCookie();
+    expect(prefs()['bible.edition']).toBe('osen');
+    expect(reloads).toBe(2);
   });
 
   test('an uploaded edition of the reader\'s own stays in the browser', async () => {
