@@ -14,6 +14,7 @@ import { bookAbbrByShort, bookNameByShort } from './books-data.ts';
 
 import { toUrlSlug } from './url-utils.ts';
 import { bookMentionTest, personChapterCandidates } from './blob-forfilter.ts';
+import { currentChosenEdition } from './edition-choice.ts';
 
 // --- Språk-scopet uthenting ---
 //
@@ -2251,16 +2252,21 @@ export async function readableBibleCandidates(requested: string): Promise<BibleC
 }
 
 /**
- * Utgaven en side skal SITERE fra når leseren ikke har valgt noe selv — første
- * kandidat i språkets kjede (#26). Finnes fordi `'osnb'` lå som hardkodet
- * default på hvert sitatsted, og et engelsk sitat da kom på norsk: forsidens
- * dagens vers, profetiene, evangelieparallellene, favorittene og
- * ord-statistikken hentet alle norsk tekst uansett språk.
+ * Utgaven en side skal SITERE fra når ingen `?bible=` sier noe annet.
  *
- * Et EKSPLISITT `?bible=` overstyrer som før — utgavevalget er brukerens eget
- * (I18N.md-akse 3) og skal ikke rives med av språkvalget.
+ * Har leseren valgt en utgave i innstillingene (`bible.edition` i `fv-prefs`,
+ * #182), er det den — uansett hvilket språk grensesnittet står på. Ellers er det
+ * første kandidat i språkets kjede (#26). Den siste regelen finnes fordi
+ * `'osnb'` lå som hardkodet default på hvert sitatsted, og et engelsk sitat da
+ * kom på norsk: forsidens dagens vers, profetiene, evangelieparallellene,
+ * favorittene og ord-statistikken hentet alle norsk tekst uansett språk.
+ *
+ * Et EKSPLISITT `?bible=` overstyrer begge — det er et valg for denne ene
+ * adressen (I18N.md-akse 3).
  */
 export async function defaultBibleForLanguage(lang = currentContentLanguage()): Promise<string> {
+  const chosen = currentChosenEdition();
+  if (chosen) return chosen;
   const [first] = await readableBibleCandidates(lang);
   return first?.id ?? 'osnb';
 }

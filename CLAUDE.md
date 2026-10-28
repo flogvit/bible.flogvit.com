@@ -374,6 +374,13 @@ bibelteksten og studiestoffet som MCP-verktøy. Runbook og verktøyliste:
   hvordan den tas ned står i `mcp/README.md`.
 
 ## Funksjoner — skill `funksjoner`
+- **Utgavevalget (#182): leserens valg slår språket.** `bible.edition` i
+  `fv-prefs` leses ETT sted (`src/lib/edition-choice.ts`) av
+  `defaultBibleForLanguage()`; språket avgjør bare når ingenting er valgt, og
+  `?bible=` slår begge. Sider varierer på cookien: mikrocachen nøkler på valget,
+  og svaret sier `Vary: Cookie`. Klienten skriver valget med `setPref`
+  (`public/js/edition-pref.js`). Vakter: `test/edition-choice.test.ts`,
+  `test/edition-pref.test.ts`.
 - **Lesesporing (#16):** lesing er en HENDELSE (`{ firstAt, lastAt, count, opens,
   verses? }`). Kjernen er `public/js/reading-progress.js`, importert av både klient
   og server. `MERGERS` i `sync.ts` fletter kommutativt; klienten bruker samme

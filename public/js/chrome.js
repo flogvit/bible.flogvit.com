@@ -2,16 +2,10 @@
 // klikk utenfor / Escape, og plattform-riktig snarveihint. Ren progressiv
 // forbedring — alt i chromen fungerer uten denne fila.
 
-// ---- prefs (holdes i takt med PREFS.md sitt skrive-snippet) ----
+// ---- prefs (holdes i takt med PREFS.md sitt skrive-snippet, i prefs.js) ----
 
-function readPrefs() {
-  try {
-    const m = document.cookie.match(/(?:^|;\s*)fv-prefs=([^;]+)/);
-    return m ? JSON.parse(decodeURIComponent(m[1])) : {};
-  } catch {
-    return {};
-  }
-}
+import { readPrefs, setPref as writePref } from './prefs.js';
+import { moveSavedChoiceToCookie } from './edition-pref.js';
 
 function applyPrefs(p) {
   const d = document.documentElement;
@@ -22,21 +16,12 @@ function applyPrefs(p) {
 }
 
 function setPref(key, value) {
-  const p = readPrefs();
-  p[key] = value;
-  const v = encodeURIComponent(JSON.stringify(p));
-  document.cookie =
-    'fv-prefs=' + v + ';domain=.flogvit.com;path=/;max-age=31536000;samesite=lax' +
-    (location.protocol === 'https:' ? ';secure' : '');
-  applyPrefs(p);
-  // persistér til konto hvis innlogget (401 hvis ikke — da hopper vi over)
-  fetch('https://flogvit.com/api/prefs', {
-    method: 'PUT',
-    credentials: 'include',
-    headers: { 'content-type': 'application/json', 'x-csrf': window.__fvCsrf || '' },
-    body: JSON.stringify({ prefs: { [key]: value } }),
-  }).catch(() => {});
+  applyPrefs(writePref(key, value));
 }
+
+// Et bibelutgavevalg lagret før #182 lå bare i localStorage, som serveren ikke
+// ser — flytt det til cookien én gang.
+moveSavedChoiceToCookie();
 
 // ---- tema-UI ----
 

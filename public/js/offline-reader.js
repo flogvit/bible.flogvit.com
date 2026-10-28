@@ -17,7 +17,7 @@
 import { getChapter, getAllChapterKeys, countChapters } from './offline-db.js';
 import { readStrings, localeHref } from './locale.js';
 import { el } from './dom.js';
-import { readJSON } from './store.js';
+import { chosenEdition } from './edition-pref.js';
 import { verseHash } from './verse-hash.js';
 
 const t = readStrings(document.body);
@@ -71,8 +71,7 @@ const editionLabel = (id) => {
  */
 async function pickChapter(book, chapter) {
   const params = new URLSearchParams(location.search);
-  const settings = readJSON('bible-settings', {}) || {};
-  const wanted = params.get('bible') || settings.bible || EDITIONS[0]?.id || 'osnb';
+  const wanted = params.get('bible') || chosenEdition() || EDITIONS[0]?.id || 'osnb';
   const order = [wanted, ...EDITIONS.map((e) => e.id)];
   for (const [bookId, ch, bible] of await getAllChapterKeys()) {
     if (bookId === book.id && ch === chapter && !String(bible).startsWith('user:')) order.push(bible);
