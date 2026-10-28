@@ -68,6 +68,22 @@ export function currentChosenEdition(): string | undefined {
 }
 
 /**
+ * A choice in this browser's cookie that the account has not got, to be saved
+ * there: a reader who chose before the account could keep it (#182) still
+ * has it only on this device. undefined when the account already has a choice,
+ * or the cookie has none. '' ("follow the interface language") is a choice.
+ */
+export function cookieChoiceForAccount(
+  cookieHeader: string | undefined,
+  accountPrefs: Record<string, string>,
+): string | undefined {
+  if (EDITION_PREF in accountPrefs) return undefined;
+  const raw = parsePrefs(prefsCookieIn(cookieHeader))[EDITION_PREF];
+  if (raw === '') return '';
+  return editionIn(raw);
+}
+
+/**
  * The Set-Cookie line that brings the account's choice into this browser's
  * `fv-prefs`, or null when the cookie already says the same (or the account has
  * made no choice). Keeps every other key in the cookie.

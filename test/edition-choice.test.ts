@@ -13,9 +13,9 @@
 //
 // Requires the local DB (DBngin :3326) with imported content.
 
-import { afterAll, beforeAll, describe, expect, setDefaultTimeout, test } from 'bun:test';
+import { afterAll, beforeAll, beforeEach, describe, expect, setDefaultTimeout, test } from 'bun:test';
 import { DB_TEST_TIMEOUT_MS } from './db-timeout.ts';
-import { kontoUser, startMockKonto } from './mock-konto.ts';
+import { kontoUser, startMockKonto, type MockKontoPut } from './mock-konto.ts';
 import { createApp } from '../src/app.ts';
 import { getDailyVerse, getVerses } from '../src/lib/bible.ts';
 import { chosenEditionFrom } from '../src/lib/edition-choice.ts';
@@ -100,13 +100,21 @@ describe('a logged-in reader without Plus', () => {
   const admin = { id: 38, plus: false, email: 'admin@flogvit.com' };
   const session = (value: string) => `; fv-session=${value}`;
   let konto: ReturnType<typeof startMockKonto>;
+  const puts: MockKontoPut[] = [];
   const accountBefore = process.env.ACCOUNT_API_URL;
   beforeAll(() => {
-    konto = startMockKonto({
-      'chose-osen': () => kontoUser(admin, 'tok-38', { lang: 'nb', theme: 'system', units: 'metric', 'bible.edition': 'osen' }),
-      'chose-language': () => kontoUser(admin, 'tok-38', { lang: 'nb', theme: 'system', units: 'metric', 'bible.edition': '' }),
-      'chose-nothing': () => kontoUser(admin, 'tok-38', { lang: 'nb', theme: 'system', units: 'metric' }),
-    });
+    konto = startMockKonto(
+      {
+        'chose-osen': () => kontoUser(admin, 'tok-38', { lang: 'nb', theme: 'system', units: 'metric', 'bible.edition': 'osen' }),
+        'chose-language': () => kontoUser(admin, 'tok-38', { lang: 'nb', theme: 'system', units: 'metric', 'bible.edition': '' }),
+        'chose-nothing': () => kontoUser(admin, 'tok-38', { lang: 'nb', theme: 'system', units: 'metric' }),
+      },
+      undefined,
+      puts,
+    );
+  });
+  beforeEach(() => {
+    puts.length = 0;
   });
   afterAll(() => {
     konto.stop(true);
@@ -135,12 +143,31 @@ describe('a logged-in reader without Plus', () => {
     const { res, verse } = await chapter('/nb/joh/3', `${chose('osen')}${session('chose-language')}`);
     expect(verse).toContain(text.osnb);
     expect(setPrefs(res)).toContain(encodeURIComponent('"bible.edition":""'));
+    // The account had a choice, so nothing from this browser goes to it.
+    expect(puts).toEqual([]);
   });
 
-  test('an account with no choice leaves it to the cookie, and sets nothing', async () => {
-    const { res, verse } = await chapter('/nb/joh/3', `${chose('osen')}${session('chose-nothing')}`);
+  // Both of the owner's accounts on 2026-10-28: OSEN chosen in the browser
+  // before the account could keep it, and nothing on the account.
+  test('a choice only this browser has is saved on the account, with the reader\'s session and token', async () => {
+    const cookie = `${chose('osen')}${session('chose-nothing')}`;
+    const { res, verse } = await chapter('/nb/joh/3', cookie);
     expect(verse).toContain(text.osen);
+    expect(puts).toEqual([{ cookie, csrf: 'tok-38', body: { prefs: { 'bible.edition': 'osen' } } }]);
+    // The cookie already says the same, so it is left alone.
     expect(setPrefs(res)).toBeNull();
+  });
+
+  test('"follow the language" in the browser is a choice the account gets too', async () => {
+    await chapter('/nb/joh/3', `${chose('')}${session('chose-nothing')}`);
+    expect(puts.map((p) => p.body)).toEqual([{ prefs: { 'bible.edition': '' } }]);
+  });
+
+  test('no choice in the browser and none on the account: nothing to save', async () => {
+    const cookie = `fv-prefs=${encodeURIComponent(JSON.stringify({ lang: 'nb' }))}${session('chose-nothing')}`;
+    const { verse } = await chapter('/nb/joh/3', cookie);
+    expect(verse).toContain(text.osnb);
+    expect(puts).toEqual([]);
   });
 
   test('the page carries konto\'s CSRF token, so the browser can save a choice on the account', async () => {

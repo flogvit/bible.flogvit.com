@@ -6,7 +6,7 @@
 // konto på localhost:3020. Alt er best-effort — feiler kallet, er man utlogget.
 
 import type { Context, Next } from 'hono';
-import { refreshedPrefsCookie } from './edition-choice.ts';
+import { cookieChoiceForAccount, EDITION_PREF, refreshedPrefsCookie } from './edition-choice.ts';
 import type { Locale } from './i18n.ts';
 
 // Leses ved kall-tid så tester kan peke på en mock-server.
@@ -108,11 +108,32 @@ export async function withSession(c: Context<AppEnv>, next: Next): Promise<void>
   } else if (!desired && current) {
     c.header('Set-Cookie', `${AUTH_MARKER}=; Path=/; SameSite=Lax; Max-Age=0`, { append: true });
   }
-  // The account's edition choice reaches this browser's cookie, so the
-  // settings page and the offline reader show what the server shows (#182).
+  // A choice only this browser has goes to the account first, once; then the
+  // account's choice reaches this browser's cookie, so the settings page and
+  // the offline reader show what the server shows (#182).
+  const unsaved = user ? cookieChoiceForAccount(cookieHeader, user.prefs) : undefined;
+  if (user && unsaved !== undefined && (await saveOnAccount(cookieHeader, user.csrf, { [EDITION_PREF]: unsaved }))) {
+    user.prefs = { ...user.prefs, [EDITION_PREF]: unsaved };
+  }
   const refreshed = user && refreshedPrefsCookie(cookieHeader, user.prefs, new URL(c.req.url).hostname);
   if (refreshed) c.header('Set-Cookie', refreshed, { append: true });
   await next();
+}
+
+/** PUT prefs to the account on the reader's behalf (their session cookie and CSRF token). True when konto took them. */
+async function saveOnAccount(cookieHeader: string, csrf: string, prefs: Record<string, string>): Promise<boolean> {
+  if (!csrf) return false;
+  try {
+    const res = await fetch(`${accountApiUrl()}/api/prefs`, {
+      method: 'PUT',
+      headers: { cookie: cookieHeader, 'x-csrf': csrf, 'content-type': 'application/json' },
+      body: JSON.stringify({ prefs }),
+      signal: AbortSignal.timeout(TIMEOUT_MS),
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
 }
 
 /** 401 for API-ruter som krever innlogget bruker (sync m.m.). */
