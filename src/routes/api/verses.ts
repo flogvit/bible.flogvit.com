@@ -13,7 +13,8 @@ r.get('/', async (c) => {
   // Uten eksplisitt utgave sto default på 'osnb': en engelsk leser fikk norsk
   // verstekst tilbake. `defaultBibleForLanguage()` leser locale fra
   // contextStorage, som /api/*-middlewaren allerede setter (#24).
-  const bible = normalizeBibleId(c.req.query('bible')) || (await defaultBibleForLanguage());
+  const named = normalizeBibleId(c.req.query('bible'));
+  const bible = named || (await defaultBibleForLanguage());
 
   if (!ref) return c.json({ error: 'Missing ref parameter' }, 400);
 
@@ -23,7 +24,9 @@ r.get('/', async (c) => {
 
     const verseRefs = refSegmentsToVerseRefs(segments);
     const verses = await getVersesWithOriginal(verseRefs as VerseRef[], bible);
-    return c.json(verses, 200, { 'Cache-Control': 'public, max-age=86400' });
+    // Without `bible` in the address, the edition is the reader's choice in the
+    // cookie (#182), so a cached answer must not be reused across a change.
+    return c.json(verses, 200, { 'Cache-Control': 'public, max-age=86400', ...(named ? {} : { Vary: 'Cookie' }) });
   } catch (error) {
     return internFeil(c, 'Error fetching verses', error);
   }

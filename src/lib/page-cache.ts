@@ -22,6 +22,7 @@
 // statiske filene sto bak det og fikk 503 under last — se NOT_A_PAGE (#64).
 
 import type { Context, Next } from 'hono';
+import { chosenEditionFrom, prefsCookieIn } from './edition-choice.ts';
 import { registrerMinnekilde } from './minne-regnskap.ts';
 
 /** Taket, lest én gang: køens standardlengde er det samme tallet (under). */
@@ -96,6 +97,15 @@ export function configurePageCache(next: Partial<typeof PAGE_CACHE_DEFAULTS>): v
 
 const cacheControl = () =>
   `public, max-age=${Math.round(config.ttlMs / 1000)}, stale-while-revalidate=86400`;
+
+/**
+ * A page shows the edition the reader chose in `fv-prefs` (#182), so the same
+ * URL is a different page for two readers. The microcache keys on the choice,
+ * and the browser is told the page varies on the cookie — without it, a reader
+ * who changes edition would get the old one from the browser's own cache for
+ * the next hour.
+ */
+const VARY = 'Cookie';
 
 // --- Innholdsversjon: én import skal tømme cachen, ikke vente ut TTL-en ------
 //
@@ -323,6 +333,7 @@ function serveEntry(c: Context, entry: CacheEntry, xCache: 'hit' | 'stale'): Res
   return c.body(entry.body as unknown as ArrayBuffer, 200, {
     'content-type': entry.contentType,
     'cache-control': cacheControl(),
+    vary: VARY,
     'x-cache': xCache,
   });
 }
@@ -400,7 +411,8 @@ export async function withPageCache(c: Context, next: Next): Promise<Response | 
   await invalidateOnContentChange();
 
   const url = new URL(c.req.url);
-  const key = url.pathname + url.search;
+  const edition = chosenEditionFrom(prefsCookieIn(c.req.header('cookie')));
+  const key = url.pathname + url.search + (edition ? `#edition=${edition}` : '');
   const hit = cache.get(key);
   if (hit && hit.expires > Date.now()) {
     return serveEntry(c, hit, 'hit');
@@ -434,6 +446,7 @@ export async function withPageCache(c: Context, next: Next): Promise<Response | 
   const body = new Uint8Array(await res.clone().arrayBuffer());
   const bytes = body.byteLength;
   c.res.headers.set('cache-control', cacheControl());
+  c.res.headers.set('vary', VARY);
   if (bytes > config.maxEntryBytes) return;
   if (hit) {
     cache.delete(key);

@@ -52,7 +52,9 @@ import {
   normalizeBibleId,
   readableBibleCandidates,
   defaultBibleForLanguage,
+  getBibleEditionById,
 } from '../../lib/bible.ts';
+import { currentChosenEdition } from '../../lib/edition-choice.ts';
 import type {
   BibleCandidate,
   Verse,
@@ -1767,7 +1769,18 @@ r.get('/:book/:chapter', async (c) => {
   // dagen den finnes og faller til osnb (med hint) til da — per kapittel.
   // Et eksplisitt ?bible=-valg overstyrer og fallbacker ikke.
   const contentLang = localeToContentLanguage(c.get('locale'));
-  const candidates = await readableBibleCandidates(contentLang);
+  // The reader's chosen edition (#182) goes first, whatever the interface
+  // language; the language's editions stay behind it for a chapter the chosen
+  // one does not have. The choice is the default, so it is kept out of the
+  // URLs like the language's default is.
+  const chosen = currentChosenEdition();
+  const languageCandidates = await readableBibleCandidates(contentLang);
+  const candidates: BibleCandidate[] = chosen
+    ? [
+        { id: chosen, lang: (await getBibleEditionById(chosen))?.lang_iso639_1 ?? contentLang },
+        ...languageCandidates.filter((x) => x.id !== chosen),
+      ]
+    : languageCandidates;
   const localeDefault = candidates[0] ?? { id: 'osnb', lang: 'nb' };
 
   // Egne opplastede bibler ('user:<uuid>') bor i IndexedDB på klienten: SSR
@@ -1802,7 +1815,7 @@ r.get('/:book/:chapter', async (c) => {
     : (candidates.find((x) => x.id === bible)?.lang ?? served.lang);
   // Hint når leseren ba om ett språk og fikk et annet (utgaven/kapittelet
   // er ikke oversatt ennå). Aldri ved eksplisitt valg.
-  const untranslated = !explicitBible && !userBible && served.lang !== contentLang;
+  const untranslated = !explicitBible && !chosen && !userBible && served.lang !== contentLang;
 
   const maxChapter = book.chapters;
   const nextBook = getBookInfoById(book.id + 1);
