@@ -50,14 +50,21 @@ export function moveSavedChoiceToCookie() {
     return;
   }
   if (!saved || !SERVED.test(saved)) return;
+  // Should the cookie not stick (another domain), the page must not reload for
+  // ever: remember the cookie this left behind, and move again only when
+  // someone else has rewritten it since — konto does at every login, and drops
+  // product keys it does not keep.
+  const before = JSON.stringify(prefs);
   try {
-    // Once per session: should the cookie not stick (another domain), the
-    // page must not reload for ever.
-    if (sessionStorage.getItem('bible-edition-moved') === '1') return;
-    sessionStorage.setItem('bible-edition-moved', '1');
+    if (sessionStorage.getItem(MOVED) === before) return;
   } catch {
     return;
   }
   setPref(EDITION_PREF, saved);
+  try {
+    sessionStorage.setItem(MOVED, before);
+  } catch {}
   if (EDITION_PREF in readPrefs()) location.reload();
 }
+
+const MOVED = 'bible-edition-moved';
