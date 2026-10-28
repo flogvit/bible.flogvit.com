@@ -1,5 +1,9 @@
 # Release notes
 
+## 2026-10-28 — Security maintenance update
+
+**Behind the scenes**
+- Updated the `qs` dependency in the MCP server to 6.16.1, which fixes security advisory GHSA-6pq8-jhm2-2vcw.
 ## 2026-10-27 — Church year readings, prophecies, verse numbering and a command line client for the Bible MCP
 
 **New features**
