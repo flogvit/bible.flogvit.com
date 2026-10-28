@@ -118,7 +118,8 @@ describe('every surface that quotes the text', () => {
 
   test('the verse API the previews and the front page use', async () => {
     const res = await get('/api/verses?ref=Joh+3,16', chose('osen'));
-    expect(JSON.stringify(await res.json())).toContain(text.osen.split(' ')[0]!);
+    const rows = (await res.json()) as { verse: { text: string } }[];
+    expect(words(rows[0]!.verse.text)).toBe(text.osen);
     // The answer depends on the cookie, so a cached copy must not outlive a change.
     expect(res.headers.get('vary')).toBe('Cookie');
     const named = await get('/api/verses?ref=Joh+3,16&bible=osnb', chose('osen'));
