@@ -1,6 +1,7 @@
 // The Bible edition the reader has chosen (#182). It lives in `fv-prefs` as
-// `bible.edition`, where the server reads it (src/lib/edition-choice.ts) and
-// shows it on every page, whatever the interface language. An empty value is
+// `bible.edition`, and for a logged-in reader also on the account in konto,
+// where the server reads it (src/lib/edition-choice.ts) and shows it on every
+// page, whatever the interface language. An empty value is
 // "follow the interface language". An uploaded edition of the reader's own
 // (`user:<id>`) lives only in this browser, so the server never sees it and the
 // reading page keeps its own path for it (reading.js).
@@ -8,7 +9,7 @@
 // `bible-settings.bible` in localStorage is kept equal to the cookie: the
 // offline reader and the settings page read it.
 
-import { readPrefs, setPref } from './prefs.js';
+import { persistPref, readPrefs, setPref, writePrefCookie } from './prefs.js';
 import { readJSON, writeJSON } from './store.js';
 
 export const EDITION_PREF = 'bible.edition';
@@ -36,35 +37,39 @@ export function chooseEdition(id) {
  * see. Move it to the cookie once and reload, so the page shows it. Only when
  * the cookie has no choice at all — a choice in the cookie (from the account, or
  * "follow the language") is the truth, and this browser's copy follows it.
+ * A logged-in reader's choice goes to the account too, before the reload, so
+ * the server (which reads the account first) shows it on the reloaded page.
+ * Resolves when done.
  */
 export function moveSavedChoiceToCookie() {
   const prefs = readPrefs();
   const saved = (readJSON(SETTINGS, {}) || {}).bible;
   if (EDITION_PREF in prefs) {
     const target = prefs[EDITION_PREF];
-    if (String(saved).startsWith('user:') || (saved || '') === target) return;
+    if (String(saved).startsWith('user:') || (saved || '') === target) return Promise.resolve();
     const settings = readJSON(SETTINGS, {}) || {};
     if (target) settings.bible = target;
     else delete settings.bible;
     writeJSON(SETTINGS, settings);
-    return;
+    return Promise.resolve();
   }
-  if (!saved || !SERVED.test(saved)) return;
+  if (!saved || !SERVED.test(saved)) return Promise.resolve();
   // Should the cookie not stick (another domain), the page must not reload for
   // ever: remember the cookie this left behind, and move again only when
-  // someone else has rewritten it since — konto does at every login, and drops
-  // product keys it does not keep.
+  // someone else has rewritten it since.
   const before = JSON.stringify(prefs);
   try {
-    if (sessionStorage.getItem(MOVED) === before) return;
+    if (sessionStorage.getItem(MOVED) === before) return Promise.resolve();
   } catch {
-    return;
+    return Promise.resolve();
   }
-  setPref(EDITION_PREF, saved);
+  writePrefCookie(EDITION_PREF, saved);
+  const saving = persistPref(EDITION_PREF, saved);
   try {
     sessionStorage.setItem(MOVED, before);
   } catch {}
-  if (EDITION_PREF in readPrefs()) location.reload();
+  if (!(EDITION_PREF in readPrefs())) return saving;
+  return saving.then(() => location.reload());
 }
 
 const MOVED = 'bible-edition-moved';

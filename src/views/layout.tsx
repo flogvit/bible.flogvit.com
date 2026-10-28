@@ -311,7 +311,10 @@ function AccountChip({ t }: { t: Translator }) {
     // Navnet er det SYNLIGE: navnet og «plus» (WCAG 2.5.3, #163). Den gamle
     // aria-labelen «Konto: <navn>» var norsk på alle åtte språk og utelot
     // plus-merket leseren ser.
-    <a class="account-chip account-chip-in" href={ACCOUNT_URL} title={user.email}>
+    // data-csrf: konto's token for this session, which a prefs write to the
+    // account must carry (public/js/prefs.js, #182). The page is never cached
+    // for a logged-in reader (page-cache.ts).
+    <a class="account-chip account-chip-in" href={ACCOUNT_URL} title={user.email} data-csrf={user.csrf}>
       <span class="account-chip-name">{name}</span>
       {user.plus && <span class="account-chip-plus">plus</span>}
     </a>
