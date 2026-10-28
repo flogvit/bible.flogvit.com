@@ -17,8 +17,8 @@ export interface MockKontoUser {
   plusUntil?: string | null;
 }
 
-/** Kontoens svar for en innlogget bruker. */
-export function kontoUser(user: MockKontoUser, csrf = 'csrf'): Response {
+/** Kontoens svar for en innlogget bruker; `prefs` er kontoens lagrede prefs (portal/PREFS.md). */
+export function kontoUser(user: MockKontoUser, csrf = 'csrf', prefs?: Record<string, string>): Response {
   return Response.json({
     user: {
       id: user.id,
@@ -29,6 +29,7 @@ export function kontoUser(user: MockKontoUser, csrf = 'csrf'): Response {
       plusUntil: user.plusUntil ?? null,
     },
     csrf,
+    ...(prefs ? { prefs } : {}),
   });
 }
 

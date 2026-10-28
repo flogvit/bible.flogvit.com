@@ -13,8 +13,9 @@
 //
 // Requires the local DB (DBngin :3326) with imported content.
 
-import { beforeAll, describe, expect, setDefaultTimeout, test } from 'bun:test';
+import { afterAll, beforeAll, describe, expect, setDefaultTimeout, test } from 'bun:test';
 import { DB_TEST_TIMEOUT_MS } from './db-timeout.ts';
+import { kontoUser, startMockKonto } from './mock-konto.ts';
 import { createApp } from '../src/app.ts';
 import { getDailyVerse, getVerses } from '../src/lib/bible.ts';
 import { chosenEditionFrom } from '../src/lib/edition-choice.ts';
@@ -93,15 +94,63 @@ describe('the chapter page', () => {
 
 describe('a logged-in reader without Plus', () => {
   // The combination that failed for admin@flogvit.com (2026-10-28): logged in,
-  // no Plus, so no settings synced to the account, and the cookie as konto
-  // writes it at login (the three global prefs, plus the choice). A logged-in
-  // request bypasses the microcache and goes through the session, so it is its
-  // own path; the fake session fails open to anonymous, as an unreachable konto
-  // does, and the page must still follow the cookie.
-  test('an nb interface with OSEN chosen shows the OSEN text', async () => {
-    const cookie = `${chose('osen', { theme: 'system', units: 'metric' })}; fv-session=not-a-real-session`;
+  // no Plus, so no settings synced by bibel. The account in konto keeps the
+  // choice (`bible.edition` in its prefs) and is the truth for a logged-in
+  // reader (PREFS.md), so a choice made on one device counts on the next.
+  const admin = { id: 38, plus: false, email: 'admin@flogvit.com' };
+  const session = (value: string) => `; fv-session=${value}`;
+  let konto: ReturnType<typeof startMockKonto>;
+  const accountBefore = process.env.ACCOUNT_API_URL;
+  beforeAll(() => {
+    konto = startMockKonto({
+      'chose-osen': () => kontoUser(admin, 'tok-38', { lang: 'nb', theme: 'system', units: 'metric', 'bible.edition': 'osen' }),
+      'chose-language': () => kontoUser(admin, 'tok-38', { lang: 'nb', theme: 'system', units: 'metric', 'bible.edition': '' }),
+      'chose-nothing': () => kontoUser(admin, 'tok-38', { lang: 'nb', theme: 'system', units: 'metric' }),
+    });
+  });
+  afterAll(() => {
+    konto.stop(true);
+    if (accountBefore === undefined) delete process.env.ACCOUNT_API_URL;
+    else process.env.ACCOUNT_API_URL = accountBefore;
+  });
+  const setPrefs = (res: Response) =>
+    res.headers.getSetCookie().find((c) => c.startsWith('fv-prefs=')) ?? null;
+
+  test('a choice on the account counts on another device, where the cookie has none', async () => {
+    const cookie = `fv-prefs=${encodeURIComponent(JSON.stringify({ lang: 'nb', theme: 'dark' }))}${session('chose-osen')}`;
     const { res, verse } = await chapter('/nb/joh/3', cookie);
     expect(res.headers.get('x-cache')).toBeNull();
+    expect(verse).toContain(text.osen);
+    // ...and this browser's cookie gets it, keeping what it had.
+    const line = setPrefs(res);
+    expect(line, 'fv-prefs is refreshed from the account').not.toBeNull();
+    expect(JSON.parse(decodeURIComponent(line!.split(';')[0]!.slice('fv-prefs='.length)))).toEqual({
+      lang: 'nb',
+      theme: 'dark',
+      'bible.edition': 'osen',
+    });
+  });
+
+  test('the account beats an old cookie: "follow the language" on the account wins', async () => {
+    const { res, verse } = await chapter('/nb/joh/3', `${chose('osen')}${session('chose-language')}`);
+    expect(verse).toContain(text.osnb);
+    expect(setPrefs(res)).toContain(encodeURIComponent('"bible.edition":""'));
+  });
+
+  test('an account with no choice leaves it to the cookie, and sets nothing', async () => {
+    const { res, verse } = await chapter('/nb/joh/3', `${chose('osen')}${session('chose-nothing')}`);
+    expect(verse).toContain(text.osen);
+    expect(setPrefs(res)).toBeNull();
+  });
+
+  test('the page carries konto\'s CSRF token, so the browser can save a choice on the account', async () => {
+    const res = await get('/nb/innstillinger', `${chose('osen')}${session('chose-nothing')}`);
+    expect(await res.text()).toMatch(/class="account-chip account-chip-in"[^>]*data-csrf="tok-38"/);
+  });
+
+  test('konto out of reach: the reader is anonymous, and the cookie still decides', async () => {
+    const cookie = `${chose('osen', { theme: 'system', units: 'metric' })}; fv-session=not-a-real-session`;
+    const { verse } = await chapter('/nb/joh/3', cookie);
     expect(verse).toContain(text.osen);
   });
 });

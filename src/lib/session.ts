@@ -6,6 +6,7 @@
 // konto på localhost:3020. Alt er best-effort — feiler kallet, er man utlogget.
 
 import type { Context, Next } from 'hono';
+import { refreshedPrefsCookie } from './edition-choice.ts';
 import type { Locale } from './i18n.ts';
 
 // Leses ved kall-tid så tester kan peke på en mock-server.
@@ -34,6 +35,8 @@ export interface SessionUser {
   plus: boolean;
   plusUntil: string | null;
   csrf: string;
+  /** The account's family prefs (portal/PREFS.md), product keys included. */
+  prefs: Record<string, string>;
 }
 
 // `locale` settes av språkmonteringen i app.ts (I18N.md §2) og leses av
@@ -50,6 +53,14 @@ interface CentralSessionResponse {
     plusUntil: string | null;
   } | null;
   csrf?: string;
+  prefs?: Record<string, unknown> | null;
+}
+
+/** Only string values: the account's prefs come from another service. */
+function stringPrefs(raw: Record<string, unknown> | null | undefined): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const [k, v] of Object.entries(raw ?? {})) if (typeof v === 'string') out[k] = v;
+  return out;
 }
 
 async function getCentralSession(cookieHeader: string): Promise<SessionUser | null> {
@@ -71,6 +82,7 @@ async function getCentralSession(cookieHeader: string): Promise<SessionUser | nu
       plus: !!u.plus,
       plusUntil: u.plusUntil ?? null,
       csrf: data?.csrf || '',
+      prefs: stringPrefs(data?.prefs),
     };
   } catch {
     return null;
@@ -92,10 +104,14 @@ export async function withSession(c: Context<AppEnv>, next: Next): Promise<void>
   const current = cookieHeader.match(new RegExp(`(?:^|;\\s*)${AUTH_MARKER}=([^;]+)`))?.[1] ?? null;
   const desired = user ? (user.plus ? '2' : '1') : null;
   if (desired && current !== desired) {
-    c.header('Set-Cookie', `${AUTH_MARKER}=${desired}; Path=/; SameSite=Lax; Max-Age=2592000`);
+    c.header('Set-Cookie', `${AUTH_MARKER}=${desired}; Path=/; SameSite=Lax; Max-Age=2592000`, { append: true });
   } else if (!desired && current) {
-    c.header('Set-Cookie', `${AUTH_MARKER}=; Path=/; SameSite=Lax; Max-Age=0`);
+    c.header('Set-Cookie', `${AUTH_MARKER}=; Path=/; SameSite=Lax; Max-Age=0`, { append: true });
   }
+  // The account's edition choice reaches this browser's cookie, so the
+  // settings page and the offline reader show what the server shows (#182).
+  const refreshed = user && refreshedPrefsCookie(cookieHeader, user.prefs, new URL(c.req.url).hostname);
+  if (refreshed) c.header('Set-Cookie', refreshed, { append: true });
   await next();
 }
 

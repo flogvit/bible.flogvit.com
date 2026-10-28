@@ -14,6 +14,7 @@ const USER: SessionUser = {
   plus: false,
   plusUntil: null,
   csrf: '',
+  prefs: {},
 };
 
 const VALID = {

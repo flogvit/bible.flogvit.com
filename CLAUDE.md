@@ -379,8 +379,12 @@ bibelteksten og studiestoffet som MCP-verktøy. Runbook og verktøyliste:
   `defaultBibleForLanguage()`; språket avgjør bare når ingenting er valgt, og
   `?bible=` slår begge. Sider varierer på cookien: mikrocachen nøkler på valget,
   og svaret sier `Vary: Cookie`. Klienten skriver valget med `setPref`
-  (`public/js/edition-pref.js`). Vakter: `test/edition-choice.test.ts`,
-  `test/edition-pref.test.ts`.
+  (`public/js/edition-pref.js`). **Innlogget er KONTOEN sannheten, med eller
+  uten plus:** konto lagrer `bible.edition` (`PRODUCT_PREF_REGISTRY` i
+  `konto/src/lib/prefs.ts`, portal/PREFS.md), sesjonssvaret bærer
+  `prefs`, og `withSession` skriver kontoens valg inn i cookien. PUT-en til
+  konto krever CSRF-tokenet, som står på konto-chipen (`data-csrf`). Vakter:
+  `test/edition-choice.test.ts`, `test/edition-pref.test.ts`.
 - **Lesesporing (#16):** lesing er en HENDELSE (`{ firstAt, lastAt, count, opens,
   verses? }`). Kjernen er `public/js/reading-progress.js`, importert av både klient
   og server. `MERGERS` i `sync.ts` fletter kommutativt; klienten bruker samme
