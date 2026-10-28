@@ -100,7 +100,8 @@ function bookIdForSlug(slug) {
       fetch('/api/verses', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ refs: [{ bookId, chapter: pos.chapter, verse }], bible: settings.bible }),
+        // No `bible`: the server quotes the reader's chosen edition (#182).
+        body: JSON.stringify({ refs: [{ bookId, chapter: pos.chapter, verse }] }),
       })
         .then((res) => (res.ok ? res.json() : null))
         .then((rows) => {

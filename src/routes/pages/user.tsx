@@ -623,6 +623,8 @@ r.get('/innstillinger', async (c) => {
           <label class="settings-row">
             <span>{t('u.bibleEdition')}</span>
             <select data-setting="bible" class="user-input" data-proper-names>
+              {/* No choice: the interface language decides (#182). */}
+              <option value="">{t('u.editionFollowsLanguage')}</option>
               {readable.map((e) => (
                 <option value={e.id}>{editionLabel(e)}</option>
               ))}

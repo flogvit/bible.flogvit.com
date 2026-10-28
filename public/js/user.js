@@ -10,6 +10,7 @@ import { el } from './dom.js';
 import { parseVerseListRef, withRef } from './verse-list.js';
 import { verseHash } from './verse-hash.js';
 import { readJSON, writeJSON } from './store.js';
+import { chooseEdition, chosenEdition } from './edition-pref.js';
 
 const t = readStrings(document.body);
 
@@ -284,6 +285,13 @@ if (root) {
     };
     root.querySelectorAll('[data-setting]').forEach((input) => {
       const key = input.dataset.setting;
+      // The edition is the reader's choice for the whole site, read by the
+      // server from `fv-prefs` (#182) — not only this browser's settings.
+      if (key === 'bible') {
+        input.value = chosenEdition();
+        input.addEventListener('change', () => chooseEdition(input.value));
+        return;
+      }
       const cur = getPath(s, key);
       if (input.type === 'checkbox') input.checked = cur !== false;
       else if (cur !== undefined) input.value = cur;
@@ -316,7 +324,7 @@ if (root) {
           opt.textContent = b.name;
           select.append(opt);
         }
-        const cur = getPath(s, sel);
+        const cur = sel === 'bible' ? chosenEdition() : getPath(s, sel);
         if (cur !== undefined) select.value = cur;
       }
       const box = root.querySelector('[data-bible-visibility]');

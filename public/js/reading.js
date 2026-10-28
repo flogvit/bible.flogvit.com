@@ -107,7 +107,10 @@ if (rootPage) {
         changed = true;
       }
     };
-    applyParam('bible', s.bible, 'osnb');
+    // A chosen edition is the server's to show (fv-prefs, #182) — whatever the
+    // interface language, with no redirect. Only an uploaded edition of the
+    // reader's own lives in this browser alone, and needs the address to say so.
+    if (String(s.bible || '').startsWith('user:')) applyParam('bible', s.bible, '');
     applyParam('secondary', s.secondaryBible, '');
     applyParam('mapping', s.verseMapping, 'osnb');
     if (changed) location.replace(url.pathname + url.search + url.hash);
