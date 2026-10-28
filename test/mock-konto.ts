@@ -33,18 +33,31 @@ export function kontoUser(user: MockKontoUser, csrf = 'csrf', prefs?: Record<str
   });
 }
 
+/** Et PUT /api/prefs kontoen har tatt imot. */
+export interface MockKontoPut {
+  cookie: string;
+  csrf: string | null;
+  body: unknown;
+}
+
 /**
  * `sessions` er cookie-verdi → svar, prøvd i rekkefølge med `includes` (som
  * kopiene gjorde). Alt annet får `fallback` — standard «ikke innlogget».
+ * `PUT /api/prefs` legges i `puts` (når den er gitt) og svarer 200.
  */
 export function startMockKonto(
   sessions: Record<string, () => Response>,
   fallback: () => Response = () => Response.json({ user: null }),
+  puts?: MockKontoPut[],
 ): ReturnType<typeof Bun.serve> {
   const server = Bun.serve({
     port: 0,
-    fetch(req) {
+    async fetch(req) {
       const cookie = req.headers.get('cookie') ?? '';
+      if (puts && req.method === 'PUT' && new URL(req.url).pathname === '/api/prefs') {
+        puts.push({ cookie, csrf: req.headers.get('x-csrf'), body: await req.json() });
+        return Response.json({});
+      }
       for (const [value, respond] of Object.entries(sessions)) {
         if (cookie.includes(`fv-session=${value}`)) return respond();
       }
