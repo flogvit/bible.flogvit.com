@@ -1157,3 +1157,25 @@ a.fvmenu-item:hover { background: color-mix(in oklab, var(--ink) 6%, var(--surfa
   margin-top: 4px;
   padding-top: 10px;
 }
+
+/* Songs from FLOGVIT.music (#188): chapter study block, verse detail, and the
+   theme, person and story pages. Here and not in a page sheet, since all four
+   load different ones. */
+.song-section { margin: 0 0 28px; }
+.song-section h2 {
+  margin-bottom: 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border);
+}
+.song-list { list-style: none; margin: 0; padding: 0; }
+.song {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  padding: 0.6rem 0;
+}
+.song + .song { border-top: 1px solid var(--border); }
+.song-title { font-weight: 600; }
+.song-meta { font-size: 0.85rem; color: var(--ink-2); }
+.song-audio { width: 100%; max-width: 28rem; }
+.song-link { align-self: flex-start; font-size: 0.9rem; color: var(--gold-text); }

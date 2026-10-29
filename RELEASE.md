@@ -1,5 +1,10 @@
 # Release notes
 
+## Not yet released — Songs about the text you read
+
+**New features**
+- Songs from FLOGVIT.music now appear where they belong: a «Songs» block on the chapter page, a «Songs» tab on every verse a song is about, and a «Songs» section on theme, person and story pages. Play them right there, or open them on FLOGVIT.music to sing along.
+
 ## 2026-10-28 — Choose your Bible edition and keep it, plus a security update
 
 **New features**

@@ -244,6 +244,14 @@ import). Nøkkelregler:
   «Litteratur» i versdetaljen (presise treff) og studium-blokka
   (kapittel-/bok-nivå).
 
+## Sanger fra FLOGVIT.music (#188)
+
+`src/lib/songs.ts` leser `media.flogvit.com/music/index.json` server-side
+(10 min cache, `MUSIC_INDEX_TTL_MS`; `MUSIC_INDEX_URL=` slår av). Feil = ingen
+sanger, aldri en feilside. Testene kjører uten nett (`test/preload.ts`).
+**Sjekk etter en ny sangrunde:** `bun scripts/check-song-tags.ts` — exit 1
+navngir hver sang hvis tema/person/historie eller vers bibel ikke har.
+
 ## Manuskripter: deling og åpen katalog (#15) — skill `manuskripter`
 
 Runbooken for review er `REVIEW.md`.

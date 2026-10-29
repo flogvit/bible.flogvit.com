@@ -68,6 +68,8 @@ import type {
 } from '../../lib/bible.ts';
 import { mapChapter, resolveMappingId, getAvailableMappings } from '../../lib/verse-mapper.ts';
 import { getWorksForChapter, workHref, type WorkRef } from '../../lib/works.ts';
+import { songIndex, songsForPassage, type Song } from '../../lib/songs.ts';
+import { SongList } from '../../views/songs.tsx';
 import { encode as encodeKvn } from '@free-bible/kvn/types';
 import { layoutProps, tFor, type Translator, type MessageKey, lhref } from '../../lib/i18n.ts';
 import { localeToContentLanguage } from '../../lib/lang.ts';
@@ -146,6 +148,8 @@ interface DisplayVerse {
   references: Reference[];
   prophecies: Prophecy[];
   works: WorkRef[];
+  /** Songs with a passage that contains this verse (#188). */
+  songs: Song[];
 }
 
 interface ChapterData {
@@ -164,6 +168,8 @@ interface ChapterData {
   parallels: GospelParallel[];
   chapterProphecies: Prophecy[];
   chapterWorks: WorkRef[];
+  /** Songs with a passage anywhere in the chapter. */
+  songs: Song[];
 }
 
 function versesInProphecy(p: Prophecy, bookId: number, chapter: number, verse: number): boolean {
@@ -217,7 +223,7 @@ async function loadChapterData(
     ]);
 
   // Studium-ressurser (samme kall som /api/search/chapter-resources).
-  const [personsRaw, themesRaw, storiesRaw, numbersRaw, readingTextsRaw, parallels, allWorks] = await Promise.all([
+  const [personsRaw, themesRaw, storiesRaw, numbersRaw, readingTextsRaw, parallels, allWorks, music] = await Promise.all([
     getPersonsByChapter(bookId, primaryChapter, lang),
     getThemesByChapter(bookId, primaryChapter, lang),
     getStoriesByChapter(bookId, primaryChapter, lang),
@@ -225,6 +231,7 @@ async function loadChapterData(
     getReadingTextsByChapter(bookId, primaryChapter, lang),
     getGospelParallelsForChapter(bookId, primaryChapter, lang),
     getWorksForChapter(bookId, primaryChapter),
+    songIndex(),
   ]);
   // Presise treff (vers/passasje) legges paa hvert vers; kapittel-/bok-nivaa
   // samles i studium-blokka saa de ikke drukner de presise paa hvert vers.
@@ -288,12 +295,15 @@ async function loadChapterData(
         const k = encodeKvn(bookId, b.osnbChapter, b.osnbVerse);
         return w.kvn_from <= k + 15 && w.kvn_to >= k;
       }),
+      songs: songsForPassage(music, bookId, b.osnbChapter, b.osnbVerse),
     });
   }
 
   return {
     verses,
     chapterWorks,
+    // A display chapter can span two osnb chapters (see perChapter above).
+    songs: [...new Set(osnbChapters.flatMap((ch) => songsForPassage(music, bookId, ch)))],
     bookSummary,
     summary,
     context,
@@ -913,6 +923,11 @@ function VerseDetailPanel({
             {t('contrib.worksTab')} ({data.works.length})
           </button>
         )}
+        {data.songs.length > 0 && (
+          <button type="button" class="vd-tab" data-vd-tab="songs">
+            {t('songs.title')} ({data.songs.length})
+          </button>
+        )}
         {data.prophecies.length > 0 && (
           <button type="button" class="vd-tab" data-vd-tab="prophecies">
             {t('nav.prophecies')} ({data.prophecies.length})
@@ -1026,6 +1041,12 @@ function VerseDetailPanel({
                   <WorkItem work={work} t={t} />
                 ))}
             </div>
+          </div>
+        )}
+
+        {data.songs.length > 0 && (
+          <div class="vd-pane" data-vd-pane="songs" hidden>
+            <SongList songs={data.songs} />
           </div>
         )}
 
@@ -1457,6 +1478,12 @@ function StudyPanel({
               </div>
             ))}
           </div>
+        </StudyBlock>
+      )}
+
+      {data.songs.length > 0 && (
+        <StudyBlock id="sanger" title={t('songs.title')} count={data.songs.length} defaultOpen>
+          <SongList songs={data.songs} />
         </StudyBlock>
       )}
 
