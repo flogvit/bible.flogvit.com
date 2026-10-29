@@ -5,6 +5,10 @@
 **New features**
 - Songs from FLOGVIT.music now appear where they belong: a «Songs» block on the chapter page, a «Songs» tab on every verse a song is about, and a «Songs» section on theme, person and story pages. Play them right there, or open them on FLOGVIT.music to sing along.
 
+**Bug fixes**
+- Screen readers now hear the tabs in a verse's details and in the study panel as tabs, and which one is chosen.
+- The «Show more» button on the verse of the day is called what it says, so voice control finds it.
+
 ## 2026-10-28 — Choose your Bible edition and keep it, plus a security update
 
 **New features**
