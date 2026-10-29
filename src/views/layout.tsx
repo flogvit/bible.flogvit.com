@@ -14,7 +14,7 @@ import { raw } from 'hono/html';
 import type { Child } from 'hono/jsx';
 import { getContext } from 'hono/context-storage';
 import type { AppEnv } from '../lib/session.ts';
-import { ACCOUNT_URL, loginUrl } from '../lib/session.ts';
+import { ACCOUNT_URL, loginUrlHere } from '../lib/session.ts';
 import { DEFAULT_LOCALE, LOCALES, href, makeT, ogLocale, type Locale, type Translator, lhref } from '../lib/i18n.ts';
 import { tCtx, islandStrings, type MessageKey } from '../lib/i18n.ts';
 import { absoluteUrl } from '../lib/site-url.ts';
@@ -294,19 +294,15 @@ function AccountChip({ t }: { t: Translator }) {
   // Request-konteksten hentes fra AsyncLocalStorage (contextStorage-middleware
   // i app.ts), så vi slipper å tre user gjennom hvert Layout-kall.
   let user: AppEnv['Variables']['user'] = null;
-  // «Logg inn» kommer tilbake til siden den ble trykket på (konto#62).
-  let here = '';
   try {
-    const c = getContext<AppEnv>();
-    user = c.var.user;
-    const url = new URL(c.req.url);
-    here = absoluteUrl(decodeURI(url.pathname)) + url.search;
+    user = getContext<AppEnv>().var.user;
   } catch {
     user = null; // rendret utenfor request-kontekst (f.eks. test) → utlogget
   }
   if (!user) {
+    // «Logg inn» kommer tilbake til siden den ble trykket på (konto#62).
     return (
-      <a class="account-chip" href={here ? loginUrl(here) : ACCOUNT_URL} aria-label={t('chrome.login')}>
+      <a class="account-chip" href={loginUrlHere()} aria-label={t('chrome.login')}>
         {t('chrome.login')}
       </a>
     );

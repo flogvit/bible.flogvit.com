@@ -72,4 +72,15 @@ describe('konto-sesjon', () => {
       expect(res.headers.get('location')).toBe('https://flogvit.com/konto/');
     }
   });
+
+  // flogvit-com-konto#62: the islands' «Log in» sends the page it was pressed on.
+  test('/logg-inn bærer ?return= videre til kontotjenesten', async () => {
+    const app = createApp();
+    const back = 'https://bible.flogvit.com/en/rom/8?bible=osnb#v3';
+    for (const path of ['/logg-inn', '/en/logg-inn']) {
+      const res = await app.request(`${path}?return=${encodeURIComponent(back)}`);
+      expect(res.status).toBe(302);
+      expect(res.headers.get('location')).toBe('https://flogvit.com/konto/?return=' + encodeURIComponent(back));
+    }
+  });
 });

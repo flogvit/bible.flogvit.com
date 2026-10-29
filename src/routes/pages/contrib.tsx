@@ -9,7 +9,7 @@
 
 import { Hono } from 'hono';
 import type { Context } from 'hono';
-import type { AppEnv } from '../../lib/session.ts';
+import { loginUrlHere, type AppEnv } from '../../lib/session.ts';
 import { Layout } from '../../views/layout.tsx';
 import { Breadcrumbs, type Crumb } from '../../views/breadcrumbs.tsx';
 import type { Child } from 'hono/jsx';
@@ -57,12 +57,12 @@ function ContribShell(props: {
   );
 }
 
-function LoginCta({ t, locale }: { t: Translator; locale: Locale }) {
+function LoginCta({ t }: { t: Translator }) {
   return (
     <div class="contrib-login">
       <p>{t('contrib.loginRequired')}</p>
       <p>
-        <a class="contrib-login-cta" href={href(locale, '/logg-inn')}>{t('contrib.loginCta')}</a>
+        <a class="contrib-login-cta" href={loginUrlHere()}>{t('contrib.loginCta')}</a>
       </p>
     </div>
   );
@@ -191,7 +191,7 @@ r.get('/bidra', (c) => {
     return c.html(
       <ContribShell title={t('contrib.title')} crumb={t('contrib.title')} heading={t('contrib.heading')}
         intro={t('contrib.intro')} page="contrib-form" locale={locale} path={path} origin={origin} noindex={noindex}>
-        <LoginCta t={t} locale={locale} />
+        <LoginCta t={t} />
       </ContribShell>,
     );
   }
@@ -359,7 +359,7 @@ r.get('/mine-bidrag', async (c) => {
 
   let content: Child;
   if (!user) {
-    content = <LoginCta t={t} locale={locale} />;
+    content = <LoginCta t={t} />;
   } else {
     const rows = await listSubmissionsForUser(user.id);
     content = (

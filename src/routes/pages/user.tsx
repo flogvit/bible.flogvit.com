@@ -9,7 +9,7 @@
 
 import { Hono } from 'hono';
 import type { AppEnv } from '../../lib/session.ts';
-import { ACCOUNT_URL } from '../../lib/session.ts';
+import { ACCOUNT_URL, loginUrlHere } from '../../lib/session.ts';
 import { Layout } from '../../views/layout.tsx';
 import { Breadcrumbs } from '../../views/breadcrumbs.tsx';
 import type { Child } from 'hono/jsx';
@@ -586,7 +586,7 @@ r.get('/innstillinger', async (c) => {
           ) : (
             <p class="settings-account">
               {t('u.notLoggedIn')}{' '}
-              <a href={ACCOUNT_URL}>FLOGVIT-konto</a> {t('u.accountWith')}{' '}
+              <a href={loginUrlHere()}>FLOGVIT-konto</a> {t('u.accountWith')}{' '}
               <a href="https://flogvit.com/plus/">FLOGVIT.plus</a>.
             </p>
           )}

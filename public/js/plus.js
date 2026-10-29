@@ -40,7 +40,8 @@ function showCta(what) {
   if (!loggedIn()) {
     const login = document.createElement('a');
     login.className = 'plus-cta-link';
-    login.href = localeHref('/logg-inn');
+    // Back to this page after the login (flogvit-com-konto#62).
+    login.href = `${localeHref('/logg-inn')}?return=${encodeURIComponent(location.href)}`;
     login.textContent = t('chrome.login');
     cta.append(login);
   }

@@ -35,6 +35,12 @@ describe('skjelett', () => {
     expect(html).toContain(`<a class="account-chip" href="${href.replaceAll('&', '&amp;')}"`);
   });
 
+  test('utlogget på innstillingene lenker «FLOGVIT-konto» tilbake til innstillingene', async () => {
+    const html = await (await app.request(L('/innstillinger'))).text();
+    const back = encodeURIComponent('https://bible.flogvit.com' + L('/innstillinger'));
+    expect(html).toContain(`<a href="https://flogvit.com/konto/?return=${back}">FLOGVIT-konto</a>`);
+  });
+
   test('ukjent side gir 404', async () => {
     const res = await app.request(L('/finnes-ikke'));
     expect(res.status).toBe(404);
