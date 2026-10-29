@@ -541,6 +541,9 @@ export function VersionHead() {
     <>
       <meta name="fv-versjon" content={buildId()} data-url="/versjon.json" />
       <script src={assetUrl('/js/ny-versjon.js')} defer />
+      {/* «Ekte besøk» (portal/BESOK.md): sier fra til /stats at et menneske
+          leste siden. Caddy svarer selv på /fv-besok; SW-en slipper POST forbi. */}
+      <script src={assetUrl('/js/fv-besok.js')} defer />
     </>
   );
 }

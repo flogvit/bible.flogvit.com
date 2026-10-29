@@ -36,7 +36,9 @@ const NORWEGIAN_WORDS = [
  * er `version.*` i portalens `chrome-i18n.json` og holdes like av portalens
  * test; kopien holdes lik portalen av `ny-versjon.test.ts`.
  */
-const PORTAL_COPIES = new Set(['ny-versjon.js']);
+// `fv-besok.js` («Ekte besøk», portal/BESOK.md) har ingen tekst, bare et norsk
+// navn i kommentaren øverst; den holdes lik portalen av `fv-besok.test.ts`.
+const PORTAL_COPIES = new Set(['ny-versjon.js', 'fv-besok.js']);
 
 const WORD_RE = new RegExp(`\\b(${NORWEGIAN_WORDS.join('|')})\\b`, 'i');
 const NORDIC_RE = /[æøåÆØÅ]/;
