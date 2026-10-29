@@ -165,6 +165,9 @@ describe('SIDENE bærer bygget de ble rendret fra', () => {
       expect(meta[0]![1]).toContain('data-url="/versjon.json"');
       const script = /<script src="(\/js\/ny-versjon\.js(?:\?v=[0-9a-f]+)?)" defer=""><\/script>/.exec(head);
       expect(script?.[1] ?? `ingen ny-versjon.js i <head> på ${side.url}`).toStartWith('/js/ny-versjon.js');
+      // «Ekte besøk»-beaconen står i samme <head> (portal/BESOK.md).
+      const besok = /<script src="(\/js\/fv-besok\.js(?:\?v=[0-9a-f]+)?)" defer=""><\/script>/.exec(head);
+      expect(besok?.[1] ?? `ingen fv-besok.js i <head> på ${side.url}`).toStartWith('/js/fv-besok.js');
     });
   }
 
