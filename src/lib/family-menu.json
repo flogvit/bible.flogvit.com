@@ -35,6 +35,7 @@
     { "name": "lab", "href": "https://lab.flogvit.com/", "accent": "fiolett", "dot": { "light": "#6743b8", "dark": "#b39df0" } },
     { "name": "books", "href": "https://books.flogvit.com/", "accent": "groenn", "dot": { "light": "#2f7d43", "dark": "#85c795" } },
     { "name": "bible", "href": "https://bible.flogvit.com/", "accent": "laer", "dot": { "light": "#7a4a21", "dark": "#d9a06b" } },
+    { "name": "music", "href": "https://music.flogvit.com/", "accent": "rosentre", "dot": { "light": "#774440", "dark": "#d4918c" } },
     { "name": "eventphotos", "href": "https://eventphotos.flogvit.com/", "accent": "magenta", "dot": { "light": "#9c2f92", "dark": "#e79ae0" } },
     { "name": "gallery", "href": "https://gallery.flogvit.com/", "accent": "skifer", "dot": { "light": "#3f5b75", "dark": "#a3bdd4" } },
     { "name": "photo", "status": "coming", "accent": "baer", "dot": { "light": "#b0355f", "dark": "#ef8fb1" } }
