@@ -132,7 +132,7 @@ function rangeUrl(range: VerseRange): string {
 const HOME_ISLAND_KEYS = [
   'home.continueReading', 'home.stoppedAtVerse', 'home.continueAtVerse', 'home.nextChapter',
   'home.clearPosition', 'home.nowReading', 'home.addFavorite', 'home.removeFavorite',
-  'home.showMore', 'home.showLess', 'home.expandVerse', 'home.collapseVerse',
+  'home.showMore', 'home.showLess',
   'home.readingPlans', 'home.oneActive', 'home.noneActive', 'home.newPlan',
   'home.dayOf', 'home.daysInARow', 'home.todayLabel', 'home.choosePlan', 'home.noPlanYet',
 ] as const;

@@ -3,3 +3,5 @@
 # checkout where mcp/node_modules is not installed — including bibel's deploy.
 [test]
 pathIgnorePatterns = ["mcp/**"]
+# Keeps the suite off the network: the songs index is off unless a test asks (test/preload.ts).
+preload = ["./test/preload.ts"]

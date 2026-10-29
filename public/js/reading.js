@@ -155,7 +155,10 @@ if (rootPage) {
     detail.querySelectorAll('[data-vd-tab]').forEach((tab) => {
       tab.addEventListener('click', () => {
         const name = tab.dataset.vdTab;
-        detail.querySelectorAll('[data-vd-tab]').forEach((t) => t.classList.toggle('is-active', t === tab));
+        detail.querySelectorAll('[data-vd-tab]').forEach((t) => {
+          t.classList.toggle('is-active', t === tab);
+          t.setAttribute('aria-selected', String(t === tab));
+        });
         detail.querySelectorAll('[data-vd-pane]').forEach((p) => {
           const active = p.dataset.vdPane === name;
           p.hidden = !active;

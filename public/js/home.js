@@ -129,13 +129,12 @@ function bookIdForSlug(slug) {
     if (overflows) {
       const toggle = el('button', 'home-vod-more', t('home.showMore'));
       toggle.type = 'button';
+      // The name is the visible text (WCAG 2.5.3, #191); aria-expanded carries the state.
       toggle.setAttribute('aria-expanded', 'false');
-      toggle.setAttribute('aria-label', t('home.expandVerse'));
       toggle.addEventListener('click', () => {
         const open = scroll.classList.toggle('is-open');
         toggle.textContent = open ? t('home.showLess') : t('home.showMore');
         toggle.setAttribute('aria-expanded', String(open));
-        toggle.setAttribute('aria-label', open ? t('home.collapseVerse') : t('home.expandVerse'));
       });
       scroll.classList.add('has-more');
       scroll.after(toggle);

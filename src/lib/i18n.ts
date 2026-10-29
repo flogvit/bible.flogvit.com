@@ -44,10 +44,15 @@ export const ogLocale = (l: Locale) => INTL_TAG[l].replace('-', '_');
  * språk uten å feile noe sted (#25).
  */
 export function currentIntlTag(): string {
+  return INTL_TAG[currentLocale()];
+}
+
+/** The request's UI locale from contextStorage; the base language outside a request. */
+export function currentLocale(): Locale {
   try {
-    return INTL_TAG[getContext<{ Variables: { locale?: Locale } }>().var.locale ?? DEFAULT_LOCALE];
+    return getContext<{ Variables: { locale?: Locale } }>().var.locale ?? DEFAULT_LOCALE;
   } catch {
-    return INTL_TAG[DEFAULT_LOCALE];
+    return DEFAULT_LOCALE;
   }
 }
 
@@ -143,12 +148,7 @@ export function href(locale: Locale, path: string): string {
  * basespråket framfor å kaste.
  */
 export function lhref(path: string): string {
-  try {
-    const locale = getContext<{ Variables: { locale?: Locale } }>().var.locale;
-    return href(locale ?? DEFAULT_LOCALE, path);
-  } catch {
-    return href(DEFAULT_LOCALE, path);
-  }
+  return href(currentLocale(), path);
 }
 
 /** Stien uten språkprefiks — grunnlaget for hreflang og språkbytte. */

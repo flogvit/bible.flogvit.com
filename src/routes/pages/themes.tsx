@@ -10,6 +10,8 @@ import { InlineRefs } from '../../views/inline-refs.tsx';
 import { Footnotes } from '../../views/footnotes.tsx';
 import { ItemTagging } from '../../views/item-tagging.tsx';
 import { VerseRefList, verseUrl } from '../../views/verse-display.tsx';
+import { SongSection } from '../../views/songs.tsx';
+import { songIndex, songsTagged } from '../../lib/songs.ts';
 import {
   getAllThemes,
   getThemeByName,
@@ -126,6 +128,7 @@ r.get('/temaer/:tema', async (c) => {
   }
 
   const title = themeTitle(theme);
+  const songs = songsTagged(await songIndex(), 'themes', theme.name);
 
   return c.html(
     <Layout {...layoutProps(c)} title={`${title} — FLOGVIT.bible`} description={json?.introduction?.slice(0, 155) || `${t('themes.studyFallback')}: ${title}`} styles={['study.css']} scripts={['tagging.js']}>
@@ -142,6 +145,7 @@ r.get('/temaer/:tema', async (c) => {
                   <InlineRefs text={json.introduction} />
                 </p>
               )}
+              <SongSection songs={songs} />
               <div class="study-sections">
                 {json.sections.map((section) => (
                   <div class="study-section">
@@ -158,6 +162,7 @@ r.get('/temaer/:tema', async (c) => {
             </>
           ) : (
             <div class="study-sections">
+              <SongSection songs={songs} />
               {theme.content
                 .split('\n')
                 .filter((l) => l.trim())
@@ -246,6 +251,7 @@ r.get('/historier/:slug', async (c) => {
   } catch {
     return c.notFound();
   }
+  const songs = songsTagged(await songIndex(), 'stories', story.slug);
 
   return c.html(
     <Layout {...layoutProps(c)} title={`${data.title} — FLOGVIT.bible`} description={data.description?.slice(0, 155)} styles={['study.css']} scripts={['tagging.js']}>
@@ -259,6 +265,7 @@ r.get('/historier/:slug', async (c) => {
               <InlineRefs text={data.description} />
             </p>
           )}
+          <SongSection songs={songs} />
           <div class="study-sections">
             {data.references.map((ref) => {
               const book = getBookInfoById(ref.bookId);

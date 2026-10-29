@@ -68,6 +68,8 @@ import type {
 } from '../../lib/bible.ts';
 import { mapChapter, resolveMappingId, getAvailableMappings } from '../../lib/verse-mapper.ts';
 import { getWorksForChapter, workHref, type WorkRef } from '../../lib/works.ts';
+import { songIndex, songsForPassage, type Song } from '../../lib/songs.ts';
+import { SongList } from '../../views/songs.tsx';
 import { encode as encodeKvn } from '@free-bible/kvn/types';
 import { layoutProps, tFor, type Translator, type MessageKey, lhref } from '../../lib/i18n.ts';
 import { localeToContentLanguage } from '../../lib/lang.ts';
@@ -146,6 +148,8 @@ interface DisplayVerse {
   references: Reference[];
   prophecies: Prophecy[];
   works: WorkRef[];
+  /** Songs with a passage that contains this verse (#188). */
+  songs: Song[];
 }
 
 interface ChapterData {
@@ -164,6 +168,8 @@ interface ChapterData {
   parallels: GospelParallel[];
   chapterProphecies: Prophecy[];
   chapterWorks: WorkRef[];
+  /** Songs with a passage anywhere in the chapter. */
+  songs: Song[];
 }
 
 function versesInProphecy(p: Prophecy, bookId: number, chapter: number, verse: number): boolean {
@@ -217,7 +223,7 @@ async function loadChapterData(
     ]);
 
   // Studium-ressurser (samme kall som /api/search/chapter-resources).
-  const [personsRaw, themesRaw, storiesRaw, numbersRaw, readingTextsRaw, parallels, allWorks] = await Promise.all([
+  const [personsRaw, themesRaw, storiesRaw, numbersRaw, readingTextsRaw, parallels, allWorks, music] = await Promise.all([
     getPersonsByChapter(bookId, primaryChapter, lang),
     getThemesByChapter(bookId, primaryChapter, lang),
     getStoriesByChapter(bookId, primaryChapter, lang),
@@ -225,6 +231,7 @@ async function loadChapterData(
     getReadingTextsByChapter(bookId, primaryChapter, lang),
     getGospelParallelsForChapter(bookId, primaryChapter, lang),
     getWorksForChapter(bookId, primaryChapter),
+    songIndex(),
   ]);
   // Presise treff (vers/passasje) legges paa hvert vers; kapittel-/bok-nivaa
   // samles i studium-blokka saa de ikke drukner de presise paa hvert vers.
@@ -288,12 +295,15 @@ async function loadChapterData(
         const k = encodeKvn(bookId, b.osnbChapter, b.osnbVerse);
         return w.kvn_from <= k + 15 && w.kvn_to >= k;
       }),
+      songs: songsForPassage(music, bookId, b.osnbChapter, b.osnbVerse),
     });
   }
 
   return {
     verses,
     chapterWorks,
+    // A display chapter can span two osnb chapters (see perChapter above).
+    songs: [...new Set(osnbChapters.flatMap((ch) => songsForPassage(music, bookId, ch)))],
     bookSummary,
     summary,
     context,
@@ -902,38 +912,43 @@ function VerseDetailPanel({
       </div>
 
       <div class="vd-tabs" role="tablist" aria-label={`${t('rd.verseDetails')} ${n}`}>
-        <button type="button" class="vd-tab is-active" data-vd-tab="original">
+        <button type="button" role="tab" aria-selected="true" class="vd-tab is-active" data-vd-tab="original">
           {t('u.originalText')}
         </button>
-        <button type="button" class="vd-tab" data-vd-tab="references">
+        <button type="button" role="tab" aria-selected="false" class="vd-tab" data-vd-tab="references">
           {t('common.references')} {data.references.length > 0 && `(${data.references.length})`}
         </button>
         {data.works.length > 0 && (
-          <button type="button" class="vd-tab" data-vd-tab="works">
+          <button type="button" role="tab" aria-selected="false" class="vd-tab" data-vd-tab="works">
             {t('contrib.worksTab')} ({data.works.length})
           </button>
         )}
+        {data.songs.length > 0 && (
+          <button type="button" role="tab" aria-selected="false" class="vd-tab" data-vd-tab="songs">
+            {t('songs.title')} ({data.songs.length})
+          </button>
+        )}
         {data.prophecies.length > 0 && (
-          <button type="button" class="vd-tab" data-vd-tab="prophecies">
+          <button type="button" role="tab" aria-selected="false" class="vd-tab" data-vd-tab="prophecies">
             {t('nav.prophecies')} ({data.prophecies.length})
           </button>
         )}
-        <button type="button" class="vd-tab" data-vd-tab="topics">
+        <button type="button" role="tab" aria-selected="false" class="vd-tab" data-vd-tab="topics">
           {t('nav.topicsMine')}
         </button>
-        <button type="button" class="vd-tab" data-vd-tab="notes">
+        <button type="button" role="tab" aria-selected="false" class="vd-tab" data-vd-tab="notes">
           {t('nav.notes')}
         </button>
-        <button type="button" class="vd-tab" data-vd-tab="devotionals">
+        <button type="button" role="tab" aria-selected="false" class="vd-tab" data-vd-tab="devotionals">
           {t('nav.manuscripts')}
         </button>
         {hasVersions && (
-          <button type="button" class="vd-tab" data-vd-tab="versions">
+          <button type="button" role="tab" aria-selected="false" class="vd-tab" data-vd-tab="versions">
             {t('about.lbl.versions')}
           </button>
         )}
         {hasFootnotes && (
-          <button type="button" class="vd-tab" data-vd-tab="footnotes">
+          <button type="button" role="tab" aria-selected="false" class="vd-tab" data-vd-tab="footnotes">
             {t('common.footnotes')} ({v.footnotes!.length})
           </button>
         )}
@@ -941,7 +956,7 @@ function VerseDetailPanel({
 
       <div class="vd-panes">
         {/* Grunntekst + Ord for ord — data ligger i DOM-et (data-attributter) */}
-        <div class="vd-pane is-active" data-vd-pane="original">
+        <div class="vd-pane is-active" role="tabpanel" data-vd-pane="original">
           {data.originalText && (
             <div
               class={`full-original-text ${hebrew ? 'hebrew' : 'greek'}`}
@@ -990,7 +1005,7 @@ function VerseDetailPanel({
         </div>
 
         {/* Referanser */}
-        <div class="vd-pane" data-vd-pane="references" hidden>
+        <div class="vd-pane" role="tabpanel" data-vd-pane="references" hidden>
           <div class="vd-references">
             {data.references.length > 0 ? (
               data.references.map((ref) => (
@@ -1017,7 +1032,7 @@ function VerseDetailPanel({
 
         {/* Litteratur — verk fra contrib-pipelinen som treffer dette verset presist */}
         {data.works.length > 0 && (
-          <div class="vd-pane" data-vd-pane="works" hidden>
+          <div class="vd-pane" role="tabpanel" data-vd-pane="works" hidden>
             <div class="vd-works">
               {data.works
                 .slice()
@@ -1029,9 +1044,15 @@ function VerseDetailPanel({
           </div>
         )}
 
+        {data.songs.length > 0 && (
+          <div class="vd-pane" role="tabpanel" data-vd-pane="songs" hidden>
+            <SongList songs={data.songs} />
+          </div>
+        )}
+
         {/* Profetier */}
         {data.prophecies.length > 0 && (
-          <div class="vd-pane" data-vd-pane="prophecies" hidden>
+          <div class="vd-pane" role="tabpanel" data-vd-pane="prophecies" hidden>
             <div class="vd-prophecies">
               {data.prophecies.map((prophecy) => (
                 <a href={lhref(`/profetier#${prophecy.id}`)} class="vd-prophecy">
@@ -1049,12 +1070,12 @@ function VerseDetailPanel({
         )}
 
         {/* Emner — item-tagging-skallet + tagging.js */}
-        <div class="vd-pane" data-vd-pane="topics" hidden>
+        <div class="vd-pane" role="tabpanel" data-vd-pane="topics" hidden>
           <ItemTagging itemType="verse" itemId={key} />
         </div>
 
         {/* Notater — bygges av reading.js (localStorage 'bible-notes') */}
-        <div class="vd-pane" data-vd-pane="notes" hidden>
+        <div class="vd-pane" role="tabpanel" data-vd-pane="notes" hidden>
           <div class="verse-notes" data-verse-notes>
             <div class="notes-list" data-notes-list></div>
             <div class="note-input-wrapper">
@@ -1076,7 +1097,7 @@ function VerseDetailPanel({
         </div>
 
         {/* Manuskripter — lokale (localStorage 'bible-devotionals'), fylles av reading.js */}
-        <div class="vd-pane" data-vd-pane="devotionals" hidden>
+        <div class="vd-pane" role="tabpanel" data-vd-pane="devotionals" hidden>
           <div class="vd-devotionals" data-verse-devotionals data-verse-ref={verseRef}>
             <div data-devotionals-list>
               <p class="text-muted">{t('rd.noManuscripts')}</p>
@@ -1089,7 +1110,7 @@ function VerseDetailPanel({
 
         {/* Versjoner */}
         {hasVersions && (
-          <div class="vd-pane" data-vd-pane="versions" hidden>
+          <div class="vd-pane" role="tabpanel" data-vd-pane="versions" hidden>
             <div class="vd-versions" data-versions={JSON.stringify(selectableVersions.map((ver) => ver.text))}>
               <p class="versions-intro">{t('rd.chooseVersion')}</p>
               <div class="version-option">
@@ -1131,7 +1152,7 @@ function VerseDetailPanel({
 
         {/* Fotnoter */}
         {hasFootnotes && (
-          <div class="vd-pane" data-vd-pane="footnotes" hidden>
+          <div class="vd-pane" role="tabpanel" data-vd-pane="footnotes" hidden>
             <div class="vd-footnotes">
               {v.footnotes!.map((fn) => (
                 <div class="vd-footnote">
@@ -1457,6 +1478,12 @@ function StudyPanel({
               </div>
             ))}
           </div>
+        </StudyBlock>
+      )}
+
+      {data.songs.length > 0 && (
+        <StudyBlock id="sanger" title={t('songs.title')} count={data.songs.length} defaultOpen>
+          <SongList songs={data.songs} />
         </StudyBlock>
       )}
 
@@ -2023,27 +2050,27 @@ r.get('/:book/:chapter', async (c) => {
             ></div>
             {/* studium.js flytter fanerada med inn i mobil-overlegget (#94) */}
             <div class="panel-tabbar" role="tablist" data-panel-tabbar aria-label={tCtx()('rd.panelTabsAria')}>
-              <button type="button" class="panel-tab is-active" data-panel-tab="1">
+              <button type="button" role="tab" aria-selected="true" class="panel-tab is-active" data-panel-tab="1">
                 {t('rd.study')}
               </button>
-              <button type="button" class="panel-tab" data-panel-tab="2">
+              <button type="button" role="tab" aria-selected="false" class="panel-tab" data-panel-tab="2">
                 {t('nav.timeline')}
               </button>
-              <button type="button" class="panel-tab" data-panel-tab="3">
+              <button type="button" role="tab" aria-selected="false" class="panel-tab" data-panel-tab="3">
                 {t('nav.parallels')}
               </button>
-              <button type="button" class="panel-tab" data-panel-tab="4">
+              <button type="button" role="tab" aria-selected="false" class="panel-tab" data-panel-tab="4">
                 {t('rd.insight')}
               </button>
             </div>
             <div class="sidebar-content" data-sidebar-content>
-              <section class="panel-section is-active" data-panel-section="1">
+              <section class="panel-section is-active" role="tabpanel" data-panel-section="1">
                 <StudyPanel t={t} data={data} book={book} chapter={chapter} />
               </section>
-              <section class="panel-section" data-panel-section="2" hidden>
+              <section class="panel-section" role="tabpanel" data-panel-section="2" hidden>
                 <PanelTimeline t={t} events={data.timelineEvents} bookId={book.id} chapter={chapter} />
               </section>
-              <section class="panel-section" data-panel-section="3" hidden>
+              <section class="panel-section" role="tabpanel" data-panel-section="3" hidden>
                 {data.parallels.length > 0 ? (
                   <ul class="st-prop-list">
                     {data.parallels.map((p) => {
@@ -2062,7 +2089,7 @@ r.get('/:book/:chapter', async (c) => {
                   <p class="st-empty">{t('rd.noParallels')}</p>
                 )}
               </section>
-              <section class="panel-section" data-panel-section="4" hidden>
+              <section class="panel-section" role="tabpanel" data-panel-section="4" hidden>
                 {data.insight ? (
                   <div class="insights-content">
                     <InsightContent t={t} insight={data.insight} />

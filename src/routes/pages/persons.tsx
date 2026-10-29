@@ -11,6 +11,8 @@ import { Breadcrumbs } from '../../views/breadcrumbs.tsx';
 import { InlineRefs } from '../../views/inline-refs.tsx';
 import { ItemTagging } from '../../views/item-tagging.tsx';
 import { KeyEventList } from '../../views/verse-display.tsx';
+import { SongSection } from '../../views/songs.tsx';
+import { songIndex, songsTagged } from '../../lib/songs.ts';
 import {
   getAllPersonsData,
   getPersonData,
@@ -207,6 +209,7 @@ r.get('/personer/:personId', async (c) => {
     const p = await lookup(id);
     if (p) related.push(p);
   }
+  const songs = songsTagged(await songIndex(), 'persons', person.id);
 
   return c.html(
     <Layout {...layoutProps(c)}
@@ -246,6 +249,8 @@ r.get('/personer/:personId', async (c) => {
           <div class="person-tagging-section">
             <ItemTagging itemType="person" itemId={person.id} />
           </div>
+
+          <SongSection songs={songs} />
 
           {familyMembers.length > 0 && (
             <section class="person-family-section">
