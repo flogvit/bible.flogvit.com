@@ -19,6 +19,14 @@ function accountApiUrl(): string {
 
 export const ACCOUNT_URL = process.env.ACCOUNT_URL || 'https://flogvit.com/konto/';
 
+/**
+ * konto's login page with the way back to `here`, an absolute address on this
+ * site (flogvit-com-konto#62). konto only follows an https address on
+ * flogvit.com or a subdomain. Only for a reader who is NOT logged in: one who
+ * is, and arrives at konto with a return, is sent straight back.
+ */
+export const loginUrl = (here: string): string => `${ACCOUNT_URL}?return=${encodeURIComponent(here)}`;
+
 // Kort timeout: en treg kontotjeneste skal ikke holde sidevisninger som
 // uansett fungerer utlogget.
 const TIMEOUT_MS = 2500;
