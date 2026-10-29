@@ -170,9 +170,24 @@ describe('songs — the fetch', () => {
   });
 
   test('a song without what a page needs is dropped, and the others stay', async () => {
-    body = { songs: [{ id: 'broken', title: 'No files' }, ...published([PSALM_23]).songs] };
+    body = { songs: [{ id: 'broken', title: 'No files' }, null, ...published([PSALM_23]).songs] };
     useIndex(INDEX_URL);
     expect((await songIndex())?.songs.map((s) => s.id)).toEqual(['psalm-23']);
+  });
+
+  test('a field of the wrong shape is emptied, so a lookup cannot throw', async () => {
+    const odd = {
+      id: 'odd', title: 'Odd', files: { mp3: 'bible/odd/audio.mp3' },
+      style: 'folk', references: [null, { bookId: 19 }, { bookId: 19, chapter: 23 }],
+      tags: { themes: 'hap', persons: [null, { slug: 'peter' }] },
+    };
+    body = { songs: [odd] };
+    useIndex(INDEX_URL);
+    const index = await songIndex();
+    expect(index?.songs[0]?.style).toEqual([]);
+    expect(ids(songsForPassage(index, 19, 23, 1))).toEqual(['odd']);
+    expect(songsTagged(index, 'themes', 'hap')).toEqual([]);
+    expect(ids(songsTagged(index, 'persons', 'peter'))).toEqual(['odd']);
   });
 
   test('an unreachable index is no songs, not an error', async () => {
@@ -267,6 +282,22 @@ describe('songs — the pages', () => {
     expect(detail(4)).toContain('Song psalm-23-4');
     expect(detail(3)).toContain('data-vd-tab="songs"'); // the whole psalm still covers verse 3
     expect(detail(3)).not.toContain('Song psalm-23-4');
+    body = published(PAGE_SONGS);
+  });
+});
+
+describe('songs — a long list folds', () => {
+  test('beyond the first five, the songs are behind one toggle that says how many, and none is lost', async () => {
+    const many = Array.from({ length: 8 }, (_, i) =>
+      song(`hope-${i}`, { title: `Hope ${i}`, tags: { themes: [{ slug: 'hap' }] } }),
+    );
+    body = published(many);
+    useIndex(INDEX_URL);
+    const text = await html('/nb/temaer/hap');
+    const folded = text.slice(text.indexOf('<details class="song-more">'));
+    expect(text.match(/class="song"/g)).toHaveLength(8);
+    expect(folded.match(/class="song"/g)).toHaveLength(3);
+    expect(folded).toContain(DICTIONARIES.nb['songs.more'].replace('{n}', '3'));
     body = published(PAGE_SONGS);
   });
 });

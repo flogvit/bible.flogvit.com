@@ -66,17 +66,36 @@ let cached: { index: SongIndex; at: number } | null = null;
 let failedAt = 0;
 let inflight: Promise<void> | null = null;
 
-/** Only songs with what a page needs; one bad entry does not take the others with it. */
+const KINDS: SongTagKind[] = ['themes', 'persons', 'stories'];
+const list = (v: unknown): unknown[] => (Array.isArray(v) ? v : []);
+
+/**
+ * Only what a page reads, in the shape it reads it. The index is another
+ * repo's output: a song without a title or a file is dropped, and a field of the
+ * wrong shape is emptied — one bad entry never takes a page or the other songs
+ * with it.
+ */
 function readSongs(raw: unknown, url: string): Song[] | null {
   const songs = (raw as { songs?: unknown } | null)?.songs;
   if (!Array.isArray(songs)) return null;
   return songs
-    .filter(
-      (s): s is Omit<Song, 'audio'> =>
-        !!s && typeof s.id === 'string' && typeof s.title === 'string' && typeof s.files?.mp3 === 'string' &&
-        Array.isArray(s.references) && Array.isArray(s.style) && typeof s.tags === 'object' && !!s.tags,
-    )
-    .map((s) => ({ ...s, audio: new URL(s.files.mp3, url).href }));
+    .filter((s) => typeof s?.id === 'string' && typeof s.title === 'string' && typeof s.files?.mp3 === 'string')
+    .map((s) => ({
+      id: s.id,
+      collection: typeof s.collection === 'string' ? s.collection : 'bible',
+      title: s.title,
+      style: list(s.style).filter((x): x is string => typeof x === 'string'),
+      references: list(s.references).filter(
+        (p): p is SongPassage =>
+          typeof (p as SongPassage)?.bookId === 'number' && typeof (p as SongPassage).chapter === 'number',
+      ),
+      tags: Object.fromEntries(
+        KINDS.map((k) => [k, list(s.tags?.[k]).filter((n): n is { slug: string } => typeof (n as { slug?: unknown })?.slug === 'string')]),
+      ),
+      music: typeof s.music?.duration === 'string' ? { duration: s.music.duration } : undefined,
+      files: { mp3: s.files.mp3 },
+      audio: new URL(s.files.mp3, url).href,
+    }));
 }
 
 async function load(url: string): Promise<void> {

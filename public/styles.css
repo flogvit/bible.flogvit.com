@@ -1179,3 +1179,5 @@ a.fvmenu-item:hover { background: color-mix(in oklab, var(--ink) 6%, var(--surfa
 .song-meta { font-size: 0.85rem; color: var(--ink-2); }
 .song-audio { width: 100%; max-width: 28rem; }
 .song-link { align-self: flex-start; font-size: 0.9rem; color: var(--gold-text); }
+.song-more { border-top: 1px solid var(--border); }
+.song-more > summary { cursor: pointer; padding: 0.6rem 0; color: var(--gold-text); font-weight: 600; }
