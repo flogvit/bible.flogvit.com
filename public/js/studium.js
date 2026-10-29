@@ -35,7 +35,9 @@ if (sidebar) {
   // sidebaren ville da sluttet å bytte seksjon uten å se annerledes ut.
   function activateTab(n) {
     document.querySelectorAll('[data-panel-tab]').forEach((t) => {
-      t.classList.toggle('is-active', t.dataset.panelTab === String(n));
+      const active = t.dataset.panelTab === String(n);
+      t.classList.toggle('is-active', active);
+      t.setAttribute('aria-selected', String(active));
     });
     document.querySelectorAll('[data-panel-section]').forEach((s) => {
       const active = s.dataset.panelSection === String(n);

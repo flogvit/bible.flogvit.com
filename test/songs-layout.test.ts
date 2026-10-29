@@ -43,9 +43,11 @@ const VIEWPORTS = [
   { width: 320, height: 693 },
   { width: 390, height: 844 },
 ];
-/** English, Norwegian, and whichever language writes the song texts longest. */
-const LONGEST = LOCALES.reduce((a, b) => (DICTIONARIES[b]['songs.open'].length > DICTIONARIES[a]['songs.open'].length ? b : a));
-const MEASURED: Locale[] = [...new Set<Locale>(['en', 'nb', LONGEST])];
+/** English, Norwegian, and whichever other language writes the song texts longest. */
+const songText = (l: Locale) =>
+  Object.entries(DICTIONARIES[l]).filter(([k]) => k.startsWith('songs.')).reduce((n, [, v]) => n + v.length, 0);
+const LONGEST = LOCALES.filter((l) => l !== 'en' && l !== 'nb').reduce((a, b) => (songText(b) > songText(a) ? b : a));
+const MEASURED: Locale[] = ['en', 'nb', LONGEST];
 
 let index: ReturnType<typeof Bun.serve>;
 let server: ReturnType<typeof Bun.serve>;
@@ -127,6 +129,13 @@ describe('songs in a real browser (#188)', () => {
             const shown = await showSongs();
             // No silent pass: the songs must be on screen to be measured.
             expect(shown, `${path} at ${vp.width} px`).toBeGreaterThan(0);
+            if (path === '/sal/23') {
+              // The verse's songs tab was clicked: the tab list must say so (#190).
+              const selected = await page.evaluate(() =>
+                [...document.querySelectorAll('#v4-detail [role="tab"][aria-selected="true"]')].map((t) => (t as HTMLElement).dataset.vdTab),
+              );
+              expect(selected).toEqual(['songs']);
+            }
             const width = await page.evaluate(() => [document.documentElement.scrollWidth, document.documentElement.clientWidth]);
             if (width[0]! > width[1]! + 1) problems.push(`${vp.width} px, 100 %: ${width[0]} px wide`);
             problems.push(...(await page.evaluate(insetLists)).map((p) => `${vp.width} px: ${p}`));
