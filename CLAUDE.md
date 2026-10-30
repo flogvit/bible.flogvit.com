@@ -382,17 +382,16 @@ bibelteksten og studiestoffet som MCP-verktøy. Runbook og verktøyliste:
   hvordan den tas ned står i `mcp/README.md`.
 
 ## Funksjoner — skill `funksjoner`
-- **Utgavevalget (#182): leserens valg slår språket.** `bible.edition` i
-  `fv-prefs` leses ETT sted (`src/lib/edition-choice.ts`) av
-  `defaultBibleForLanguage()`; språket avgjør bare når ingenting er valgt, og
-  `?bible=` slår begge. Sider varierer på cookien: mikrocachen nøkler på valget,
-  og svaret sier `Vary: Cookie`. Klienten skriver valget med `setPref`
-  (`public/js/edition-pref.js`). **Innlogget er KONTOEN sannheten, med eller
-  uten plus:** konto lagrer `bible.edition` (`PRODUCT_PREF_REGISTRY` i
-  `konto/src/lib/prefs.ts`, portal/PREFS.md), sesjonssvaret bærer
-  `prefs`, og `withSession` skriver kontoens valg inn i cookien. PUT-en til
-  konto krever CSRF-tokenet, som står på konto-chipen (`data-csrf`). Vakter:
+- **Utgavevalget (#182): leserens valg slår språket.** `bible.edition` leses
+  ETT sted (`src/lib/edition-choice.ts`); `?bible=` slår det, språket avgjør
+  bare uten valg. Innlogget er KONTOEN sannheten, også uten plus. Vakter:
   `test/edition-choice.test.ts`, `test/edition-pref.test.ts`.
+- **Importløypa (#200, #170):** en utgave i `IMPORTED_BIBLES` må ha lisensen
+  bekreftet (`license.json` → `verification`) og, utenom `OSNB_NUMBERED`,
+  KVN verifisert mot teksten (`textVerification`); ellers ender importen med 1.
+  Teksten flyttes til osnb-numre ved import (`src/lib/edition-import.ts`). CC
+  BY-kreditten står under teksten og i MCP-svaret. Vakt:
+  `test/edition-import.test.ts`.
 - **Lesesporing (#16):** lesing er en HENDELSE (`{ firstAt, lastAt, count, opens,
   verses? }`). Kjernen er `public/js/reading-progress.js`, importert av både klient
   og server. `MERGERS` i `sync.ts` fletter kommutativt; klienten bruker samme

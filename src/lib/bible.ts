@@ -15,6 +15,7 @@ import { bookAbbrByShort, bookNameByShort } from './books-data.ts';
 import { toUrlSlug } from './url-utils.ts';
 import { bookMentionTest, personChapterCandidates } from './blob-forfilter.ts';
 import { currentChosenEdition } from './edition-choice.ts';
+import { OWN_EDITIONS } from './editions.ts';
 
 // --- Språk-scopet uthenting ---
 //
@@ -2240,6 +2241,12 @@ export async function readableBibleCandidates(requested: string): Promise<BibleC
     WHERE philosophy IS NULL OR philosophy != 'source_text'
     ORDER BY id
   ` as { id: string; lang: string | null }[];
+  // Våre egne først i hvert språk (#200): med KJV, WEB, BSB og ASV importert ville
+  // ellers ASV vært første engelske i alfabetet og blitt standard for /en/.
+  // Sortert her og ikke i SQL: basens kollasjon gir ikke nødvendigvis den
+  // rekkefølgen `ORDER BY id` ser ut til å love.
+  const own = OWN_EDITIONS as readonly string[];
+  rows.sort((a, b) => Number(own.includes(b.id)) - Number(own.includes(a.id)) || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
   const result: BibleCandidate[] = [];
   for (const language of contentLanguageChain(requested)) {
     for (const row of rows) {

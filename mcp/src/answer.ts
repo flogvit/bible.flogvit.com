@@ -95,7 +95,10 @@ export async function attribution(editions: string[], lang: string): Promise<str
   for (const id of editions) {
     const e = await getBibleEditionById(id);
     if (!e) continue;
-    lines.push(`${e.name_en} (${e.abbreviation ?? e.id}), ${e.license_spdx ?? e.license_name ?? ''}: ${pageUrl(lang, `/oversettelser/${e.id}`)}`);
+    // A CC BY / CC BY-SA text carries its credit in the answer itself (#200),
+    // in the licence's own words from free-bible's license.json.
+    const credit = e.license?.attribution_required && e.license.statement ? ` — ${e.license.statement}` : '';
+    lines.push(`${e.name_en} (${e.abbreviation ?? e.id}), ${e.license_spdx ?? e.license_name ?? ''}: ${pageUrl(lang, `/oversettelser/${e.id}`)}${credit}`);
   }
   return lines.length ? `\n\nSource: ${lines.join('; ')}` : '';
 }

@@ -36,7 +36,10 @@ import { prunePersonRefs, personPruneReportIsEmpty, formatPersonPruneReport } fr
 import { syncPersonRefBooks, refBooksSyncIsEmpty, formatRefBooksSync } from '../src/lib/blob-forfilter.ts';
 import { CONTENT_TABLES, CONTENT_SOURCES, contentSourceReport } from '../src/lib/content-sources.ts';
 import { parseReadingRefMarkup, unknownMappingSystem } from '../src/lib/reading-ref.ts';
-import { IMPORTED_BIBLES } from '../src/lib/editions.ts';
+import { IMPORTED_BIBLES, OSNB_NUMBERED } from '../src/lib/editions.ts';
+import { checkEdition, toOsnbNumbering } from '../src/lib/edition-import.ts';
+import type { RawVerse } from '../src/lib/edition-import.ts';
+import { loadRawMappingUncached } from '../src/lib/verse-mapper.ts';
 
 // Kilde for bibelinnhold: FREE_BIBLE_DIR (se import-utils.ts). Standard er
 // ../free-bible relativt til cwd, som er en symlink til det ekte free-bible-repoet.
@@ -77,8 +80,24 @@ const args = process.argv.slice(2);
 const isFullImport = args.includes('--full');
 
 // Lista bor i src/lib/editions.ts — sitemap-stiene trenger den også,
-// og de bygges uten database.
-const BIBLES: readonly string[] = IMPORTED_BIBLES;
+// og de bygges uten database. Hver oppføring må gjennom porten (#200): lisensen
+// bekreftet mot kilden, og KVN-mappingen verifisert mot teksten. Det som
+// avvises importeres ikke, tas ut av basen om det lå der, og importen
+// avslutter med 1 — en liste som lover en utgave vi ikke kan publisere skal
+// stoppe deployen, ikke bli en stille 404 på /oversettelser/<id>.
+const REFUSED: string[] = [];
+const BIBLES: readonly string[] = IMPORTED_BIBLES.filter((id) => {
+  const gate = checkEdition(id, path.join(FREE_BIBLE_DIR, 'generate'), (m) => {
+    try {
+      return loadRawMappingUncached(m);
+    } catch {
+      return null;
+    }
+  });
+  if (!gate.ok) REFUSED.push(gate.reason);
+  return gate.ok;
+});
+for (const reason of REFUSED) console.error(`AVVIST: ${reason}`);
 
 // Statistikk per innholdstype: nøkkel, etikett i sammendraget, og nøkkelen
 // slettinger føres under i `deleted`. Rekkefølgen er sammendragstabellens.
@@ -335,19 +354,14 @@ await sql.begin(async (tx) => {
 // Importer vers med hash-sjekk
 console.log('Importerer vers...');
 
-interface RawVerse {
-  bookId: number;
-  chapterId: number;
-  verseId: number;
-  text: string;
-  versions?: unknown;
-  footnotes?: unknown;
-}
-
 async function importVerses(bible: string): Promise<void> {
   const biblePath = path.join(GENERATE_PATH, 'bibles_raw', bible);
   if (!fs.existsSync(biblePath)) {
     console.log(`  Hopper over ${bible} (ikke funnet)`);
+    return;
+  }
+  if (!(OSNB_NUMBERED as readonly string[]).includes(bible)) {
+    await importRenumbered(bible, biblePath);
     return;
   }
 
@@ -395,6 +409,57 @@ async function importVerses(bible: string): Promise<void> {
       }
     }
   });
+}
+
+/**
+ * En høstet oversettelse (#200): hele teksten leses, flyttes til osnb-adresser
+ * gjennom KVN-mappingen, og skrives på nytt når teksten ELLER mappingen er
+ * endret — en rettet mapping flytter vers selv om ingen tekst er endret.
+ */
+async function importRenumbered(bible: string, biblePath: string): Promise<void> {
+  const files: string[] = [];
+  for (const bookDir of fs.readdirSync(biblePath).filter((f) => /^\d+$/.test(f)).sort((a, b) => +a - +b)) {
+    const bookPath = path.join(biblePath, bookDir);
+    for (const f of fs.readdirSync(bookPath).filter((f) => f.endsWith('.json')).sort((a, b) => parseInt(a) - parseInt(b))) {
+      files.push(path.join(bookPath, f));
+    }
+  }
+  const contents = files.map((f) => fs.readFileSync(f, 'utf-8'));
+  const mapping = loadRawMappingUncached(bible);
+  const osnb = loadRawMappingUncached('osnb');
+  const contentHash = computeHash(contents.join('\n') + JSON.stringify(mapping.map) + JSON.stringify(osnb.map));
+  if (unchanged(stats.chapters, 'chapter', `${bible}-all`, contentHash)) return;
+
+  const raw = contents.flatMap((c) => JSON.parse(c) as RawVerse[]);
+  const { verses, merged, split } = toOsnbNumbering(raw, mapping, osnb);
+  const outside = verses.filter((v) => v.verse < 1 || v.verse > (getChapterVerseCount(v.book, v.chapter) ?? 0));
+  console.log(
+    `  ${bible}: ${raw.length} vers → ${verses.length} osnb-vers` +
+      (merged ? `, ${merged} slått sammen` : '') +
+      (split ? `, ${split} delt` : '') +
+      (outside.length ? `, ${outside.length} utenfor osnbs kapitler (beholdt)` : ''),
+  );
+
+  await sql.begin(async (tx) => {
+    await tx`DELETE FROM verses WHERE bible = ${bible}`;
+    for (let i = 0; i < verses.length; i += 500) {
+      const batch = verses.slice(i, i + 500);
+      await tx.unsafe(
+        `INSERT INTO verses (book_id, chapter, verse, text, bible, versions, footnotes) VALUES ${batch.map(() => '(?, ?, ?, ?, ?, ?, ?)').join(', ')}`,
+        batch.flatMap((v) => [
+          v.book,
+          v.chapter,
+          v.verse,
+          v.text,
+          bible,
+          v.versions ? JSON.stringify(v.versions) : null,
+          v.footnotes ? JSON.stringify(v.footnotes) : null,
+        ]),
+      );
+    }
+    await setContentHash(tx, 'chapter', `${bible}-all`, contentHash);
+  });
+  stats.chapters.updated++;
 }
 
 for (const bible of BIBLES) {
@@ -490,9 +555,16 @@ for (const bible of BIBLES) {
 // language-kolonne.
 await sql.begin(async (tx) => {
   const rows = (await tx`SELECT id FROM bible_editions`) as { id: string }[];
-  const stale = rows.map((r) => r.id).filter((id) => !BIBLES.includes(id));
+  // Bare det som er TATT UT av lista fjernes. En avvist utgave (#200) blir
+  // liggende som den var: avvisningen kan komme av en utdatert free-bible-klone,
+  // og da skal ikke OSNB forsvinne fra basen — importen feiler i stedet.
+  const listed = IMPORTED_BIBLES as readonly string[];
+  const stale = rows.map((r) => r.id).filter((id) => !listed.includes(id));
   for (const id of stale) {
     await tx`DELETE FROM bible_editions WHERE id = ${id}`;
+    // Teksten går med: en avvist utgave (#200) skal ikke kunne nås med ?bible=.
+    await tx`DELETE FROM verses WHERE bible = ${id}`;
+    await tx`DELETE FROM content_hashes WHERE content_type = 'chapter' AND content_key LIKE ${`${id}-%`}`;
     await tx`DELETE FROM content_hashes WHERE content_type = 'bible_edition' AND content_key = ${id}`;
     hashCache.delete(hashKey('bible_edition', id, DEFAULT_CONTENT_LANGUAGE));
   }
@@ -1920,6 +1992,21 @@ for (const [key, label, deletedLabel] of STAT_ROWS) {
 }
 console.log('--------------------------------------------------');
 console.log(`Totalt                ${String(totalUpdated).padStart(9)}  ${String(totalUnchanged).padStart(7)}  ${totalDeleted > 0 ? String(totalDeleted).padStart(7) : '      -'}`);
+// En utgave i IMPORTED_BIBLES som ikke slapp gjennom porten er en feil i lista,
+// ikke en stille utelatelse (#200): alt annet ble importert, men deployen skal
+// bli rød og si hvorfor.
+const sourceMissing = process.exitCode === 1;
+if (REFUSED.length > 0) {
+  console.error(`\n${REFUSED.length} utgave(r) i IMPORTED_BIBLES ble avvist:`);
+  for (const reason of REFUSED) console.error(`  ${reason}`);
+  process.exitCode = 1;
+}
 // «Ferdig!» er en påstand om utfallet, og den skal ikke stå der utfallet var at
 // vi ikke fant kilden. Sammendraget over er da bare nuller.
-console.log(process.exitCode ? '\nAvbrutt: ingenting ble importert.' : '\nFerdig!');
+console.log(
+  sourceMissing
+    ? '\nAvbrutt: ingenting ble importert.'
+    : REFUSED.length > 0
+      ? '\nFerdig, men med avviste utgaver (se over).'
+      : '\nFerdig!',
+);

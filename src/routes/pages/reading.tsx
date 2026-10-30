@@ -18,6 +18,7 @@ import type { AppEnv } from '../../lib/session.ts';
 import { Layout } from '../../views/layout.tsx';
 import { Breadcrumbs } from '../../views/breadcrumbs.tsx';
 import { Footnotes } from '../../views/footnotes.tsx';
+import { EditionCredit } from '../../views/edition-credit.tsx';
 import { InlineRefs } from '../../views/inline-refs.tsx';
 import { Markdown } from '../../views/markdown.tsx';
 import { ItemTagging } from '../../views/item-tagging.tsx';
@@ -2020,6 +2021,7 @@ r.get('/:book/:chapter', async (c) => {
             </section>
 
             <footer class="chapter-footer">
+              <EditionCredit id={bible} />
               <div class="nav-buttons">
                 {chapter > 1 && (
                   <a href={lhref(`/${canonicalSlug}/${chapter - 1}${query}`)} rel={relFor(query)} class="nav-button">
@@ -2247,6 +2249,7 @@ r.get('/tekst', async (c) => {
               })}
             </div>
           )}
+          {grouped.length > 0 && <EditionCredit id={bible} />}
         </div>
       </div>
     </Layout>,

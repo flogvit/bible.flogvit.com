@@ -79,6 +79,15 @@ test('quoted text carries its licence, one source line per edition', async () =>
   expect(source).toContain('CC-BY-4.0');
 });
 
+// #200: a CC BY / CC BY-SA licence asks for its credit WITH the text, so the
+// answer carries the licence's own words, read from license.json.
+test('a CC BY text carries the credit its licence asks for, in the answer', async () => {
+  const { text } = await call('get_passage', { reference: 'John 3:16', editions: ['osen'] });
+  const source = text.slice(text.lastIndexOf('Source:'));
+  expect(source).toContain('https://sblgnt.com');
+  expect(source).toContain('Translated by the free-bible project');
+});
+
 test('the language picks the edition when none is named', async () => {
   expect((await call('get_passage', { reference: 'John 3:16', language: 'nb' })).text).toContain('**osnb**');
   expect((await call('get_passage', { reference: 'John 3:16', language: 'de' })).text).toContain('**osen**');
