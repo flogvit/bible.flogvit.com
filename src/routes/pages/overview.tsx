@@ -9,6 +9,7 @@ import type { AppEnv } from '../../lib/session.ts';
 import { Layout } from '../../views/layout.tsx';
 import { Breadcrumbs } from '../../views/breadcrumbs.tsx';
 import { InlineRefs } from '../../views/inline-refs.tsx';
+import { EditionCredit } from '../../views/edition-credit.tsx';
 import { ItemTagging } from '../../views/item-tagging.tsx';
 import { VerseRefList, verseUrl } from '../../views/verse-display.tsx';
 import { bookAbbrByShort } from '../../lib/books-data.ts';
@@ -223,7 +224,14 @@ r.get('/oversettelser/:id', async (c) => {
                 {license.attribution_required ? (
                   <p class="edition-license-required" dangerouslySetInnerHTML={{ __html: t('ed.attributionRequired') }} />
                 ) : null}
-                {license.statement ? (
+                {/* The credit a licence asks for stands HERE and nowhere else
+                    (#206): the sources on the page's language, with links. Where
+                    license.json has `credits`, its `statement` is our internal
+                    note and is not shown; a harvested edition's statement is the
+                    publisher's own licence notice, and stands. */}
+                {license.credits?.length ? (
+                  <EditionCredit licence={license} />
+                ) : license.statement ? (
                   <blockquote class="edition-license-statement" lang="en">{license.statement}</blockquote>
                 ) : null}
               </>

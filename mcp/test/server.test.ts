@@ -48,8 +48,8 @@ test('every tool is declared read-only', async () => {
 // The invariants below run over ALL of `CALLS`, so a new tool is held to them
 // the moment it is added there.
 
-/** The licence statements require these links to follow the text. */
-const LICENCE_SOURCES = ['https://sblgnt.com', 'https://www.tanach.us'];
+/** The licences require these links to follow the text: the sources, and the CC licence itself (#206). */
+const LICENCE_SOURCES = ['https://sblgnt.com', 'https://www.tanach.us', 'https://creativecommons.org/licenses/'];
 
 describe.each(CALLS)('%s %j', (name, args) => {
   test('answers without error', async () => {
@@ -72,20 +72,22 @@ describe.each(CALLS)('%s %j', (name, args) => {
   });
 });
 
-test('quoted text carries its licence, one source line per edition', async () => {
+// #206, the owner's decision: where a text comes from is given where the MCP
+// DESCRIBES an edition, not in each answer — as on the site, where it stands on
+// the edition's page and not under every chapter.
+test('an answer carries no source line', async () => {
   const { text } = await call('get_passage', { reference: 'John 3:16', editions: ['osen', 'osnn', 'sblgnt'] });
-  const source = text.slice(text.lastIndexOf('Source:'));
-  for (const e of ['OSEN', 'OSNN', 'SBLGNT']) expect(source).toContain(e);
-  expect(source).toContain('CC-BY-4.0');
+  expect(text).not.toContain('Source:');
+  expect(text).not.toContain('CC BY');
 });
 
-// #200: a CC BY / CC BY-SA licence asks for its credit WITH the text, so the
-// answer carries the licence's own words, read from license.json.
-test('a CC BY text carries the credit its licence asks for, in the answer', async () => {
-  const { text } = await call('get_passage', { reference: 'John 3:16', editions: ['osen'] });
-  const source = text.slice(text.lastIndexOf('Source:'));
-  expect(source).toContain('https://sblgnt.com');
-  expect(source).toContain('Translated by the free-bible project');
+test('list_editions gives each edition its credit, never the internal note', async () => {
+  const { text } = await call('list_editions', {});
+  const osen = text.slice(text.indexOf('**osen**'), text.indexOf('\n- ', text.indexOf('**osen**')));
+  expect(osen).toContain('Translated from SBLGNT (https://sblgnt.com, CC BY 4.0 https://creativecommons.org/licenses/by/4.0/)');
+  expect(osen).toContain('Leningrad Codex (https://www.tanach.us)');
+  expect(text).not.toContain('No credit is required');
+  expect(text).not.toContain('obligation carries over');
 });
 
 test('the language picks the edition when none is named', async () => {

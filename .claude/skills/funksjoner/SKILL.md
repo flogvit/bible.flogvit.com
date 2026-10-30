@@ -220,6 +220,12 @@ og svaret sier `Vary: Cookie`. Klienten skriver valget med `setPref`
   standard for /en/, første engelske i alfabetet. Sortert i koden, ikke i SQL —
   basens kollasjon holdt ikke `ORDER BY id` (målt).
 - **Kreditten** (`src/views/edition-credit.tsx`) står under teksten på
-  kapittelsida og /tekst når lisensen krever navngivelse, med lisensens EGNE ord
-  (`statement`); MCP-ens `attribution()` bærer de samme ordene. Fem mutasjoner
-  kjørt.
+  kapittelsida og /tekst når lisensen krever navngivelse: ÉN kort linje på
+  sidens språk, bygget av `credits` i license.json (kildene med lenke, lisensen
+  lenket, «oversatt fra» der utgaven er en oversettelse) og en lenke til
+  utgavesida. MCP-ens `attribution()` gir det samme kort på engelsk.
+- **`statement` vises ALDRI under teksten (#206).** Den første utgaven viste hele
+  lisensnotatet rått og på engelsk på hver kapittelside — et notat til oss, ikke
+  en kreditt for leseren. Det står på utgavesida (`/oversettelser/<id>`), som
+  linja lenker til; CC BY 4.0 godtar kreditt «in any reasonable manner»,
+  også en lenke dit den fulle informasjonen står.

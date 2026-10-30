@@ -131,34 +131,70 @@ describe('our own editions come first for their language', () => {
   });
 });
 
-describe('the credit under the text', () => {
+describe('the credit, on the edition page only', () => {
+  // #206: the reader gets one short line on the page's language, built from
+  // `credits` in license.json; the licence's full wording (`statement`) is never
+  // shown under the text. A test edition carries both, so the line is measured
+  // whatever the local import holds.
   const app = createApp();
-  const statement = (id: string) =>
-    JSON.parse(fs.readFileSync(path.join(GENERATE, 'bibles_raw', id, 'license.json'), 'utf-8')).statement as string;
-  const plain = (html: string) => html.replace(/<[^>]+>/g, ' ').replace(/&#39;|&quot;|&amp;/g, (m) => ({ '&#39;': "'", '&quot;': '"', '&amp;': '&' })[m]!).replace(/\s+/g, ' ');
+  const statement = 'No credit is required for this internal note';
+  const licence = {
+    license: 'CC BY',
+    spdx: 'CC-BY-4.0',
+    attribution_required: true,
+    statement,
+    credits: [
+      { name: 'SBLGNT', url: 'https://sblgnt.com', license: 'CC BY 4.0', license_url: 'https://creativecommons.org/licenses/by/4.0/', relation: 'translated_from' },
+      { name: 'Leningrad Codex', url: 'https://www.tanach.us', relation: 'translated_from' },
+    ],
+  };
+  const creditOf = (html: string) => html.match(/<p class="edition-credit" data-edition-credit[^>]*>[\s\S]*?<\/p>/)?.[0] ?? '';
+  const plain = (html: string) => html.replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
 
   beforeAll(async () => {
     await getSql()`REPLACE INTO bible_editions (id, name_native, lang_iso639_1, direction, meta, license)
       VALUES ('pd-test', 'PD', 'en', 'ltr', '{}', '{"license":"Public Domain","attribution_required":false}')`;
+    await getSql()`REPLACE INTO bible_editions (id, name_native, abbreviation, lang_iso639_1, direction, meta, license)
+      VALUES ('cc-test', 'CC', 'CC', 'en', 'ltr', '{}', ${JSON.stringify(licence)})`;
+    // A credit stands under TEXT: the verse page shows it only when there are verses.
+    await getSql()`REPLACE INTO verses (book_id, chapter, verse, text, bible) VALUES (43, 3, 16, 'For God so loved the world.', 'cc-test')`;
   });
   afterAll(async () => {
-    await getSql()`DELETE FROM bible_editions WHERE id = 'pd-test'`;
+    await getSql()`DELETE FROM bible_editions WHERE id IN ('pd-test', 'cc-test')`;
+    await getSql()`DELETE FROM verses WHERE bible = 'cc-test'`;
   });
 
-  test('a CC BY text carries its licence and the credit from license.json, on the chapter page', async () => {
-    const html = await (await app.request('http://x/en/joh/3?bible=osen')).text();
-    const credit = html.match(/<p class="edition-credit" data-edition-credit="osen">[\s\S]*?<\/p>/)?.[0] ?? '';
-    expect(credit).toContain('CC-BY-4.0');
-    expect(plain(credit)).toContain(statement('osen').slice(0, 120));
+  // The owner's decision (2026-10-30): the credit stands on the edition's page,
+  // «ikke hver bidige side».
+  test('on the edition page: one short line on the page\'s language, with its links', async () => {
+    const en = creditOf(await (await app.request('http://x/en/oversettelser/cc-test')).text());
+    expect(plain(en)).toBe('Translated from SBLGNT (CC BY 4.0) and Leningrad Codex');
+    expect(en).toContain('href="https://sblgnt.com"');
+    expect(en).toContain('href="https://creativecommons.org/licenses/by/4.0/"');
+    expect(en).toContain('href="https://www.tanach.us"');
+    const nb = creditOf(await (await app.request('http://x/nb/oversettelser/cc-test')).text());
+    expect(plain(nb)).toBe('Oversatt fra SBLGNT (CC BY 4.0) og Leningrad Codex');
   });
 
-  test('and on the verse page', async () => {
-    const html = await (await app.request('http://x/en/tekst?refs=joh-3-16&bible=osen')).text();
-    expect(html).toContain('data-edition-credit="osen"');
+  test('nothing about licence or credit on the chapter and verse pages', async () => {
+    for (const url of ['/en/tekst?refs=joh-3-16&bible=cc-test', '/nb/joh/3?bible=cc-test', '/nb/joh/3', '/en/ps/23', '/en/ps/23?bible=osen']) {
+      const html = await (await app.request(`http://x${url}`)).text();
+      expect(html, url).not.toContain('data-edition-credit');
+      expect(html, url).not.toContain('No credit is required');
+      expect(html, url).not.toContain('that obligation carries over');
+    }
   });
 
-  test('a public domain text asks for no credit, and gets none', async () => {
-    const html = await (await app.request('http://x/en/tekst?refs=joh-3-16&bible=pd-test')).text();
+  test("the licence's internal wording is shown nowhere, the edition page included", async () => {
+    for (const url of ['/en/oversettelser/cc-test', '/en/oversettelser/osen', '/nb/oversettelser/osen']) {
+      const html = await (await app.request(`http://x${url}`)).text();
+      expect(html, url).not.toContain(statement);
+      expect(html, url).not.toContain('No credit is required');
+    }
+  });
+
+  test('a public domain edition with no credits keeps its publisher\'s licence notice', async () => {
+    const html = await (await app.request('http://x/en/oversettelser/pd-test')).text();
     expect(html).not.toContain('data-edition-credit');
   });
 });

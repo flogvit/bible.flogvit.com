@@ -4,8 +4,9 @@
 //
 // All data comes from the getters in `src/lib/bible.ts`, the same ones the site
 // renders from, so an answer here is the page there. Every answer ends with the
-// address of that page, and quoted Bible text carries its licence: the CC BY
-// obligation follows the text wherever the model puts it.
+// address of that page. Where a text comes from and its licence is given where
+// the MCP describes an edition (list_editions), with a link to its page — not in
+// each answer (#206), as on the site, where it stands on the edition's page.
 
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
@@ -52,7 +53,6 @@ import { chapterUrl, pageUrl } from './links.ts';
 import { parseReferences } from './reference.ts';
 import { searchVerseText } from './search.ts';
 import {
-  attribution,
   failure,
   inMapping,
   label,
@@ -64,6 +64,7 @@ import {
   labelMapping,
   mapping,
   numberedAs,
+  creditLine,
   passageVerses,
   resolveMapping,
   plain,
@@ -132,7 +133,13 @@ export function registerTools(server: McpServer): void {
         const full = await getBibleEditionById(e.id);
         lines.push(
           `- **${e.id}** — ${e.name_en}${e.name_native && e.name_native !== e.name_en ? ` (${e.name_native})` : ''}; language ${e.lang_iso639_1}; ${e.philosophy === 'source_text' ? 'source text' : 'translation'}; licence ${e.license_spdx ?? e.license_name}.` +
-            (full?.license?.statement ? `\n  ${full.license.statement}` : '') +
+            // The credit from `credits`, never our internal statement; a harvested
+            // edition without credits shows its publisher's own licence notice.
+            (full?.license?.credits?.length
+              ? `\n  ${creditLine(full.license)}`
+              : full?.license?.statement
+                ? `\n  ${full.license.statement}`
+                : '') +
             `\n  ${pageUrl('en', `/oversettelser/${e.id}`)}`,
         );
       }
@@ -235,7 +242,7 @@ export function registerTools(server: McpServer): void {
           break;
         }
       }
-      return text(blocks.join('\n\n') + p.notes + numberedAs(numbering.id) + (await attribution(chosen, language)));
+      return text(blocks.join('\n\n') + p.notes + numberedAs(numbering.id));
     },
   );
 
@@ -336,7 +343,7 @@ export function registerTools(server: McpServer): void {
         }
         blocks.push(lines.join('\n'));
       }
-      return text(blocks.join('\n\n') + p.notes + numberedAs(numbering.id) + (await attribution([...used], language)));
+      return text(blocks.join('\n\n') + p.notes + numberedAs(numbering.id));
     },
   );
 
@@ -672,8 +679,7 @@ export function registerTools(server: McpServer): void {
       if (!v || !book) return text('No verse of the day today.');
       return text(
         `**${refLabel(book.id, v.chapter, v.verseStart, v.verseEnd, language, numbering.id)}** (${bible})\n${v.text}${v.note ? `\n\n${v.note}` : ''}\n\n${chapterUrl(book, v.chapter, language, v.verseStart, bible)}` +
-          numberedAs(numbering.id) +
-          (await attribution([bible], language)),
+          numberedAs(numbering.id),
       );
     },
   );
@@ -712,7 +718,6 @@ export function registerTools(server: McpServer): void {
       const references: z.infer<typeof checkedReference>[] = [];
       const blocks: string[] = [];
       let remaining = MAX_VERSES;
-      let quoted = false;
 
       for (const f of found) {
         const at = `line ${f.line}, column ${f.column}: ${f.written}`;
@@ -743,7 +748,6 @@ export function registerTools(server: McpServer): void {
           for (const p of f.passages) {
             const q = await quote(p, bible, Math.min(MAX_CHECK_VERSES_PER_REFERENCE, remaining), language, numbering.id);
             remaining -= q.shown;
-            quoted ||= q.shown > 0;
             lines.push(...q.lines);
           }
         }
@@ -754,7 +758,7 @@ export function registerTools(server: McpServer): void {
       const summary = found.length
         ? `${found.length} Bible references, ${problems} with problems.`
         : 'No Bible references found. Book names must be capitalised ("Joh 3,16", "John 3:16").';
-      const body = plain(blocks.join('\n\n')) + (found.length ? numberedAs(numbering.id) : '') + (quoted ? await attribution([bible], language) : '');
+      const body = plain(blocks.join('\n\n')) + (found.length ? numberedAs(numbering.id) : '');
       return {
         content: [...(body ? [{ type: 'text' as const, text: body }] : []), { type: 'text' as const, text: summary }],
         structuredContent: { references, checked: found.length, problems },

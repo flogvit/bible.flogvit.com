@@ -30,7 +30,7 @@ const INSTRUCTIONS = `Bible text and study material from bible.flogvit.com.
 
 Editions: osen (English), osnb (Norwegian Bokmål) and osnn (Norwegian Nynorsk) are open CC BY 4.0 translations made directly from the Hebrew and Greek; sblgnt (Greek NT) and tanach (Hebrew OT) are the source texts.
 
-Quote Bible text from get_passage rather than from memory, and give the link and source line it returns: the CC BY licence requires the attribution to follow the text. Answer in the user's language and pass it as \`language\` (en, nb, nn, sv, fr, es, fi, de).
+Quote Bible text from get_passage rather than from memory, and give the link it returns. Where an edition comes from and its licence is in list_editions. Answer in the user's language and pass it as \`language\` (en, nb, nn, sv, fr, es, fi, de).
 
 Typical flow: search_bible or search_topics to find passages, get_passage to read them (several references in one call, separated by ";"), get_original_text for the Hebrew/Greek, get_cross_references and get_chapter_study to go deeper.`;
 

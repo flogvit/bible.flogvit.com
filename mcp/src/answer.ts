@@ -6,7 +6,7 @@
 
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import { z } from 'zod';
-import { getBibleEditionById, getVerses, normalizeBibleId, type ProphecyReference, type Verse } from '../../src/lib/bible.ts';
+import { getBibleEditionById, getVerses, normalizeBibleId, type BibleEditionLicense, type LicenceCredit, type ProphecyReference, type Verse } from '../../src/lib/bible.ts';
 import { bookName, getBookInfoById as bookById, type BookInfo } from '../../src/lib/books-data.ts';
 import { IMPORTED_BIBLES } from '../../src/lib/editions.ts';
 import { LOCALES } from '../../src/lib/i18n.ts';
@@ -90,17 +90,21 @@ export function parsed(input: string, mapping: string | null = null): Parsed {
   return { passages, notes: errors.length ? `\n\nSkipped: ${errors.join(' ')}` : '' };
 }
 
-export async function attribution(editions: string[], lang: string): Promise<string> {
-  const lines: string[] = [];
-  for (const id of editions) {
-    const e = await getBibleEditionById(id);
-    if (!e) continue;
-    // A CC BY / CC BY-SA text carries its credit in the answer itself (#200),
-    // in the licence's own words from free-bible's license.json.
-    const credit = e.license?.attribution_required && e.license.statement ? ` — ${e.license.statement}` : '';
-    lines.push(`${e.name_en} (${e.abbreviation ?? e.id}), ${e.license_spdx ?? e.license_name ?? ''}: ${pageUrl(lang, `/oversettelser/${e.id}`)}${credit}`);
-  }
-  return lines.length ? `\n\nSource: ${lines.join('; ')}` : '';
+/**
+ * Where an edition's text comes from, in one short line: its sources with their
+ * links and licences, from free-bible's license.json (`credits`). Given where
+ * the MCP DESCRIBES an edition (list_editions), never in each answer — the
+ * owner's decision (#206) — and never the licence's internal wording.
+ */
+export function creditLine(licence: BibleEditionLicense | null | undefined): string {
+  const credits = licence?.credits ?? [];
+  const source = (c: LicenceCredit) =>
+    `${c.name} (${c.url}${c.license ? `, ${c.license}${c.license_url ? ` ${c.license_url}` : ''}` : ''})`;
+  const shown = credits.filter((c) => c.relation === 'text').map(source);
+  const translated = credits.filter((c) => c.relation === 'translated_from').map(source);
+  return [shown.length ? `Text: ${shown.join(' and ')}.` : '', translated.length ? `Translated from ${translated.join(' and ')}.` : '']
+    .filter(Boolean)
+    .join(' ');
 }
 
 /** A verse as it is shown: numbered in the requested numbering, with where it stands in osnb. */
