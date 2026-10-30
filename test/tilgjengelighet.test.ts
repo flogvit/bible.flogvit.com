@@ -226,15 +226,11 @@ function settTilstand(theme: string, sesjon: string) {
  * WCAG 3.1.2: hebraisk og gresk tekst skal stå i et element med riktig `lang`
  * — ellers leser skjermleseren grunnteksten med sidens uttale. axe ser ikke
  * dette (den vet ikke hvilket språk en tekst ER), så det måles her: hver
- * tekstnode som er REN grunnskrift — hebraiske eller greske bokstaver og ingen
- * latinske (versteksten i Tanach/SBLGNT, parallellene, grunntekststripa,
- * ordlistene) — skal ha `lang` he/hbo eller el/grc på seg selv eller en
- * forelder.
- *
- * Enkeltord INNE I prosa på et annet språk («Abaddon (Hebrew: אֲבַדּוֹן) …» i
- * fotnoter, personkort, studieblokker) er et KJENT BRUDD: det står i
- * erklæringens `brudd` (3.1.2) og rettes i #166. Derfor teller ikke en node som
- * også har latinske bokstaver — og den grensen er det #166 skal fjerne.
+ * tekstnode med hebraiske eller greske bokstaver skal ha `lang` he/hbo eller
+ * el/grc på seg selv eller en forelder. Det gjelder også enkeltord inne i prosa
+ * på et annet språk («Abaddon (Hebrew: אֲבַדּוֹן) …»), som
+ * `src/lib/lang-of-parts.ts` merker på den rendrede siden (#166). Fram til #166
+ * var de unntatt, og sto som et kjent brudd i erklæringen.
  */
 function grunnspråkUtenLang(): string[] {
   const ut: string[] = [];
@@ -243,9 +239,7 @@ function grunnspråkUtenLang(): string[] {
     const tekst = n.textContent ?? '';
     const hebraisk = (tekst.match(/[\u05D0-\u05EA]/g) ?? []).length;
     const gresk = (tekst.match(/[\u0370-\u03FF\u1F00-\u1FFF]/g) ?? []).length;
-    const latin = (tekst.match(/[A-Za-z\u00C0-\u024F]/g) ?? []).length;
     if (!hebraisk && !gresk) continue;
-    if (latin > 0) continue; // #166: ord inne i prosa (erklæringens brudd på 3.1.2)
     const el = n.parentElement;
     if (!el || el.closest('script, style, template, [aria-hidden="true"]')) continue;
     const lang = (el.closest('[lang]')?.getAttribute('lang') ?? '').toLowerCase().split('-')[0];
