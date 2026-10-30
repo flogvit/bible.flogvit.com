@@ -12,3 +12,13 @@
 // symptomet ville vært stille — en utgave med infoside som ikke er indeksert.
 
 export const IMPORTED_BIBLES = ['osnb', 'osnn', 'osen', 'sblgnt', 'tanach'] as const;
+
+// De som alt er nummerert som osnb, og lagres som de er. Alle andre flyttes til
+// osnb-adresser gjennom sin KVN-mapping ved import (edition-import.ts, #200).
+// Dette er også våre EGNE utgaver, og de går foran de høstede i språkets
+// rekkefølge (readableBibleCandidates): en engelsk leser skal få OSEN, ikke den
+// første engelske i alfabetet.
+export const OSNB_NUMBERED = ['osnb', 'osnn', 'osen', 'sblgnt', 'tanach'] as const;
+
+/** Våre egne oversettelser, som står først for sitt språk. */
+export const OWN_EDITIONS = ['osnb', 'osnn', 'osen', 'oses'] as const;

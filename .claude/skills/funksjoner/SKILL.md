@@ -1,6 +1,6 @@
 ---
 name: funksjoner
-description: Lesesporing og sync-fletting (#16, #132), offline-lesing (#14, #136), «Ny versjon er lagt ut» (#161), verslister (#133) og API-dokumentasjonen (#114). Les før du endrer en av disse funksjonene.
+description: Lesesporing og sync-fletting (#16, #132), offline-lesing (#14, #136), «Ny versjon er lagt ut» (#161), verslister (#133), API-dokumentasjonen (#114), utgavevalget (#182) og importløypa for oversettelser (#200). Les før du endrer en av disse funksjonene.
 ---
 
 <!-- Flyttet ordrett fra CLAUDE.md (#164). Regelen står kort i CLAUDE.md; her er saken. -->
@@ -179,3 +179,47 @@ mot bible.flogvit.com fantes API-et da ikke.
   framtidig oppføring en påstand — ikke et gjemmested. Det ene endepunktet uten
   eksempel er `/api/mappings/kvn/all`, som er ~73 MB (#104); grunnen står i
   `ikkeProvd`.
+
+## Utgavevalget (#182)
+
+`bible.edition` i `fv-prefs` leses ETT sted (`src/lib/edition-choice.ts`) av
+`defaultBibleForLanguage()`; språket avgjør bare når ingenting er valgt, og
+`?bible=` slår begge. Sider varierer på cookien: mikrocachen nøkler på valget,
+og svaret sier `Vary: Cookie`. Klienten skriver valget med `setPref`
+(`public/js/edition-pref.js`).
+
+- **Innlogget er KONTOEN sannheten, med eller uten plus.** konto lagrer
+  `bible.edition` (`PRODUCT_PREF_REGISTRY` i `konto/src/lib/prefs.ts`,
+  portal/PREFS.md), sesjonssvaret bærer `prefs`, og `withSession` skriver
+  kontoens valg inn i cookien.
+- **PUT-en til konto krever CSRF-tokenet**, som står på konto-chipen
+  (`data-csrf`). `window.__fvCsrf` settes av ingen; uten tokenet svarte konto 403,
+  og valget nådde aldri kontoen.
+
+## Importløypa for oversettelser (#200, #170)
+
+Én vei fra free-bible til siden og MCP-en: `IMPORTED_BIBLES` i
+`src/lib/editions.ts` er lista, `scripts/import-bible.ts` importerer.
+
+- **Porten** (`editionGate`/`checkEdition` i `src/lib/edition-import.ts`):
+  lisensen må være BEKREFTET mot kilden (`license.json` → `verification.status:
+  confirmed`, skrevet i free-bible), og for alt utenom `OSNB_NUMBERED` må
+  KVN-mappinga være verifisert mot teksten (`textVerification.status:
+  verified` i `kvn/mappings/<id>.ukvn.json`). En listet utgave som avvises
+  importeres ikke, blir liggende som den var i basen, og importen ender med 1
+  — deployen stopper. `test/edition-import.test.ts` kjører porten mot free-bible
+  som den er, så en liste som lover noe free-bible ikke har klarert er rød FØR
+  deploy.
+- **Basen holder alle utgaver i osnb-numre.** En høstet oversettelse (KJV har
+  Malaki 4) flyttes ved import: eget nummer → osmain (dens mapping) → osnb.
+  Vers som lander på samme osnb-vers slås sammen i egen rekkefølge; et vers
+  osnb deler, deles med `sliceVersePart`. Ingen tekst går tapt (målt over hele
+  KJV). Derfor MÅ KVN være verifisert: en mapping som er riktig i aritmetikk og
+  feil i tekst flytter hvert vers til feil nummer.
+- **Våre egne først i språket** (`OWN_EDITIONS`): ellers ville ASV blitt
+  standard for /en/, første engelske i alfabetet. Sortert i koden, ikke i SQL —
+  basens kollasjon holdt ikke `ORDER BY id` (målt).
+- **Kreditten** (`src/views/edition-credit.tsx`) står under teksten på
+  kapittelsida og /tekst når lisensen krever navngivelse, med lisensens EGNE ord
+  (`statement`); MCP-ens `attribution()` bærer de samme ordene. Fem mutasjoner
+  kjørt.

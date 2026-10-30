@@ -1304,6 +1304,14 @@ a.ins-hero-name:hover {
   padding-top: 32px;
   border-top: 1px solid var(--border);
 }
+/* Kreditten lisensen krever under teksten (#200). Liten, men lesbar: den er en
+   plikt, ikke pynt, og skal ikke kunne overses. */
+.edition-credit {
+  margin: 0 0 20px;
+  font-size: 0.8rem;
+  line-height: 1.5;
+  color: var(--ink-2);
+}
 .nav-buttons {
   display: flex;
   gap: 16px;
