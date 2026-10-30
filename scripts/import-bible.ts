@@ -37,7 +37,7 @@ import { syncPersonRefBooks, refBooksSyncIsEmpty, formatRefBooksSync } from '../
 import { CONTENT_TABLES, CONTENT_SOURCES, contentSourceReport } from '../src/lib/content-sources.ts';
 import { parseReadingRefMarkup, unknownMappingSystem } from '../src/lib/reading-ref.ts';
 import { IMPORTED_BIBLES, OSNB_NUMBERED } from '../src/lib/editions.ts';
-import { checkEdition, toOsnbNumbering } from '../src/lib/edition-import.ts';
+import { checkEdition, toOsnbNumbering, versesWithInlineNotes } from '../src/lib/edition-import.ts';
 import type { RawVerse } from '../src/lib/edition-import.ts';
 import { loadRawMappingUncached } from '../src/lib/verse-mapper.ts';
 
@@ -86,6 +86,8 @@ const isFullImport = args.includes('--full');
 // avslutter med 1 — en liste som lover en utgave vi ikke kan publisere skal
 // stoppe deployen, ikke bli en stille 404 på /oversettelser/<id>.
 const REFUSED: string[] = [];
+// Verses whose text carries a translator's note (#207); their chapter is not imported.
+const INLINE_NOTES: string[] = [];
 const BIBLES: readonly string[] = IMPORTED_BIBLES.filter((id) => {
   const gate = checkEdition(id, path.join(FREE_BIBLE_DIR, 'generate'), (m) => {
     try {
@@ -387,6 +389,13 @@ async function importVerses(bible: string): Promise<void> {
 
         // Content changed - update
         const verses = JSON.parse(content) as RawVerse[];
+        // A note written into the verse text is refused (#207): the chapter keeps
+        // what it had, and the import ends with 1.
+        const noted = versesWithInlineNotes(verses);
+        if (noted.length) {
+          INLINE_NOTES.push(...noted.map((r) => `${bible} ${r}`));
+          continue;
+        }
         await tx`DELETE FROM verses WHERE book_id = ${bookId} AND chapter = ${chapterId} AND bible = ${bible}`;
         if (verses.length > 0) {
           const placeholders = verses.map(() => '(?, ?, ?, ?, ?, ?, ?)').join(', ');
@@ -431,6 +440,12 @@ async function importRenumbered(bible: string, biblePath: string): Promise<void>
   if (unchanged(stats.chapters, 'chapter', `${bible}-all`, contentHash)) return;
 
   const raw = contents.flatMap((c) => JSON.parse(c) as RawVerse[]);
+  const noted = versesWithInlineNotes(raw);
+  if (noted.length) {
+    // Refused as a whole (#207): the edition keeps what it had.
+    INLINE_NOTES.push(...noted.map((r) => `${bible} ${r}`));
+    return;
+  }
   const { verses, merged, split } = toOsnbNumbering(raw, mapping, osnb);
   const outside = verses.filter((v) => v.verse < 1 || v.verse > (getChapterVerseCount(v.book, v.chapter) ?? 0));
   console.log(
@@ -2001,12 +2016,20 @@ if (REFUSED.length > 0) {
   for (const reason of REFUSED) console.error(`  ${reason}`);
   process.exitCode = 1;
 }
+if (INLINE_NOTES.length > 0) {
+  console.error(
+    `\n${INLINE_NOTES.length} vers har en oversetternote i selve teksten (#207) og ble ikke importert — ` +
+      `noten hører i \`footnotes\` (free-bible: scripts/move-inline-notes.py):`,
+  );
+  for (const ref of INLINE_NOTES.slice(0, 20)) console.error(`  ${ref}`);
+  process.exitCode = 1;
+}
 // «Ferdig!» er en påstand om utfallet, og den skal ikke stå der utfallet var at
 // vi ikke fant kilden. Sammendraget over er da bare nuller.
 console.log(
   sourceMissing
     ? '\nAvbrutt: ingenting ble importert.'
-    : REFUSED.length > 0
+    : REFUSED.length > 0 || INLINE_NOTES.length > 0
       ? '\nFerdig, men med avviste utgaver (se over).'
       : '\nFerdig!',
 );

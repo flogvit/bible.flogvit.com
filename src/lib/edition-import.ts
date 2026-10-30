@@ -103,6 +103,20 @@ export function checkEdition(
   return editionGate(id, licence, needsMapping ? loadMapping(id) : null);
 }
 
+/**
+ * A translator's note written into verse text (#207). Notes belong in
+ * `footnotes`; in the text they stood in the middle of the verse on the page,
+ * and in search, the songs and the MCP. These are the forms that were found in
+ * free-bible (its tests/verse-text-clean.test.ts holds the same list).
+ */
+export const INLINE_NOTE =
+  /\[\s*\*?\s*(?:Footnote|Fotnote|Nota|Note)\s*:|\[\*|\[\^[\w-]+\]|<fn>|(?:^|\n\n)\s*\*\S|\*[ \t]+\*\S/i;
+
+/** The verses whose text carries a note, as `book:chapter:verse`. */
+export function versesWithInlineNotes(verses: RawVerse[]): string[] {
+  return verses.filter((v) => INLINE_NOTE.test(v.text)).map((v) => `${v.bookId}:${v.chapterId}:${v.verseId}`);
+}
+
 /** A verse at its osnb address, ready for the `verses` table. */
 export interface OsnbVerse {
   book: number;
