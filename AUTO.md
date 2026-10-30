@@ -22,7 +22,7 @@ repository: flogvit/bible.flogvit.com
 default_branch: main
 description: The Bible app bible.flogvit.com and its MCP server (Bun + Hono), with text from free-bible
 work_queue: the Dux work queue for flogvit/bible.flogvit.com (GitHub issues labelled dux)
-checked: 2026-10-29
+checked: 2026-10-30
 ```
 
 ## stack
@@ -95,7 +95,7 @@ environments:
       compose_dir: /srv/flogvit.com/server
       compose_services: bibel-hono (port 8080, 768m) and bibel-mcp
       tag_variables: BIBEL_HONO_TAG and BIBEL_MCP_TAG in /srv/flogvit.com/server/.env
-      database: the managed MySQL db-flogvit (Scaleway, fr-par); connection in bibel.env
+      database: the managed MySQL db-flogvit-pop2 (Scaleway, fr-par, instance a4f505d0-59d1-4a6b-8adb-779a63facecb); connection in bibel.env
       url: https://bible.flogvit.com and https://mcp.bible.flogvit.com
     order:
       - stage the kvn package from free-bible, then the test gate
@@ -105,9 +105,12 @@ environments:
       - reload Caddy, health check from inside Caddy, smoke.sh; a failure rolls back to the recorded tag
       - deploy-bibel-mcp.sh the same way for bibel-mcp, checked on https://mcp.bible.flogvit.com/healthz
       - after a green deploy, tag this repository with the tag that runs (BIBEL_HONO_TAG) and push the tag; the RELEASE.md post is part of the change merged through the work queue (server/README.md «deploy <navn>»)
+    # The owner's call (2026-10-30): a restart in the daytime needs his yes; at
+    # night Dux may restart on its own. A kernel reboot of flogvit-vm takes down
+    # every flogvit.com product and is always a step for the owner.
     downtime:
-      policy: anytime
-      reason: the flogvit.com deploy scripts already run at any time of day; a kernel reboot of flogvit-vm is still always a step for the owner
+      policy: window
+      window: daily 23:00-06:00 Europe/Oslo
     patch_effect:
       - kind: restart
         what: docker compose replaces the bibel-hono container; Caddy holds requests while it starts (import gjenforsoek)
@@ -128,7 +131,7 @@ environments:
         command: ssh flogvit-vm "grep -E '^BIBEL_(HONO|MCP)_TAG=' /srv/flogvit.com/server/.env"
         expect: <UTC timestamp>-<short sha of the merged commit>, without -dirty
     rollback:
-      backup: "OPEN: the script records the running image tags and the registry keeps the 5 newest; a backup of the database before scripts/init-db.ts changes it is not written down"
+      backup: "OPEN: the script records the running image tags and the registry keeps the 5 newest. The deploy takes no database backup before scripts/init-db.ts changes the schema; db-flogvit-pop2 has a daily backup schedule with 7 days' retention, but `scw rdb backup list` showed no backups on 2026-10-30, so a restore point is not confirmed"
       undo: |
         The scripts roll back by themselves when a health check or smoke.sh fails. By hand, per service:
         ssh flogvit-vm "sed -i 's|^BIBEL_HONO_TAG=.*|BIBEL_HONO_TAG=<previous tag>|' /srv/flogvit.com/server/.env && cd /srv/flogvit.com/server && docker compose pull bibel-hono && docker compose up -d bibel-hono"
