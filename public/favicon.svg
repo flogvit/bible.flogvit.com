@@ -1,10 +1,20 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-  <rect x="15" y="10" width="70" height="80" rx="3" fill="#8b7355"/>
-  <rect x="20" y="15" width="60" height="70" rx="2" fill="#faf8f5"/>
-  <line x1="50" y1="20" x2="50" y2="80" stroke="#c9a959" stroke-width="2"/>
-  <line x1="30" y1="35" x2="70" y2="35" stroke="#2c3e50" stroke-width="1.5" opacity="0.3"/>
-  <line x1="30" y1="45" x2="70" y2="45" stroke="#2c3e50" stroke-width="1.5" opacity="0.3"/>
-  <line x1="30" y1="55" x2="70" y2="55" stroke="#2c3e50" stroke-width="1.5" opacity="0.3"/>
-  <line x1="30" y1="65" x2="70" y2="65" stroke="#2c3e50" stroke-width="1.5" opacity="0.3"/>
-  <text x="50" y="52" text-anchor="middle" font-size="14" font-family="serif" fill="#c9a959" font-weight="bold">B</text>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <!-- GENERERT av portal/scripts/appikoner.ts fra design/appikoner.json — ikke rediger. FLOGVIT.bible: †, Lesing og tro. -->
+  <rect width="1024" height="1024" rx="195" fill="#1b1b18"/>
+  <circle cx="224" cy="224" r="68" fill="#faf9f6" fill-opacity="0.16"/>
+  <circle cx="416" cy="224" r="68" fill="#85c795"/>
+  <circle cx="608" cy="224" r="68" fill="#faf9f6" fill-opacity="0.16"/>
+  <circle cx="800" cy="224" r="68" fill="#faf9f6" fill-opacity="0.16"/>
+  <circle cx="224" cy="416" r="68" fill="#85c795"/>
+  <circle cx="416" cy="416" r="68" fill="#85c795"/>
+  <circle cx="608" cy="416" r="68" fill="#85c795"/>
+  <circle cx="800" cy="416" r="68" fill="#faf9f6" fill-opacity="0.16"/>
+  <circle cx="224" cy="608" r="68" fill="#faf9f6" fill-opacity="0.16"/>
+  <circle cx="416" cy="608" r="68" fill="#85c795"/>
+  <circle cx="608" cy="608" r="68" fill="#faf9f6" fill-opacity="0.16"/>
+  <circle cx="800" cy="608" r="68" fill="#faf9f6" fill-opacity="0.16"/>
+  <circle cx="224" cy="800" r="68" fill="#faf9f6" fill-opacity="0.16"/>
+  <circle cx="416" cy="800" r="68" fill="#85c795"/>
+  <circle cx="608" cy="800" r="68" fill="#faf9f6" fill-opacity="0.16"/>
+  <circle cx="800" cy="800" r="68" fill="#faf9f6"/>
 </svg>
