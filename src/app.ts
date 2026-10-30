@@ -11,6 +11,7 @@ import { contextStorage } from 'hono/context-storage';
 import type { AppEnv } from './lib/session.ts';
 import { ACCOUNT_URL, loginUrl, withSession } from './lib/session.ts';
 import { withPageCache } from './lib/page-cache.ts';
+import { withLanguageOfParts } from './lib/lang-of-parts.ts';
 import { withRetryBudget } from './lib/db.ts';
 import { feilsvar } from './lib/error-handler.ts';
 import pages from './routes/pages.tsx';
@@ -130,6 +131,11 @@ export function createApp() {
   // Mikrocache for anonyme sidevisninger — FØR withSession, så cache-treff
   // hverken rendrer eller validerer sesjon (GitHub #4).
   app.use('*', withPageCache);
+
+  // Hebraiske og greske ord i prosa får sitt `lang` (WCAG 3.1.2, #166). INNENFOR
+  // mikrocachen, så en cachet side bærer merkene og arbeidet gjøres én gang per
+  // render.
+  app.use('*', withLanguageOfParts);
 
   // Konto-sesjonen løses inn på c.var.user for hver request (fail-open til
   // anonym). Login/konto bor sentralt — vi bare redirecter dit.

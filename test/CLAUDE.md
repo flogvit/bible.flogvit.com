@@ -172,7 +172,9 @@ i ekte Chrome, lys og mørk, utlogget og innlogget med Plus — matrisen står
 Ny sidetype ⇒ legg den i `test/pages.ts` (eller `SIDETYPER` i testen), og
 oppdater `omfang` i datafila. Temaet settes med `fv-prefs`-cookien FØR lasting:
 å bytte `data-fv-theme` etterpå målte farger midt i en `transition`.
-Kjente brudd nå: 3.1.2 for hebraiske/greske ord inne i forklarende prosa
-(#166) — derfor teller lang-sjekken bare tekstnoder uten latinske bokstaver.
+Ingen kjente brudd. Hebraiske og greske ord inne i prosa får `lang` av
+`src/lib/lang-of-parts.ts` på den rendrede siden (#166), og lang-sjekken teller
+hver tekstnode med hebraisk eller gresk; `test/lang-of-parts.test.ts` måler det
+samme uten nettleser.
 Footer-lenka står i den FASTE raden, med fellesdelens `lenketekst()`;
 kommandopalettens `foot.a11y` holdes lik den av testen.
