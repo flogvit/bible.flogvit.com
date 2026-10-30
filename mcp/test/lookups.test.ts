@@ -86,11 +86,11 @@ describe('get_church_year_readings', () => {
     expect(text).toContain('only on bible.flogvit.com in Norwegian');
   });
 
-  test('include_text quotes the readings, with their source', async () => {
+  test('include_text quotes the readings, without a source line (#206)', async () => {
     const { text } = await call('get_church_year_readings', { date: '2026-03-29', include_text: true, edition: 'osen' });
     const john = (await getVerses(43, 12, 'osen')).find((v) => v.verse === 12)!;
     expect(text).toContain(john.text);
-    expect(text).toContain('Source: ');
+    expect(text).not.toContain('Source: ');
   });
 
   test('a name the lectionary does not have is an error that names the days it has', async () => {
@@ -204,7 +204,7 @@ describe('get_story', () => {
     expect(text).toContain('# Den fortapte sønn');
     expect(text).toContain('Lukas 15:11-32');
     expect(text).toContain(verse.text);
-    expect(text).toContain('Source: ');
+    expect(text).not.toContain('Source: ');
   });
 });
 

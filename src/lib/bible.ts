@@ -2201,7 +2201,23 @@ export interface BibleEditionLicense {
   noncommercial?: boolean;
   kvn_renumber_ok?: boolean;
   source?: string;
+  /** The licence's full wording, for the edition page. Never shown under the text. */
   statement?: string;
+  /** What a reader is shown under the text: the sources a licence asks to be credited. */
+  credits?: LicenceCredit[];
+}
+
+/**
+ * One source to credit under the text (free-bible's license.json → `credits`).
+ * `translated_from`: the edition is a translation of it (CC BY asks to say the
+ * material was changed); `text`: the text shown IS it.
+ */
+export interface LicenceCredit {
+  name: string;
+  url: string;
+  license?: string;
+  license_url?: string;
+  relation: 'translated_from' | 'text';
 }
 
 const EDITION_COLUMNS = `id, name_native, name_en, abbreviation, lang_iso639_1, lang_iso639_3,

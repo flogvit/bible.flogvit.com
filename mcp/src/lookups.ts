@@ -34,7 +34,6 @@ import {
 } from '../../src/lib/bible.ts';
 import { makeT, tEnum, type Locale } from '../../src/lib/i18n.ts';
 import {
-  attribution,
   failure,
   inMapping,
   labelMapping,
@@ -207,7 +206,6 @@ export function registerLookupTools(server: McpServer): void {
       const bible = edition ?? (await defaultBibleForLanguage(language));
       const pageLocale = lang === language ? language : lang;
       let remaining = MAX_VERSES;
-      let quoted = false;
       const blocks: string[] = [];
       if (!next) blocks.push(`(The lectionary ends ${all.at(-1)!.date}; this is the last time "${name}" is in it.)`);
 
@@ -233,7 +231,6 @@ export function registerLookupTools(server: McpServer): void {
               for (const p of passages) {
                 const q = await quote(inMapping(p, numbering.id), bible, remaining, language, numbering.id);
                 remaining -= q.shown;
-                quoted ||= q.shown > 0;
                 lines.push(...q.lines);
               }
             }
@@ -242,7 +239,7 @@ export function registerLookupTools(server: McpServer): void {
         blocks.push(lines.join('\n'));
       }
       if (lang !== language) blocks.push('(The church year readings are only on bible.flogvit.com in Norwegian.)');
-      return text(blocks.join('\n\n') + numberedAs(numbering.id) + (quoted ? await attribution([bible], language) : ''));
+      return text(blocks.join('\n\n') + numberedAs(numbering.id));
     },
   );
 
@@ -370,7 +367,6 @@ export function registerLookupTools(server: McpServer): void {
       const explain = list.length <= MAX_EXPLAINED_PROPHECIES;
       const bible = edition ?? (await defaultBibleForLanguage(language));
       let remaining = MAX_VERSES;
-      let quoted = false;
       const groups = new Map<string, string[]>();
       for (const x of list) {
         const prophecy = passageAt(x.prophecy.book_id, x.prophecy.chapter, x.prophecy.verse_start, x.prophecy.chapter, x.prophecy.verse_end);
@@ -388,7 +384,6 @@ export function registerLookupTools(server: McpServer): void {
             if (!p) continue;
             const q = await quote(inMapping(p, numbering.id), bible, remaining, language, numbering.id);
             remaining -= q.shown;
-            quoted ||= q.shown > 0;
             lines.push(`${role}, ${passageLabel(inMapping(p, numbering.id), language)}:`, ...q.lines);
           }
         }
@@ -398,7 +393,7 @@ export function registerLookupTools(server: McpServer): void {
       const body = [...groups].map(([name, items]) => `## ${name}\n\n${items.join('\n\n')}`).join('\n\n');
       const hint = explain ? '' : '\n\nFor the explanation of one, ask with its passage or use get_topic with kind "prophecy" and the id.';
       return text(
-        `# ${count(list.length, 'prophecy', 'prophecies')}\n${pageUrl(language, '/profetier')}\n\n${body}${hint}${notes}${numberedAs(numbering.id)}` + (quoted ? await attribution([bible], language) : ''),
+        `# ${count(list.length, 'prophecy', 'prophecies')}\n${pageUrl(language, '/profetier')}\n\n${body}${hint}${notes}${numberedAs(numbering.id)}`,
       );
     },
   );
@@ -447,18 +442,16 @@ export function registerLookupTools(server: McpServer): void {
         `Told in: ${passages.map((p) => passageLabel(inMapping(p, numbering.id), language)).join('; ')}`,
       ];
       const bible = edition ?? (await defaultBibleForLanguage(language));
-      let quoted = false;
       if (include_text) {
         let remaining = MAX_STORY_VERSES;
         for (const p of passages) {
           const q = await quote(inMapping(p, numbering.id), bible, remaining, language, numbering.id);
           remaining -= q.shown;
-          quoted ||= q.shown > 0;
           lines.push(`**${passageLabel(inMapping(p, numbering.id), language)}**\n${q.lines.join('\n')}`);
         }
       }
       if (others.length) lines.push(`Other stories that match: ${others.map((s) => `${s.title} [id: ${s.slug}]`).join('; ')}`);
-      return text(lines.join('\n\n') + numberedAs(numbering.id) + (quoted ? await attribution([bible], language) : ''));
+      return text(lines.join('\n\n') + numberedAs(numbering.id));
     },
   );
 
@@ -565,7 +558,6 @@ export function registerLookupTools(server: McpServer): void {
 
       const bible = edition ?? (await defaultBibleForLanguage(language));
       let remaining = MAX_VERSES;
-      let quoted = false;
       const blocks: string[] = [];
       for (const x of found) {
         const lines = [`## ${x.title}${x.section?.name ? ` (${x.section.name})` : ''} [id: ${x.id}]`];
@@ -575,13 +567,12 @@ export function registerLookupTools(server: McpServer): void {
           for (const q of passagesOf(x)) {
             const quoteLines = await quote(inMapping(q, numbering.id), bible, remaining, language, numbering.id);
             remaining -= quoteLines.shown;
-            quoted ||= quoteLines.shown > 0;
             lines.push(`**${passageLabel(inMapping(q, numbering.id), language)}**`, ...quoteLines.lines);
           }
         }
         blocks.push(lines.join('\n'));
       }
-      return text(`# ${count(found.length, 'gospel parallel')} for ${reference}\n${url}\n\n${blocks.join('\n\n')}${p.notes}${numberedAs(numbering.id)}` + (quoted ? await attribution([bible], language) : ''));
+      return text(`# ${count(found.length, 'gospel parallel')} for ${reference}\n${url}\n\n${blocks.join('\n\n')}${p.notes}${numberedAs(numbering.id)}`);
     },
   );
 }
