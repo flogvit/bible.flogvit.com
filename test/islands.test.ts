@@ -486,3 +486,18 @@ describe('user.js — lesekartet', () => {
     expect(levels).toEqual(['1', '1', '1']);
   });
 });
+
+// flogvit-com-konto#62: the plus prompt's «Log in» comes back to this page.
+describe('plus.js — innlogging fra plus-oppfordringen', () => {
+  test('utlogget sendes tilbake til siden oppfordringen sto på', async () => {
+    setupDom('', { lang: 'en' });
+    document.cookie = 'fv-auth=; path=/; max-age=0';
+    history.replaceState(null, '', '/en/rom/8?bible=osnb');
+    await loadIsland('plus');
+    (window as unknown as { fvPlus: { cta: (what: string) => void } }).fvPlus.cta('notes');
+    const login = [...document.querySelectorAll('.plus-cta-link')]
+      .map((a) => a.getAttribute('href'))
+      .find((h) => h?.includes('/logg-inn'));
+    expect(login).toBe('/en/logg-inn?return=' + encodeURIComponent('https://bible.flogvit.com/en/rom/8?bible=osnb'));
+  });
+});

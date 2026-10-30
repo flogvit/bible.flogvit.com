@@ -26,6 +26,21 @@ describe('skjelett', () => {
     expect(html).toContain('/styles.css');
   });
 
+  // konto#62: «Log in» kommer tilbake til siden den ble trykket på.
+  test('utlogget bærer kontochipen veien tilbake til denne siden', async () => {
+    const res = await app.request(L('/temaer') + '?q=nåde');
+    const html = await res.text();
+    const back = 'https://bible.flogvit.com' + L('/temaer') + '?q=n%C3%A5de';
+    const href = 'https://flogvit.com/konto/?return=' + encodeURIComponent(back);
+    expect(html).toContain(`<a class="account-chip" href="${href.replaceAll('&', '&amp;')}"`);
+  });
+
+  test('utlogget på innstillingene lenker «FLOGVIT-konto» tilbake til innstillingene', async () => {
+    const html = await (await app.request(L('/innstillinger'))).text();
+    const back = encodeURIComponent('https://bible.flogvit.com' + L('/innstillinger'));
+    expect(html).toContain(`<a href="https://flogvit.com/konto/?return=${back}">FLOGVIT-konto</a>`);
+  });
+
   test('ukjent side gir 404', async () => {
     const res = await app.request(L('/finnes-ikke'));
     expect(res.status).toBe(404);

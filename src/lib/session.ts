@@ -6,6 +6,8 @@
 // konto på localhost:3020. Alt er best-effort — feiler kallet, er man utlogget.
 
 import type { Context, Next } from 'hono';
+import { getContext } from 'hono/context-storage';
+import { absoluteUrl } from './site-url.ts';
 import { cookieChoiceForAccount, EDITION_PREF, refreshedPrefsCookie } from './edition-choice.ts';
 import type { Locale } from './i18n.ts';
 
@@ -18,6 +20,27 @@ function accountApiUrl(): string {
 }
 
 export const ACCOUNT_URL = process.env.ACCOUNT_URL || 'https://flogvit.com/konto/';
+
+/**
+ * konto's login page with the way back to `here`, an absolute address on this
+ * site (flogvit-com-konto#62). konto only follows an https address on
+ * flogvit.com or a subdomain. Only for a reader who is NOT logged in: one who
+ * is, and arrives at konto with a return, is sent straight back.
+ */
+export const loginUrl = (here: string): string => `${ACCOUNT_URL}?return=${encodeURIComponent(here)}`;
+
+/**
+ * konto's login page with the way back to the page this request renders (its
+ * absolute address with the query). Outside a request, the plain account page.
+ */
+export function loginUrlHere(): string {
+  try {
+    const url = new URL(getContext<AppEnv>().req.url);
+    return loginUrl(absoluteUrl(decodeURI(url.pathname)) + url.search);
+  } catch {
+    return ACCOUNT_URL;
+  }
+}
 
 // Kort timeout: en treg kontotjeneste skal ikke holde sidevisninger som
 // uansett fungerer utlogget.

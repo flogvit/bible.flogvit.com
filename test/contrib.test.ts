@@ -192,7 +192,9 @@ describe('contrib-sider', () => {
     const res = await app.request(L('/bidra'));
     expect(res.status).toBe(200);
     const html = await res.text();
-    expect(html).toContain('/logg-inn');
+    // Back to /bidra after the login (flogvit-com-konto#62).
+    const back = encodeURIComponent('https://bible.flogvit.com' + L('/bidra'));
+    expect(html).toContain(`class="contrib-login-cta" href="https://flogvit.com/konto/?return=${back}"`);
     expect(html).not.toContain('data-ref-template');
   });
 

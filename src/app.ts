@@ -3,13 +3,13 @@
 // JSON-kontrakt (bibel-hono/ISSUES.md #7). Gamle /api/auth finnes ikke lenger —
 // innlogging bor sentralt i konto (#5). Sidene rendres server-side i hono/jsx.
 
-import { Hono, type MiddlewareHandler } from 'hono';
+import { Hono, type Handler, type MiddlewareHandler } from 'hono';
 import { serveStatic } from 'hono/bun';
 import { ensureBooks } from './lib/bible.ts';
 import { STATIC_MOUNTS, staticCache, staticMountNotFound } from './lib/static-cache.ts';
 import { contextStorage } from 'hono/context-storage';
 import type { AppEnv } from './lib/session.ts';
-import { ACCOUNT_URL, withSession } from './lib/session.ts';
+import { ACCOUNT_URL, loginUrl, withSession } from './lib/session.ts';
 import { withPageCache } from './lib/page-cache.ts';
 import { withRetryBudget } from './lib/db.ts';
 import { feilsvar } from './lib/error-handler.ts';
@@ -69,6 +69,17 @@ import { buildId } from './lib/build-id.ts';
  * delekortene og `public/` slår ikke opp en bok, og en brems bak sin egen port
  * er ingen brems (#64).
  */
+/**
+ * `/logg-inn` is the client islands' way to konto's login page (they do not
+ * know `ACCOUNT_URL`). `?return=` is the page they were on, and konto follows
+ * it after the login (flogvit-com-konto#62); konto's `safeReturn` decides what
+ * is allowed, so the value is passed on as it is.
+ */
+const toLogin: Handler<AppEnv> = (c) => {
+  const back = c.req.query('return');
+  return c.redirect(back ? loginUrl(back) : ACCOUNT_URL, 302);
+};
+
 const medBokdata: MiddlewareHandler<AppEnv> = async (_c, next) => {
   await ensureBooks();
   await next();
@@ -123,7 +134,7 @@ export function createApp() {
   // Konto-sesjonen løses inn på c.var.user for hver request (fail-open til
   // anonym). Login/konto bor sentralt — vi bare redirecter dit.
   app.use('*', withSession);
-  app.get('/logg-inn', (c) => c.redirect(ACCOUNT_URL, 302));
+  app.get('/logg-inn', toLogin);
   app.get('/konto', (c) => c.redirect(ACCOUNT_URL, 302));
 
   // /api/* er montert uprefikset og arver ingen locale fra ruta slik sidene
@@ -211,7 +222,7 @@ export function createApp() {
     // Samme snarveier som uprefikset (se over): /<lang>/logg-inn og
     // /<lang>/konto skal ikke 404 naar de uprefiksede virker. De redirecter
     // til sentral konto uansett spraak, saa locale spiller ingen rolle her.
-    sub.get('/logg-inn', (c) => c.redirect(ACCOUNT_URL, 302));
+    sub.get('/logg-inn', toLogin);
     sub.get('/konto', (c) => c.redirect(ACCOUNT_URL, 302));
     sub.route('/', pages);
     app.route(`/${locale}`, sub);

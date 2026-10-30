@@ -14,7 +14,7 @@ import { raw } from 'hono/html';
 import type { Child } from 'hono/jsx';
 import { getContext } from 'hono/context-storage';
 import type { AppEnv } from '../lib/session.ts';
-import { ACCOUNT_URL } from '../lib/session.ts';
+import { ACCOUNT_URL, loginUrlHere } from '../lib/session.ts';
 import { DEFAULT_LOCALE, LOCALES, href, makeT, ogLocale, type Locale, type Translator, lhref } from '../lib/i18n.ts';
 import { tCtx, islandStrings, type MessageKey } from '../lib/i18n.ts';
 import { absoluteUrl } from '../lib/site-url.ts';
@@ -300,8 +300,9 @@ function AccountChip({ t }: { t: Translator }) {
     user = null; // rendret utenfor request-kontekst (f.eks. test) → utlogget
   }
   if (!user) {
+    // «Logg inn» kommer tilbake til siden den ble trykket på (konto#62).
     return (
-      <a class="account-chip" href={ACCOUNT_URL} aria-label={t('chrome.login')}>
+      <a class="account-chip" href={loginUrlHere()} aria-label={t('chrome.login')}>
         {t('chrome.login')}
       </a>
     );
