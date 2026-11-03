@@ -94,12 +94,18 @@ describe('the commands ARE the tools', () => {
 });
 
 describe('a passage', () => {
-  test('reads with its link and its source line', async () => {
+  // The licence is given where an edition is DESCRIBED, never in each answer:
+  // the owner's decision in #206. This test still asked for it until #213.
+  test('reads with its link, and leaves the licence to list-editions', async () => {
     const r = await run(['passage', 'John 3:16', '--editions', 'osen,sblgnt']);
     expect(r.code).toBe(0);
     expect(r.stdout).toContain('https://bible.flogvit.com/en/joh/3#v16');
     expect(r.stdout).toContain('**sblgnt**');
-    expect(r.stdout).toContain('CC-BY-4.0');
+    expect(r.stdout).not.toContain('CC-BY-4.0');
+    const editions = await run(['list-editions']);
+    expect(editions.code).toBe(0);
+    expect(editions.stdout).toContain('**sblgnt**');
+    expect(editions.stdout).toContain('CC-BY-4.0');
   });
 
   test('takes the rest of the words as the last required argument', async () => {
