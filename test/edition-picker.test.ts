@@ -11,14 +11,12 @@
 //
 // Requires the local DB (DBngin :3326) with imported content.
 
-import { afterAll, describe, expect, setDefaultTimeout, test } from 'bun:test';
+import { describe, expect, setDefaultTimeout, test } from 'bun:test';
 import { DB_TEST_TIMEOUT_MS } from './db-timeout.ts';
 import { createApp } from '../src/app.ts';
 import { getBibleEditions } from '../src/lib/bible.ts';
-import { resetPageCache } from '../src/lib/page-cache.ts';
 
 setDefaultTimeout(DB_TEST_TIMEOUT_MS);
-afterAll(resetPageCache);
 
 const app = createApp();
 const html = async (path: string) => (await app.request(`http://x${path}`)).text();
