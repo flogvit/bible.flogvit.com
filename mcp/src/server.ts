@@ -19,6 +19,7 @@ import { WebStandardStreamableHTTPServerTransport } from '@modelcontextprotocol/
 import { getVerse } from '../../src/lib/bible.ts';
 import { CONTENT_TABLES } from '../../src/lib/content-sources.ts';
 import { getSql, withRetryBudget } from '../../src/lib/db.ts';
+import { editionsByKind } from '../../src/lib/editions.ts';
 import { registerLookupTools } from './lookups.ts';
 import { registerTools } from './tools.ts';
 import { ABOUT, landingHtml, wantsHtml } from './landing.ts';
@@ -28,7 +29,7 @@ export const SERVER_VERSION = '1.1.0';
 
 const INSTRUCTIONS = `Bible text and study material from bible.flogvit.com.
 
-Editions: osen (English), osnb (Norwegian Bokmål) and osnn (Norwegian Nynorsk) are open CC BY 4.0 translations made directly from the Hebrew and Greek; sblgnt (Greek NT) and tanach (Hebrew OT) are the source texts.
+Editions: ${editionsByKind()}
 
 Quote Bible text from get_passage rather than from memory, and give the link it returns. Where an edition comes from and its licence is in list_editions. Answer in the user's language and pass it as \`language\` (en, nb, nn, sv, fr, es, fi, de).
 

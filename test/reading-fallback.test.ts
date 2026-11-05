@@ -16,31 +16,51 @@ setDefaultTimeout(DB_TEST_TIMEOUT_MS);
 const app = createApp();
 
 describe('readableBibleCandidates', () => {
+  // Our own editions lead, in the language chain's order; the harvested ones
+  // (#170) follow, the language's own before the floor's. The lists below are
+  // the heads; what follows them is checked by the rule, not by name, so the
+  // next import does not have to rewrite this test.
+  const SOURCE = ['sblgnt', 'tanach'];
+  const OWN = ['osnb', 'osnn', 'osen', 'oses'];
+  const startsWith = async (lang: string, head: string[]) => {
+    const candidates = await readableBibleCandidates(lang);
+    const ids = candidates.map((e) => e.id);
+    expect(ids.slice(0, head.length), lang).toEqual(head);
+    expect(ids.filter((id) => SOURCE.includes(id)), `${lang}: no source texts`).toEqual([]);
+    // Within one language, no own edition comes after a harvested one.
+    candidates.forEach((e, i) => {
+      if (OWN.includes(e.id)) return;
+      const laterOwn = candidates.slice(i + 1).filter((x) => x.lang === e.lang && OWN.includes(x.id));
+      expect(laterOwn.map((x) => x.id), `${lang}: ${e.id} before our own`).toEqual([]);
+    });
+    return ids;
+  };
+
   test('nb → osnb, deretter engelsk som gulv (#26)', async () => {
-    const c = await readableBibleCandidates('nb');
-    expect(c.map((e) => e.id)).toEqual(['osnb', 'osen']);
+    await startsWith('nb', ['osnb', 'osen']);
   });
 
   test('nn → osnn, osnb, osen — nabospråk før basespråk', async () => {
-    const c = await readableBibleCandidates('nn');
-    expect(c.map((e) => e.id)).toEqual(['osnn', 'osnb', 'osen']);
+    await startsWith('nn', ['osnn', 'osnb', 'osen']);
   });
 
   test('en → osen først, osnb som gulv', async () => {
-    const c = await readableBibleCandidates('en');
-    expect(c.map((e) => e.id)).toEqual(['osen', 'osnb']);
+    const ids = await startsWith('en', ['osen']);
+    expect(ids).toContain('osnb');
   });
 
   test('sv → osen (basespråket) før osnb, ingen svensk utgave', async () => {
-    const c = await readableBibleCandidates('sv');
-    expect(c.map((e) => e.id)).toEqual(['osen', 'osnb']);
+    const ids = await startsWith('sv', ['osen']);
+    expect(ids).toContain('osnb');
+  });
+
+  test('es → oses before the harvested Spanish edition (#170)', async () => {
+    const ids = await startsWith('es', ['oses']);
+    if (ids.includes('rv_1909')) expect(ids.indexOf('rv_1909')).toBeGreaterThan(ids.indexOf('oses'));
   });
 
   test('grunntekster (sblgnt/tanach) er aldri kandidater', async () => {
-    for (const lang of ['el', 'he']) {
-      const c = await readableBibleCandidates(lang);
-      expect(c.map((e) => e.id)).toEqual(['osen', 'osnb']);
-    }
+    for (const lang of ['el', 'he']) await startsWith(lang, ['osen']);
   });
 });
 

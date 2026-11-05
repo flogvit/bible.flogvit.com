@@ -158,6 +158,15 @@ describe('choosing on the settings page', () => {
     expect(saved().bible).toBeUndefined();
   });
 
+  test('every edition we serve can be chosen, also the ones with an underscore in the id', async () => {
+    const { IMPORTED_BIBLES } = await import('../src/lib/editions.ts');
+    const m = await load();
+    for (const id of IMPORTED_BIBLES) {
+      m.chooseEdition(id);
+      expect(prefs()['bible.edition'], id).toBe(id);
+    }
+  });
+
   test('logged in: the choice is saved on the account, with the CSRF token', async () => {
     logIn('tok-9');
     (await load()).chooseEdition('osen');

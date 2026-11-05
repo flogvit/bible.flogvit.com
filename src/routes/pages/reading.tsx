@@ -51,6 +51,8 @@ import {
   formatReference,
   normalizeBibleId,
   readableBibleCandidates,
+  offlineEditions,
+  type OfflineEdition,
   defaultBibleForLanguage,
   getBibleEditionById,
 } from '../../lib/bible.ts';
@@ -1563,6 +1565,7 @@ function MobileToolbar({
   bible,
   secondary,
   defaultBible,
+  editions,
   t,
 }: {
   book: BookInfo;
@@ -1573,6 +1576,7 @@ function MobileToolbar({
   bible: string;
   secondary: string | undefined;
   defaultBible: string;
+  editions: OfflineEdition[];
   t: Translator;
 }) {
   const maxChapter = book.chapters;
@@ -1580,9 +1584,14 @@ function MobileToolbar({
   const otBooks = booksData.filter((b) => b.testament === 'OT');
   const ntBooks = booksData.filter((b) => b.testament === 'NT');
   // Utgavebryterne — samme kapittel, annen utgave. Hoistet ut av JSX-en fordi
-  // `rel` avhenger av om stien endte opp med en query (#60, relFor).
-  const toolsOsnb = `/${bookSlug}/${chapter}${buildQuery('osnb', mapping, secondary, defaultBible)}`;
-  const toolsOsnn = `/${bookSlug}/${chapter}${buildQuery('osnn', mapping, secondary, defaultBible)}`;
+  // `rel` avhenger av om stien endte opp med en query (#60, relFor). Utgavene
+  // er de lesbare i basen, språkets egne først (offlineEditions, #136): de var
+  // hardkodet til OSNB/OSNN, så en leser på /en/ eller /es/ nådde verken
+  // sin egen eller de høstede utgavene herfra (#202).
+  const editionLinks = editions.map((e) => ({
+    ...e,
+    href: `/${bookSlug}/${chapter}${buildQuery(e.id, mapping, secondary, defaultBible)}`,
+  }));
   const contribHref = contribChapterHref(bookSlug, chapter);
 
   return (
@@ -1688,20 +1697,15 @@ function MobileToolbar({
           <div class="tools-section">
             <span class="tools-section-title">{t('rd.translation')}</span>
             <div class="tools-bibles">
-              <a
-                href={lhref(toolsOsnb)}
-                rel={relFor(toolsOsnb)}
-                class={`tools-bible-button ${bible === 'osnb' ? 'is-active' : ''}`}
-              >
-                <span data-proper-names>OSNB (bokmål)</span>
-              </a>
-              <a
-                href={lhref(toolsOsnn)}
-                rel={relFor(toolsOsnn)}
-                class={`tools-bible-button ${bible === 'osnn' ? 'is-active' : ''}`}
-              >
-                <span data-proper-names>OSNN (nynorsk)</span>
-              </a>
+              {editionLinks.map((e) => (
+                <a
+                  href={lhref(e.href)}
+                  rel={relFor(e.href)}
+                  class={`tools-bible-button ${bible === e.id ? 'is-active' : ''}`}
+                >
+                  <span data-proper-names>{e.label}</span>
+                </a>
+              ))}
             </div>
           </div>
           <div class="tools-section">
@@ -1713,12 +1717,11 @@ function MobileToolbar({
               <option value="original" selected={secondary === 'original'}>
                 {t('u.originalText')}
               </option>
-              <option value="osnb" selected={secondary === 'osnb'}>
-                OSNB (bokmål)
-              </option>
-              <option value="osnn" selected={secondary === 'osnn'}>
-                OSNN (nynorsk)
-              </option>
+              {editions.filter((e) => e.id !== bible).map((e) => (
+                <option value={e.id} selected={secondary === e.id}>
+                  {e.label}
+                </option>
+              ))}
             </select>
           </div>
           {mappings.length > 0 && (
@@ -1801,7 +1804,10 @@ r.get('/:book/:chapter', async (c) => {
   // one does not have. The choice is the default, so it is kept out of the
   // URLs like the language's default is.
   const chosen = currentChosenEdition();
-  const languageCandidates = await readableBibleCandidates(contentLang);
+  const [languageCandidates, toolEditions] = await Promise.all([
+    readableBibleCandidates(contentLang),
+    offlineEditions(contentLang),
+  ]);
   const candidates: BibleCandidate[] = chosen
     ? [
         { id: chosen, lang: (await getBibleEditionById(chosen))?.lang_iso639_1 ?? contentLang },
@@ -1825,7 +1831,8 @@ r.get('/:book/:chapter', async (c) => {
   const canonicalSlug = toUrlSlug(book.short_name);
   const ssrCandidates: BibleCandidate[] =
     userBible ? [{ id: 'osnb', lang: 'nb' }]
-    : explicitBible ? [{ id: explicitBible, lang: contentLang }]
+    : explicitBible
+      ? [{ id: explicitBible, lang: (await getBibleEditionById(explicitBible))?.lang_iso639_1 ?? contentLang }]
     : candidates;
   const { data, bible: served } = await loadChapterWithFallback(
     book.id, chapter, ssrCandidates, mapping, secondary, contentLang,
@@ -2111,6 +2118,7 @@ r.get('/:book/:chapter', async (c) => {
           bible={bible}
           secondary={secondary}
           defaultBible={localeDefault.id}
+          editions={toolEditions}
         />
       </div>
     </Layout>,

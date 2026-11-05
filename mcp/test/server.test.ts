@@ -92,7 +92,9 @@ test('list_editions gives each edition its credit, never the internal note', asy
 
 test('the language picks the edition when none is named', async () => {
   expect((await call('get_passage', { reference: 'John 3:16', language: 'nb' })).text).toContain('**osnb**');
-  expect((await call('get_passage', { reference: 'John 3:16', language: 'de' })).text).toContain('**osen**');
+  // German has an edition of its own now (#170), and Spanish gets our own oses before rv_1909.
+  expect((await call('get_passage', { reference: 'John 3:16', language: 'de' })).text).toContain('**luther_1912**');
+  expect((await call('get_passage', { reference: 'John 3:16', language: 'es' })).text).toContain('**oses**');
 });
 
 test(`a passage stops at ${MAX_VERSES} verses and says so`, async () => {
