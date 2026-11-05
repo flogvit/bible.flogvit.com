@@ -8,7 +8,7 @@ import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import { z } from 'zod';
 import { getBibleEditionById, getVerses, normalizeBibleId, type BibleEditionLicense, type LicenceCredit, type ProphecyReference, type Verse } from '../../src/lib/bible.ts';
 import { bookName, getBookInfoById as bookById, type BookInfo } from '../../src/lib/books-data.ts';
-import { IMPORTED_BIBLES } from '../../src/lib/editions.ts';
+import { IMPORTED_BIBLES, READABLE_BIBLES, editionList } from '../../src/lib/editions.ts';
 import { LOCALES } from '../../src/lib/i18n.ts';
 import { listMappingIds, MAPPING_META, mapChapter, osnbToMapping, resolveMappingId } from '../../src/lib/verse-mapper.ts';
 import { pageUrl } from './links.ts';
@@ -17,7 +17,7 @@ import { chaptersOf, contains, parseReferences, type Passage } from './reference
 /** Most verses one call returns per edition. Psalm 119 (176) fits. */
 export const MAX_VERSES = 200;
 
-export const READABLE = ['osnb', 'osnn', 'osen'] as const;
+export const READABLE = READABLE_BIBLES;
 
 export const language = z
   .enum(LOCALES)
@@ -172,7 +172,7 @@ export const quoteEdition = z
   .enum(IMPORTED_BIBLES)
   .optional()
   .describe(
-    'Edition to quote the verses from: osnb (Norwegian Bokmål), osnn (Norwegian Nynorsk), osen (English), sblgnt (Greek New Testament) or tanach (Hebrew Old Testament). Default: the edition for `language`.',
+    `Edition to quote the verses from: ${editionList(IMPORTED_BIBLES)}. Default: the edition for \`language\`.`,
   );
 
 /**

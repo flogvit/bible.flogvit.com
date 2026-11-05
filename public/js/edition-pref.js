@@ -14,7 +14,7 @@ import { readJSON, writeJSON } from './store.js';
 
 export const EDITION_PREF = 'bible.edition';
 const SETTINGS = 'bible-settings';
-const SERVED = /^[a-z0-9]{2,16}$/;
+const SERVED = /^[a-z0-9_]{2,16}$/;
 
 /** The chosen edition: the cookie first, then this browser's settings. '' = none. */
 export function chosenEdition() {

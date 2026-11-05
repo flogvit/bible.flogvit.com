@@ -46,7 +46,7 @@ import {
   type ThemeData,
 } from '../../src/lib/bible.ts';
 import { bookName, getBookInfoById as bookById } from '../../src/lib/books-data.ts';
-import { IMPORTED_BIBLES } from '../../src/lib/editions.ts';
+import { IMPORTED_BIBLES, editionList, editionsByKind } from '../../src/lib/editions.ts';
 import { getAvailableMappings } from '../../src/lib/verse-mapper.ts';
 import { findReferences } from './find-references.ts';
 import { chapterUrl, pageUrl } from './links.ts';
@@ -123,7 +123,7 @@ export function registerTools(server: McpServer): void {
     {
       title: 'List Bible editions',
       description:
-        'The Bible editions available, with language and licence. OSNB (Norwegian Bokmål), OSNN (Norwegian Nynorsk) and OSEN (English) are open translations made by the free-bible project directly from the Hebrew and Greek; SBLGNT (Greek New Testament) and Tanach (Hebrew Old Testament, Leningrad Codex) are the source texts.',
+        `The Bible editions available, with language and licence: ${editionsByKind()}`,
       inputSchema: {},
       annotations: READ_ONLY,
     },
@@ -193,7 +193,7 @@ export function registerTools(server: McpServer): void {
           .max(5)
           .optional()
           .describe(
-            'Editions to show side by side, 1-5 of: osnb (Norwegian Bokmål), osnn (Norwegian Nynorsk), osen (English), sblgnt (Greek New Testament), tanach (Hebrew Old Testament). Default: the edition for `language`.',
+            `Editions to show side by side, 1-5 of: ${editionList(IMPORTED_BIBLES)}. Default: the edition for \`language\`.`,
           ),
         include_notes: z
           .boolean()
@@ -251,13 +251,13 @@ export function registerTools(server: McpServer): void {
     {
       title: 'Search the Bible text',
       description:
-        'Finds verses containing ALL the given words in one edition. Words match as substrings, so a stem finds its forms ("forgiv" finds forgive, forgiven, forgiveness). Put a phrase in double quotes to match it exactly. Search the edition in the language of the words: osen for English, osnb/osnn for Norwegian, sblgnt/tanach for Greek/Hebrew spellings.',
+        'Finds verses containing ALL the given words in one edition. Words match as substrings, so a stem finds its forms ("forgiv" finds forgive, forgiven, forgiveness). Put a phrase in double quotes to match it exactly. Search an edition in the language of the words, e.g. osen or kjv for English, osnb/osnn for Norwegian, sblgnt/tanach for Greek/Hebrew spellings.',
       inputSchema: {
         query: z.string().min(2).describe('Words to find, e.g. `forgiv sins` or `"love one another"`.'),
         edition: z
           .enum(IMPORTED_BIBLES)
           .default('osen')
-          .describe('Edition to search, in the language of the words: osen (English), osnb (Norwegian Bokmål), osnn (Norwegian Nynorsk), sblgnt (Greek), tanach (Hebrew). Default: osen.'),
+          .describe(`Edition to search, in the language of the words: ${editionList(IMPORTED_BIBLES)}. Default: osen.`),
         book: z.string().optional().describe('Limit to one book, by name or abbreviation in any language, e.g. "John", "Joh" or "Sal". Default: the whole Bible.'),
         testament: z.enum(['OT', 'NT']).optional().describe('Limit to the Old (OT) or New (NT) Testament. Ignored when book is given. Default: both.'),
         limit,
@@ -358,7 +358,7 @@ export function registerTools(server: McpServer): void {
         edition: z
           .enum(READABLE)
           .default('osen')
-          .describe('Translation to show next to the source text: osen (English), osnb (Norwegian Bokmål), osnn (Norwegian Nynorsk). Default: osen.'),
+          .describe(`Translation to show next to the source text: ${editionList(READABLE)}. Default: osen.`),
         limit,
         offset,
         mapping: labelMapping,
@@ -665,7 +665,7 @@ export function registerTools(server: McpServer): void {
         edition: z
           .enum(READABLE)
           .optional()
-          .describe('Edition to quote the verse from: osen (English), osnb (Norwegian Bokmål), osnn (Norwegian Nynorsk). Default: the edition for `language`.'),
+          .describe(`Edition to quote the verse from: ${editionList(READABLE)}. Default: the edition for \`language\`.`),
         mapping: labelMapping,
       },
       annotations: READ_ONLY,
