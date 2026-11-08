@@ -446,7 +446,8 @@ async function importRenumbered(bible: string, biblePath: string): Promise<void>
     INLINE_NOTES.push(...noted.map((r) => `${bible} ${r}`));
     return;
   }
-  const { verses, merged, split } = toOsnbNumbering(raw, mapping, osnb);
+  const { verses, merged, split, placeholders } = toOsnbNumbering(raw, mapping, osnb);
+  if (placeholders.length) console.log(`  ${bible}: plassholdere fra kilden utelatt: ${placeholders.join(', ')}`);
   const outside = verses.filter((v) => v.verse < 1 || v.verse > (getChapterVerseCount(v.book, v.chapter) ?? 0));
   console.log(
     `  ${bible}: ${raw.length} vers → ${verses.length} osnb-vers` +

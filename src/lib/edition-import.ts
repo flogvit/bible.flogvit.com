@@ -117,6 +117,27 @@ export function versesWithInlineNotes(verses: RawVerse[]): string[] {
   return verses.filter((v) => INLINE_NOTE.test(v.text)).map((v) => `${v.bookId}:${v.chapterId}:${v.verseId}`);
 }
 
+/**
+ * Another numbering printed inside the text (#216). The Vietnamese Cadman
+ * Bible marks where the Hebrew or its own printed numbering starts a verse:
+ * «(40:20) Ngươi có thể câu sấu…» at the KJV's Job 41:1, or «… (9:51) Các
+ * ngươi phải…» in the middle of Mark 9:50. The KVN mapping already carries
+ * that numbering; in the text it is noise in front of the reader.
+ */
+export const VERSE_NUMBER_MARK = /\s*\(\d{1,3}[:.]\d{1,3}\)\s*/g;
+
+/**
+ * A placeholder the source wrote where it had no text (#216): bungo's Exodus
+ * 7:24 is «*** POSSIBLE ERROR IN BIBLE, TEXT MISSING HERE ***». Such a verse is
+ * left out, so the reader sees an empty verse rather than the message.
+ */
+export const SOURCE_PLACEHOLDER = /\*\*\*.*\*\*\*|POSSIBLE ERROR IN BIBLE|TEXT MISSING HERE/i;
+
+/** The verse text a reader is shown: other numberings out, spaces tidied. */
+export function readerText(text: string): string {
+  return text.replace(VERSE_NUMBER_MARK, ' ').replace(/\s{2,}/g, ' ').trim();
+}
+
 /** A verse at its osnb address, ready for the `verses` table. */
 export interface OsnbVerse {
   book: number;
@@ -133,6 +154,8 @@ export interface Renumbered {
   merged: number;
   /** verses of the translation split over more than one osnb verse. */
   split: number;
+  /** the translation's own addresses (`book:chapter:verse`) whose text was a source placeholder, left out. */
+  placeholders: string[];
 }
 
 /**
@@ -183,16 +206,22 @@ export function toOsnbNumbering(raw: RawVerse[], source: UkvnMappingFile, osnb: 
   };
 
   let split = 0;
+  const placeholders: string[] = [];
   raw.forEach((v) => {
+    if (SOURCE_PLACEHOLDER.test(v.text)) {
+      placeholders.push(`${v.bookId}:${v.chapterId}:${v.verseId}`);
+      return;
+    }
+    const text = readerText(v.text);
     // The translation's own address is the order its pieces are joined in.
     const order = ukvnEncode(v.bookId, v.chapterId, v.verseId);
     const kvn = sourceKvn(order);
     const parts = kvn % UKVN_PART_SIZE === 0 ? osnbParts(kvn) : [];
     if (parts.length > 1) {
       split++;
-      parts.forEach((t, i) => add(t, order, sliceVersePart(v.text, i + 1, parts.length), v));
+      parts.forEach((t, i) => add(t, order, sliceVersePart(text, i + 1, parts.length), v));
     } else {
-      add(osnbTkvn(kvn), order, v.text, v);
+      add(osnbTkvn(kvn), order, text, v);
     }
   });
 
@@ -216,5 +245,5 @@ export function toOsnbNumbering(raw: RawVerse[], source: UkvnMappingFile, osnb: 
     });
   }
   verses.sort((a, b) => a.book - b.book || a.chapter - b.chapter || a.verse - b.verse);
-  return { verses, merged, split };
+  return { verses, merged, split, placeholders };
 }

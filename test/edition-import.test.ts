@@ -13,11 +13,11 @@ import * as path from 'path';
 import { DB_TEST_TIMEOUT_MS } from './db-timeout.ts';
 import { FREE_BIBLE_DIR } from '../scripts/kvn-staging.ts';
 import { IMPORTED_BIBLES, OWN_EDITIONS } from '../src/lib/editions.ts';
-import { checkEdition, editionGate, toOsnbNumbering } from '../src/lib/edition-import.ts';
+import { checkEdition, editionGate, readerText, toOsnbNumbering } from '../src/lib/edition-import.ts';
 import type { RawVerse } from '../src/lib/edition-import.ts';
 import { loadRawMappingUncached } from '../src/lib/verse-mapper.ts';
 import { getSql } from '../src/lib/db.ts';
-import { readableBibleCandidates } from '../src/lib/bible.ts';
+import { editionLangTag, readableBibleCandidates } from '../src/lib/bible.ts';
 import { createApp } from '../src/app.ts';
 
 setDefaultTimeout(DB_TEST_TIMEOUT_MS);
@@ -95,6 +95,37 @@ describe('the renumbering', () => {
     expect(new Set(verses.map((v) => `${v.book}:${v.chapter}:${v.verse}`)).size).toBe(verses.length);
   });
 
+  // #216: what the source wrote that is not the translation's text.
+  test("another numbering inside the text is taken out (cadman's «(40:20)»)", () => {
+    const id = { ...osnb, map: [] };
+    const out = toOsnbNumbering(
+      [
+        { bookId: 18, chapterId: 41, verseId: 1, text: '(40:20) Ngươi có thể câu sấu với lưỡi câu' },
+        { bookId: 41, chapterId: 9, verseId: 50, text: 'Muối là vật tốt? (9:51) Các ngươi phải có muối' },
+      ],
+      { ...kjv, map: [] },
+      id,
+    );
+    expect(out.verses.map((v) => v.text)).toEqual([
+      'Ngươi có thể câu sấu với lưỡi câu',
+      'Muối là vật tốt? Các ngươi phải có muối',
+    ]);
+    expect(readerText('Paul, an apostle, (not of men,) to you')).toBe('Paul, an apostle, (not of men,) to you');
+  });
+
+  test("a source's placeholder is left out and reported, not shown (bungo Exodus 7:24)", () => {
+    const out = toOsnbNumbering(
+      [
+        { bookId: 2, chapterId: 7, verseId: 23, text: 'ファラオ身をめぐらして' },
+        { bookId: 2, chapterId: 7, verseId: 24, text: '*** POSSIBLE ERROR IN BIBLE, TEXT MISSING HERE ***' },
+      ],
+      { ...kjv, map: [] },
+      { ...osnb, map: [] },
+    );
+    expect(out.verses.map((v) => v.verse)).toEqual([23]);
+    expect(out.placeholders).toEqual(['2:7:24']);
+  });
+
   test('verses that land on one osnb verse are joined in their own order', () => {
     // A synthetic mapping: the translation's 1:1:1 and 1:1:2 are parts 1 and 2 of osmain 1:1:1.
     const enc = (b: number, c: number, v: number, p = 0) => ((b * 151 + c) * 177 + v) * 16 + p;
@@ -112,8 +143,18 @@ describe('the renumbering', () => {
       id,
     );
     expect(out.verses).toEqual([{ book: 1, chapter: 1, verse: 1, text: 'first second', versions: null, footnotes: null }]);
+    expect(out.placeholders).toEqual([]);
     expect(out.merged).toBe(1);
   });
+});
+
+// #216: the same character is drawn differently in simplified and traditional
+// fonts; `zh` alone lets the browser use simplified forms for both.
+test("a Chinese edition's text carries its script in `lang`", () => {
+  expect(editionLangTag({ lang_iso639_1: 'zh', script: 'Hant' })).toBe('zh-Hant');
+  expect(editionLangTag({ lang_iso639_1: 'zh', script: 'Hans' })).toBe('zh-Hans');
+  expect(editionLangTag({ lang_iso639_1: 'ja', script: 'Jpan' })).toBe('ja');
+  expect(editionLangTag({ lang_iso639_1: 'en', script: 'Latn' })).toBe('en');
 });
 
 describe('our own editions come first for their language', () => {
