@@ -112,9 +112,15 @@ export function checkEdition(
 export const INLINE_NOTE =
   /\[\s*\*?\s*(?:Footnote|Fotnote|Nota|Note)\s*:|\[\*|\[\^[\w-]+\]|<fn>|(?:^|\n\n)\s*\*\S|\*[ \t]+\*\S/i;
 
-/** The verses whose text carries a note, as `book:chapter:verse`. */
+/**
+ * The verses whose text carries a note, as `book:chapter:verse`. A source
+ * placeholder is not a note: it is left out at renumbering (#216), and its
+ * asterisks must not refuse the whole edition here.
+ */
 export function versesWithInlineNotes(verses: RawVerse[]): string[] {
-  return verses.filter((v) => INLINE_NOTE.test(v.text)).map((v) => `${v.bookId}:${v.chapterId}:${v.verseId}`);
+  return verses
+    .filter((v) => !SOURCE_PLACEHOLDER.test(v.text) && INLINE_NOTE.test(v.text))
+    .map((v) => `${v.bookId}:${v.chapterId}:${v.verseId}`);
 }
 
 /**

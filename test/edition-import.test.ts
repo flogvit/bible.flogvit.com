@@ -13,7 +13,7 @@ import * as path from 'path';
 import { DB_TEST_TIMEOUT_MS } from './db-timeout.ts';
 import { FREE_BIBLE_DIR } from '../scripts/kvn-staging.ts';
 import { IMPORTED_BIBLES, OWN_EDITIONS } from '../src/lib/editions.ts';
-import { checkEdition, editionGate, readerText, toOsnbNumbering } from '../src/lib/edition-import.ts';
+import { checkEdition, editionGate, readerText, toOsnbNumbering, versesWithInlineNotes } from '../src/lib/edition-import.ts';
 import type { RawVerse } from '../src/lib/edition-import.ts';
 import { loadRawMappingUncached } from '../src/lib/verse-mapper.ts';
 import { getSql } from '../src/lib/db.ts';
@@ -124,6 +124,14 @@ describe('the renumbering', () => {
     );
     expect(out.verses.map((v) => v.verse)).toEqual([23]);
     expect(out.placeholders).toEqual(['2:7:24']);
+  });
+
+  test("a placeholder does not count as a translator's note, so it cannot refuse the edition (#207)", () => {
+    const raw = [
+      { bookId: 2, chapterId: 7, verseId: 24, text: '*** POSSIBLE ERROR IN BIBLE, TEXT MISSING HERE ***' },
+      { bookId: 2, chapterId: 7, verseId: 25, text: 'Text [Footnote: a note] more' },
+    ];
+    expect(versesWithInlineNotes(raw)).toEqual(['2:7:25']);
   });
 
   test('footnote asterisks inside real text are not a placeholder (dnb30 Dan 11:17)', () => {
