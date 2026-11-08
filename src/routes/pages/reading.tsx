@@ -54,7 +54,7 @@ import {
   offlineEditions,
   type OfflineEdition,
   defaultBibleForLanguage,
-  getBibleEditionById,
+  editionLang,
 } from '../../lib/bible.ts';
 import { currentChosenEdition } from '../../lib/edition-choice.ts';
 import type {
@@ -1810,7 +1810,7 @@ r.get('/:book/:chapter', async (c) => {
   ]);
   const candidates: BibleCandidate[] = chosen
     ? [
-        { id: chosen, lang: (await getBibleEditionById(chosen))?.lang_iso639_1 ?? contentLang },
+        { id: chosen, lang: (await editionLang(chosen)) ?? contentLang },
         ...languageCandidates.filter((x) => x.id !== chosen),
       ]
     : languageCandidates;
@@ -1832,7 +1832,7 @@ r.get('/:book/:chapter', async (c) => {
   const ssrCandidates: BibleCandidate[] =
     userBible ? [{ id: 'osnb', lang: 'nb' }]
     : explicitBible
-      ? [{ id: explicitBible, lang: (await getBibleEditionById(explicitBible))?.lang_iso639_1 ?? contentLang }]
+      ? [{ id: explicitBible, lang: (await editionLang(explicitBible)) ?? contentLang }]
     : candidates;
   const { data, bible: served } = await loadChapterWithFallback(
     book.id, chapter, ssrCandidates, mapping, secondary, contentLang,
