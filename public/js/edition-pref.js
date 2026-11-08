@@ -14,7 +14,8 @@ import { readJSON, writeJSON } from './store.js';
 
 export const EDITION_PREF = 'bible.edition';
 const SETTINGS = 'bible-settings';
-const SERVED = /^[a-z0-9_]{2,16}$/;
+// The ids konto keeps (`[a-z0-9_]{2,32}`, portal/PREFS.md); free-bible's run to 26 (#218).
+const SERVED = /^[a-z0-9_]{2,32}$/;
 
 /** The chosen edition: the cookie first, then this browser's settings. '' = none. */
 export function chosenEdition() {
