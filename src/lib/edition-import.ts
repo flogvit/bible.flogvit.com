@@ -112,9 +112,66 @@ export function checkEdition(
 export const INLINE_NOTE =
   /\[\s*\*?\s*(?:Footnote|Fotnote|Nota|Note)\s*:|\[\*|\[\^[\w-]+\]|<fn>|(?:^|\n\n)\s*\*\S|\*[ \t]+\*\S/i;
 
-/** The verses whose text carries a note, as `book:chapter:verse`. */
+/**
+ * The verses whose text carries a note, as `book:chapter:verse`. A source
+ * placeholder is not a note: it is left out at renumbering (#216), and its
+ * asterisks must not refuse the whole edition here.
+ */
 export function versesWithInlineNotes(verses: RawVerse[]): string[] {
-  return verses.filter((v) => INLINE_NOTE.test(v.text)).map((v) => `${v.bookId}:${v.chapterId}:${v.verseId}`);
+  return verses
+    .filter((v) => !SOURCE_PLACEHOLDER.test(v.text) && INLINE_NOTE.test(v.text))
+    .map((v) => `${v.bookId}:${v.chapterId}:${v.verseId}`);
+}
+
+/**
+ * Another numbering printed inside the text (#216). The Vietnamese Cadman
+ * Bible marks where the Hebrew or its own printed numbering starts a verse:
+ * «(40:20) Ngươi có thể câu sấu…» at the KJV's Job 41:1, or «… (9:51) Các
+ * ngươi phải…» in the middle of Mark 9:50. The KVN mapping already carries
+ * that numbering; in the text it is noise in front of the reader.
+ */
+export const VERSE_NUMBER_MARK = /\s*\(\d{1,3}[:.]\d{1,3}\)\s*/g;
+
+/**
+ * A placeholder the source wrote where it had no text (#216): bungo's Exodus
+ * 7:24 is «*** POSSIBLE ERROR IN BIBLE, TEXT MISSING HERE ***». Such a verse is
+ * left out, so the reader sees an empty verse rather than the message. Only a
+ * verse that IS the message counts: dnb30 marks footnotes with *, ** and ***
+ * inside real text (Dan 11:17 «…sin egen datter***»), and that text stays.
+ */
+export const SOURCE_PLACEHOLDER = /^\s*\*{3}[^*]*(?:POSSIBLE ERROR|TEXT MISSING)[^*]*\*{3}\s*$/i;
+
+/** Han characters and the CJK punctuation and full-width forms around them. */
+const CJK = '\\p{Script=Han}\\u3000-\\u303f\\uff00-\\uffef';
+const CJK_SPACE = new RegExp(`([${CJK}]) +(?=[${CJK}])`, 'gu');
+
+/**
+ * Chinese printed one character at a time (#216): the Chinese Union Version
+ * came with a space after every character, «神 爱 世 人», which reads as
+ * broken text. Only a verse spaced like that throughout is closed up — the
+ * Bungo-yaku's spaces between phrases are the edition's own and stay. The
+ * ideographic space before 神 (U+3000, a mark of respect) is a character, not
+ * a gap, and stays too.
+ */
+function closeSpacedCjk(text: string): string {
+  const han = text.match(/\p{Script=Han}/gu)?.length ?? 0;
+  if (han < 4) return text;
+  const gaps = text.match(CJK_SPACE)?.length ?? 0;
+  return gaps >= han * 0.6 ? text.replace(CJK_SPACE, '$1') : text;
+}
+
+/**
+ * Raise when readerText(), SOURCE_PLACEHOLDER or the renumbering changes what
+ * is stored: the import's content hash carries it, so every harvested edition
+ * is imported again with the new rules instead of keeping the old text until
+ * its source changes.
+ */
+export const READER_TEXT_RULES = 1;
+
+/** The verse text a reader is shown: other numberings out, spaced Chinese closed up, spaces tidied. */
+export function readerText(text: string): string {
+  // [ \t\n], not \s: \s takes the ideographic space (U+3000) too.
+  return closeSpacedCjk(text.replace(VERSE_NUMBER_MARK, ' ').replace(/[ \t\n]{2,}/g, ' ').trim());
 }
 
 /** A verse at its osnb address, ready for the `verses` table. */
@@ -133,6 +190,8 @@ export interface Renumbered {
   merged: number;
   /** verses of the translation split over more than one osnb verse. */
   split: number;
+  /** the translation's own addresses (`book:chapter:verse`) whose text was a source placeholder, left out. */
+  placeholders: string[];
 }
 
 /**
@@ -183,16 +242,22 @@ export function toOsnbNumbering(raw: RawVerse[], source: UkvnMappingFile, osnb: 
   };
 
   let split = 0;
+  const placeholders: string[] = [];
   raw.forEach((v) => {
+    if (SOURCE_PLACEHOLDER.test(v.text)) {
+      placeholders.push(`${v.bookId}:${v.chapterId}:${v.verseId}`);
+      return;
+    }
+    const text = readerText(v.text);
     // The translation's own address is the order its pieces are joined in.
     const order = ukvnEncode(v.bookId, v.chapterId, v.verseId);
     const kvn = sourceKvn(order);
     const parts = kvn % UKVN_PART_SIZE === 0 ? osnbParts(kvn) : [];
     if (parts.length > 1) {
       split++;
-      parts.forEach((t, i) => add(t, order, sliceVersePart(v.text, i + 1, parts.length), v));
+      parts.forEach((t, i) => add(t, order, sliceVersePart(text, i + 1, parts.length), v));
     } else {
-      add(osnbTkvn(kvn), order, v.text, v);
+      add(osnbTkvn(kvn), order, text, v);
     }
   });
 
@@ -216,5 +281,5 @@ export function toOsnbNumbering(raw: RawVerse[], source: UkvnMappingFile, osnb: 
     });
   }
   verses.sort((a, b) => a.book - b.book || a.chapter - b.chapter || a.verse - b.verse);
-  return { verses, merged, split };
+  return { verses, merged, split, placeholders };
 }

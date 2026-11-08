@@ -14,7 +14,7 @@
 import { describe, expect, setDefaultTimeout, test } from 'bun:test';
 import { DB_TEST_TIMEOUT_MS } from './db-timeout.ts';
 import { createApp } from '../src/app.ts';
-import { getBibleEditions } from '../src/lib/bible.ts';
+import { editionLangTag, getBibleEditions } from '../src/lib/bible.ts';
 
 setDefaultTimeout(DB_TEST_TIMEOUT_MS);
 
@@ -51,7 +51,8 @@ describe('the edition picker on the chapter page', () => {
       const other = e.lang_iso639_1 === 'es' ? 'en' : 'es';
       const page = await html(`/${other}/joh/3?bible=${e.id}`);
       const verse = page.slice(page.indexOf('id="v16"'), page.indexOf('id="v17"'));
-      expect(verse, `${e.id} on /${other}/`).toContain(`lang="${e.lang_iso639_1}"`);
+      // Chinese carries its script (zh-Hans / zh-Hant, #216); editionLangTag() is the rule.
+      expect(verse, `${e.id} on /${other}/`).toContain(`lang="${editionLangTag(e)}"`);
     }
   });
 });

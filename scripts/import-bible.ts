@@ -37,7 +37,7 @@ import { syncPersonRefBooks, refBooksSyncIsEmpty, formatRefBooksSync } from '../
 import { CONTENT_TABLES, CONTENT_SOURCES, contentSourceReport } from '../src/lib/content-sources.ts';
 import { parseReadingRefMarkup, unknownMappingSystem } from '../src/lib/reading-ref.ts';
 import { IMPORTED_BIBLES, OSNB_NUMBERED } from '../src/lib/editions.ts';
-import { checkEdition, toOsnbNumbering, versesWithInlineNotes } from '../src/lib/edition-import.ts';
+import { checkEdition, READER_TEXT_RULES, toOsnbNumbering, versesWithInlineNotes } from '../src/lib/edition-import.ts';
 import type { RawVerse } from '../src/lib/edition-import.ts';
 import { loadRawMappingUncached } from '../src/lib/verse-mapper.ts';
 
@@ -436,7 +436,7 @@ async function importRenumbered(bible: string, biblePath: string): Promise<void>
   const contents = files.map((f) => fs.readFileSync(f, 'utf-8'));
   const mapping = loadRawMappingUncached(bible);
   const osnb = loadRawMappingUncached('osnb');
-  const contentHash = computeHash(contents.join('\n') + JSON.stringify(mapping.map) + JSON.stringify(osnb.map));
+  const contentHash = computeHash(contents.join('\n') + JSON.stringify(mapping.map) + JSON.stringify(osnb.map) + `rules:${READER_TEXT_RULES}`);
   if (unchanged(stats.chapters, 'chapter', `${bible}-all`, contentHash)) return;
 
   const raw = contents.flatMap((c) => JSON.parse(c) as RawVerse[]);
@@ -446,7 +446,8 @@ async function importRenumbered(bible: string, biblePath: string): Promise<void>
     INLINE_NOTES.push(...noted.map((r) => `${bible} ${r}`));
     return;
   }
-  const { verses, merged, split } = toOsnbNumbering(raw, mapping, osnb);
+  const { verses, merged, split, placeholders } = toOsnbNumbering(raw, mapping, osnb);
+  if (placeholders.length) console.log(`  ${bible}: plassholdere fra kilden utelatt: ${placeholders.join(', ')}`);
   const outside = verses.filter((v) => v.verse < 1 || v.verse > (getChapterVerseCount(v.book, v.chapter) ?? 0));
   console.log(
     `  ${bible}: ${raw.length} vers → ${verses.length} osnb-vers` +

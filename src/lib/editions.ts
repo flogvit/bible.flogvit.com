@@ -15,6 +15,8 @@ export const IMPORTED_BIBLES = [
   'osnb', 'osnn', 'osen', 'oses', 'sblgnt', 'tanach',
   // #170, first group: licence confirmed (#199), KVN verified against the text (#201).
   'kjv', 'web', 'bsb', 'asv', 'luther_1912', 'segond_1910', 'rv_1909',
+  // #170, second group (#216): the same two answers from free-bible.
+  'akjv', 'albanian', 'bungo', 'cadman', 'chinese_union_simp', 'chinese_union_trad',
 ] as const;
 
 // De som alt er nummerert som osnb, og lagres som de er. Alle andre flyttes til
@@ -51,6 +53,12 @@ export const EDITION_LABELS: Record<ImportedBible, string> = {
   luther_1912: 'Luther 1912, German',
   segond_1910: 'Louis Segond 1910, French',
   rv_1909: 'Reina-Valera 1909, Spanish',
+  akjv: 'American King James Version, English',
+  albanian: 'Albanian Bible',
+  bungo: 'Bungo-yaku, classical Japanese',
+  cadman: 'Cadman 1926, Vietnamese',
+  chinese_union_simp: 'Chinese Union Version, simplified',
+  chinese_union_trad: 'Chinese Union Version, traditional',
 };
 
 /** "osnb (Norwegian Bokmål), osnn (Norwegian Nynorsk), …" for the given editions. */

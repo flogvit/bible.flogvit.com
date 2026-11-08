@@ -2328,6 +2328,24 @@ export async function offlineEditions(lang = currentContentLanguage()): Promise<
   return result;
 }
 
+/**
+ * The `lang` an edition's text carries (3.1.2, #163). Chinese gets its script
+ * (#216): the same character is drawn differently in simplified and
+ * traditional fonts, and `zh` alone lets the browser pick the simplified forms
+ * for the Chinese Union Version in traditional characters too.
+ */
+export function editionLangTag(edition: Pick<BibleEdition, 'lang_iso639_1' | 'script'>): string | null {
+  const lang = edition.lang_iso639_1;
+  if (lang === 'zh' && (edition.script === 'Hans' || edition.script === 'Hant')) return `zh-${edition.script}`;
+  return lang;
+}
+
+/** `editionLangTag()` for an edition by id; undefined when there is none. */
+export async function editionLang(id: string): Promise<string | undefined> {
+  const edition = await getBibleEditionById(id);
+  return edition ? (editionLangTag(edition) ?? undefined) : undefined;
+}
+
 export async function getBibleEditionById(id: string): Promise<
   (BibleEdition & { meta: BibleEditionMeta; license: BibleEditionLicense | null }) | undefined
 > {

@@ -391,7 +391,7 @@ bibelteksten og studiestoffet som MCP-verktøy. Runbook og verktøyliste:
   KVN verifisert mot teksten (`textVerification`); ellers ender importen med 1.
   Teksten flyttes til osnb-numre ved import (`src/lib/edition-import.ts`). CC
   BY-kreditten står under teksten og i MCP-svaret. Vakt:
-  `test/edition-import.test.ts`.
+  `test/edition-import.test.ts`. Ny gruppe: `scripts/check-edition-landing.ts` (#216).
 - **Lesesporing (#16):** lesing er en HENDELSE (`{ firstAt, lastAt, count, opens,
   verses? }`). Kjernen er `public/js/reading-progress.js`, importert av både klient
   og server. `MERGERS` i `sync.ts` fletter kommutativt; klienten bruker samme
