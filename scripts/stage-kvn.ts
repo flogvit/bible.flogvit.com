@@ -35,6 +35,7 @@ import {
   TARGET,
   freeBibleCandidates,
   inventoryProblems,
+  sourceFingerprint,
   stagedPackageJson,
 } from './kvn-staging.ts';
 
@@ -63,46 +64,15 @@ for (const entry of STAGED) {
   }
 }
 
-/**
- * Fingeravtrykk av kilden: hver fil med størrelse og mtime.
- *
- * Kopien er 109 MB, så den skal ikke gjøres om igjen ved hver kjøring.
- * Innhold-hashing av 109 MB ville kostet mer enn kopien vi prøver å unngå;
- * størrelse + mtime er det `rsync` og `make` bruker, og er nok her.
- */
-function fingerprint(): string {
-  const rows: string[] = [];
-  const walk = (abs: string, rel: string) => {
-    for (const d of fs.readdirSync(abs, { withFileTypes: true }).sort((a, b) => (a.name < b.name ? -1 : 1))) {
-      const childAbs = path.join(abs, d.name);
-      const childRel = `${rel}/${d.name}`;
-      if (d.isDirectory()) walk(childAbs, childRel);
-      else {
-        const st = fs.statSync(childAbs);
-        rows.push(`${childRel}\t${st.size}\t${Math.floor(st.mtimeMs)}`);
-      }
-    }
-  };
-  for (const entry of STAGED) {
-    const abs = path.join(SOURCE, entry);
-    if (fs.statSync(abs).isDirectory()) walk(abs, entry);
-    else {
-      const st = fs.statSync(abs);
-      rows.push(`${entry}\t${st.size}\t${Math.floor(st.mtimeMs)}`);
-    }
-  }
-  return Bun.hash(rows.join('\n')).toString(16);
-}
-
 const wanted = [...STAGED].sort();
 // SAMME liste som `ensure-kvn.ts` reparerer etter. Hadde skriptet hatt sin egen
 // «er inventaret ok»-sjekk, kunne ensure bedt om en re-staging som stagingen så
 // hoppet over — altså en reparasjon som aldri skjer (#112).
 const inventoryOk = inventoryProblems().length === 0;
 const stamp = fs.existsSync(STAMP) ? JSON.parse(fs.readFileSync(STAMP, 'utf-8')) : null;
-const sourceFingerprint = fingerprint();
+const fingerprint = sourceFingerprint();
 
-if (!force && inventoryOk && stamp?.fingerprint === sourceFingerprint) {
+if (!force && inventoryOk && stamp?.fingerprint === fingerprint) {
   console.log(`kvn-package/ er allerede i takt med ${SOURCE}`);
   process.exit(0);
 }
@@ -135,7 +105,7 @@ const source = fs.readFileSync(pkgPath, 'utf-8');
 const staged = stagedPackageJson(source);
 if (staged !== source) fs.writeFileSync(pkgPath, staged);
 
-fs.writeFileSync(STAMP, `${JSON.stringify({ source: SOURCE, fingerprint: sourceFingerprint }, null, 2)}\n`);
+fs.writeFileSync(STAMP, `${JSON.stringify({ source: SOURCE, fingerprint }, null, 2)}\n`);
 
 console.log(`Staget kvn-package/ fra ${SOURCE}: ${wanted.join(', ')}`);
 const dropped = STRIPPED_FIELDS.filter((f) => JSON.parse(source)[f] !== undefined);
