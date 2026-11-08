@@ -29,10 +29,11 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import type { UkvnMappingFile } from '@free-bible/kvn';
-import { toOsnbNumbering } from '../src/lib/edition-import.ts';
+import { SOURCE_PLACEHOLDER, toOsnbNumbering } from '../src/lib/edition-import.ts';
 import type { RawVerse, OsnbVerse, Renumbered } from '../src/lib/edition-import.ts';
 
-export const JUNK = /\*\*\*|POSSIBLE ERROR|TEXT MISSING/i;
+/** Placeholder text that would reach the reader: the import's own rule (#216). */
+export const JUNK = SOURCE_PLACEHOLDER;
 
 /** Length that compares across scripts: letters only, no spaces or punctuation. */
 export function textLength(text: string): number {

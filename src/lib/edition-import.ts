@@ -129,9 +129,11 @@ export const VERSE_NUMBER_MARK = /\s*\(\d{1,3}[:.]\d{1,3}\)\s*/g;
 /**
  * A placeholder the source wrote where it had no text (#216): bungo's Exodus
  * 7:24 is «*** POSSIBLE ERROR IN BIBLE, TEXT MISSING HERE ***». Such a verse is
- * left out, so the reader sees an empty verse rather than the message.
+ * left out, so the reader sees an empty verse rather than the message. Only a
+ * verse that IS the message counts: dnb30 marks footnotes with *, ** and ***
+ * inside real text (Dan 11:17 «…sin egen datter***»), and that text stays.
  */
-export const SOURCE_PLACEHOLDER = /\*\*\*.*\*\*\*|POSSIBLE ERROR IN BIBLE|TEXT MISSING HERE/i;
+export const SOURCE_PLACEHOLDER = /^\s*\*{3}[^*]*(?:POSSIBLE ERROR|TEXT MISSING)[^*]*\*{3}\s*$/i;
 
 /** The verse text a reader is shown: other numberings out, spaces tidied. */
 export function readerText(text: string): string {

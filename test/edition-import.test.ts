@@ -126,6 +126,13 @@ describe('the renumbering', () => {
     expect(out.placeholders).toEqual(['2:7:24']);
   });
 
+  test('footnote asterisks inside real text are not a placeholder (dnb30 Dan 11:17)', () => {
+    const text = 'Og han* skal ta sig fore å komme med hele sitt rikes makt**, og en kvinne, sin egen datter***';
+    const out = toOsnbNumbering([{ bookId: 27, chapterId: 11, verseId: 17, text }], { ...kjv, map: [] }, { ...osnb, map: [] });
+    expect(out.placeholders).toEqual([]);
+    expect(out.verses[0]?.text).toBe(text);
+  });
+
   test('verses that land on one osnb verse are joined in their own order', () => {
     // A synthetic mapping: the translation's 1:1:1 and 1:1:2 are parts 1 and 2 of osmain 1:1:1.
     const enc = (b: number, c: number, v: number, p = 0) => ((b * 151 + c) * 177 + v) * 16 + p;
