@@ -160,6 +160,14 @@ function closeSpacedCjk(text: string): string {
   return gaps >= han * 0.6 ? text.replace(CJK_SPACE, '$1') : text;
 }
 
+/**
+ * Raise when readerText(), SOURCE_PLACEHOLDER or the renumbering changes what
+ * is stored: the import's content hash carries it, so every harvested edition
+ * is imported again with the new rules instead of keeping the old text until
+ * its source changes.
+ */
+export const READER_TEXT_RULES = 1;
+
 /** The verse text a reader is shown: other numberings out, spaced Chinese closed up, spaces tidied. */
 export function readerText(text: string): string {
   // [ \t\n], not \s: \s takes the ideographic space (U+3000) too.
