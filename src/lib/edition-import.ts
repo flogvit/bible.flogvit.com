@@ -141,9 +141,29 @@ export const VERSE_NUMBER_MARK = /\s*\(\d{1,3}[:.]\d{1,3}\)\s*/g;
  */
 export const SOURCE_PLACEHOLDER = /^\s*\*{3}[^*]*(?:POSSIBLE ERROR|TEXT MISSING)[^*]*\*{3}\s*$/i;
 
-/** The verse text a reader is shown: other numberings out, spaces tidied. */
+/** Han characters and the CJK punctuation and full-width forms around them. */
+const CJK = '\\p{Script=Han}\\u3000-\\u303f\\uff00-\\uffef';
+const CJK_SPACE = new RegExp(`([${CJK}]) +(?=[${CJK}])`, 'gu');
+
+/**
+ * Chinese printed one character at a time (#216): the Chinese Union Version
+ * came with a space after every character, «神 爱 世 人», which reads as
+ * broken text. Only a verse spaced like that throughout is closed up — the
+ * Bungo-yaku's spaces between phrases are the edition's own and stay. The
+ * ideographic space before 神 (U+3000, a mark of respect) is a character, not
+ * a gap, and stays too.
+ */
+function closeSpacedCjk(text: string): string {
+  const han = text.match(/\p{Script=Han}/gu)?.length ?? 0;
+  if (han < 4) return text;
+  const gaps = text.match(CJK_SPACE)?.length ?? 0;
+  return gaps >= han * 0.6 ? text.replace(CJK_SPACE, '$1') : text;
+}
+
+/** The verse text a reader is shown: other numberings out, spaced Chinese closed up, spaces tidied. */
 export function readerText(text: string): string {
-  return text.replace(VERSE_NUMBER_MARK, ' ').replace(/\s{2,}/g, ' ').trim();
+  // [ \t\n], not \s: \s takes the ideographic space (U+3000) too.
+  return closeSpacedCjk(text.replace(VERSE_NUMBER_MARK, ' ').replace(/[ \t\n]{2,}/g, ' ').trim());
 }
 
 /** A verse at its osnb address, ready for the `verses` table. */

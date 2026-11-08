@@ -126,6 +126,18 @@ describe('the renumbering', () => {
     expect(out.placeholders).toEqual(['2:7:24']);
   });
 
+  test('Chinese printed with a space after every character is closed up, the respect space before 神 kept', () => {
+    expect(readerText('「 神 爱 世 人 ， 甚 至 将 他 的 独 生 子 赐 给 他 们 。')).toBe('「神爱世人，甚至将他的独生子赐给他们。');
+    expect(readerText('交 与 伶 长 。 ） 　 神 啊 ， 求 你 怜 恤 我 ！')).toBe('交与伶长。）　神啊，求你怜恤我！');
+  });
+
+  test("the Bungo-yaku's spaces between phrases are its own and stay", () => {
+    const bungo = 'ヱホバよ我にあたする者のいかに蔓延れるや 我にさからひて起りたつもの多し';
+    expect(readerText(bungo)).toBe(bungo);
+    const latin = 'For God so loved the world';
+    expect(readerText(latin)).toBe(latin);
+  });
+
   test("a placeholder does not count as a translator's note, so it cannot refuse the edition (#207)", () => {
     const raw = [
       { bookId: 2, chapterId: 7, verseId: 24, text: '*** POSSIBLE ERROR IN BIBLE, TEXT MISSING HERE ***' },
