@@ -229,3 +229,32 @@ og svaret sier `Vary: Cookie`. Klienten skriver valget med `setPref`
   en kreditt for leseren. Det står på utgavesida (`/oversettelser/<id>`), som
   linja lenker til; CC BY 4.0 godtar kreditt «in any reasonable manner»,
   også en lenke dit den fulle informasjonen står.
+
+### Ny gruppe oversettelser: slik sjekkes KVN før `IMPORTED_BIBLES` (#216)
+
+Skrevet for den som tar neste gruppe i #170. Rekkefølgen:
+
+1. **Struktur** (gratis): `cd ../free-bible/kvn && bun scripts/check-mapping-coverage.ts <id>…`.
+   Det som står igjen er vers oversettelsen utelater eller slår sammen; les dem.
+2. **Gjennom importen** (gratis, ingen modell):
+   `FREE_BIBLE_DIR=<free-bible> bun scripts/check-edition-landing.ts <id>… [--ref kjv]`.
+   Hvert vers flyttes med `toOsnbNumbering` og sammenliknes kapittel for kapittel
+   med kjv. Exit 1 = noe å se på:
+   - **forskjøvet** — verslengdene følger kjv bedre ett vers over enn på plass.
+     Les kapitlet mot kjv (`peek` er ett `toOsnbNumbering`-kall per kapittel);
+     korte kapitler og overskrifter som blir i v1 gir falske alarmer (Sal 4, 146).
+   - **tomme** — osnb-vers kjv fyller, men ikke denne. Riktig når oversettelsen
+     utelater verset (Luk 17,36) eller ikke trykker salmeoverskrifter.
+   - **søppel / plassholdere** — kildens «*** … TEXT MISSING ***». Importen
+     utelater slike vers (`SOURCE_PLACEHOLDER`) og navngir dem i loggen.
+3. **Typiske rettelser** (alle i free-bible):
+   - Ingen salmeoverskrifter i v1 → v1 til SISTE del av osmain X,1 der osnb deler
+     den (akjv, albanian, bungo, cadman).
+   - Samme versstruktur som kjv i et kapittel #138 rettet → kjvs poster for det kapitlet.
+   - Kilden selv er forskjøvet → les teksten på nytt fra kilden i `license.json`
+     (albanian fra CrossWires Alb, free-bible#141). En mapping kan ikke skape tekst.
+   - Annen nummerering inne i teksten («(40:20)» i cadman) → importen stryker den
+     (`VERSE_NUMBER_MARK`); ingen dataendring.
+4. **`textVerification`** i mappinga: hva sjekken hviler på, og hva som er igjen.
+5. Legg oversettelsene i `verify-pending.txt` for modellsjekken på Home Mac
+   (`~/Library/Application Support/flogvit-kvn-verify/README.md`).
