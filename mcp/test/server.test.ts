@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { getBibleEditionById, getBibleEditions } from '../../src/lib/bible.ts';
 import { DB_TEST_TIMEOUT_MS } from '../../test/db-timeout.ts';
+import { editionsByKind } from '../../src/lib/editions.ts';
 import { closeSql } from '../../src/lib/db.ts';
 import { LOCALES } from '../../src/lib/i18n.ts';
 import { createHandler, SERVER_NAME } from '../src/server.ts';
@@ -113,6 +114,22 @@ test('list_editions names every edition, never «null»', async () => {
   const haLit = lines.find((l) => l.startsWith('- **ha_lit**'));
   expect(haLit).toContain('— Litafi Mai-tsarki, Hausa New Testament');
 });
+
+// #246: the server's instructions and list_editions' description said every
+// harvested edition is public domain. Measured against the base: once any of
+// them carries another licence, the sentence may not call them all public
+// domain, and it must send the client to list_editions for each licence.
+test("the editions sentence matches the base's licences", async () => {
+  const harvested = [];
+  for (const e of await getBibleEditions()) {
+    const full = await getBibleEditionById(e.id);
+    if (full?.license && e.philosophy !== 'source_text') harvested.push(full.license.spdx ?? full.license.license ?? '');
+  }
+  const notPublicDomain = harvested.filter((l) => !/public.?domain|^PD$|CC0/i.test(l));
+  expect(notPublicDomain.length).toBeGreaterThan(0);
+  expect(editionsByKind()).not.toMatch(/are public-domain translations/);
+  expect(editionsByKind()).toMatch(/list_editions/);
+}, DB_TEST_TIMEOUT_MS);
 
 test('the language picks the edition when none is named', async () => {
   expect((await call('get_passage', { reference: 'John 3:16', language: 'nb' })).text).toContain('**osnb**');
