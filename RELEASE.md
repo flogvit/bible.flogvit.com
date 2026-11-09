@@ -1,13 +1,15 @@
 # Release notes
 
-## 2026-11-09 — Twenty-four more Bible editions to read, including both Chinese Union versions, the 1871 Elberfelder, a Modern Hebrew edition and Japanese, French, Latvian and Spanish additions
+## 2026-11-09 — Twenty-nine more Bible editions to read, including both Chinese Union versions, the 1871 Elberfelder, a Modern Hebrew edition and a Swahili edition, plus a FLOGVIT menu sorted into categories
 
 **New features**
-- Read the Bible in twenty-four more editions: the Albanian translation, the Bungo (classical Japanese) translation, Cadman's translation, the AKJV, both Chinese Union versions, the Catholic Public Domain Version, the Darby translation, the Diodati (Italian), the Douay-Rheims, and the 1871 and 1905 Elberfelder (German). Also new are the English Revised Version, a Finnish edition, the Geneva Bible, the HCV, a Modern Hebrew edition and the JPS.
-- The latest six add more languages to read in: the Kougo (colloquial Japanese) edition, the Latvian Glück edition, the French Martin edition, the OPT, the 1858 Reina-Valera (Spanish) and the Sagradas Escrituras (Spanish).
+- Read the Bible in twenty-nine more editions: the Albanian translation, the Bungo (classical Japanese) translation, Cadman's translation, the AKJV, both Chinese Union versions, the Catholic Public Domain Version, the Darby translation, the Diodati (Italian), the Douay-Rheims, and the 1871 and 1905 Elberfelder (German). Also new are the English Revised Version, a Finnish edition, the Geneva Bible, the HCV, a Modern Hebrew edition and the JPS.
+- The next six add more languages to read in: the Kougo (colloquial Japanese) edition, the Latvian Glück edition, the French Martin edition, the OPT, the 1858 Reina-Valera (Spanish) and the Sagradas Escrituras (Spanish).
+- The latest five are the SLT, a Swahili edition, the Synodal, the Tagab and the WBT.
 - Whichever edition you pick, you can keep it on your account. Your choice follows you to your other devices, including for the new editions.
 
 **Polish**
+- The FLOGVIT menu is now sorted into categories, so it is easier to find the product you are looking for.
 - Chinese text now reads as normal running text. It no longer comes out one character at a time with gaps between them.
 - Chinese verses now carry their script (Simplified or Traditional), so your device picks the right font.
 - The Hebrew edition's name is marked as Hebrew, so it displays with the right font and reading direction in the edition picker and on the reading page.
@@ -25,6 +27,8 @@
 - The reading-fallback test now checks the Norwegian chains by their rule, so a Norwegian edition may sit before English.
 - The earlier six new editions went through the same import path, with the importer, edition-picker and reading-fallback tests extended to cover them. The source-text and memory guards now know the Modern Hebrew edition.
 - Group 5 (kougo, lv_gluck_8, martin, opt, rv_1858, sagradas) was published through the same import path, with a small importer adjustment and an extra importer test.
+- Group 6 (slt, swahili, synodal, tagab, wbt) was published through the same import path.
+- The family menu's copy and categories now follow the portal's (flogvit-com#481), with the family-menu test extended to cover them.
 ## 2026-10-30 — Songs about the text you read, and «Log in» brings you back
 
 **New features**
