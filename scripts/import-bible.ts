@@ -40,6 +40,16 @@ import { CONTENT_TABLES, CONTENT_SOURCES, contentSourceReport } from '../src/lib
 import { parseReadingRefMarkup, unknownMappingSystem } from '../src/lib/reading-ref.ts';
 import { IMPORTED_BIBLES, OSNB_NUMBERED } from '../src/lib/editions.ts';
 import { checkEdition, READER_TEXT_RULES, toOsnbNumbering, versesWithInlineNotes } from '../src/lib/edition-import.ts';
+
+// The kvn CODE that moved and sliced the text (the guard above made it the one
+// in $FREE_BIBLE_DIR). A new slicer changes stored text without a new mapping
+// (#220: Darby's braced titles), so its content is part of a harvested
+// edition's hash. The mappings are in the hash already, each by its own file.
+const KVN_SRC_HASH = (() => {
+  const dir = path.join(import.meta.dir, '..', 'node_modules', '@free-bible', 'kvn', 'src');
+  const files = fs.readdirSync(dir, { recursive: true }).map(String).filter((f) => f.endsWith('.ts')).sort();
+  return computeHash(files.map((f) => f + '\n' + fs.readFileSync(path.join(dir, f), 'utf-8')).join('\n'));
+})();
 import type { RawVerse } from '../src/lib/edition-import.ts';
 import { loadRawMappingUncached } from '../src/lib/verse-mapper.ts';
 
@@ -438,7 +448,7 @@ async function importRenumbered(bible: string, biblePath: string): Promise<void>
   const contents = files.map((f) => fs.readFileSync(f, 'utf-8'));
   const mapping = loadRawMappingUncached(bible);
   const osnb = loadRawMappingUncached('osnb');
-  const contentHash = computeHash(contents.join('\n') + JSON.stringify(mapping.map) + JSON.stringify(osnb.map) + `rules:${READER_TEXT_RULES}`);
+  const contentHash = computeHash(contents.join('\n') + JSON.stringify(mapping.map) + JSON.stringify(osnb.map) + `rules:${READER_TEXT_RULES}` + `kvn:${KVN_SRC_HASH}`);
   if (unchanged(stats.chapters, 'chapter', `${bible}-all`, contentHash)) return;
 
   const raw = contents.flatMap((c) => JSON.parse(c) as RawVerse[]);

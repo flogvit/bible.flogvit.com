@@ -17,6 +17,8 @@ export const IMPORTED_BIBLES = [
   'kjv', 'web', 'bsb', 'asv', 'luther_1912', 'segond_1910', 'rv_1909',
   // #170, second group (#216): the same two answers from free-bible.
   'akjv', 'albanian', 'bungo', 'cadman', 'chinese_union_simp', 'chinese_union_trad',
+  // #170, third group, first half (#220).
+  'cpdv', 'dbt', 'diodati', 'drb', 'elberfelder_1905',
 ] as const;
 
 // De som alt er nummerert som osnb, og lagres som de er. Alle andre flyttes til
@@ -59,6 +61,11 @@ export const EDITION_LABELS: Record<ImportedBible, string> = {
   cadman: 'Cadman 1926, Vietnamese',
   chinese_union_simp: 'Chinese Union Version, simplified',
   chinese_union_trad: 'Chinese Union Version, traditional',
+  cpdv: 'Catholic Public Domain Version, English',
+  dbt: 'Darby Translation, English',
+  diodati: 'Diodati, Italian',
+  drb: 'Douay-Rheims (Challoner), English',
+  elberfelder_1905: 'Elberfelder 1905, German',
 };
 
 /** "osnb (Norwegian Bokmål), osnn (Norwegian Nynorsk), …" for the given editions. */
