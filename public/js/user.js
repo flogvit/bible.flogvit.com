@@ -313,7 +313,7 @@ if (root) {
       // Fanges FØR løkka under, som legger egne bibler inn i samme select —
       // ellers ville de talt to ganger i synlighets-togglene.
       const fromServer = [...root.querySelectorAll('[data-setting="bible"] option')]
-        .map((o) => ({ value: o.value, label: o.textContent }))
+        .map((o) => ({ value: o.value, label: o.textContent, lang: o.lang }))
         .filter((o) => o.value);
       for (const sel of ['bible', 'secondaryBible']) {
         const select = root.querySelector(`[data-setting="${sel}"]`);
@@ -361,6 +361,8 @@ if (root) {
           });
           const span = el('span');
           span.textContent = v.label;
+          // The option's lang goes with its name (WCAG 3.1.2, #221): «תנ ך עברי מודרני» is Hebrew.
+          if (v.lang) span.lang = v.lang;
           label.append(input, ' ', span);
           box.append(label);
         }

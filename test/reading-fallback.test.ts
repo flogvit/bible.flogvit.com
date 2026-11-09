@@ -91,7 +91,13 @@ describe('readableBibleCandidates', () => {
   });
 
   test('grunntekster (sblgnt/tanach) er aldri kandidater', async () => {
-    for (const lang of ['el', 'he']) await startsWith(lang, ['osen']);
+    // Greek has no reading edition, so English leads; Hebrew has he_modern (#221),
+    // a reading edition, which leads its language. startsWith itself holds that
+    // no source text is among the candidates.
+    await startsWith('el', ['osen']);
+    const he = await readableBibleCandidates('he');
+    expect(he.map((e) => e.id)).not.toContain('tanach');
+    expect(he[0]?.id === 'he_modern' || he[0]?.id === 'osen').toBe(true);
   });
 });
 

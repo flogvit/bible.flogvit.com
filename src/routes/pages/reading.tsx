@@ -76,7 +76,7 @@ import { songIndex, songsForPassage, type Song } from '../../lib/songs.ts';
 import { SongList } from '../../views/songs.tsx';
 import { encode as encodeKvn } from '@free-bible/kvn/types';
 import { layoutProps, tFor, type Translator, type MessageKey, lhref } from '../../lib/i18n.ts';
-import { localeToContentLanguage } from '../../lib/lang.ts';
+import { localeToContentLanguage, originalScriptLang } from '../../lib/lang.ts';
 import { relFor } from '../../lib/crawl.ts';
 import { chapterShareCard } from '../../lib/share-card.ts';
 import { absoluteUrl } from '../../lib/site-url.ts';
@@ -1708,7 +1708,7 @@ function MobileToolbar({
                   rel={relFor(e.href)}
                   class={`tools-bible-button ${bible === e.id ? 'is-active' : ''}`}
                 >
-                  <span data-proper-names>{e.label}</span>
+                  <span data-proper-names lang={originalScriptLang(e.label)}>{e.label}</span>
                 </a>
               ))}
             </div>
@@ -1723,7 +1723,7 @@ function MobileToolbar({
                 {t('u.originalText')}
               </option>
               {offered.filter((e) => e.id !== bible).map((e) => (
-                <option value={e.id} selected={secondary === e.id}>
+                <option value={e.id} selected={secondary === e.id} lang={originalScriptLang(e.label)}>
                   {e.label}
                 </option>
               ))}
