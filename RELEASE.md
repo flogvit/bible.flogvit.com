@@ -1,14 +1,15 @@
 # Release notes
 
-## 2026-11-09 — Twelve more Bible editions to read, including both Chinese Union versions and the 1871 Elberfelder
+## 2026-11-09 — Eighteen more Bible editions to read, including both Chinese Union versions, the 1871 Elberfelder and a Modern Hebrew edition
 
 **New features**
-- Read the Bible in twelve more editions: the Albanian translation, the Bungo (classical Japanese) translation, Cadman's translation, the AKJV, both Chinese Union versions, the Catholic Public Domain Version, the Darby translation, the Diodati (Italian), the Douay-Rheims, and the 1871 and 1905 Elberfelder (German).
+- Read the Bible in eighteen more editions: the Albanian translation, the Bungo (classical Japanese) translation, Cadman's translation, the AKJV, both Chinese Union versions, the Catholic Public Domain Version, the Darby translation, the Diodati (Italian), the Douay-Rheims, and the 1871 and 1905 Elberfelder (German). Also new are the English Revised Version, a Finnish edition, the Geneva Bible, the HCV, a Modern Hebrew edition and the JPS.
 - Whichever edition you pick, you can keep it on your account. Your choice follows you to your other devices, including for the new editions.
 
 **Polish**
 - Chinese text now reads as normal running text. It no longer comes out one character at a time with gaps between them.
 - Chinese verses now carry their script (Simplified or Traditional), so your device picks the right font.
+- The Hebrew edition's name is marked as Hebrew, so it displays with the right font and reading direction in the edition picker and on the reading page.
 
 **Bug fixes**
 - Placeholder text from the source and stray inline verse numbers no longer show up in the verse text you read.
@@ -21,6 +22,7 @@
 - New `check-edition-landing` script that checks an edition's KVN through the import, with tests.
 - A test now guards that a new edition never moves a language's default.
 - The reading-fallback test now checks the Norwegian chains by their rule, so a Norwegian edition may sit before English.
+- The six new editions went through the same import path, with the importer, edition-picker and reading-fallback tests extended to cover them. The source-text and memory guards now know the Modern Hebrew edition.
 ## 2026-10-30 — Songs about the text you read, and «Log in» brings you back
 
 **New features**
