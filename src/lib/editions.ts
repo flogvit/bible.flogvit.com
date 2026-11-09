@@ -29,6 +29,10 @@ export const IMPORTED_BIBLES = [
   'kougo', 'lv_gluck_8', 'martin', 'opt', 'rv_1858', 'sagradas',
   // #170, sixth group (#223).
   'slt', 'swahili', 'synodal', 'tagab', 'wbt',
+  // #170, seventh group (#224); the CC BY-SA ones carry their credits.
+  'weymouth', 'ylt', 'bn_irv', 'gu_irv', 'irv', 'ha_con', 'ha_lit',
+  // #170, eighth group (#225), CC BY-SA with credits.
+  'kn_irv', 'mr_irv', 'pa_irv', 'ta_irv', 'te_irv',
 ] as const;
 
 // De som alt er nummerert som osnb, og lagres som de er. Alle andre flyttes til
@@ -95,6 +99,18 @@ export const EDITION_LABELS: Record<ImportedBible, string> = {
   synodal: 'Synodal Translation 1876, Russian',
   tagab: 'Ang Biblia 1905, Tagalog',
   wbt: 'Webster Bible 1833, English',
+  weymouth: 'Weymouth New Testament 1903, English',
+  ylt: "Young's Literal Translation, English",
+  bn_irv: 'Indian Revised Version, Bengali',
+  gu_irv: 'Indian Revised Version, Gujarati',
+  irv: 'Indian Revised Version, Hindi',
+  ha_con: 'Open Hausa Contemporary Bible',
+  ha_lit: 'Litafi Mai-tsarki, Hausa New Testament',
+  kn_irv: 'Indian Revised Version, Kannada',
+  mr_irv: 'Indian Revised Version, Marathi',
+  pa_irv: 'Indian Revised Version, Punjabi',
+  ta_irv: 'Indian Revised Version, Tamil',
+  te_irv: 'Indian Revised Version, Telugu',
 };
 
 /** "osnb (Norwegian Bokmål), osnn (Norwegian Nynorsk), …" for the given editions. */
