@@ -1,9 +1,9 @@
 # Release notes
 
-## 2026-11-09 — Five more Bible editions to read, including both Chinese Union versions
+## 2026-11-09 — Six more Bible editions to read, including both Chinese Union versions
 
 **New features**
-- Read the Bible in five more editions: the Albanian translation, the Bungo (classical Japanese) translation, Cadman's translation, the AKJV, and both Chinese Union versions.
+- Read the Bible in six more editions: the Albanian translation, the Bungo (classical Japanese) translation, Cadman's translation, the AKJV, and both Chinese Union versions.
 - Whichever edition you pick, you can keep it on your account. Your choice follows you to your other devices, including for the new editions.
 
 **Polish**
