@@ -1,11 +1,13 @@
 # Release notes
 
-## 2026-11-09 — Twenty-nine more Bible editions to read, including both Chinese Union versions, the 1871 Elberfelder, a Modern Hebrew edition and a Swahili edition, plus a FLOGVIT menu sorted into categories
+## 2026-11-09 — Forty-one more Bible editions to read, now including Weymouth, Young's Literal Translation and IRV editions in Indian languages, plus a FLOGVIT menu sorted into categories
 
 **New features**
-- Read the Bible in twenty-nine more editions: the Albanian translation, the Bungo (classical Japanese) translation, Cadman's translation, the AKJV, both Chinese Union versions, the Catholic Public Domain Version, the Darby translation, the Diodati (Italian), the Douay-Rheims, and the 1871 and 1905 Elberfelder (German). Also new are the English Revised Version, a Finnish edition, the Geneva Bible, the HCV, a Modern Hebrew edition and the JPS.
+- Read the Bible in forty-one more editions: the Albanian translation, the Bungo (classical Japanese) translation, Cadman's translation, the AKJV, both Chinese Union versions, the Catholic Public Domain Version, the Darby translation, the Diodati (Italian), the Douay-Rheims, and the 1871 and 1905 Elberfelder (German). Also new are the English Revised Version, a Finnish edition, the Geneva Bible, the HCV, a Modern Hebrew edition and the JPS.
 - The next six add more languages to read in: the Kougo (colloquial Japanese) edition, the Latvian Glück edition, the French Martin edition, the OPT, the 1858 Reina-Valera (Spanish) and the Sagradas Escrituras (Spanish).
-- The latest five are the SLT, a Swahili edition, the Synodal, the Tagab and the WBT.
+- Five more are the SLT, a Swahili edition, the Synodal, the Tagab and the WBT.
+- Seven more arrive in this round: the Weymouth New Testament, Young's Literal Translation, Indian Revised Version (IRV) editions in Bengali, Gujarati and one more language, and two Hausa editions.
+- The latest five are IRV editions in Kannada, Marathi, Punjabi, Tamil and Telugu, so you can read in five more Indian languages.
 - Whichever edition you pick, you can keep it on your account. Your choice follows you to your other devices, including for the new editions.
 
 **Polish**
@@ -17,6 +19,7 @@
 **Bug fixes**
 - Placeholder text from the source and stray inline verse numbers no longer show up in the verse text you read.
 - Adding a new edition no longer changes which edition opens by default for your language. The edition you are used to stays the default.
+- Stray asterisks around emphasised words (as in Weymouth) and the red-letter marks ‹ › (as in the Latvian Glück edition and several others) no longer appear in the verse text.
 
 **Behind the scenes**
 - The edition importer now rejects a source placeholder only when it is the whole verse, and no longer mistakes one for a translator's note.
@@ -28,6 +31,8 @@
 - The earlier six new editions went through the same import path, with the importer, edition-picker and reading-fallback tests extended to cover them. The source-text and memory guards now know the Modern Hebrew edition.
 - Group 5 (kougo, lv_gluck_8, martin, opt, rv_1858, sagradas) was published through the same import path, with a small importer adjustment and an extra importer test.
 - Group 6 (slt, swahili, synodal, tagab, wbt) was published through the same import path.
+- Group 7 (weymouth, ylt, bn_irv, gu_irv, irv, ha_con, ha_lit) and group 8 (kn_irv, mr_irv, pa_irv, ta_irv, te_irv) were published through the same import path, with importer adjustments and tests for the new text markers.
+- The MCP server test now takes the licence's sources from the credits instead of a hand-kept list.
 - The family menu's copy and categories now follow the portal's (flogvit-com#481), with the family-menu test extended to cover them.
 ## 2026-10-30 — Songs about the text you read, and «Log in» brings you back
 
