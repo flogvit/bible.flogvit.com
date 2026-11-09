@@ -159,6 +159,17 @@ export const INLINE_TAG = /<\/?(?:i|b|em|strong|u|sup|sub|span|font)\b[^>]*>/gi;
 export const EMPHASIS_STARS = /(?<![\p{L}\p{N}*])\*([\p{L}\p{N}](?:[^*\n]{0,60}?[\p{L}\p{N}.,!?])?)\*(?![\p{L}\p{N}*])/gu;
 
 /**
+ * Red-letter marks (#225): the editions from Bible SuperSearch (the Indian
+ * Revised Versions, the Hausa Contemporary Bible, the Lithuanian Heritage
+ * Translation) wrap Jesus' words in ‹ ›, and so does the published Latvian
+ * Glück Bible (lv_gluck_8). The page has no red letters, so the
+ * marks would stand in the text as stray signs; the words stay. No published
+ * edition uses ‹ › as quotation marks (checked 2026-11-09 across all of them);
+ * the double guillemets « » are quotation marks and are not touched.
+ */
+export const RED_LETTER_MARK = /[‹›]/g;
+
+/**
  * A placeholder the source wrote where it had no text (#216): bungo's Exodus
  * 7:24 is «*** POSSIBLE ERROR IN BIBLE, TEXT MISSING HERE ***». Such a verse is
  * left out, so the reader sees an empty verse rather than the message. Only a
@@ -197,7 +208,7 @@ export const READER_TEXT_RULES = 4;
 /** The verse text a reader is shown: other numberings out, spaced Chinese closed up, spaces tidied. */
 export function readerText(text: string): string {
   // [ \t\n], not \s: \s takes the ideographic space (U+3000) too.
-  return closeSpacedCjk(text.replace(INLINE_TAG, '').replace(EMPHASIS_STARS, '$1').replace(VERSE_NUMBER_MARK, ' ').replace(PARAGRAPH_MARK, ' ').replace(/[ \t\n]{2,}/g, ' ').trim());
+  return closeSpacedCjk(text.replace(INLINE_TAG, '').replace(EMPHASIS_STARS, '$1').replace(RED_LETTER_MARK, '').replace(VERSE_NUMBER_MARK, ' ').replace(PARAGRAPH_MARK, ' ').replace(/[ \t\n]{2,}/g, ' ').trim());
 }
 
 /** A verse at its osnb address, ready for the `verses` table. */

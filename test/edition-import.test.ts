@@ -132,6 +132,13 @@ describe('the renumbering', () => {
     expect(readerText('3 * 4 * 5')).toBe('3 * 4 * 5');
   });
 
+  test("Bible SuperSearch's red-letter marks ‹ › round Jesus' words are taken out, the words kept (#225)", () => {
+    expect(readerText('‹వేష ధారులారా, ‘ఈ ప్రజలు తమ పెదాలతో›')).toBe('వేష ధారులారా, ‘ఈ ప్రజలు తమ పెదాలతో');
+    expect(readerText('ఆయన ప్రజలందరినీ పిలిచి, ‹“మీరు తెలుసుకోవలసింది ఏమంటే,›')).toBe('ఆయన ప్రజలందరినీ పిలిచి, “మీరు తెలుసుకోవలసింది ఏమంటే,');
+    // The guillemets « » are quotation marks and stay.
+    expect(readerText('Il dit : « Venez »')).toBe('Il dit : « Venez »');
+  });
+
   test("Sagradas Escrituras' italic tags «<I>la</I>» are taken out, the words kept (#222)", () => {
     expect(readerText('que está en el mundo por <I>la</I>  concupiscencia.')).toBe('que está en el mundo por la concupiscencia.');
     expect(readerText('Thou shalt <b>not</b> kill; 3 < 4 and a <tag> stays')).toBe('Thou shalt not kill; 3 < 4 and a <tag> stays');
