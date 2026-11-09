@@ -65,6 +65,41 @@ export const STAGED = ['src', 'mappings', 'package.json', 'tsconfig.json'] as co
 /** Filer stagingen selv legger igjen, og som derfor ikke er fremmedlegemer. */
 export const OWN = new Set([STAMP_FILE]);
 
+/** Stempelet i den INSTALLERTE kopien — det koden faktisk laster (#227). */
+export const INSTALLED_STAMP = path.join(BIBEL_DIR, 'node_modules', '@free-bible', 'kvn', STAMP_FILE);
+
+/**
+ * Fingeravtrykk av kilden: hver fil i hvitlista med størrelse og mtime.
+ *
+ * Kopien er 109 MB, så den skal ikke gjøres om igjen ved hver kjøring.
+ * Innhold-hashing av 109 MB ville kostet mer enn kopien vi prøver å unngå;
+ * størrelse + mtime er det `rsync` og `make` bruker, og er nok her. Stiene er
+ * relative, så samme filer gjennom symlenka `flogvit.com/free-bible` gir samme avtrykk.
+ */
+export function sourceFingerprint(source: string = SOURCE): string {
+  const rows: string[] = [];
+  const walk = (abs: string, rel: string) => {
+    for (const d of fs.readdirSync(abs, { withFileTypes: true }).sort((a, b) => (a.name < b.name ? -1 : 1))) {
+      const childAbs = path.join(abs, d.name);
+      const childRel = `${rel}/${d.name}`;
+      if (d.isDirectory()) walk(childAbs, childRel);
+      else {
+        const st = fs.statSync(childAbs);
+        rows.push(`${childRel}\t${st.size}\t${Math.floor(st.mtimeMs)}`);
+      }
+    }
+  };
+  for (const entry of STAGED) {
+    const abs = path.join(source, entry);
+    if (fs.statSync(abs).isDirectory()) walk(abs, entry);
+    else {
+      const st = fs.statSync(abs);
+      rows.push(`${entry}\t${st.size}\t${Math.floor(st.mtimeMs)}`);
+    }
+  }
+  return Bun.hash(rows.join('\n')).toString(16);
+}
+
 /**
  * Felter som IKKE bæres over i den stagede `package.json`.
  *

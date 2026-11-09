@@ -9,6 +9,8 @@
 // Hver import-seksjon kjører i sin egen transaksjon (sql.begin) slik at et
 // krasj ikke etterlater en halvskrevet seksjon.
 
+// FIRST: the kvn this process loads must be the one in $FREE_BIBLE_DIR (#227).
+import './kvn-fresh-guard.ts';
 import * as fs from 'fs';
 import * as path from 'path';
 import type { SQL } from 'bun';
