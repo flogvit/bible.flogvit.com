@@ -121,6 +121,17 @@ describe('the renumbering', () => {
     expect(readerText('¶ Apre sa, wa David')).toBe('Apre sa, wa David');
   });
 
+  test("Weymouth's emphasis stars «*you*» are taken out, dnb30's footnote stars stay (#224)", () => {
+    expect(readerText('But *I* have prayed for *you* that your faith may not fail')).toBe('But I have prayed for you that your faith may not fail');
+    expect(readerText('It is *in hope* that we have been saved')).toBe('It is in hope that we have been saved');
+    expect(readerText('“Are *you* the King of the Jews?”')).toBe('“Are you the King of the Jews?”');
+    expect(readerText('it is *you*—pitiable, poor')).toBe('it is you—pitiable, poor');
+    // dnb30: a star (or three) right after the word it marks, never a pair round words.
+    expect(readerText('han skal gi ham sin egen datter*** for å ødelegge det')).toBe('han skal gi ham sin egen datter*** for å ødelegge det');
+    expect(readerText('Herren* sa til min herre** sett deg')).toBe('Herren* sa til min herre** sett deg');
+    expect(readerText('3 * 4 * 5')).toBe('3 * 4 * 5');
+  });
+
   test("Sagradas Escrituras' italic tags «<I>la</I>» are taken out, the words kept (#222)", () => {
     expect(readerText('que está en el mundo por <I>la</I>  concupiscencia.')).toBe('que está en el mundo por la concupiscencia.');
     expect(readerText('Thou shalt <b>not</b> kill; 3 < 4 and a <tag> stays')).toBe('Thou shalt not kill; 3 < 4 and a <tag> stays');
