@@ -178,7 +178,10 @@ export interface FamilyMenu {
   home: { href: string };
   // status 'coming' = vises uten lenke, med «snart»-merket. accent er
   // portalens CSS-variabelnavn; prikken farges av dot.light/dot.dark.
-  products: { name: string; href?: string; status?: 'coming'; accent: string; dot: { light: string; dark: string }; locales?: string[] }[];
+  products: { name: string; href?: string; status?: 'coming'; accent: string; dot: { light: string; dark: string }; locales?: string[]; category: string }[];
+  // Menyens kategorier (flogvit-com#481), i rekkefølge. Etiketten er DATA på
+  // alle språkene, ikke en nøkkel i ordboka.
+  categories: { id: string; label: Partial<Record<Locale, string>> & { en: string } }[];
   // label er en nøkkel i portalens chrome-i18n; her rendres chrome.accountItem.
   account: { href: string; label: string };
 }
@@ -207,30 +210,21 @@ export function FlogvitMenu({ t, locale }: { t: Translator; locale: Locale }) {
               <span class="fvmenu-dot">.</span>
             </span>
           </a>
-          {/* An entry with `locales` is shown only in those languages (flogvit-com#335). */}
-          {FAMILY_MENU.products.filter((p) => !p.locales || p.locales.includes(locale)).map((p) => {
-            const self = p.name === SELF_PRODUCT;
-            const wm = (
-              <span class="fvmenu-wm">
-                <span class="fvmenu-b">FLOGVIT</span>
-                <span class="fvmenu-dot" style={`--fv-dot:${p.dot.light};--fv-dot-dark:${p.dot.dark}`}>.</span>
-                <span class="fvmenu-prod">{p.name}</span>
-              </span>
-            );
-            if (p.status === 'coming' || !p.href) {
-              return (
-                <span class="fvmenu-item soon">
-                  {wm}
-                  <span class="fvmenu-chip">{t('chrome.soon')}</span>
-                </span>
-              );
-            }
-            return (
-              <a class="fvmenu-item" href={self ? lhref('/') : p.href} aria-current={self ? 'true' : undefined}>
-                {wm}
-              </a>
-            );
-          })}
+          {/* One <details> per category (flogvit-com#481, portal/SETTINGS.md):
+              bibel's own category stands open, a category with no product in
+              this language is left out. An entry with `locales` is shown only
+              in those languages (flogvit-com#335). */}
+          {menuCategories(locale).map((k) => (
+            <details class="fv-kat" data-fv-kat={k.id} open={k.id === SELF_CATEGORY}>
+              <summary class="fv-kat-sum">
+                {k.label[locale] ?? k.label.en}
+                <svg class="fv-kat-caret" viewBox="0 0 8 6" width="8" height="6" aria-hidden="true">
+                  <path d="M1 1.5l3 3 3-3" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+              </summary>
+              <div class="fv-kat-liste">{k.products.map((p) => menuRow(p, t))}</div>
+            </details>
+          ))}
           {/* Uniform familie-oppføring (portal/STYLE.md): globale innstillinger
               — konto, språk — nås fra samme plass i alle produktene. */}
           <a class="fvmenu-item fvmenu-kontoitem" href={FAMILY_MENU.account.href}>
@@ -244,6 +238,40 @@ export function FlogvitMenu({ t, locale }: { t: Translator; locale: Locale }) {
         <span class="fvmenu-productDot">.</span>bible
       </a>
     </span>
+  );
+}
+
+type MenuProduct = FamilyMenu['products'][number];
+
+const SELF_CATEGORY = FAMILY_MENU.products.find((p) => p.name === SELF_PRODUCT)?.category;
+
+function menuCategories(locale: Locale) {
+  return FAMILY_MENU.categories
+    .map((k) => ({ ...k, products: FAMILY_MENU.products.filter((p) => p.category === k.id && (!p.locales || p.locales.includes(locale))) }))
+    .filter((k) => k.products.length > 0);
+}
+
+function menuRow(p: MenuProduct, t: Translator) {
+  const self = p.name === SELF_PRODUCT;
+  const wm = (
+    <span class="fvmenu-wm">
+      <span class="fvmenu-b">FLOGVIT</span>
+      <span class="fvmenu-dot" style={`--fv-dot:${p.dot.light};--fv-dot-dark:${p.dot.dark}`}>.</span>
+      <span class="fvmenu-prod">{p.name}</span>
+    </span>
+  );
+  if (p.status === 'coming' || !p.href) {
+    return (
+      <span class="fvmenu-item soon">
+        {wm}
+        <span class="fvmenu-chip">{t('chrome.soon')}</span>
+      </span>
+    );
+  }
+  return (
+    <a class="fvmenu-item" href={self ? lhref('/') : p.href} aria-current={self ? 'true' : undefined}>
+      {wm}
+    </a>
   );
 }
 

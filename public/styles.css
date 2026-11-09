@@ -307,7 +307,37 @@ button { font-family: var(--font-ui); }
   z-index: 600;
   display: flex;
   flex-direction: column;
+  /* Tre åpne kategorier på en lav skjerm ruller i panelet, ikke ut av skjermen. */
+  max-height: calc(100dvh - 96px);
+  overflow-y: auto;
 }
+/* Kategoriene i menyen (flogvit-com#481, portal/SETTINGS.md): <details> gir
+   tastatur og utvidet/skjult til skjermleseren uten skript. Summary er et
+   trykkmål på minst 44 px; etiketten brytes framfor å gjøre panelet bredt. */
+.fv-kat { min-width: 0; }
+.fv-kat-sum {
+  list-style: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 44px;
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  font-size: 0.8125rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+  overflow-wrap: anywhere;
+}
+.fv-kat-sum::-webkit-details-marker { display: none; }
+.fv-kat-sum:hover { background: color-mix(in oklab, var(--ink) 6%, var(--surface)); color: var(--ink); }
+.fv-kat-sum:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.fv-kat-caret { flex: none; opacity: 0.55; transition: transform 0.15s ease-out; }
+.fv-kat[open] > .fv-kat-sum .fv-kat-caret { transform: rotate(180deg); }
+.fv-kat-liste { display: flex; flex-direction: column; gap: 2px; padding: 0 0 4px 10px; min-width: 0; }
 .fvmenu-item {
   display: flex;
   align-items: center;

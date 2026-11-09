@@ -63,8 +63,10 @@ reflectTheme();
 
 // ---- details-menyer: lukk ved klikk utenfor og Escape ----
 
+// A category in the FLOGVIT menu is a <details> too (flogvit-com#481): opening
+// one must not close the others, and closing the menu hides them anyway.
 document.addEventListener('pointerdown', (e) => {
-  document.querySelectorAll('details[open]').forEach((d) => {
+  document.querySelectorAll('details[open]:not(.fv-kat)').forEach((d) => {
     if (!d.contains(e.target)) d.removeAttribute('open');
   });
 });
