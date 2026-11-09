@@ -25,6 +25,8 @@ export const IMPORTED_BIBLES = [
   'dnb30',
   // #170, fourth group (#221).
   'erv', 'finn', 'geneva', 'hcv', 'he_modern', 'jps',
+  // #170, fifth group (#222).
+  'kougo', 'lv_gluck_8', 'martin', 'opt', 'rv_1858', 'sagradas',
 ] as const;
 
 // De som alt er nummerert som osnb, og lagres som de er. Alle andre flyttes til
@@ -80,6 +82,12 @@ export const EDITION_LABELS: Record<ImportedBible, string> = {
   hcv: 'Haitian Creole Bible (1985)',
   he_modern: 'Modern Hebrew Bible (Delitzsch NT)',
   jps: 'JPS Tanakh 1917, English',
+  kougo: 'Kougo-yaku 1954/55, Japanese',
+  lv_gluck_8: 'Glück Bible, Latvian',
+  martin: 'Martin 1744, French',
+  opt: 'Old Persian Version, Persian',
+  rv_1858: 'Reina-Valera 1858 New Testament, Spanish',
+  sagradas: 'Sagradas Escrituras 1569, Spanish',
 };
 
 /** "osnb (Norwegian Bokmål), osnn (Norwegian Nynorsk), …" for the given editions. */

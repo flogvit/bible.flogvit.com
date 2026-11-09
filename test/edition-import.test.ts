@@ -121,6 +121,11 @@ describe('the renumbering', () => {
     expect(readerText('¶ Apre sa, wa David')).toBe('Apre sa, wa David');
   });
 
+  test("Sagradas Escrituras' italic tags «<I>la</I>» are taken out, the words kept (#222)", () => {
+    expect(readerText('que está en el mundo por <I>la</I>  concupiscencia.')).toBe('que está en el mundo por la concupiscencia.');
+    expect(readerText('Thou shalt <b>not</b> kill; 3 < 4 and a <tag> stays')).toBe('Thou shalt not kill; 3 < 4 and a <tag> stays');
+  });
+
   test("a source's placeholder is left out and reported, not shown (bungo Exodus 7:24)", () => {
     const out = toOsnbNumbering(
       [
