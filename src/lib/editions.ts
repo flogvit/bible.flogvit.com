@@ -27,6 +27,8 @@ export const IMPORTED_BIBLES = [
   'erv', 'finn', 'geneva', 'hcv', 'he_modern', 'jps',
   // #170, fifth group (#222).
   'kougo', 'lv_gluck_8', 'martin', 'opt', 'rv_1858', 'sagradas',
+  // #170, sixth group (#223).
+  'slt', 'swahili', 'synodal', 'tagab', 'wbt',
 ] as const;
 
 // De som alt er nummerert som osnb, og lagres som de er. Alle andre flyttes til
@@ -88,6 +90,11 @@ export const EDITION_LABELS: Record<ImportedBible, string> = {
   opt: 'Old Persian Version, Persian',
   rv_1858: 'Reina-Valera 1858 New Testament, Spanish',
   sagradas: 'Sagradas Escrituras 1569, Spanish',
+  slt: "Smith's Literal Translation, English",
+  swahili: 'Swahili New Testament',
+  synodal: 'Synodal Translation 1876, Russian',
+  tagab: 'Ang Biblia 1905, Tagalog',
+  wbt: 'Webster Bible 1833, English',
 };
 
 /** "osnb (Norwegian Bokmål), osnn (Norwegian Nynorsk), …" for the given editions. */
