@@ -21,6 +21,8 @@ export const IMPORTED_BIBLES = [
   'cpdv', 'dbt', 'diodati', 'drb', 'elberfelder_1905',
   // #220, second half: text read again with its notes in footnotes (free-bible#147).
   'elberfelder_1871',
+  // #220: text read again from CrossWire's Norsk (free-bible#146).
+  'dnb30',
 ] as const;
 
 // De som alt er nummerert som osnb, og lagres som de er. Alle andre flyttes til
@@ -69,6 +71,7 @@ export const EDITION_LABELS: Record<ImportedBible, string> = {
   drb: 'Douay-Rheims (Challoner), English',
   elberfelder_1905: 'Elberfelder 1905, German',
   elberfelder_1871: 'Elberfelder 1871, German',
+  dnb30: 'Bibelselskapet 1930, Norwegian Bokmål',
 };
 
 /** "osnb (Norwegian Bokmål), osnn (Norwegian Nynorsk), …" for the given editions. */

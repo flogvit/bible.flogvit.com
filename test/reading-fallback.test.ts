@@ -37,12 +37,22 @@ describe('readableBibleCandidates', () => {
     return ids;
   };
 
+  // The language's own editions come before the floor's: a harvested Norwegian
+  // edition (dnb30, #220) sits between osnb and osen, and osen still leads English.
+  const englishLeadsWith = async (lang: string, lead: string) => {
+    const english = (await readableBibleCandidates(lang)).filter((e) => e.lang === 'en');
+    expect(english[0]?.id, `${lang}: first English`).toBe(lead);
+  };
+
   test('nb → osnb, deretter engelsk som gulv (#26)', async () => {
-    await startsWith('nb', ['osnb', 'osen']);
+    const ids = await startsWith('nb', ['osnb']);
+    await englishLeadsWith('nb', 'osen');
   });
 
   test('nn → osnn, osnb, osen — nabospråk før basespråk', async () => {
-    await startsWith('nn', ['osnn', 'osnb', 'osen']);
+    const ids = await startsWith('nn', ['osnn', 'osnb']);
+    await englishLeadsWith('nn', 'osen');
+    expect(ids.indexOf('osen')).toBeGreaterThan(ids.indexOf('osnb'));
   });
 
   test('en → osen først, osnb som gulv', async () => {
