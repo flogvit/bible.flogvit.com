@@ -14,17 +14,19 @@
 import { describe, expect, setDefaultTimeout, test } from 'bun:test';
 import { DB_TEST_TIMEOUT_MS } from './db-timeout.ts';
 import { createApp } from '../src/app.ts';
-import { editionLangTag, getBibleEditions } from '../src/lib/bible.ts';
+import { editionCoversTestament, editionLangTag, getBibleEditions } from '../src/lib/bible.ts';
 
 setDefaultTimeout(DB_TEST_TIMEOUT_MS);
 
 const app = createApp();
 const html = async (path: string) => (await app.request(`http://x${path}`)).text();
 const readable = async () => (await getBibleEditions()).filter((e) => e.philosophy !== 'source_text');
+// John 3 is in the New Testament: an Old-Testament-only edition (jps) is not offered there (#221).
+const readableForNT = async () => (await readable()).filter((e) => editionCoversTestament(e, 'NT'));
 
 describe('the edition picker on the chapter page', () => {
-  test('offers every readable edition, on every language', async () => {
-    const ids = (await readable()).map((e) => e.id);
+  test('offers every readable edition that has the book, on every language', async () => {
+    const ids = (await readableForNT()).map((e) => e.id);
     expect(ids.length).toBeGreaterThan(2);
     for (const locale of ['en', 'es', 'nb']) {
       const page = await html(`/${locale}/joh/3`);
@@ -39,7 +41,7 @@ describe('the edition picker on the chapter page', () => {
   });
 
   test('the parallel text can be any readable edition but the one shown', async () => {
-    const ids = (await readable()).map((e) => e.id);
+    const ids = (await readableForNT()).map((e) => e.id);
     const page = await html('/en/joh/3?bible=kjv');
     const select = page.slice(page.indexOf('data-secondary-select'), page.indexOf('</select>', page.indexOf('data-secondary-select')));
     for (const id of ids.filter((x) => x !== 'kjv')) expect(select, id).toContain(`value="${id}"`);
@@ -47,7 +49,7 @@ describe('the edition picker on the chapter page', () => {
   });
 
   test('an edition picked in the URL marks its verses in its own language', async () => {
-    for (const e of (await readable()).filter((x) => x.lang_iso639_1)) {
+    for (const e of (await readableForNT()).filter((x) => x.lang_iso639_1)) {
       const other = e.lang_iso639_1 === 'es' ? 'en' : 'es';
       const page = await html(`/${other}/joh/3?bible=${e.id}`);
       const verse = page.slice(page.indexOf('id="v16"'), page.indexOf('id="v17"'));
@@ -55,4 +57,11 @@ describe('the edition picker on the chapter page', () => {
       expect(verse, `${e.id} on /${other}/`).toContain(`lang="${editionLangTag(e)}"`);
     }
   });
+});
+
+test('an Old-Testament-only edition is not offered on a New Testament chapter (#221)', () => {
+  expect(editionCoversTestament({ testament: 'ot' }, 'NT')).toBe(false);
+  expect(editionCoversTestament({ testament: 'ot' }, 'OT')).toBe(true);
+  expect(editionCoversTestament({ testament: 'both' }, 'NT')).toBe(true);
+  expect(editionCoversTestament({ testament: null }, 'NT')).toBe(true);
 });

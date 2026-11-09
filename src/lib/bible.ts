@@ -2310,6 +2310,17 @@ export interface OfflineEdition {
   id: string;
   /** Egennavn («OSEN (Open Source English)») — oversettes ikke. */
   label: string;
+  /** 'ot', 'nt' or 'both' (bible_editions.testament); null when unknown. */
+  testament?: string | null;
+}
+
+/**
+ * Does the edition have this book's testament (#221)? JPS 1917 is the Old
+ * Testament only, and offered on John 3 it led to a 404. Unknown counts as yes.
+ */
+export function editionCoversTestament(e: Pick<OfflineEdition, 'testament'>, bookTestament: string): boolean {
+  const t = (e.testament ?? '').toLowerCase();
+  return !t || t === 'both' || t === bookTestament.toLowerCase();
 }
 
 /**
@@ -2335,7 +2346,7 @@ export async function offlineEditions(lang = currentContentLanguage()): Promise<
     // En nødkandidat (osen/osnb) som ikke er importert, kan ikke lastes ned.
     if (!e) continue;
     const abbr = e.abbreviation || id.toUpperCase();
-    result.push({ id, label: e.name_native && e.name_native !== abbr ? `${abbr} (${e.name_native})` : abbr });
+    result.push({ id, label: e.name_native && e.name_native !== abbr ? `${abbr} (${e.name_native})` : abbr, testament: e.testament });
   }
   return result;
 }
@@ -2350,6 +2361,16 @@ export function editionLangTag(edition: Pick<BibleEdition, 'lang_iso639_1' | 'sc
   const lang = edition.lang_iso639_1;
   if (lang === 'zh' && (edition.script === 'Hans' || edition.script === 'Hant')) return `zh-${edition.script}`;
   return lang;
+}
+
+/**
+ * The writing direction of an edition's text, from its language (#221). The
+ * Modern Hebrew edition is the first one read from right to left as the main
+ * text; without `dir` its punctuation and verse ends land on the wrong side.
+ */
+const RTL = new Set(['he', 'ar', 'fa', 'ur', 'yi', 'syr', 'arc']);
+export function langDir(lang: string | undefined): 'rtl' | undefined {
+  return lang && RTL.has(lang.split('-')[0]!) ? 'rtl' : undefined;
 }
 
 /** `editionLangTag()` for an edition by id; undefined when there is none. */

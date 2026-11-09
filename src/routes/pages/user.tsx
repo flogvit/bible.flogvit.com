@@ -626,7 +626,7 @@ r.get('/innstillinger', async (c) => {
               {/* No choice: the interface language decides (#182). */}
               <option value="">{t('u.editionFollowsLanguage')}</option>
               {readable.map((e) => (
-                <option value={e.id}>{editionLabel(e)}</option>
+                <option value={e.id} lang={originalScriptLang(editionLabel(e))}>{editionLabel(e)}</option>
               ))}
             </select>
           </label>
@@ -636,7 +636,7 @@ r.get('/innstillinger', async (c) => {
               <option value="">{t('common.none')}</option>
               <option value="original">{t('u.originalText')}</option>
               {readable.map((e) => (
-                <option value={e.id}>{editionLabel(e)}</option>
+                <option value={e.id} lang={originalScriptLang(editionLabel(e))}>{editionLabel(e)}</option>
               ))}
             </select>
           </label>
@@ -747,7 +747,7 @@ r.get('/offline', async (c) => {
               laste ned OSEN. Den første er den lesesiden viser, og er valgt. */}
           {editions.map((e, i) => (
             <label class="settings-toggle">
-              <input type="checkbox" data-dl-bible={e.id} checked={i === 0} /> <span data-proper-names>{e.label}</span>
+              <input type="checkbox" data-dl-bible={e.id} checked={i === 0} /> <span data-proper-names lang={originalScriptLang(e.label)}>{e.label}</span>
             </label>
           ))}
           <div class="offline-actions">

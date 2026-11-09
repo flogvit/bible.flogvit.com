@@ -55,6 +55,8 @@ import {
   type OfflineEdition,
   defaultBibleForLanguage,
   editionLang,
+  editionCoversTestament,
+  langDir,
 } from '../../lib/bible.ts';
 import { currentChosenEdition } from '../../lib/edition-choice.ts';
 import type {
@@ -74,7 +76,7 @@ import { songIndex, songsForPassage, type Song } from '../../lib/songs.ts';
 import { SongList } from '../../views/songs.tsx';
 import { encode as encodeKvn } from '@free-bible/kvn/types';
 import { layoutProps, tFor, type Translator, type MessageKey, lhref } from '../../lib/i18n.ts';
-import { localeToContentLanguage } from '../../lib/lang.ts';
+import { localeToContentLanguage, originalScriptLang } from '../../lib/lang.ts';
 import { relFor } from '../../lib/crawl.ts';
 import { chapterShareCard } from '../../lib/share-card.ts';
 import { absoluteUrl } from '../../lib/site-url.ts';
@@ -1203,7 +1205,7 @@ function VerseBlock({
         {n}
       </button>
       <span class="verse-text" data-verse-text>
-        <span data-verse-plain lang={lang}>{v.text}</span>
+        <span data-verse-plain lang={lang} dir={langDir(lang)}>{v.text}</span>
         {v.footnotes && v.footnotes.length > 0 && <Footnotes footnotes={v.footnotes} />}
       </span>
       <VerseStrip
@@ -1588,7 +1590,10 @@ function MobileToolbar({
   // er de lesbare i basen, språkets egne først (offlineEditions, #136): de var
   // hardkodet til OSNB/OSNN, så en leser på /en/ eller /es/ nådde verken
   // sin egen eller de høstede utgavene herfra (#202).
-  const editionLinks = editions.map((e) => ({
+  // Only editions that have this book (#221): an Old Testament edition offered
+  // on John 3 led to a 404.
+  const offered = editions.filter((e) => editionCoversTestament(e, book.testament));
+  const editionLinks = offered.map((e) => ({
     ...e,
     href: `/${bookSlug}/${chapter}${buildQuery(e.id, mapping, secondary, defaultBible)}`,
   }));
@@ -1703,7 +1708,7 @@ function MobileToolbar({
                   rel={relFor(e.href)}
                   class={`tools-bible-button ${bible === e.id ? 'is-active' : ''}`}
                 >
-                  <span data-proper-names>{e.label}</span>
+                  <span data-proper-names lang={originalScriptLang(e.label)}>{e.label}</span>
                 </a>
               ))}
             </div>
@@ -1717,8 +1722,8 @@ function MobileToolbar({
               <option value="original" selected={secondary === 'original'}>
                 {t('u.originalText')}
               </option>
-              {editions.filter((e) => e.id !== bible).map((e) => (
-                <option value={e.id} selected={secondary === e.id}>
+              {offered.filter((e) => e.id !== bible).map((e) => (
+                <option value={e.id} selected={secondary === e.id} lang={originalScriptLang(e.label)}>
                   {e.label}
                 </option>
               ))}

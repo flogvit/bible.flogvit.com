@@ -80,6 +80,7 @@ const UTELATT: Record<string, string> = {
   'minne-regnskap/kilder': 'registeret selv — én oppføring per registrerMinnekilde() i kildekoden',
   'api-ids/BY_PATH': 'bygget av API_COLLECTIONS ved import, én oppføring per deklarert samling',
   'books-data/booksById': 'bygget av booksData ved import — 66 bøker',
+  'bible/RTL': 'fast liste over sju språkkoder som skrives fra høyre mot venstre, skrives aldri til (#221)',
   'lang-of-parts/RAW_TEXT': 'fast liste over seks HTML-tagger, skrives aldri til (#166)',
   'lang-of-parts/VOID': 'fast liste over fjorten tomme HTML-tagger, skrives aldri til (#166)',
   'books-data/booksBySlug': 'bygget av booksData ved import — 66 bøker',
