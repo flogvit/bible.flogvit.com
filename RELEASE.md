@@ -1,9 +1,9 @@
 # Release notes
 
-## 2026-11-09 — Eleven more Bible editions to read, including both Chinese Union versions
+## 2026-11-09 — Twelve more Bible editions to read, including both Chinese Union versions and the 1871 Elberfelder
 
 **New features**
-- Read the Bible in eleven more editions: the Albanian translation, the Bungo (classical Japanese) translation, Cadman's translation, the AKJV, both Chinese Union versions, the Catholic Public Domain Version, the Darby translation, the Diodati (Italian), the Douay-Rheims and the 1905 Elberfelder (German).
+- Read the Bible in twelve more editions: the Albanian translation, the Bungo (classical Japanese) translation, Cadman's translation, the AKJV, both Chinese Union versions, the Catholic Public Domain Version, the Darby translation, the Diodati (Italian), the Douay-Rheims, and the 1871 and 1905 Elberfelder (German).
 - Whichever edition you pick, you can keep it on your account. Your choice follows you to your other devices, including for the new editions.
 
 **Polish**
