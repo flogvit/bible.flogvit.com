@@ -170,6 +170,15 @@ describe('the renumbering', () => {
     expect(versesWithInlineNotes(raw)).toEqual(['2:7:25']);
   });
 
+  test("a verse that opens with emphasis («*You* are the light») is not a note; a note that opens with a star still is (#224)", () => {
+    const raw = [
+      { bookId: 40, chapterId: 5, verseId: 14, text: '*You* are the light of the world; a town cannot be hid' },
+      { bookId: 48, chapterId: 5, verseId: 5, text: '*We* have not, for through the Spirit we wait' },
+      { bookId: 40, chapterId: 5, verseId: 15, text: '*Or, the lamp-stand' },
+    ];
+    expect(versesWithInlineNotes(raw)).toEqual(['40:5:15']);
+  });
+
   test('footnote asterisks inside real text are not a placeholder (dnb30 Dan 11:17)', () => {
     const text = 'Og han* skal ta sig fore å komme med hele sitt rikes makt**, og en kvinne, sin egen datter***';
     const out = toOsnbNumbering([{ bookId: 27, chapterId: 11, verseId: 17, text }], { ...kjv, map: [] }, { ...osnb, map: [] });

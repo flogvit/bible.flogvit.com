@@ -115,11 +115,13 @@ export const INLINE_NOTE =
 /**
  * The verses whose text carries a note, as `book:chapter:verse`. A source
  * placeholder is not a note: it is left out at renumbering (#216), and its
- * asterisks must not refuse the whole edition here.
+ * asterisks must not refuse the whole edition here. Neither is emphasis
+ * (#224): Weymouth's «*You* are the light» opens with a star like a note does,
+ * so the pairs readerText() takes out are taken out before the test.
  */
 export function versesWithInlineNotes(verses: RawVerse[]): string[] {
   return verses
-    .filter((v) => !SOURCE_PLACEHOLDER.test(v.text) && INLINE_NOTE.test(v.text))
+    .filter((v) => !SOURCE_PLACEHOLDER.test(v.text) && INLINE_NOTE.test(v.text.replace(EMPHASIS_STARS, '$1')))
     .map((v) => `${v.bookId}:${v.chapterId}:${v.verseId}`);
 }
 
