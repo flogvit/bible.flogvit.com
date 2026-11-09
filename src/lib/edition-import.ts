@@ -170,6 +170,16 @@ export const EMPHASIS_STARS = /(?<![\p{L}\p{N}*])\*([\p{L}\p{N}](?:[^*\n]{0,60}?
 export const RED_LETTER_MARK = /[‹›]/g;
 
 /**
+ * Where one red-letter span ends and the next begins (#245). The source often
+ * writes them back to back with no space, «‹“ಇಗೋ›‹ಕಳ್ಳನು» (kn_irv Rev 16:15),
+ * so taking out the marks alone glued two words together. Before a word or an
+ * opening quotation mark the seam is a space; before punctuation it is
+ * nothing («›‹, और» in irv).
+ */
+const RED_LETTER_SEAM_WORD = /›\s*‹(?=[\p{L}\p{N}\p{Pi}\p{Ps}“„"'])/gu;
+const RED_LETTER_SEAM = /›\s*‹/g;
+
+/**
  * A placeholder the source wrote where it had no text (#216): bungo's Exodus
  * 7:24 is «*** POSSIBLE ERROR IN BIBLE, TEXT MISSING HERE ***». Such a verse is
  * left out, so the reader sees an empty verse rather than the message. Only a
@@ -203,12 +213,12 @@ function closeSpacedCjk(text: string): string {
  * is imported again with the new rules instead of keeping the old text until
  * its source changes.
  */
-export const READER_TEXT_RULES = 4;
+export const READER_TEXT_RULES = 5;
 
 /** The verse text a reader is shown: other numberings out, spaced Chinese closed up, spaces tidied. */
 export function readerText(text: string): string {
   // [ \t\n], not \s: \s takes the ideographic space (U+3000) too.
-  return closeSpacedCjk(text.replace(INLINE_TAG, '').replace(EMPHASIS_STARS, '$1').replace(RED_LETTER_MARK, '').replace(VERSE_NUMBER_MARK, ' ').replace(PARAGRAPH_MARK, ' ').replace(/[ \t\n]{2,}/g, ' ').trim());
+  return closeSpacedCjk(text.replace(INLINE_TAG, '').replace(EMPHASIS_STARS, '$1').replace(RED_LETTER_SEAM_WORD, ' ').replace(RED_LETTER_SEAM, '').replace(RED_LETTER_MARK, '').replace(VERSE_NUMBER_MARK, ' ').replace(PARAGRAPH_MARK, ' ').replace(/[ \t\n]{2,}/g, ' ').trim());
 }
 
 /** A verse at its osnb address, ready for the `verses` table. */
