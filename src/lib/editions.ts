@@ -31,6 +31,8 @@ export const IMPORTED_BIBLES = [
   'slt', 'swahili', 'synodal', 'tagab', 'wbt',
   // #170, seventh group (#224); the CC BY-SA ones carry their credits.
   'weymouth', 'ylt', 'bn_irv', 'gu_irv', 'irv', 'ha_con', 'ha_lit',
+  // #170, eighth group (#225), CC BY-SA with credits.
+  'kn_irv', 'mr_irv', 'pa_irv', 'ta_irv', 'te_irv',
 ] as const;
 
 // De som alt er nummerert som osnb, og lagres som de er. Alle andre flyttes til
@@ -104,6 +106,11 @@ export const EDITION_LABELS: Record<ImportedBible, string> = {
   irv: 'Indian Revised Version, Hindi',
   ha_con: 'Open Hausa Contemporary Bible',
   ha_lit: 'Litafi Mai-tsarki, Hausa New Testament',
+  kn_irv: 'Indian Revised Version, Kannada',
+  mr_irv: 'Indian Revised Version, Marathi',
+  pa_irv: 'Indian Revised Version, Punjabi',
+  ta_irv: 'Indian Revised Version, Tamil',
+  te_irv: 'Indian Revised Version, Telugu',
 };
 
 /** "osnb (Norwegian Bokmål), osnn (Norwegian Nynorsk), …" for the given editions. */
