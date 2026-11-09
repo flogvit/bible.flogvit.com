@@ -140,6 +140,13 @@ export const VERSE_NUMBER_MARK = /\s*\((?:H\s*)?\d{1,3}[:.]\d{1,3}\)\s*/g;
 export const PARAGRAPH_MARK = /\s*¶\s*/g;
 
 /**
+ * Inline HTML from the source (#222): Sagradas Escrituras marks italic words
+ * «por <I>la</I> concupiscencia». The page escapes it, so the reader would see
+ * the tags; the words stay, the tags go.
+ */
+export const INLINE_TAG = /<\/?(?:i|b|em|strong|u|sup|sub|span|font)\b[^>]*>/gi;
+
+/**
  * A placeholder the source wrote where it had no text (#216): bungo's Exodus
  * 7:24 is «*** POSSIBLE ERROR IN BIBLE, TEXT MISSING HERE ***». Such a verse is
  * left out, so the reader sees an empty verse rather than the message. Only a
@@ -173,12 +180,12 @@ function closeSpacedCjk(text: string): string {
  * is imported again with the new rules instead of keeping the old text until
  * its source changes.
  */
-export const READER_TEXT_RULES = 2;
+export const READER_TEXT_RULES = 3;
 
 /** The verse text a reader is shown: other numberings out, spaced Chinese closed up, spaces tidied. */
 export function readerText(text: string): string {
   // [ \t\n], not \s: \s takes the ideographic space (U+3000) too.
-  return closeSpacedCjk(text.replace(VERSE_NUMBER_MARK, ' ').replace(PARAGRAPH_MARK, ' ').replace(/[ \t\n]{2,}/g, ' ').trim());
+  return closeSpacedCjk(text.replace(INLINE_TAG, '').replace(VERSE_NUMBER_MARK, ' ').replace(PARAGRAPH_MARK, ' ').replace(/[ \t\n]{2,}/g, ' ').trim());
 }
 
 /** A verse at its osnb address, ready for the `verses` table. */
