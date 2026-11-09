@@ -76,7 +76,7 @@ meny.get('/:locale', (c) => {
 async function rendreMeny(locale: Locale): Promise<Oppføring[]> {
   const html = await (await meny.request(`/${locale}`)).text();
   const panel = /<nav class="fvmenu-panel"[^>]*>([\s\S]*?)<\/nav>/.exec(html)?.[1] ?? '';
-  const items = [...panel.matchAll(/<(a|span) class="fvmenu-item([^"]*)"([^>]*)>([\s\S]*?)<\/\1>(?=\s*(?:<a class="fvmenu-item|<span class="fvmenu-item|$))/g)];
+  const items = [...panel.matchAll(/<(a|span) class="fvmenu-item([^"]*)"([^>]*)>([\s\S]*?)<\/\1>(?=\s*(?:<a class="fvmenu-item|<span class="fvmenu-item|<\/div>|<details|$))/g)];
   return items.map((m) => {
     const attrs = m[3] ?? '';
     const body = m[4] ?? '';
@@ -109,6 +109,57 @@ describe('MENYEN lister nøyaktig kopien', () => {
       expect(items).toEqual(forventet);
     });
   }
+});
+
+// Kategoriene (flogvit-com#481, portal/SETTINGS.md → «Kategoriene i
+// FLOGVIT-menyen»): én <details class="fv-kat" data-fv-kat> per kategori i
+// kopiens rekkefølge, produktene under i sin, etiketten på sidas språk, og
+// bare bibels egen kategori åpen.
+describe('KATEGORIENE grupperer menyen', () => {
+  for (const locale of LOCALES) {
+    test(`/${locale}/: hver kategori med sine produkter, «bibel» åpen, resten lukket`, async () => {
+      const html = await (await meny.request(`/${locale}`)).text();
+      const panel = /<nav class="fvmenu-panel"[^>]*>([\s\S]*?)<\/nav>/.exec(html)?.[1] ?? '';
+      const kats = [...panel.matchAll(/<details class="fv-kat" data-fv-kat="([^"]+)"( open="")?>\s*<summary class="fv-kat-sum">([\s\S]*?)<svg[\s\S]*?<\/summary>\s*<div class="fv-kat-liste">([\s\S]*?)<\/div>\s*<\/details>/g)].map((m) => ({
+        id: m[1],
+        open: Boolean(m[2]),
+        label: m[3]!.trim(),
+        produkter: [...m[4]!.matchAll(/class="fvmenu-prod">([^<]+)</g)].map((p) => p[1]),
+      }));
+      const synlig = (p: { locales?: string[] }) => !p.locales || p.locales.includes(locale);
+      const self = FAMILY_MENU.products.find((p) => p.name === SELF_PRODUCT)!.category;
+      const forventet = FAMILY_MENU.categories
+        .map((k) => ({
+          id: k.id,
+          open: k.id === self,
+          label: k.label[locale] ?? k.label.en,
+          produkter: FAMILY_MENU.products.filter((p) => p.category === k.id && synlig(p)).map((p) => p.name),
+        }))
+        .filter((k) => k.produkter.length > 0);
+      expect(kats).toEqual(forventet);
+      expect(kats.filter((k) => k.open).map((k) => k.id)).toEqual(['bibel']);
+    });
+  }
+
+  test('hvert produkt i kopien står i en kategori kopien har', () => {
+    const ids = new Set(FAMILY_MENU.categories.map((k) => k.id));
+    expect(FAMILY_MENU.products.filter((p) => !ids.has(p.category)).map((p) => p.name)).toEqual([]);
+  });
+
+  test('summary er et trykkmål på minst 44 px, og panelet ruller selv', () => {
+    const css = readFileSync(resolve(ROOT, 'public/styles.css'), 'utf8');
+    expect(css).toMatch(/\.fv-kat-sum\s*\{[^}]*min-height:\s*44px/);
+    expect(css).toMatch(/\.fv-kat-sum\s*\{[^}]*overflow-wrap:\s*anywhere/);
+    expect(css).toMatch(/\.fvmenu-panel\s*\{[^}]*max-height:\s*calc\(100dvh - 96px\)[^}]*overflow-y:\s*auto/);
+  });
+
+  test('klikk utenfor lukker menyen, ikke kategorien man trykker i (portal/SETTINGS.md)', () => {
+    const js = readFileSync(resolve(ROOT, 'public/js/chrome.js'), 'utf8');
+    const closer = /addEventListener\('pointerdown'[\s\S]*?\}\);\n\}\);/.exec(js)?.[0] ?? '';
+    expect(closer).not.toBe('');
+    expect(closer).not.toMatch(/querySelectorAll\('details\[open\]'\)/);
+    expect(closer).toMatch(/:not\(\.fv-kat\)/);
+  });
 });
 
 describe('FARGENE kommer fra kopien', () => {
