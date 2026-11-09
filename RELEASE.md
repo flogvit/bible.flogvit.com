@@ -20,6 +20,7 @@
 - The import always runs against the KVN data in `$FREE_BIBLE_DIR`, never a stale staged copy, with a guard and tests.
 - New `check-edition-landing` script that checks an edition's KVN through the import, with tests.
 - A test now guards that a new edition never moves a language's default.
+- The reading-fallback test now checks the Norwegian chains by their rule, so a Norwegian edition may sit before English.
 ## 2026-10-30 — Songs about the text you read, and «Log in» brings you back
 
 **New features**
