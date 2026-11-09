@@ -1,4 +1,6 @@
-import { afterAll, describe, expect, test } from 'bun:test';
+import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
+import { getBibleEditionById, getBibleEditions } from '../../src/lib/bible.ts';
+import { DB_TEST_TIMEOUT_MS } from '../../test/db-timeout.ts';
 import { closeSql } from '../../src/lib/db.ts';
 import { LOCALES } from '../../src/lib/i18n.ts';
 import { createHandler, SERVER_NAME } from '../src/server.ts';
@@ -49,7 +51,17 @@ test('every tool is declared read-only', async () => {
 // the moment it is added there.
 
 /** The licences require these links to follow the text: the sources, and the CC licence itself (#206). */
-const LICENCE_SOURCES = ['https://sblgnt.com', 'https://www.tanach.us', 'https://creativecommons.org/licenses/'];
+// The sources a licence names, read from the same credits list_editions reads
+// (free-bible's license.json → `credits`), not written out here: a hand list
+// turned red for every new CC BY-SA edition whose credit is the licence's own
+// demand (#225).
+const LICENCE_SOURCES: string[] = [];
+beforeAll(async () => {
+  for (const e of await getBibleEditions()) {
+    const credits = (await getBibleEditionById(e.id))?.license?.credits ?? [];
+    for (const c of credits) LICENCE_SOURCES.push(c.url, ...(c.license_url ? [c.license_url] : []));
+  }
+}, DB_TEST_TIMEOUT_MS);
 
 describe.each(CALLS)('%s %j', (name, args) => {
   test('answers without error', async () => {
