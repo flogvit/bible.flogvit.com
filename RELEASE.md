@@ -1,5 +1,23 @@
 # Release notes
 
+## 2026-11-09 — Five more Bible editions to read, including both Chinese Union versions
+
+**New features**
+- Read the Bible in five more editions: the Albanian translation, the Bungo (classical Japanese) translation, Cadman's translation, the AKJV, and both Chinese Union versions.
+- Whichever edition you pick, you can keep it on your account. Your choice follows you to your other devices, including for the new editions.
+
+**Polish**
+- Chinese text now reads as normal running text. It no longer comes out one character at a time with gaps between them.
+- Chinese verses now carry their script (Simplified or Traditional), so your device picks the right font.
+
+**Bug fixes**
+- Placeholder text from the source and stray inline verse numbers no longer show up in the verse text you read.
+
+**Behind the scenes**
+- The edition importer now rejects a source placeholder only when it is the whole verse, and no longer mistakes one for a translator's note.
+- A harvested edition's text rules are now part of its content hash, so changing them re-imports the edition.
+- The import always runs against the KVN data in `$FREE_BIBLE_DIR`, never a stale staged copy, with a guard and tests.
+- New `check-edition-landing` script that checks an edition's KVN through the import, with tests.
 ## 2026-10-30 — Songs about the text you read, and «Log in» brings you back
 
 **New features**
