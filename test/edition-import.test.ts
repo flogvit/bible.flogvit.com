@@ -17,7 +17,7 @@ import { checkEdition, editionGate, readerText, toOsnbNumbering, versesWithInlin
 import type { RawVerse } from '../src/lib/edition-import.ts';
 import { loadRawMappingUncached } from '../src/lib/verse-mapper.ts';
 import { getSql } from '../src/lib/db.ts';
-import { editionLangTag, readableBibleCandidates } from '../src/lib/bible.ts';
+import { editionLangTag, langDir, readableBibleCandidates } from '../src/lib/bible.ts';
 import { createApp } from '../src/app.ts';
 
 setDefaultTimeout(DB_TEST_TIMEOUT_MS);
@@ -113,6 +113,14 @@ describe('the renumbering', () => {
     expect(readerText('Paul, an apostle, (not of men,) to you')).toBe('Paul, an apostle, (not of men,) to you');
   });
 
+  test("the Finnish 1776's Hebrew numbers «(H 3:2)» and paragraph marks «¶» are taken out (#221)", () => {
+    expect(readerText('Davidin Psalmi, kuin hän pakeni poikaansa Absalomia.  (H 3:2) Voi Herra! kuinka monta')).toBe(
+      'Davidin Psalmi, kuin hän pakeni poikaansa Absalomia. Voi Herra! kuinka monta',
+    );
+    expect(readerText('¶ מזמור לדוד בברחו מפני אבשלום בנו')).toBe('מזמור לדוד בברחו מפני אבשלום בנו');
+    expect(readerText('¶ Apre sa, wa David')).toBe('Apre sa, wa David');
+  });
+
   test("a source's placeholder is left out and reported, not shown (bungo Exodus 7:24)", () => {
     const out = toOsnbNumbering(
       [
@@ -182,6 +190,15 @@ test("a Chinese edition's text carries its script in `lang`", () => {
   expect(editionLangTag({ lang_iso639_1: 'zh', script: 'Hans' })).toBe('zh-Hans');
   expect(editionLangTag({ lang_iso639_1: 'ja', script: 'Jpan' })).toBe('ja');
   expect(editionLangTag({ lang_iso639_1: 'en', script: 'Latn' })).toBe('en');
+});
+
+// #221: the Modern Hebrew edition is read right to left as the main text.
+test('an edition in a right-to-left language gets dir="rtl", the others none', () => {
+  expect(langDir('he')).toBe('rtl');
+  expect(langDir('ar')).toBe('rtl');
+  expect(langDir('en')).toBeUndefined();
+  expect(langDir('zh-Hant')).toBeUndefined();
+  expect(langDir(undefined)).toBeUndefined();
 });
 
 describe('our own editions come first for their language', () => {

@@ -128,9 +128,16 @@ export function versesWithInlineNotes(verses: RawVerse[]): string[] {
  * Bible marks where the Hebrew or its own printed numbering starts a verse:
  * «(40:20) Ngươi có thể câu sấu…» at the KJV's Job 41:1, or «… (9:51) Các
  * ngươi phải…» in the middle of Mark 9:50. The KVN mapping already carries
- * that numbering; in the text it is noise in front of the reader.
+ * that numbering; in the text it is noise in front of the reader. The Finnish
+ * 1776 marks the Hebrew number the same way with an H, «(H 3:2)» (#221).
  */
-export const VERSE_NUMBER_MARK = /\s*\(\d{1,3}[:.]\d{1,3}\)\s*/g;
+export const VERSE_NUMBER_MARK = /\s*\((?:H\s*)?\d{1,3}[:.]\d{1,3}\)\s*/g;
+
+/**
+ * A paragraph mark printed before a verse (#221: hcv, he_modern «¶ מזמור…»).
+ * The page has its own paragraphs; in the text it is a stray sign.
+ */
+export const PARAGRAPH_MARK = /\s*¶\s*/g;
 
 /**
  * A placeholder the source wrote where it had no text (#216): bungo's Exodus
@@ -166,12 +173,12 @@ function closeSpacedCjk(text: string): string {
  * is imported again with the new rules instead of keeping the old text until
  * its source changes.
  */
-export const READER_TEXT_RULES = 1;
+export const READER_TEXT_RULES = 2;
 
 /** The verse text a reader is shown: other numberings out, spaced Chinese closed up, spaces tidied. */
 export function readerText(text: string): string {
   // [ \t\n], not \s: \s takes the ideographic space (U+3000) too.
-  return closeSpacedCjk(text.replace(VERSE_NUMBER_MARK, ' ').replace(/[ \t\n]{2,}/g, ' ').trim());
+  return closeSpacedCjk(text.replace(VERSE_NUMBER_MARK, ' ').replace(PARAGRAPH_MARK, ' ').replace(/[ \t\n]{2,}/g, ' ').trim());
 }
 
 /** A verse at its osnb address, ready for the `verses` table. */

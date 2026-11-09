@@ -23,6 +23,8 @@ export const IMPORTED_BIBLES = [
   'elberfelder_1871',
   // #220: text read again from CrossWire's Norsk (free-bible#146).
   'dnb30',
+  // #170, fourth group (#221).
+  'erv', 'finn', 'geneva', 'hcv', 'he_modern', 'jps',
 ] as const;
 
 // De som alt er nummerert som osnb, og lagres som de er. Alle andre flyttes til
@@ -72,6 +74,12 @@ export const EDITION_LABELS: Record<ImportedBible, string> = {
   elberfelder_1905: 'Elberfelder 1905, German',
   elberfelder_1871: 'Elberfelder 1871, German',
   dnb30: 'Bibelselskapet 1930, Norwegian Bokmål',
+  erv: 'English Revised Version',
+  finn: 'Finnish 1776',
+  geneva: 'Geneva Bible, English',
+  hcv: 'Haitian Creole Bible (1985)',
+  he_modern: 'Modern Hebrew Bible (Delitzsch NT)',
+  jps: 'JPS Tanakh 1917, English',
 };
 
 /** "osnb (Norwegian Bokmål), osnn (Norwegian Nynorsk), …" for the given editions. */
