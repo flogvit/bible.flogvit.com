@@ -46,7 +46,7 @@ import {
   type ThemeData,
 } from '../../src/lib/bible.ts';
 import { bookName, getBookInfoById as bookById } from '../../src/lib/books-data.ts';
-import { IMPORTED_BIBLES, editionList, editionsByKind } from '../../src/lib/editions.ts';
+import { EDITION_LABELS, IMPORTED_BIBLES, editionList, editionsByKind, type ImportedBible } from '../../src/lib/editions.ts';
 import { getAvailableMappings } from '../../src/lib/verse-mapper.ts';
 import { findReferences } from './find-references.ts';
 import { chapterUrl, pageUrl } from './links.ts';
@@ -131,8 +131,11 @@ export function registerTools(server: McpServer): void {
       const lines: string[] = [];
       for (const e of await getBibleEditions()) {
         const full = await getBibleEditionById(e.id);
+        // free-bible's meta has no English name for some editions (#244): use
+        // the label the site shows, then the native name, never «null».
+        const name = e.name_en ?? EDITION_LABELS[e.id as ImportedBible] ?? e.name_native ?? e.id;
         lines.push(
-          `- **${e.id}** — ${e.name_en}${e.name_native && e.name_native !== e.name_en ? ` (${e.name_native})` : ''}; language ${e.lang_iso639_1}; ${e.philosophy === 'source_text' ? 'source text' : 'translation'}; licence ${e.license_spdx ?? e.license_name}.` +
+          `- **${e.id}** — ${name}${e.name_native && e.name_native !== name ? ` (${e.name_native})` : ''}; language ${e.lang_iso639_1}; ${e.philosophy === 'source_text' ? 'source text' : 'translation'}; licence ${e.license_spdx ?? e.license_name}.` +
             // The credit from `credits`, never our internal statement; a harvested
             // edition without credits shows its publisher's own licence notice.
             (full?.license?.credits?.length

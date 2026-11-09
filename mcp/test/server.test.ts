@@ -102,6 +102,18 @@ test('list_editions gives each edition its credit, never the internal note', asy
   expect(text).not.toContain('obligation carries over');
 });
 
+// #244: an edition whose free-bible meta has no English name was listed as
+// «**ha_lit** — null (…)». Every line names its edition, by the label the
+// site uses when the data has no English name.
+test('list_editions names every edition, never «null»', async () => {
+  const { text } = await call('list_editions', {});
+  const lines = text.split('\n').filter((l) => l.startsWith('- **'));
+  expect(lines.length).toBeGreaterThan(10);
+  expect(lines.filter((l) => /— (null|undefined)\b/.test(l))).toEqual([]);
+  const haLit = lines.find((l) => l.startsWith('- **ha_lit**'));
+  expect(haLit).toContain('— Litafi Mai-tsarki, Hausa New Testament');
+});
+
 test('the language picks the edition when none is named', async () => {
   expect((await call('get_passage', { reference: 'John 3:16', language: 'nb' })).text).toContain('**osnb**');
   // German has an edition of its own now (#170), and Spanish gets our own oses before rv_1909.
