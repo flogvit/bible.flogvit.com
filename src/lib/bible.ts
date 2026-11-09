@@ -15,7 +15,7 @@ import { bookAbbrByShort, bookNameByShort } from './books-data.ts';
 import { toUrlSlug } from './url-utils.ts';
 import { bookMentionTest, personChapterCandidates } from './blob-forfilter.ts';
 import { currentChosenEdition } from './edition-choice.ts';
-import { OWN_EDITIONS } from './editions.ts';
+import { IMPORTED_BIBLES, OWN_EDITIONS } from './editions.ts';
 
 // --- Språk-scopet uthenting ---
 //
@@ -2261,8 +2261,20 @@ export async function readableBibleCandidates(requested: string): Promise<BibleC
   // ellers ASV vært første engelske i alfabetet og blitt standard for /en/.
   // Sortert her og ikke i SQL: basens kollasjon gir ikke nødvendigvis den
   // rekkefølgen `ORDER BY id` ser ut til å love.
+  //
+  // Etter våre egne: i den rekkefølgen IMPORTED_BIBLES lister dem, altså
+  // rekkefølgen de ble publisert i (#231). Alfabetet lot en ny utgave ta over
+  // språkets standard uten at noen valgte det: elberfelder_1905 (#230) kom
+  // foran luther_1912, og en tysk leser fikk en annen bibel dagen etter.
   const own = OWN_EDITIONS as readonly string[];
-  rows.sort((a, b) => Number(own.includes(b.id)) - Number(own.includes(a.id)) || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+  const listed = IMPORTED_BIBLES as readonly string[];
+  const rank = (id: string) => (listed.includes(id) ? listed.indexOf(id) : listed.length);
+  rows.sort(
+    (a, b) =>
+      Number(own.includes(b.id)) - Number(own.includes(a.id)) ||
+      rank(a.id) - rank(b.id) ||
+      (a.id < b.id ? -1 : a.id > b.id ? 1 : 0),
+  );
   const result: BibleCandidate[] = [];
   for (const language of contentLanguageChain(requested)) {
     for (const row of rows) {

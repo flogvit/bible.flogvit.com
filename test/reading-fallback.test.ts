@@ -9,6 +9,7 @@ import { describe, expect, setDefaultTimeout, test } from 'bun:test';
 import { DB_TEST_TIMEOUT_MS } from './db-timeout.ts';
 import { createApp } from '../src/app.ts';
 import { readableBibleCandidates } from '../src/lib/bible.ts';
+import { IMPORTED_BIBLES, OWN_EDITIONS } from '../src/lib/editions.ts';
 import { loadChapterWithFallback } from '../src/routes/pages/reading.tsx';
 
 setDefaultTimeout(DB_TEST_TIMEOUT_MS);
@@ -52,6 +53,26 @@ describe('readableBibleCandidates', () => {
   test('sv → osen (basespråket) før osnb, ingen svensk utgave', async () => {
     const ids = await startsWith('sv', ['osen']);
     expect(ids).toContain('osnb');
+  });
+
+  // #231: a new edition must not move a language's default. Harvested editions
+  // follow IMPORTED_BIBLES, the order they were published in, not the alphabet
+  // (elberfelder_1905 took German from luther_1912 the day it came).
+  test('harvested editions keep the order they were published in, so a new one never becomes the default', async () => {
+    const listed = IMPORTED_BIBLES as readonly string[];
+    const own = OWN_EDITIONS as readonly string[];
+    for (const lang of ['en', 'de', 'fr', 'es', 'nb']) {
+      const candidates = await readableBibleCandidates(lang);
+      for (const edLang of new Set(candidates.map((e) => e.lang))) {
+        const ids = candidates.filter((e) => e.lang === edLang && listed.includes(e.id) && !own.includes(e.id)).map((e) => e.id);
+        const ranks = ids.map((id) => listed.indexOf(id));
+        expect(ranks, `${lang} → ${edLang}: ${ids.join(', ')}`).toEqual([...ranks].sort((a, b) => a - b));
+      }
+    }
+    const de = (await readableBibleCandidates('de')).map((e) => e.id);
+    if (de.includes('luther_1912') && de.includes('elberfelder_1905')) {
+      expect(de.indexOf('luther_1912')).toBeLessThan(de.indexOf('elberfelder_1905'));
+    }
   });
 
   test('es → oses before the harvested Spanish edition (#170)', async () => {
