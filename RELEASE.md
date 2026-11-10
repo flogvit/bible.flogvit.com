@@ -1,16 +1,22 @@
 # Release notes
 
-## 2026-11-10 — Security update for the web framework
+## 2026-11-10 — Coverdale, Tyndale, Judson and SVD editions added, and the edition picker only offers what a chapter has
 
-**Behind the scenes**
-- The web framework under the site and the MCP server (hono) is updated from 4.13.13 to 4.13.17. The update closes five published security advisories, covering CSRF checks, form validation, mounted routes, router middleware and the CSS helper.
+**New features**
+- The Coverdale Bible is now available as an edition you can read, alongside the other public-domain English editions.
+- You can now also read the Tyndale Bible, the 1840 Judson Bible and the SVD edition.
 
-## 2026-11-10 — Red-letter verses and edition lists read correctly
+**Polish**
+- The edition picker now offers an edition only on chapters where it has text, so you no longer pick an edition and land on an empty chapter.
 
 **Bug fixes**
 - Imported editions with consecutive red-letter passages no longer run the words together. Each span now keeps its spacing.
 - Assistants connected through the MCP server now see every edition listed by name. Some editions used to show up as "null".
 - The MCP server no longer describes every harvested edition as public domain, so the licence information it gives is accurate.
+
+**Behind the scenes**
+- The web framework under the site and the MCP server (hono) is updated from 4.13.13 to 4.13.17. The update closes five published security advisories, covering CSRF checks, form validation, mounted routes, router middleware and the CSS helper.
+
 ## 2026-11-09 — Forty-one more Bible editions to read, now including Weymouth, Young's Literal Translation and IRV editions in Indian languages, plus a FLOGVIT menu sorted into categories
 
 **New features**

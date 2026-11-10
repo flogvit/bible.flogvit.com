@@ -2310,17 +2310,20 @@ export interface OfflineEdition {
   id: string;
   /** Egennavn («OSEN (Open Source English)») — oversettes ikke. */
   label: string;
-  /** 'ot', 'nt' or 'both' (bible_editions.testament); null when unknown. */
-  testament?: string | null;
 }
 
 /**
- * Does the edition have this book's testament (#221)? JPS 1917 is the Old
- * Testament only, and offered on John 3 it led to a 404. Unknown counts as yes.
+ * The editions that have this chapter (#221, #238). The testament was not
+ * enough: Tyndale has Genesis-Deuteronomy, Jonah and the New Testament, so it
+ * was offered on Isaiah and led to a 404, as JPS 1917 did on John 3 before.
+ * The query reads the prefix of `uq_verses` (book_id, chapter, …): a couple of
+ * thousand index rows per chapter, on a page the microcache keeps.
  */
-export function editionCoversTestament(e: Pick<OfflineEdition, 'testament'>, bookTestament: string): boolean {
-  const t = (e.testament ?? '').toLowerCase();
-  return !t || t === 'both' || t === bookTestament.toLowerCase();
+export async function editionsWithChapter(bookId: number, chapter: number): Promise<Set<string>> {
+  const rows = (await getSql()`
+    SELECT DISTINCT bible FROM verses WHERE book_id = ${bookId} AND chapter = ${chapter}
+  `) as { bible: string }[];
+  return new Set(rows.map((r) => r.bible));
 }
 
 /**
@@ -2346,7 +2349,7 @@ export async function offlineEditions(lang = currentContentLanguage()): Promise<
     // En nødkandidat (osen/osnb) som ikke er importert, kan ikke lastes ned.
     if (!e) continue;
     const abbr = e.abbreviation || id.toUpperCase();
-    result.push({ id, label: e.name_native && e.name_native !== abbr ? `${abbr} (${e.name_native})` : abbr, testament: e.testament });
+    result.push({ id, label: e.name_native && e.name_native !== abbr ? `${abbr} (${e.name_native})` : abbr });
   }
   return result;
 }
