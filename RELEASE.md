@@ -1,5 +1,11 @@
 # Release notes
 
+## 2026-11-10 — Red-letter verses and edition lists read correctly
+
+**Bug fixes**
+- Imported editions with consecutive red-letter passages no longer run the words together. Each span now keeps its spacing.
+- Assistants connected through the MCP server now see every edition listed by name. Some editions used to show up as "null".
+- The MCP server no longer describes every harvested edition as public domain, so the licence information it gives is accurate.
 ## 2026-11-09 — Forty-one more Bible editions to read, now including Weymouth, Young's Literal Translation and IRV editions in Indian languages, plus a FLOGVIT menu sorted into categories
 
 **New features**
