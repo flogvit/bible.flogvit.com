@@ -255,6 +255,39 @@ Skrevet for den som tar neste gruppe i #170. Rekkefølgen:
      (albanian fra CrossWires Alb, free-bible#141). En mapping kan ikke skape tekst.
    - Annen nummerering inne i teksten («(40:20)» i cadman) → importen stryker den
      (`VERSE_NUMBER_MARK`); ingen dataendring.
+   - Merking i teksten → en regel i `readerText()`, aldri en dataendring:
+     `<I>` (`INLINE_TAG`), `*ord*` (`EMPHASIS_STARS`), red-letter `‹ ›`
+     (`RED_LETTER_MARK`, med sømmen `›‹` som mellomrom før et ord, #245).
+     Skann ALLE publiserte utgaver før regelen skrives: `‹ ›` sto også i den alt
+     publiserte lv_gluck_8. Ny regel ⇒ løft `READER_TEXT_RULES`.
+   - Kilden slår sammen vers (kn_irv, te_irv: v54 bærer 54–55) → join-poster,
+     order 0..n; de landes på første vers (#234). Kjente utelatelser i den
+     kritiske teksten (Matt 18,11 …) står tomme.
+   - En egen Sal 60-oppføring som antar hebraisk forskyvning teksten ikke har
+     (gu/pa/te_irv) → fjern den; les v1 mot kjv før du stoler på den.
+   - Kildens versdeling avviker innen kapitlet (coverdale) → juster tekst mot
+     kjv med trigramlikhet, kapittel for kapittel (free-bible#150).
+   - Lisensen er bekreftet, men oversettelsen er UFERDIG (lt_heritage: 7100 av
+     31 100 vers, eBible har samme hull) → eierens valg, ikke ditt.
+   - Strongs-varianter (`{H7225}` i teksten: asvs, kjv_strongs, rv_1909_strongs,
+     *_s) og ekstra grunntekster venter på eieren (9.11). Ikke publiser dem.
 4. **`textVerification`** i mappinga: hva sjekken hviler på, og hva som er igjen.
 5. Legg oversettelsene i `verify-pending.txt` for modellsjekken på Home Mac
    (`~/Library/Application Support/flogvit-kvn-verify/README.md`).
+6. **Utrulling og prøve.** Kode går med orkesterets deployer, data med
+   `server/deploy-bibel-data.sh` fra flogvit.com. Kjør datadeployen og tunge
+   suiter i Dux' testslot (`~/.dux/bin/dux test-slot run --what <x> -- <cmd>`):
+   under last ryker free-bibles testport og Chrome-vaktene på tidsavbrudd, ikke
+   på feil. Sjekk i prod:
+   - lista;
+   - Joh 3,16 med riktig `lang`;
+   - utgavesida;
+   - `list_editions`;
+   - kreditten for CC BY-SA;
+   - 320/390 px × 150 % tekst med FLOGVIT-menyen åpen.
+
+   Fallgruver underveis:
+   - Et sparse free-bible-arbeidstre som mangler en publisert utgave, får
+     importen til å avvise den som «no license.json».
+   - Dux sveiper arbeidstreet når grenen er merget. Commit og push før merge,
+     og pek testene på `../free-bible` etterpå.
