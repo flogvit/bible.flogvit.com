@@ -1,5 +1,10 @@
 # Release notes
 
+## 2026-11-10 — Security update for the web framework
+
+**Behind the scenes**
+- The web framework under the site and the MCP server (hono) is updated from 4.13.13 to 4.13.17. The update closes five published security advisories, covering CSRF checks, form validation, mounted routes, router middleware and the CSS helper.
+
 ## 2026-11-10 — Red-letter verses and edition lists read correctly
 
 **Bug fixes**
