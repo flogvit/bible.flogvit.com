@@ -33,6 +33,8 @@ export const IMPORTED_BIBLES = [
   'weymouth', 'ylt', 'bn_irv', 'gu_irv', 'irv', 'ha_con', 'ha_lit',
   // #170, eighth group (#225), CC BY-SA with credits.
   'kn_irv', 'mr_irv', 'pa_irv', 'ta_irv', 'te_irv',
+  // #220: its own verse division in the Psalms aligned to kjv by text (free-bible#150).
+  'coverdale',
 ] as const;
 
 // De som alt er nummerert som osnb, og lagres som de er. Alle andre flyttes til
@@ -111,6 +113,7 @@ export const EDITION_LABELS: Record<ImportedBible, string> = {
   pa_irv: 'Indian Revised Version, Punjabi',
   ta_irv: 'Indian Revised Version, Tamil',
   te_irv: 'Indian Revised Version, Telugu',
+  coverdale: 'Coverdale Bible 1535, English',
 };
 
 /** "osnb (Norwegian Bokmål), osnn (Norwegian Nynorsk), …" for the given editions. */
