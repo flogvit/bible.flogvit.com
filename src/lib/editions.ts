@@ -39,6 +39,8 @@ export const IMPORTED_BIBLES = [
   'tyndale',
   // #223: text repaired from eBible's arb-vd (free-bible#154); right to left.
   'svd',
+  // #222: text read again from CrossWire's BurJudson (free-bible#152).
+  'my_judson',
 ] as const;
 
 // De som alt er nummerert som osnb, og lagres som de er. Alle andre flyttes til
@@ -120,6 +122,7 @@ export const EDITION_LABELS: Record<ImportedBible, string> = {
   coverdale: 'Coverdale Bible 1535, English',
   tyndale: 'Tyndale Bible 1526/1534, English',
   svd: 'Smith-Van Dyck 1865, Arabic',
+  my_judson: 'Judson Bible 1835, Burmese',
 };
 
 /** "osnb (Norwegian Bokmål), osnn (Norwegian Nynorsk), …" for the given editions. */
