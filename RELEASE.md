@@ -1,6 +1,9 @@
 # Release notes
 
-## 2026-11-10 — Red-letter verses and edition lists read correctly
+## 2026-11-10 — Coverdale Bible added, red-letter verses and edition lists read correctly
+
+**New features**
+- The Coverdale Bible is now available as an edition you can read, alongside the other public-domain English editions.
 
 **Bug fixes**
 - Imported editions with consecutive red-letter passages no longer run the words together. Each span now keeps its spacing.
