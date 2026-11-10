@@ -1,9 +1,13 @@
 # Release notes
 
-## 2026-11-10 — Coverdale Bible added, red-letter verses and edition lists read correctly
+## 2026-11-10 — Coverdale, Tyndale, Judson and SVD editions added, and the edition picker only offers what a chapter has
 
 **New features**
 - The Coverdale Bible is now available as an edition you can read, alongside the other public-domain English editions.
+- You can now also read the Tyndale Bible, the 1840 Judson Bible and the SVD edition.
+
+**Polish**
+- The edition picker now offers an edition only on chapters where it has text, so you no longer pick an edition and land on an empty chapter.
 
 **Bug fixes**
 - Imported editions with consecutive red-letter passages no longer run the words together. Each span now keeps its spacing.
