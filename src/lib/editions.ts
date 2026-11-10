@@ -123,6 +123,10 @@ export function editionsByKind(): string {
   return (
     `${editionList(own)} are open CC BY 4.0 translations made by the free-bible project directly from the Hebrew and Greek; ` +
     `${editionList(SOURCE_TEXTS)} are the source texts` +
-    (harvested.length ? `; ${editionList(harvested)} are public-domain translations.` : '.')
+    // Not «public domain»: since #224/#225 some are CC BY-SA and ask for a
+    // credit (#246). The licence and credit of each are in list_editions.
+    (harvested.length
+      ? `; ${editionList(harvested)} are open translations, public domain or CC BY-SA — list_editions gives each one's licence and the credit it requires.`
+      : '.')
   );
 }

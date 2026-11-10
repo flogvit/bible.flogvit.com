@@ -139,6 +139,16 @@ describe('the renumbering', () => {
     expect(readerText('Il dit : « Venez »')).toBe('Il dit : « Venez »');
   });
 
+  test('two red-letter spans back to back keep their words apart (#245)', () => {
+    // kn_irv Rev 16:15: «‹“ಇಗೋ›‹ಕಳ್ಳನು» became «“ಇಗೋಕಳ್ಳನು».
+    expect(readerText('‹“ಇಗೋ›‹ಕಳ್ಳನು ಬರುವಂತೆ ಬರುತ್ತೇನೆ.›‹ತಾನು›‹ಬೆತ್ತಲೆಯಾಗಿ›')).toBe('“ಇಗೋ ಕಳ್ಳನು ಬರುವಂತೆ ಬರುತ್ತೇನೆ. ತಾನು ಬೆತ್ತಲೆಯಾಗಿ');
+    expect(readerText('‹इसलिए›‹“स्मरण कर›')).toBe('इसलिए “स्मरण कर');
+    // Punctuation after the seam gets no space in front of it (irv «›‹, और»).
+    expect(readerText('‹गिरा है›‹, और मन फिरा›')).toBe('गिरा है, और मन फिरा');
+    // A seam the source already spaced stays one space.
+    expect(readerText('‹दूताला लिही:› ‹जो आपल्या›')).toBe('दूताला लिही: जो आपल्या');
+  });
+
   test("Sagradas Escrituras' italic tags «<I>la</I>» are taken out, the words kept (#222)", () => {
     expect(readerText('que está en el mundo por <I>la</I>  concupiscencia.')).toBe('que está en el mundo por la concupiscencia.');
     expect(readerText('Thou shalt <b>not</b> kill; 3 < 4 and a <tag> stays')).toBe('Thou shalt not kill; 3 < 4 and a <tag> stays');
