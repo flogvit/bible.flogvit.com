@@ -37,6 +37,8 @@ export const IMPORTED_BIBLES = [
   'coverdale',
   // #223: offered only on the chapters it has (#238): Gen-Deut, Jonah, the NT.
   'tyndale',
+  // #223: text repaired from eBible's arb-vd (free-bible#154); right to left.
+  'svd',
 ] as const;
 
 // De som alt er nummerert som osnb, og lagres som de er. Alle andre flyttes til
@@ -117,6 +119,7 @@ export const EDITION_LABELS: Record<ImportedBible, string> = {
   te_irv: 'Indian Revised Version, Telugu',
   coverdale: 'Coverdale Bible 1535, English',
   tyndale: 'Tyndale Bible 1526/1534, English',
+  svd: 'Smith-Van Dyck 1865, Arabic',
 };
 
 /** "osnb (Norwegian Bokmål), osnn (Norwegian Nynorsk), …" for the given editions. */
