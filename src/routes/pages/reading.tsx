@@ -55,7 +55,7 @@ import {
   type OfflineEdition,
   defaultBibleForLanguage,
   editionLang,
-  editionCoversTestament,
+  editionsWithChapter,
   langDir,
 } from '../../lib/bible.ts';
 import { currentChosenEdition } from '../../lib/edition-choice.ts';
@@ -1590,9 +1590,8 @@ function MobileToolbar({
   // er de lesbare i basen, språkets egne først (offlineEditions, #136): de var
   // hardkodet til OSNB/OSNN, så en leser på /en/ eller /es/ nådde verken
   // sin egen eller de høstede utgavene herfra (#202).
-  // Only editions that have this book (#221): an Old Testament edition offered
-  // on John 3 led to a 404.
-  const offered = editions.filter((e) => editionCoversTestament(e, book.testament));
+  // The editions are already the ones that have this chapter (#238, editionsWithChapter).
+  const offered = editions;
   const editionLinks = offered.map((e) => ({
     ...e,
     href: `/${bookSlug}/${chapter}${buildQuery(e.id, mapping, secondary, defaultBible)}`,
@@ -1809,10 +1808,14 @@ r.get('/:book/:chapter', async (c) => {
   // one does not have. The choice is the default, so it is kept out of the
   // URLs like the language's default is.
   const chosen = currentChosenEdition();
-  const [languageCandidates, toolEditions] = await Promise.all([
+  const [languageCandidates, allEditions, withChapter] = await Promise.all([
     readableBibleCandidates(contentLang),
     offlineEditions(contentLang),
+    editionsWithChapter(book.id, chapter),
   ]);
+  // The picker and the parallel list offer only editions that have this
+  // chapter (#221, #238): Tyndale on Isaiah, or JPS on John 3, led to a 404.
+  const toolEditions = allEditions.filter((e) => withChapter.has(e.id));
   const candidates: BibleCandidate[] = chosen
     ? [
         { id: chosen, lang: (await editionLang(chosen)) ?? contentLang },
