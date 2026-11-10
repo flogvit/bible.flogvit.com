@@ -13,6 +13,10 @@
 - Imported editions with consecutive red-letter passages no longer run the words together. Each span now keeps its spacing.
 - Assistants connected through the MCP server now see every edition listed by name. Some editions used to show up as "null".
 - The MCP server no longer describes every harvested edition as public domain, so the licence information it gives is accurate.
+
+**Behind the scenes**
+- The web framework under the site and the MCP server (hono) is updated from 4.13.13 to 4.13.17. The update closes five published security advisories, covering CSRF checks, form validation, mounted routes, router middleware and the CSS helper.
+
 ## 2026-11-09 — Forty-one more Bible editions to read, now including Weymouth, Young's Literal Translation and IRV editions in Indian languages, plus a FLOGVIT menu sorted into categories
 
 **New features**
