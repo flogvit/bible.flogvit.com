@@ -35,6 +35,8 @@ export const IMPORTED_BIBLES = [
   'kn_irv', 'mr_irv', 'pa_irv', 'ta_irv', 'te_irv',
   // #220: its own verse division in the Psalms aligned to kjv by text (free-bible#150).
   'coverdale',
+  // #223: offered only on the chapters it has (#238): Gen-Deut, Jonah, the NT.
+  'tyndale',
 ] as const;
 
 // De som alt er nummerert som osnb, og lagres som de er. Alle andre flyttes til
@@ -114,6 +116,7 @@ export const EDITION_LABELS: Record<ImportedBible, string> = {
   ta_irv: 'Indian Revised Version, Tamil',
   te_irv: 'Indian Revised Version, Telugu',
   coverdale: 'Coverdale Bible 1535, English',
+  tyndale: 'Tyndale Bible 1526/1534, English',
 };
 
 /** "osnb (Norwegian Bokmål), osnn (Norwegian Nynorsk), …" for the given editions. */
