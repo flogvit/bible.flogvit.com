@@ -122,7 +122,7 @@ export const EDITION_LABELS: Record<ImportedBible, string> = {
   coverdale: 'Coverdale Bible 1535, English',
   tyndale: 'Tyndale Bible 1526/1534, English',
   svd: 'Smith-Van Dyck 1865, Arabic',
-  my_judson: 'Judson Bible 1835, Burmese',
+  my_judson: 'Judson Bible 1840, Burmese',
 };
 
 /** "osnb (Norwegian Bokmål), osnn (Norwegian Nynorsk), …" for the given editions. */
