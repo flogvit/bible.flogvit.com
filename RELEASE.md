@@ -1,5 +1,9 @@
 # Release notes
 
+## 2026-11-14 — Security update for the MCP server
+
+**Behind the scenes**
+- Updated a dependency of the MCP server (`@hono/node-server` 2.1.3 → 2.1.6) to fix two published security advisories (GHSA-qv5m-9pm6-hqp3, GHSA-jpvv-r467-5p4w).
 ## 2026-11-10 — Coverdale, Tyndale, Judson and SVD editions added, the edition picker only offers what a chapter has, and a security update to the web framework
 
 **New features**
