@@ -1,5 +1,9 @@
 # Release notes
 
+## 2026-11-16 — Security update to the web framework
+
+**Behind the scenes**
+- The web framework under the site and the MCP server (hono) is updated from 4.13.17 to 4.13.18. The update closes four published security advisories, covering request-size limits, static file paths, request validation and mounted routes (GHSA-39q9-qp46-w8xg, GHSA-74fm-fwc7-3fwp, GHSA-92p4-j3wq-jmqx, GHSA-h25j-2p75-qj33).
 ## 2026-11-14 — Security update for the MCP server
 
 **Behind the scenes**
