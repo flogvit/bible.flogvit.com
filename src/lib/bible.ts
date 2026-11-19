@@ -15,7 +15,7 @@ import { bookAbbrByShort, bookNameByShort } from './books-data.ts';
 import { toUrlSlug } from './url-utils.ts';
 import { bookMentionTest, personChapterCandidates } from './blob-forfilter.ts';
 import { currentChosenEdition } from './edition-choice.ts';
-import { IMPORTED_BIBLES, OWN_EDITIONS } from './editions.ts';
+import { IMPORTED_BIBLES, OWN_EDITIONS, isReadableEdition } from './editions.ts';
 
 // --- Språk-scopet uthenting ---
 //
@@ -2254,6 +2254,7 @@ export async function readableBibleCandidates(requested: string): Promise<BibleC
   const sql = getSql();
   const rows = await sql`
     SELECT id, lang_iso639_1 AS lang FROM bible_editions
+    -- No source text is a language's default, even one a reader can pick (hebrew, wlc, tr).
     WHERE philosophy IS NULL OR philosophy != 'source_text'
     ORDER BY id
   ` as { id: string; lang: string | null }[];
@@ -2337,7 +2338,8 @@ export async function editionsWithChapter(bookId: number, chapter: number): Prom
  */
 export async function offlineEditions(lang = currentContentLanguage()): Promise<OfflineEdition[]> {
   const [candidates, editions] = await Promise.all([readableBibleCandidates(lang), getBibleEditions()]);
-  const readable = editions.filter((e) => e.philosophy !== 'source_text');
+  // Every edition a reader can pick, the open source texts too (the owner's choice 18.11).
+  const readable = editions.filter((e) => isReadableEdition(e.id));
   const byId = new Map(readable.map((e) => [e.id, e]));
   const order = [...candidates.map((c) => c.id), ...readable.map((e) => e.id)];
   const seen = new Set<string>();

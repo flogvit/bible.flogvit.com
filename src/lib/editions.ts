@@ -41,6 +41,9 @@ export const IMPORTED_BIBLES = [
   'svd',
   // #222: text read again from CrossWire's BurJudson (free-bible#152).
   'my_judson',
+  // #170, the owner's choice 18.11: the open source texts beyond sblgnt and
+  // tanach go out as editions of their own (free-bible#162).
+  'hebrew', 'wlc', 'tr',
 ] as const;
 
 // De som alt er nummerert som osnb, og lagres som de er. Alle andre flyttes til
@@ -55,8 +58,20 @@ export const OWN_EDITIONS = ['osnb', 'osnn', 'osen', 'oses'] as const;
 
 export type ImportedBible = (typeof IMPORTED_BIBLES)[number];
 
-/** The source texts; every other edition is a translation a reader reads. */
+/**
+ * The source texts shown beside every chapter. Every other edition is one a
+ * reader picks and reads, the open source texts below included.
+ */
 export const SOURCE_TEXTS = ['sblgnt', 'tanach'] as const satisfies readonly ImportedBible[];
+
+/**
+ * Source texts that are editions of their own (the owner's choice 18.11):
+ * picked in the picker like any other, never a language's default.
+ */
+export const EDITION_SOURCE_TEXTS = ['hebrew', 'wlc', 'tr'] as const satisfies readonly ImportedBible[];
+
+/** Can a reader pick this edition to read? Everything but the source texts beside each chapter. */
+export const isReadableEdition = (id: string): boolean => !(SOURCE_TEXTS as readonly string[]).includes(id);
 
 export const READABLE_BIBLES = IMPORTED_BIBLES.filter(
   (id): id is Exclude<ImportedBible, (typeof SOURCE_TEXTS)[number]> => !(SOURCE_TEXTS as readonly string[]).includes(id),
@@ -123,6 +138,9 @@ export const EDITION_LABELS: Record<ImportedBible, string> = {
   tyndale: 'Tyndale Bible 1526/1534, English',
   svd: 'Smith-Van Dyck 1865, Arabic',
   my_judson: 'Judson Bible 1840, Burmese',
+  hebrew: 'Leningrad Codex with cantillation, Hebrew Old Testament',
+  wlc: 'Westminster Leningrad Codex, Hebrew Old Testament',
+  tr: 'Textus Receptus (Stephanus 1550), Greek New Testament',
 };
 
 /** "osnb (Norwegian Bokmål), osnn (Norwegian Nynorsk), …" for the given editions. */
@@ -131,10 +149,11 @@ export const editionList = (ids: readonly ImportedBible[]): string => ids.map((i
 /** One sentence naming every edition by kind: our own, the source texts, and the harvested ones. */
 export function editionsByKind(): string {
   const own = OWN_EDITIONS as readonly ImportedBible[];
-  const harvested = IMPORTED_BIBLES.filter((id) => !own.includes(id) && !(SOURCE_TEXTS as readonly string[]).includes(id));
+  const sources = [...SOURCE_TEXTS, ...EDITION_SOURCE_TEXTS] as readonly ImportedBible[];
+  const harvested = IMPORTED_BIBLES.filter((id) => !own.includes(id) && !sources.includes(id));
   return (
     `${editionList(own)} are open CC BY 4.0 translations made by the free-bible project directly from the Hebrew and Greek; ` +
-    `${editionList(SOURCE_TEXTS)} are the source texts` +
+    `${editionList(sources)} are the source texts` +
     // Not «public domain»: since #224/#225 some are CC BY-SA and ask for a
     // credit (#246). The licence and credit of each are in list_editions.
     (harvested.length

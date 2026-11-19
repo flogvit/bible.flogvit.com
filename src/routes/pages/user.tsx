@@ -21,6 +21,7 @@ import { verseHash } from '../../../public/js/verse-hash.js';
 import { getUserItems, getUserSingleton, getReadingProgress } from '../../lib/user-data.ts';
 import { summarizeProgress, fullHeat, stalestBooks, suggestedPlans, planCoverage } from '../../lib/reading-map.ts';
 import { getBibleEditions, offlineEditions, getFavoriteVerses, getVersesWithOriginal, getAllReadingPlansList, getReadingPlanChapterSets, type BibleEdition } from '../../lib/bible.ts';
+import { isReadableEdition } from '../../lib/editions.ts';
 import { getAvailableMappings } from '../../lib/verse-mapper.ts';
 import { layoutProps, makeT, tFor, tEnum, type Locale, type MessageKey, lhref } from '../../lib/i18n.ts';
 import { tCtx } from '../../lib/i18n.ts';
@@ -532,10 +533,11 @@ r.get('/innstillinger', async (c) => {
   const t = tFor(c);
   const user = c.var.user;
   const mappings = getAvailableMappings();
-  // Bare lesbare utgaver hører hjemme i «bibeloversettelse» — grunntekstene
-  // (SBLGNT, Tanach) velges som UNDERTEKST, ikke som hovedtekst, og ligger
-  // allerede der som «Grunntekst».
-  const readable = (await getBibleEditions()).filter((e) => e.philosophy !== 'source_text');
+  // Bare lesbare utgaver hører hjemme i «bibeloversettelse» — grunntekstene ved
+  // siden av hvert kapittel (SBLGNT, Tanach) velges som UNDERTEKST, og ligger
+  // allerede der som «Grunntekst». De andre åpne grunntekstene (hebrew, wlc,
+  // tr) er egne utgaver (eierens valg 18.11).
+  const readable = (await getBibleEditions()).filter((e) => isReadableEdition(e.id));
   return c.html(
     <UserPage {...layoutProps(c)} title={t('chrome.settings')} crumb={t('chrome.settings')} heading={t('chrome.settings')} page="settings" intro={t('set.intro')}>
       <form data-settings-form class="settings-form">

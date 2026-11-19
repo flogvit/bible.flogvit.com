@@ -14,14 +14,18 @@
 import { describe, expect, setDefaultTimeout, test } from 'bun:test';
 import { DB_TEST_TIMEOUT_MS } from './db-timeout.ts';
 import { createApp } from '../src/app.ts';
-import { editionLangTag, getBibleEditions } from '../src/lib/bible.ts';
+import { editionLangTag, getBibleEditions, readableBibleCandidates } from '../src/lib/bible.ts';
+import { SOURCE_TEXTS } from '../src/lib/editions.ts';
 import { getSql } from '../src/lib/db.ts';
 
 setDefaultTimeout(DB_TEST_TIMEOUT_MS);
 
 const app = createApp();
 const html = async (path: string) => (await app.request(`http://x${path}`)).text();
-const readable = async () => (await getBibleEditions()).filter((e) => e.philosophy !== 'source_text');
+// Readable = every edition but the source texts shown beside each chapter
+// (sblgnt, tanach). The other open source texts are editions of their own
+// (the owner's choice 18.11): hebrew, wlc, tr.
+const readable = async () => (await getBibleEditions()).filter((e) => !(SOURCE_TEXTS as readonly string[]).includes(e.id));
 // John 3 is in the New Testament: an Old-Testament-only edition (jps) is not offered there (#221).
 const readableForNT = async () => (await readable()).filter((e) => (e.testament ?? '').toLowerCase() !== 'ot');
 
@@ -87,5 +91,31 @@ describe('an edition is offered only on chapters it has (#238)', () => {
   test('an Old-Testament-only edition (jps) is not offered on John 3, and is on Genesis 1', async () => {
     expect(picker(await html('/en/joh/3'))).not.toContain('?bible=jps"');
     expect(picker(await html('/en/1mos/1'))).toContain('?bible=jps"');
+  });
+});
+
+// The owner's choice 18.11: the open source texts beyond sblgnt and tanach go
+// out as editions of their own. They are picked like any other edition, and
+// they never become a language's default.
+describe('the open source texts are editions of their own', () => {
+  const picker = (page: string) => page.slice(page.indexOf('class="tools-bibles"'), page.indexOf('data-secondary-select'));
+
+  test('hebrew and wlc on Genesis 1, tr on John 3, in the picker', async () => {
+    const gen = picker(await html('/en/1mos/1'));
+    expect(gen).toContain('?bible=hebrew"');
+    expect(gen).toContain('?bible=wlc"');
+    expect(picker(await html('/en/joh/3'))).toContain('?bible=tr"');
+  });
+
+  test('the settings page offers them as the edition to read', async () => {
+    const page = await html('/en/innstillinger');
+    for (const id of ['hebrew', 'wlc', 'tr']) expect(page, id).toContain(`value="${id}"`);
+  });
+
+  test('no source text is a language default', async () => {
+    for (const lang of ['nb', 'nn', 'en', 'es', 'de', 'fr', 'sv', 'fi', 'he', 'el']) {
+      const ids = (await readableBibleCandidates(lang)).map((c) => c.id);
+      for (const id of ['hebrew', 'wlc', 'tr', 'sblgnt', 'tanach']) expect(ids, `${lang}: ${id}`).not.toContain(id);
+    }
   });
 });
