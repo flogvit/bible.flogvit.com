@@ -187,7 +187,10 @@ describe('every surface that quotes the text', () => {
     const osen = await getDailyVerse('osen', 'nb');
     const osnb = await getDailyVerse('osnb', 'nb');
     expect(osen, 'a verse of the day for today').not.toBeNull();
-    const page = plain(await (await get('/nb', chose('osen'))).text());
+    let page = plain(await (await get('/nb', chose('osen'))).text());
+    // The editorial note is written text, not the edition: it may quote the verse in
+    // Norwegian (Ps 124:8 on 2026-11-22), so it is taken out before the negative check.
+    if (osen!.note) page = page.replace(plain(osen!.note), ' ');
     expect(page).toContain(words(osen!.text));
     expect(page).not.toContain(words(osnb!.text));
   });
