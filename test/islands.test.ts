@@ -303,7 +303,7 @@ describe('reading.js — dwell-måling', () => {
 // ── user.js: deling av manuskripter (#15, del 1) ─────────────────────
 //
 // Hele delingsflaten bygges i nettleseren, og er derfor usynlig for
-// page-contract og link-prefix (som leser SSR-HTML). Det som må holde er
+// page-contract (som leser SSR-HTML). Det som må holde er
 // TILSTANDSMASKINEN: finnes en lenke, skal den VISES framfor «Lag lenke» —
 // ellers ser hvert klikk ut som en ny lenke — og etter tilbaketrekking skal
 // lenken være borte fra skjermen, ikke bare i basen.

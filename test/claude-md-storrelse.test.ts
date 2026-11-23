@@ -107,4 +107,15 @@ describe('CLAUDE.md-størrelse (#164)', () => {
     expect([...pekt].filter((n) => !finnes.has(n))).toEqual([]);
     expect([...finnes].filter((n) => !pekt.has(n))).toEqual([]);
   });
+
+  test('hver testfil rota peker på finnes (#262)', () => {
+    // `link-prefix.test.ts` ble til `page-contract.test.ts` i #18, og rota kalte
+    // den «vakten» lenge etter. En vakt som ikke finnes, vokter ingenting. Et
+    // navn uten katalog er en fil i `test/`.
+    const rot = les(resolve(ROT, 'CLAUDE.md'));
+    const pekt = new Set([...rot.matchAll(/`([\w/-]+\.test\.ts)`/g)].map((m) => m[1] ?? ''));
+    expect(pekt.size).toBeGreaterThan(0);
+    const mangler = [...pekt].filter((n) => !existsSync(resolve(ROT, n.includes('/') ? n : `test/${n}`)));
+    expect(mangler).toEqual([]);
+  });
 });

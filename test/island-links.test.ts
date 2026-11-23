@@ -1,6 +1,6 @@
 // Vakt mot #18/#33-klassen i KLIENT-ØYENE.
 //
-// `link-prefix.test.ts` rendrer SSR-HTML og ser derfor bare lenkene serveren
+// `page-contract.test.ts` rendrer SSR-HTML og ser derfor bare lenkene serveren
 // skriver. Lenkene øyene i `public/js/` bygger i nettleseren var usynlige for
 // den — og alle 20+ av dem manglet språkprefiks, så en leser på /en/ ble kastet
 // til den FORHANDLEDE locale-en ved første klikk fra forsiden, søket,

@@ -69,7 +69,7 @@ bun scripts/enrich-story-references.ts # berik historier i free-bible med evange
 ## Lokal innlogging (konto uten DB)
 konto kan kjøres lokalt med in-memory store — full login/sync-flyt uten å røre noen DB:
 ```bash
-cd ../konto && DB_DISABLED=1 PORT=3020 bun src/index.ts   # kontoer forsvinner ved restart
+cd ../konto && DB_DISABLED=1 PORT=3020 bun src/index.ts   # kontoer forsvinner ved restart # dux-drift: ignore
 ```
 bibel-dev peker allerede på http://localhost:3020 (session.ts). Registrer en bruker med
 `POST http://localhost:3020/api/auth/register {email, password}` (eller via UI-et) —
@@ -448,14 +448,14 @@ Uprefiksede lenker 302-redirecter til den FORHANDLEDE locale-en, ikke den lesere
 trenger å ta imot `locale` som prop. Unntak som SKAL være uprefikset: `/js/`, `/css/`,
 `/api/`, statiske filer.
 
-`test/link-prefix.test.ts` er vakten: den rendrer 16 sider og feiler på enhver intern
+`test/page-contract.test.ts` er vakten: den rendrer hele `PAGES` og feiler på enhver intern
 lenke uten prefiks, og sveiper alle 8 ordbøker for manglende nøkler (`makeT` returnerer
 NØKKELEN ved miss, så en glemt oversettelse vises som «rd.markRead» uten å feile).
 
 ## Klient-øyene: tekst og lenker (#33)
 
-Øyene i `public/js/` bygger DOM i nettleseren og er derfor USYNLIGE for både
-`link-prefix.test.ts` og `page-contract.test.ts`, som rendrer SSR-HTML. Da det
+Øyene i `public/js/` bygger DOM i nettleseren og er derfor USYNLIGE for
+`page-contract.test.ts`, som rendrer SSR-HTML. Da det
 ble sjekket, lå det 21 uprefiksede interne lenker og ~130 norske strenger der —
 hele kommandopaletten, hele hurtigtast-hjelpen, plus-CTA-en, PWA-banneret,
 offline-nedlastingen.

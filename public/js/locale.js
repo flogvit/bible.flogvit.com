@@ -30,7 +30,7 @@ export function langParam() {
  *
  * Lenker en øy bygger uten prefiks 302-redirecter til den FORHANDLEDE
  * locale-en, ikke den leseren står på — nøyaktig #18, men i DOM-en, der
- * `link-prefix.test.ts` (som rendrer SSR-HTML) ikke ser den. `home.js` sendte
+ * `page-contract.test.ts` (som rendrer SSR-HTML) ikke ser den. `home.js` sendte
  * en engelsk leser til /nb/ på første klikk fra forsiden (#33).
  *
  * Unntakene fra SSR-siden gjelder her også: `/js/`, `/css/`, `/api/` og
