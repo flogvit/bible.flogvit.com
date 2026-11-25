@@ -2279,4 +2279,18 @@ r.get('/tekst', async (c) => {
   );
 });
 
+// ── Bok uten kapittel (#217) ─────────────────────────────────────────
+// En leser som kutter kapittelet av adressen skal få boka, ikke 404: en kjent
+// bokslug (eller et alias) 301-er til kapittel 1 under bokas egen slug,
+// prosentkodet som den publiserte formen (#80). SIST i fila, og fila monteres
+// sist (pages.tsx): Hono matcher i registreringsrekkefølge, så enhver
+// ett-ledds side (`/tekst`, `/om` …) må vinne over denne.
+
+r.get('/:book', (c) => {
+  const book = getBookInfoBySlug(c.req.param('book'));
+  if (!book) return c.notFound();
+  const target = encodeURI(lhref(`/${toUrlSlug(book.short_name)}/1`));
+  return c.redirect(target + new URL(c.req.url).search, 301);
+});
+
 export default r;
