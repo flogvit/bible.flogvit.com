@@ -184,7 +184,7 @@ describe('the other tools', () => {
       const t = osnbToMapping('english_kj', x.b, x.c, x.v);
       if (t.chapter === x.c && t.verse === x.v) continue;
       // A prophecy that points at a psalm title (forsaken-cry: osnb Ps 22:1,
-      // the title, where "My God, my God" is 22:2) has no verse in the KJV.
+      // the title, where "My God, my God" is 22:2; free-bible#165) has no verse in the KJV.
       if (t.verse === 0) continue;
       const label = `${bookName(getBookInfoById(x.b)!, 'en')} ${t.chapter}:${t.verse}`;
       const { text } = await call('get_prophecies', { reference: label, mapping: 'kjv' });

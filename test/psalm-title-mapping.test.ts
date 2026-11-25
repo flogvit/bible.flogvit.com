@@ -33,7 +33,7 @@ const PSALMS = 19;
  * verse off there for a reason in free-bible's data, not in the code here:
  * 9 and 77 have no entries at all, 60 has stale `60:1`/`60:1a` entries. Over
  * all 1158 numberings, 803 fold Ps 60's title, 54 Ps 9's, 50 Ps 77's.
- * see the free-bible issue named in #173. Asserted to be STILL wrong, so the list goes
+ * flogvit/free-bible#164. Asserted to be STILL wrong, so the list goes
  * red the day the data is fixed.
  */
 const KJV_DATA_ERRORS = [9, 60, 77];
@@ -91,7 +91,7 @@ describe('the King James numbering against the printed King James', () => {
 describe('a numbering that numbers the title itself is left alone', () => {
   test('dnb2024 has no verse 0 in any psalm, and Ps 3:1 is the title as in osnb', async () => {
     // Except Ps 13, where dnb2024's entries predate osmain's current Ps 13 and
-    // fold its title (free-bible data, same issue as KJV_DATA_ERRORS; Ps 51 and
+    // fold its title (free-bible#164, like KJV_DATA_ERRORS; Ps 51 and
     // 60 are stale there too, but not folded).
     const zeros: string[] = [];
     for (let ch = 1; ch <= 150; ch++)
