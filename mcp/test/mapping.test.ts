@@ -65,12 +65,22 @@ describe('get_passage reads and numbers through mapChapter', () => {
         // Verses spelled out: in a one-chapter book "3 John 1" is a verse.
         const { text, isError } = await call('get_passage', { reference: `${bookName(getBookInfoById(b)!, 'en')} ${c}:1-200`, mapping: 'kjv', editions: ['osen'] });
         expect(isError).toBe(false);
-        for (const m of expected) expect(text).toContain(`\n${m.displayVerse} ${m.text}`);
+        // A psalm title is verse 0 (#173): "c:1-200" asks for the verses, not the title.
+        for (const m of expected.filter((x) => x.displayVerse > 0)) expect(text).toContain(`\n${m.displayVerse} ${m.text}`);
         expect(text).toContain('verse numbering english_kj');
       }
     },
     SWEEP,
   );
+
+  test('Ps 51:1 in the King James numbering is "Have mercy", and the whole psalm gives the title as verse 0 (#173)', async () => {
+    const [title1, title2, mercy] = [await verse(19, 51, 1), await verse(19, 51, 2), await verse(19, 51, 3)];
+    const one = (await call('get_passage', { reference: 'Ps 51:1', mapping: 'kjv', editions: ['osen'] })).text;
+    expect(one).toContain(`\n1 ${mercy}`);
+    expect(one).not.toContain(title1);
+    const whole = (await call('get_passage', { reference: 'Ps 51', mapping: 'kjv', editions: ['osen'] })).text;
+    expect(whole).toContain(`\n0 ${title1}\n0 ${title2}\n1 ${mercy}`);
+  });
 
   test('Malachi 4:5 in the King James numbering is osnb Malachi 3:23, and without a mapping says how to ask', async () => {
     const elijah = await verse(39, 3, 23);
@@ -173,6 +183,9 @@ describe('the other tools', () => {
     for (const x of prophecies) {
       const t = osnbToMapping('english_kj', x.b, x.c, x.v);
       if (t.chapter === x.c && t.verse === x.v) continue;
+      // A prophecy that points at a psalm title (forsaken-cry: osnb Ps 22:1,
+      // the title, where "My God, my God" is 22:2) has no verse in the KJV.
+      if (t.verse === 0) continue;
       const label = `${bookName(getBookInfoById(x.b)!, 'en')} ${t.chapter}:${t.verse}`;
       const { text } = await call('get_prophecies', { reference: label, mapping: 'kjv' });
       expect(text).toContain(`[id: ${x.id}]`);

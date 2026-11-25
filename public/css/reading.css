@@ -352,6 +352,12 @@
   margin-left: -12px;
 }
 
+/* En salmeoverskrift uten versnummer (#173), slik den står i en trykt KJV. */
+.psalm-title {
+  font-style: italic;
+  margin: 0 0 0.5em;
+}
+
 .verse-number {
   display: inline-block;
   font-family: inherit;

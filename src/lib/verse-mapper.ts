@@ -92,15 +92,38 @@ function getCrossMapper(mappingId: string): CrossMapper {
   return crossMappers.get(key) ?? remember(crossMappers, key, new CrossMapper(getMapper('osnb'), getMapper(mappingId)));
 }
 
+const PSALMS = 19;
+
+/**
+ * Er osnb-verset en del av salmeoverskriften i en nummerering som trykker den
+ * UTEN nummer (#173)? Da er det vers 0.
+ *
+ * osnb nummererer overskriften som egne vers, slik hebraisk gjør (Sal 51:1–2
+ * er overskriften, 51:3 «Miskunn deg»). KVNs osmain bretter overskriften inn i
+ * vers 1, og King James arver det: alle tre landet i KJV 51:1, så «Sal 51:1»
+ * fra en trykt KJV ga overskriften. Regelen er den kvn selv bruker i
+ * `sliceVersePart()`: av det som lander i vers 1, er alt UNNTATT det siste
+ * overskriften. Den uttrykkes uten å kjenne datakilden — enten osmain-verset
+ * har deler (51:1a–c) eller mappingfila peker to vers til samme mål (18:1–2).
+ * En nummerering som nummererer overskriften selv (osnb, dnb2024) har ingenting
+ * annet i vers 1, og der slår regelen aldri til.
+ */
+function isFoldedTitle(cross: CrossMapper, bookId: number, chapter: number, verse: number, target: { chapter: number; verse: number }): boolean {
+  if (bookId !== PSALMS || target.chapter !== chapter || target.verse !== 1) return false;
+  const next = ukvnDecode(cross.map(ukvnEncode(bookId, chapter, verse + 1)).tkvn);
+  return next.chapter === chapter && next.verse === 1;
+}
+
 /**
  * Hvor et osnb-vers står i en annen nummerering — samme kryssmapping som
  * `getKvnMappingData()` bygger verseMap av, for ett vers. `mappingId` er en
- * fil-id fra `listMappingIds()`.
+ * fil-id fra `listMappingIds()`. En salmeoverskrift uten nummer er vers 0.
  */
 export function osnbToMapping(mappingId: string, bookId: number, chapter: number, verse: number): { chapter: number; verse: number } {
   if (mappingId === 'osnb') return { chapter, verse };
-  const target = ukvnDecode(getCrossMapper(mappingId).map(ukvnEncode(bookId, chapter, verse)).tkvn);
-  return { chapter: target.chapter, verse: target.verse };
+  const cross = getCrossMapper(mappingId);
+  const target = ukvnDecode(cross.map(ukvnEncode(bookId, chapter, verse)).tkvn);
+  return { chapter: target.chapter, verse: isFoldedTitle(cross, bookId, chapter, verse, target) ? 0 : target.verse };
 }
 
 /** Rå UkvnMappingFile for en mapping-id (serveres til frontend). */
@@ -192,7 +215,8 @@ export function getKvnMappingData(
 
     const target = osnbToMapping(resolved, bookId, decoded.chapter, decoded.verse);
 
-    if (target.chapter !== decoded.chapter || target.verse !== decoded.verse) {
+    // Vers 0 (en salmeoverskrift) er ingen adresse noen skriver.
+    if (target.verse !== 0 && (target.chapter !== decoded.chapter || target.verse !== decoded.verse)) {
       const targetKey = `${bookId}-${target.chapter}-${target.verse}`;
       verseMap[targetKey] = `${bookId}-${decoded.chapter}-${decoded.verse}`;
     }
@@ -242,8 +266,10 @@ export async function mapChapter(
     (ch) => ch >= 1,
   );
 
-  // Holder styr på hvilke osmain-deler vi har sett, for totalParts.
+  // Holder styr på hvilke osmain-deler vi har sett, for totalParts. En
+  // overskrift (vers 0) teller ikke: KJV 51:1 er HELE osnb 51:3.
   const partTracker = new Map<number, Set<number>>();
+  const foldedTitles = new Set<number>();
 
   interface RawMatch {
     displayChapter: number;
@@ -278,7 +304,9 @@ export async function mapChapter(
           0,
         );
 
-        if (mapped.partial) {
+        const title = isFoldedTitle(cross, bookId, v.chapter, v.verse, target);
+        if (title) foldedTitles.add(osmainBase);
+        else if (mapped.partial) {
           if (!partTracker.has(osmainBase)) partTracker.set(osmainBase, new Set());
           partTracker.get(osmainBase)!.add(osmainDecoded.part);
         }
@@ -286,10 +314,10 @@ export async function mapChapter(
         const bibleVerse = bibleVerseMap.get(v.verse) || v;
         rawMatches.push({
           displayChapter: target.chapter,
-          displayVerse: target.verse,
+          displayVerse: title ? 0 : target.verse,
           osnbChapter: v.chapter,
           osnbVerse: v.verse,
-          partial: mapped.partial,
+          partial: mapped.partial && !title,
           part: osmainDecoded.part,
           osmainBase,
           verse: bibleVerse,
@@ -302,12 +330,14 @@ export async function mapChapter(
   // slicing; partial-flagget sier at verset er del av et osmain-vers.
   for (const match of rawMatches) {
     const totalParts = match.partial ? (partTracker.get(match.osmainBase)?.size ?? 1) : 1;
+    // Verset en overskrift var brettet inn i, står alene når overskriften er ute.
+    const partial = match.partial && !(foldedTitles.has(match.osmainBase) && totalParts === 1);
     result.push({
       displayChapter: match.displayChapter,
       displayVerse: match.displayVerse,
       osnbChapter: match.osnbChapter,
       osnbVerse: match.osnbVerse,
-      partial: match.partial,
+      partial,
       part: match.part,
       totalParts,
       text: match.verse.text,

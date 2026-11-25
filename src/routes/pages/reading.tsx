@@ -1192,6 +1192,16 @@ function VerseBlock({
   const n = v.verse;
   const hebrew = getOriginalLanguage(bookId) === 'hebrew';
 
+  // Vers 0 er en salmeoverskrift i en nummerering som trykker den uten nummer
+  // (#173): over vers 1, uten nummer og uten anker.
+  if (n === 0) {
+    return (
+      <p class="psalm-title" lang={lang} dir={langDir(lang)}>
+        {v.text}
+      </p>
+    );
+  }
+
   return (
     <div id={`v${n}`} class="verse" data-verse-num={n} data-verse-id={`${bookId}-${v.chapter}-${n}`}>
       <button
