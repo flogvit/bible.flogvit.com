@@ -65,6 +65,25 @@ describe('endringsloggen', () => {
     }
   });
 
+  // Deployeren skriver posten med en modell, og den svarer med `### Kategori`
+  // omtrent like ofte som med `**Kategori**`. Begge er samme Markdown for en
+  // leser; en parser som bare kjente fet skrift ga posten null seksjoner, og
+  // deployeren sto på testporten i to døgn (#259).
+  it('leser en kategori skrevet som ###-overskrift', () => {
+    const [entry] = parseReleaseNotes(`## 2026-11-14 — Security update
+
+### Behind the scenes
+- Updated a dependency.
+## 2026-11-10 — Older
+
+**Polish**
+- Older item.
+`);
+    expect(entry!.sections).toEqual([
+      { heading: 'Behind the scenes', items: ['Updated a dependency.'] },
+    ]);
+  });
+
   it('tåler en tom eller ødelagt fil framfor å kaste', () => {
     expect(parseReleaseNotes('')).toEqual([]);
     expect(parseReleaseNotes('bare løs tekst uten overskrifter')).toEqual([]);

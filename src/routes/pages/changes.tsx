@@ -61,10 +61,11 @@ export function parseReleaseNotes(markdown: string): Entry[] {
     }
     if (!entry) continue; // preamble før første post
 
-    const bold = line.match(/^\*\*(.+)\*\*$/);
-    if (bold) {
+    // `**Kategori**` eller `### Kategori` — deployerens modell skriver begge (#259).
+    const category = line.match(/^(?:\*\*(.+)\*\*|###\s+(.+))$/);
+    if (category) {
       flushSection();
-      section = { heading: bold[1]!, items: [] };
+      section = { heading: (category[1] ?? category[2])!.trim(), items: [] };
       continue;
     }
 
