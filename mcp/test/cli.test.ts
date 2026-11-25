@@ -1,8 +1,9 @@
-import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
+import { afterAll, beforeAll, describe, expect, setDefaultTimeout, test } from 'bun:test';
 import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { closeSql } from '../../src/lib/db.ts';
+import { DB_TEST_TIMEOUT_MS } from '../../test/db-timeout.ts';
 import { CLI_USER_AGENT, createHandler } from '../src/server.ts';
 import { MAX_CHECK_TEXT } from '../src/tools.ts';
 
@@ -10,6 +11,11 @@ import { MAX_CHECK_TEXT } from '../src/tools.ts';
 // the file a user downloads, against a real listening server over HTTP. An
 // in-process call would miss exactly the seams that break — argument parsing,
 // the HTTP framing, exit codes, the file read in parts.
+
+// Every test here starts `node` and goes through the server to the database;
+// «every tool is a command» does it once per tool. Bun's default 5 s is for
+// pure logic, not for that: it timed out on a busy machine (#74, #259).
+setDefaultTimeout(DB_TEST_TIMEOUT_MS);
 
 const CLI = join(import.meta.dir, '../../cli/skills/flogvit-bible/flogvit-bible.mjs');
 const dir = mkdtempSync(join(tmpdir(), 'flogvit-bible-cli-'));
