@@ -16,6 +16,7 @@ import { toUrlSlug } from './url-utils.ts';
 import { bookMentionTest, personChapterCandidates } from './blob-forfilter.ts';
 import { currentChosenEdition } from './edition-choice.ts';
 import { IMPORTED_BIBLES, OWN_EDITIONS } from './editions.ts';
+import type { StrongsWord } from './strongs.ts';
 
 // --- Språk-scopet uthenting ---
 //
@@ -79,6 +80,8 @@ export interface Verse {
   bible: string;
   versions?: VerseVersion[];
   footnotes?: VerseFootnote[];
+  /** Strong's numbers per word (#202), for the editions that carry them. */
+  strongs?: StrongsWord[];
 }
 
 export interface Word4Word {
@@ -169,6 +172,7 @@ interface VerseRow {
   bible: string;
   versions: string | null;
   footnotes: string | null;
+  strongs: string | null;
 }
 
 // --- Gamle bibel-/mapping-ID-er ------------------------------------------
@@ -204,6 +208,7 @@ export async function getVerses(bookId: number, chapter: number, bible?: string)
     ...row,
     versions: row.versions ? JSON.parse(row.versions) : undefined,
     footnotes: row.footnotes ? JSON.parse(row.footnotes) : undefined,
+    strongs: row.strongs ? JSON.parse(row.strongs) : undefined,
   }));
 }
 
@@ -277,6 +282,7 @@ export async function getVerse(bookId: number, chapter: number, verseNum: number
     ...row,
     versions: row.versions ? JSON.parse(row.versions) : undefined,
     footnotes: row.footnotes ? JSON.parse(row.footnotes) : undefined,
+    strongs: row.strongs ? JSON.parse(row.strongs) : undefined,
   };
 }
 

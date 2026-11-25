@@ -410,7 +410,7 @@ async function importVerses(bible: string): Promise<void> {
         }
         await tx`DELETE FROM verses WHERE book_id = ${bookId} AND chapter = ${chapterId} AND bible = ${bible}`;
         if (verses.length > 0) {
-          const placeholders = verses.map(() => '(?, ?, ?, ?, ?, ?, ?)').join(', ');
+          const placeholders = verses.map(() => '(?, ?, ?, ?, ?, ?, ?, ?)').join(', ');
           const params = verses.flatMap((v) => [
             v.bookId,
             v.chapterId,
@@ -419,9 +419,10 @@ async function importVerses(bible: string): Promise<void> {
             bible,
             v.versions ? JSON.stringify(v.versions) : null,
             v.footnotes ? JSON.stringify(v.footnotes) : null,
+            null,
           ]);
           await tx.unsafe(
-            `REPLACE INTO verses (book_id, chapter, verse, text, bible, versions, footnotes) VALUES ${placeholders}`,
+            `REPLACE INTO verses (book_id, chapter, verse, text, bible, versions, footnotes, strongs) VALUES ${placeholders}`,
             params,
           );
         }
@@ -473,7 +474,7 @@ async function importRenumbered(bible: string, biblePath: string): Promise<void>
     for (let i = 0; i < verses.length; i += 500) {
       const batch = verses.slice(i, i + 500);
       await tx.unsafe(
-        `INSERT INTO verses (book_id, chapter, verse, text, bible, versions, footnotes) VALUES ${batch.map(() => '(?, ?, ?, ?, ?, ?, ?)').join(', ')}`,
+        `INSERT INTO verses (book_id, chapter, verse, text, bible, versions, footnotes, strongs) VALUES ${batch.map(() => '(?, ?, ?, ?, ?, ?, ?, ?)').join(', ')}`,
         batch.flatMap((v) => [
           v.book,
           v.chapter,
@@ -482,6 +483,7 @@ async function importRenumbered(bible: string, biblePath: string): Promise<void>
           bible,
           v.versions ? JSON.stringify(v.versions) : null,
           v.footnotes ? JSON.stringify(v.footnotes) : null,
+          v.strongs ? JSON.stringify(v.strongs) : null,
         ]),
       );
     }

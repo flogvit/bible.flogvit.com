@@ -78,6 +78,7 @@ export const TABLES: string[] = [
     bible VARCHAR(20) NOT NULL DEFAULT 'osnb',
     versions MEDIUMTEXT,
     footnotes MEDIUMTEXT,
+    strongs MEDIUMTEXT,
     UNIQUE KEY uq_verses (book_id, chapter, verse, bible),
     INDEX idx_verses_book_chapter (book_id, chapter),
     INDEX idx_verses_bible (bible)
@@ -1013,6 +1014,10 @@ async function runMigrations(sql: SQL): Promise<void> {
   // så kolonnen legges til her og ikke i DDL-en alene (#110).
   if (!(await columnExists(sql, 'persons', 'ref_books'))) {
     await sql.unsafe('ALTER TABLE persons ADD COLUMN ref_books VARCHAR(255) NULL').simple();
+  }
+  // Strong's numbers per word (#202); same reason as above, the CREATE misses old bases.
+  if (!(await columnExists(sql, 'verses', 'strongs'))) {
+    await sql.unsafe('ALTER TABLE verses ADD COLUMN strongs MEDIUMTEXT NULL').simple();
   }
   const refBooks = await syncPersonRefBooks(sql);
   if (!refBooksSyncIsEmpty(refBooks)) console.log(formatRefBooksSync(refBooks));

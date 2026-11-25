@@ -219,7 +219,7 @@ describe('the renumbering', () => {
       src,
       id,
     );
-    expect(out.verses).toEqual([{ book: 1, chapter: 1, verse: 1, text: 'first second', versions: null, footnotes: null }]);
+    expect(out.verses).toEqual([{ book: 1, chapter: 1, verse: 1, text: 'first second', versions: null, footnotes: null, strongs: null }]);
     expect(out.placeholders).toEqual([]);
     expect(out.merged).toBe(1);
   });
