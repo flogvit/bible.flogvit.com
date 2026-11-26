@@ -9,7 +9,7 @@
 .persons-search-input {
   width: 100%;
   padding: 12px 16px;
-  font-size: 16px;
+  font-size: 1rem;
   border: 1px solid var(--border);
   border-radius: var(--radius);
   background: var(--surface);
@@ -26,7 +26,7 @@
 .persons-filter-group { margin-bottom: 12px; }
 .persons-filter-label {
   display: block;
-  font-size: 14px;
+  font-size: 0.875rem;
   font-weight: 500;
   color: var(--muted);
   margin-bottom: 6px;
@@ -34,7 +34,7 @@
 .persons-filter-buttons { display: flex; flex-wrap: wrap; gap: 6px; }
 .persons-filter-button {
   padding: 5px 10px;
-  font-size: 14px;
+  font-size: 0.875rem;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   background: var(--surface);
@@ -45,7 +45,7 @@
 .persons-filter-button:hover { border-color: var(--gold); color: var(--gold-text); }
 .persons-filter-button.active { background: var(--gold); border-color: var(--gold); color: var(--on-accent); }
 
-.persons-search-info { font-size: 14px; color: var(--muted); margin-bottom: 12px; }
+.persons-search-info { font-size: 0.875rem; color: var(--muted); margin-bottom: 12px; }
 .persons-no-results { color: var(--muted); font-style: italic; }
 
 .persons-list { display: grid; gap: 16px; margin-top: 24px; }
@@ -67,15 +67,15 @@
   margin-bottom: 8px;
   gap: 12px;
 }
-.persons-card-name { color: var(--ink); margin: 0; font-size: 20px; }
-.persons-card-title { color: var(--muted); font-size: 14px; margin-bottom: 8px; }
+.persons-card-name { color: var(--ink); margin: 0; font-size: 1.25rem; }
+.persons-card-title { color: var(--muted); font-size: 0.875rem; margin-bottom: 8px; }
 .persons-card-meta { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
-.persons-card-summary { color: var(--ink-2); font-size: 14px; margin: 0; line-height: 1.5; }
+.persons-card-summary { color: var(--ink-2); font-size: 0.875rem; margin: 0; line-height: 1.5; }
 
 .persons-era-badge {
   display: inline-block;
   padding: 2px 8px;
-  font-size: 12px;
+  font-size: 0.75rem;
   background: var(--gold-bg);
   color: var(--gold-text);
   border-radius: var(--radius-sm);
@@ -83,7 +83,7 @@
 .persons-role-badge {
   display: inline-block;
   padding: 2px 8px;
-  font-size: 12px;
+  font-size: 0.75rem;
   background: var(--paper-2);
   color: var(--ink-2);
   border-radius: var(--radius-sm);
@@ -91,12 +91,12 @@
 
 /* --- detalj --- */
 .person-header { margin-bottom: 24px; }
-.person-title { color: var(--muted); font-size: 16px; margin: 4px 0; }
-.person-aliases { color: var(--muted); font-size: 14px; font-style: italic; margin: 4px 0; }
+.person-title { color: var(--muted); font-size: 1rem; margin: 4px 0; }
+.person-aliases { color: var(--muted); font-size: 0.875rem; font-style: italic; margin: 4px 0; }
 .person-meta { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 10px; }
-.person-lifespan { color: var(--muted); font-size: 13px; }
+.person-lifespan { color: var(--muted); font-size: 0.8125rem; }
 
-.person-summary { font-size: 17px; line-height: 1.6; margin-bottom: 20px; color: var(--ink-2); }
+.person-summary { font-size: 1.0625rem; line-height: 1.6; margin-bottom: 20px; color: var(--ink-2); }
 .person-tagging-section { margin-bottom: 24px; }
 
 .person-family-section, .person-events-section, .person-references-section, .person-related-section {
@@ -121,14 +121,14 @@
   min-width: 120px;
 }
 .person-family-member:hover, .person-related-person:hover { border-color: var(--gold); }
-.person-family-relation, .person-related-title { font-size: 12px; color: var(--muted); }
+.person-family-relation, .person-related-title { font-size: 0.75rem; color: var(--muted); }
 .person-family-name, .person-related-name { color: var(--ink); font-weight: 500; }
 
 .person-ref-list { display: flex; flex-wrap: wrap; gap: 6px; }
 .person-ref-chip {
   display: inline-block;
   padding: 4px 10px;
-  font-size: 13px;
+  font-size: 0.8125rem;
   background: var(--paper-2);
   color: var(--gold-text);
   border-radius: var(--radius-sm);

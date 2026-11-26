@@ -30,12 +30,12 @@
   padding: 16px 20px;
   border-bottom: 1px solid var(--border);
 }
-.kbd-header h2 { font-size: 20px; }
+.kbd-header h2 { font-size: 1.25rem; }
 
 .kbd-close {
   background: none;
   border: none;
-  font-size: 24px;
+  font-size: 1.5rem;
   line-height: 1;
   color: var(--muted);
   cursor: pointer;
@@ -47,13 +47,13 @@
 .kbd-content { padding: 8px 20px 20px; overflow-y: auto; }
 
 .kbd-section { margin-top: 16px; }
-.kbd-section h3 { font-size: 15px; margin-bottom: 6px; }
-.kbd-hint { font-size: 13px; color: var(--muted); margin-bottom: 8px; }
+.kbd-section h3 { font-size: 0.9375rem; margin-bottom: 6px; }
+.kbd-hint { font-size: 0.8125rem; color: var(--muted); margin-bottom: 8px; }
 
 .kbd-shortcuts { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 24px; }
 .kbd-shortcut { display: flex; align-items: baseline; gap: 10px; padding: 3px 0; }
 .kbd-shortcut dt { min-width: 120px; white-space: nowrap; }
-.kbd-shortcut dd { color: var(--ink-2); font-size: 14px; }
+.kbd-shortcut dd { color: var(--ink-2); font-size: 0.875rem; }
 
 .kbd-overlay kbd {
   display: inline-flex;
@@ -65,7 +65,7 @@
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   font-family: var(--font-ui);
-  font-size: 12px;
+  font-size: 0.75rem;
   color: var(--ink);
 }
 

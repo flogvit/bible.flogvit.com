@@ -63,7 +63,7 @@
 
 .toc-group-label {
   font-family: var(--serif);
-  font-size: 15px;
+  font-size: 0.9375rem;
   font-weight: 600;
   color: var(--ink);
   margin: 14px 8px 6px;
@@ -78,7 +78,7 @@
 }
 
 .toc-chapter-cell {
-  font-size: 11px;
+  font-size: 0.6875rem;
   padding: 5px 0;
   border-radius: 5px;
   text-align: center;
@@ -102,7 +102,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  font-size: 12.5px;
+  font-size: 0.78125rem;
   color: var(--muted);
   text-decoration: none;
   padding: 4px 8px;
@@ -117,7 +117,7 @@
   font-weight: 600;
 }
 .toc-item-chapters {
-  font-size: 10.5px;
+  font-size: 0.65625rem;
   color: var(--muted);
 }
 
@@ -136,7 +136,7 @@
   gap: 10px;
   flex-wrap: wrap;
   margin-bottom: 16px;
-  font-size: 12.5px;
+  font-size: 0.78125rem;
   color: var(--muted);
 }
 .chapter-meta .breadcrumbs {
@@ -168,7 +168,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 13px;
+  font-size: 0.8125rem;
 }
 .layout-mode-btn:hover {
   background: var(--paper);
@@ -197,7 +197,7 @@
 .chapter-book {
   display: block;
   font-family: var(--sans);
-  font-size: 12px;
+  font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.12em;
   color: var(--muted);
@@ -205,7 +205,7 @@
 }
 .chapter-title {
   font-family: var(--serif);
-  font-size: 44px;
+  font-size: 2.75rem;
   font-weight: 600;
   margin: 4px 0 8px;
   letter-spacing: -0.02em;
@@ -302,7 +302,7 @@
 }
 
 .rail-chip {
-  font-size: 12.5px;
+  font-size: 0.78125rem;
   padding: 5px 10px;
   border-radius: var(--radius-pill);
   border: 1px solid var(--border);
@@ -381,12 +381,6 @@
   font-size: 1.125rem;
   color: var(--ink);
 }
-html[data-font-size='small'] .verse-text {
-  font-size: 1rem;
-}
-html[data-font-size='large'] .verse-text {
-  font-size: 1.25rem;
-}
 
 /* Grunntekst/undertekst-striper under verset */
 .original-verse {
@@ -421,7 +415,7 @@ html[data-font-size='large'] .verse-text {
 
 .undertekst-label {
   font-style: normal;
-  font-size: 10.5px;
+  font-size: 0.65625rem;
   color: var(--gold-text);
   text-transform: uppercase;
   letter-spacing: 0.1em;
@@ -532,7 +526,7 @@ html[data-font-size='large'] .verse-text {
   display: none;
 }
 .vd-tab {
-  font-size: 12.5px;
+  font-size: 0.78125rem;
   background: transparent;
   border: 0;
   padding: 8px 11px;
@@ -1355,7 +1349,7 @@ a.ins-hero-name:hover {
   border-radius: 8px;
   color: var(--ink);
   text-decoration: none;
-  font-size: 18px;
+  font-size: 1.125rem;
   background: var(--paper-2);
   border: 1px solid var(--border);
 }
@@ -1388,7 +1382,7 @@ a.ins-hero-name:hover {
   background: var(--paper-2);
   color: var(--ink);
   cursor: pointer;
-  font-size: 16px;
+  font-size: 1rem;
 }
 
 .mt-overlay {
@@ -1421,7 +1415,7 @@ a.ins-hero-name:hover {
 .mt-sheet-close {
   background: none;
   border: 0;
-  font-size: 18px;
+  font-size: 1.125rem;
   cursor: pointer;
   color: var(--muted);
   min-width: 32px;
@@ -1640,7 +1634,7 @@ a.ins-hero-name:hover {
     display: none;
   }
   .chapter-title {
-    font-size: 32px;
+    font-size: 2rem;
   }
   /* Skinna er BORTE på mobil (#56). Fire av de fem brikkene fantes allerede i
      den faste verktøylinja under (← og →) eller i ⚙-arket (undertekst og
@@ -1659,7 +1653,7 @@ a.ins-hero-name:hover {
 
 /* Egne oversettelser (#14) */
 .user-bible-note {
-  font-size: 13px;
+  font-size: 0.8125rem;
   color: var(--muted);
   background: var(--paper-2);
   border-radius: var(--radius-sm);
