@@ -181,18 +181,20 @@ describe('SIDEN svarer på alle språk, med fellessiden i vår layout', () => {
 
 /* ---------------------------------------------------------------- footeren --- */
 
+// Én test per side og språk (#275). Sveipen var ÉN test med et fast tak på
+// 120 s rundt 41 × 8 = 320 kalde SSR-rendringer: 50 s på en rolig maskin, over
+// 120 s under hele porten på en travel. Og når en test går ut på tid, dreper Bun
+// Chrome fra `beforeAll`, så de fem Chrome-testene under ble røde med den. Nå er
+// arbeidet per test ÉN forespørsel under filens tak, uansett hvor stor matrisen blir.
 describe('FOOTEREN lenker erklæringen på hver side, på hvert språk', () => {
-  test('hele matrisen × alle språk', async () => {
-    const mangler: string[] = [];
-    for (const p of PAGES) {
-      for (const locale of LOCALES) {
+  for (const p of PAGES) {
+    for (const locale of LOCALES) {
+      test(`/${locale}${p.path}`, async () => {
         const html = await (await fetch(url(locale, p.path))).text();
-        const footer = html.slice(html.lastIndexOf('<footer'));
-        if (!footer.includes(`href="/${locale}${STI}">${lenketekst(locale)}</a>`)) mangler.push(`/${locale}${p.path}`);
-      }
+        expect(html.slice(html.lastIndexOf('<footer'))).toContain(`href="/${locale}${STI}">${lenketekst(locale)}</a>`);
+      });
     }
-    expect(mangler).toEqual([]);
-  }, 120_000);
+  }
 
   test('/api/docs, som har sin egen layout', async () => {
     const html = await (await fetch(url('en', '/api/docs'))).text();
