@@ -132,10 +132,19 @@ function erArbeidsgren(gren: string): boolean {
  * `git diff` gir unionen over hele spennet, så én commit som rører noe annet
  * enn endringsloggen holder til å felle unntaket.
  */
-function upushedeFiler(gren: string): string[] | null {
+/** Grenens upstream som en ref git kan lese, eller `null` når den ikke har én. */
+type Oppstrøm = (gren: string) => string | null;
+
+/** Upstreamen slik git har den i `.git/config`. */
+const gitsOppstrøm: Oppstrøm = (gren) => {
   const opp = git('rev-parse', '--abbrev-ref', `${gren}@{upstream}`);
-  if (!opp.ok || !opp.ut) return null;
-  const d = git('diff', '--name-only', `${opp.ut}..${gren}`);
+  return opp.ok && opp.ut ? opp.ut : null;
+};
+
+function upushedeFiler(gren: string, oppstrøm: Oppstrøm): string[] | null {
+  const opp = oppstrøm(gren);
+  if (!opp) return null;
+  const d = git('diff', '--name-only', `${opp}..${gren}`);
   if (!d.ok) return null;
   return d.ut.split('\n').filter(Boolean);
 }
@@ -148,11 +157,11 @@ function upushedeFiler(gren: string): string[] | null {
  * der, og da var mutasjonen «fjern unntaket» GRØNN: porten målte sin egen kopi
  * i stedet for regelen den skulle vokte. Se #113.
  */
-function etterlatteGrener(): string[] {
+function etterlatteGrener(oppstrøm: Oppstrøm = gitsOppstrøm): string[] {
   return lokaleGrener().filter(
     (b) =>
       !erArbeidsgren(b) &&
-      !bareEndringsloggen(upushedeFiler(b)) &&
+      !bareEndringsloggen(upushedeFiler(b, oppstrøm)) &&
       påÉnDisk([b], fakta).length > 0,
   );
 }
@@ -246,9 +255,15 @@ describe('upushet arbeid (#111)', () => {
       });
       const treSha = new TextDecoder().decode(tre.stdout).trim();
       const commit = git('commit-tree', treSha, '-p', base, '-m', `probe: ${fil}`).ut;
-      git('branch', navn, commit);
-      git('branch', `--set-upstream-to=origin/main`, navn);
+      expect(git('branch', navn, commit).ok, `kunne ikke lage ${navn}`).toBe(true);
     };
+    // Upstreamen GIS probe-grenene i stedet for å skrives i `.git/config` (#268):
+    // Dux kjører porten der `.git/config` er skrivebeskyttet, og der feilet
+    // `--set-upstream-to` i stillhet — probe/logg sto uten upstream og ble meldt
+    // som etterlatt, så deployen var rød på vaktas egen probe. Alle andre grener
+    // får upstreamen sin fra git, akkurat som i «GRENA».
+    const oppstrøm: Oppstrøm = (gren) =>
+      gren.startsWith('probe/') ? 'origin/main' : gitsOppstrøm(gren);
 
     // Fila som IKKE er endringsloggen velges av treet, ikke av en literal:
     // en fil som forsvinner ville ellers gjort halvdelen til en tom påstand.
@@ -270,7 +285,7 @@ describe('upushet arbeid (#111)', () => {
       expect(git('diff', '--name-only', `origin/main..probe/kilde`).ut).toBe(annen!);
 
       // SAMME funksjon som «GRENA» dømmer med — ikke en kopi av regelen.
-      const meldt = etterlatteGrener();
+      const meldt = etterlatteGrener(oppstrøm);
 
       expect(meldt, 'deployens egen logg skal IKKE felle porten').not.toContain('probe/logg');
       expect(meldt, 'ekte arbeid skal fortsatt meldes').toContain('probe/kilde');
