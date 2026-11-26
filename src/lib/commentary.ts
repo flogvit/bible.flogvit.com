@@ -214,3 +214,16 @@ export function renderCommentaryParagraph(text: string, link: (osisRef: string) 
 export function isHeadingOnly(text: string): boolean {
   return /^\s*<h>[\s\S]*<\/h>\s*$/.test(text);
 }
+
+/**
+ * Et avsnitt som markdown, for MCP-svaret og andre tekstflater: overskrifter
+ * og kursiv beholdes, en henvisning blir teksten sin, og ingen HTML slipper ut.
+ */
+export function commentaryMarkdown(text: string): string {
+  return text
+    .replace(/<h>([\s\S]*?)<\/h>/g, '**$1**')
+    .replace(/<\/?(?:i|b)>/g, '*')
+    .replace(/<\/?sup>/g, '')
+    .replace(/<ref osisRef="[^"]*">([\s\S]*?)<\/ref>/g, '$1')
+    .replace(/<[^>]+>/g, '');
+}
