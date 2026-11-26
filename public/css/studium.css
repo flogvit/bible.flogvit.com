@@ -535,3 +535,46 @@
   color: var(--muted);
   font-size: 0.85rem;
 }
+
+/* ── Bibelkommentarer (#269) ──────────────────────────────────────────
+   Teksten på leserens språk med kildens avsnitt ved siden av. «Side om side»
+   er en egenskap ved BLOKKA, ikke vinduet: i sidepanelet på desktop er den
+   smal og stabler, i panelmodus og i ▥-overlegget på et nettbrett er den bred
+   nok til to kolonner. En container-spørring i rem følger dessuten teksten:
+   ved 150 % tekst går den til én kolonne tidligere, som den skal (#50). */
+.cm-block { container-type: inline-size; min-width: 0; }
+.cm-work + .cm-work { margin-top: 1.25rem; }
+.cm-work-title { font-size: 1rem; margin: 0 0 0.15rem; }
+.cm-work-meta, .cm-models, .cm-source-only, .cm-original-note {
+  font-size: 0.8125rem;
+  color: var(--muted);
+  margin: 0 0 0.5rem;
+}
+.cm-source-only { font-style: italic; }
+.cm-original-note { display: flex; align-items: center; gap: 0.4rem; }
+.cm-original-swatch {
+  display: inline-block;
+  width: 0.75rem;
+  height: 0.75rem;
+  flex: none;
+  border-left: 3px solid var(--line);
+  background: var(--paper-2);
+}
+.cm-section { margin-top: 0.75rem; scroll-margin-top: 4rem; }
+.cm-section-head { font-size: 0.875rem; margin: 0 0 0.35rem; }
+.cm-pair, .cm-single { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0.35rem; margin-bottom: 0.6rem; }
+.cm-text, .cm-source { min-width: 0; overflow-wrap: anywhere; line-height: 1.55; }
+.cm-source {
+  font-size: 0.875rem;
+  color: var(--muted);
+  border-left: 3px solid var(--line);
+  background: var(--paper-2);
+  padding: 0.25rem 0.5rem;
+}
+.cm-heading, .cm-heading-only { font-weight: 600; }
+@container (min-width: 40rem) {
+  .cm-pair { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 1rem; }
+}
+/* En lenke fra versdetaljene lander her: markeringen viser hvilken seksjon. */
+.cm-section:target { outline: 2px solid color-mix(in oklab, var(--accent) 45%, transparent); outline-offset: 4px; border-radius: 4px; }
+.vd-commentary { font-size: 0.875rem; margin: 0.5rem 0 0; }

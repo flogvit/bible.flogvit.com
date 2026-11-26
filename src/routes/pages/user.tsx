@@ -506,7 +506,7 @@ function editionLabel(e: BibleEdition): string {
 
 // ---------- /innstillinger ----------
 const TOGGLE_KEYS = [
-  'showBookSummary', 'showChapterSummary', 'showChapterContext', 'showChapterInsights',
+  'showBookSummary', 'showChapterSummary', 'showCommentary', 'showChapterContext', 'showChapterInsights',
   'showImportantWords', 'showVerseDetails', 'showWord4Word', 'showOriginalText',
   'showTimeline', 'showParallels', 'showDailyVerse', 'showTodaysDay', 'showReadingTexts',
   'showVerseFootnotes', 'copyVerseNumbers', 'showContinueReading',
