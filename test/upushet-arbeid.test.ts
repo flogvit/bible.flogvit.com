@@ -115,10 +115,12 @@ function git(...args: string[]): { ok: boolean; ut: string } {
   return { ok: p.exitCode === 0, ut: new TextDecoder().decode(p.stdout).trim() };
 }
 
-function lokaleGrener(): string[] {
-  return git('for-each-ref', '--format=%(refname:short)', 'refs/heads')
+/** Hver lokal gren med SHA-en tuppen står på, i én git-kjøring. */
+function lokaleGrener(): [gren: string, tupp: string][] {
+  return git('for-each-ref', '--format=%(refname:short) %(objectname)', 'refs/heads')
     .ut.split('\n')
-    .filter(Boolean);
+    .filter(Boolean)
+    .map((l) => l.split(' ') as [string, string]);
 }
 
 function erArbeidsgren(gren: string): boolean {
@@ -158,12 +160,20 @@ function upushedeFiler(gren: string, oppstrøm: Oppstrøm): string[] | null {
  * i stedet for regelen den skulle vokte. Se #113.
  */
 function etterlatteGrener(oppstrøm: Oppstrøm = gitsOppstrøm): string[] {
-  return lokaleGrener().filter(
-    (b) =>
-      !erArbeidsgren(b) &&
-      !bareEndringsloggen(upushedeFiler(b, oppstrøm)) &&
-      påÉnDisk([b], fakta).length > 0,
-  );
+  // FORFILTERET (#268): en gren hvis tupp nås fra en remote, frikjennes av
+  // `påRemote` uansett, og hver git-kjøring koster ~40 ms på en travel maskin.
+  // Fem per gren over ~30 grener sprengte Buns 5 s-tak og felte deployen. Én
+  // kjøring finner commit-ene ingen remote har; bare de grenene dømmes fullt.
+  const bareHer = new Set(git('rev-list', '--branches', '--not', '--remotes').ut.split('\n'));
+  return lokaleGrener()
+    .filter(([, tupp]) => bareHer.has(tupp))
+    .map(([gren]) => gren)
+    .filter(
+      (b) =>
+        !erArbeidsgren(b) &&
+        !bareEndringsloggen(upushedeFiler(b, oppstrøm)) &&
+        påÉnDisk([b], fakta).length > 0,
+    );
 }
 
 const fakta: GitFakta = {
