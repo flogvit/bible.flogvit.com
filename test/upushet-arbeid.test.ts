@@ -125,13 +125,6 @@ function erArbeidsgren(gren: string): boolean {
   return ARBEIDSGRENER.some((re) => re.test(gren));
 }
 
-/**
- * Filene som er endret av det som ligger upushet på grenen — altså mellom
- * grenens upstream og grenen selv. `null` når grenen ikke HAR en upstream.
- *
- * `git diff` gir unionen over hele spennet, så én commit som rører noe annet
- * enn endringsloggen holder til å felle unntaket.
- */
 /** Grenens upstream som en ref git kan lese, eller `null` når den ikke har én. */
 type Oppstrøm = (gren: string) => string | null;
 
@@ -141,6 +134,13 @@ const gitsOppstrøm: Oppstrøm = (gren) => {
   return opp.ok && opp.ut ? opp.ut : null;
 };
 
+/**
+ * Filene som er endret av det som ligger upushet på grenen — altså mellom
+ * grenens upstream og grenen selv. `null` når grenen ikke HAR en upstream.
+ *
+ * `git diff` gir unionen over hele spennet, så én commit som rører noe annet
+ * enn endringsloggen holder til å felle unntaket.
+ */
 function upushedeFiler(gren: string, oppstrøm: Oppstrøm): string[] | null {
   const opp = oppstrøm(gren);
   if (!opp) return null;
