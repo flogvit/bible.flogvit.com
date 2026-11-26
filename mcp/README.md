@@ -131,9 +131,12 @@ follow it. They do not all get their data the same way:
    cd mcp && bun --env-file=../.env scripts/listings.ts check
    ```
    Every line should say `ok`. `mcptry tools` follows mcptry's own schedule and
-   can lag; "Connect live" on its page refreshes it. mcpservers.org sits behind
-   a Cloudflare check and cannot be read by the script: open the page and see
-   that the tool list matches.
+   can lag; "Connect live" on its page refreshes it. `mcpservers.org tools` is
+   the count in the sentence their copy of `/en/mcp` states; the page sits behind
+   a Cloudflare check, so the script reads it through the public reader
+   `r.jina.ai`. `DIFF` there with `no count on the page` means an old copy (or
+   that the reader was refused): press Request update, and after two weeks
+   without change, email them.
 
 ## Where it is listed, and how to take it down
 
