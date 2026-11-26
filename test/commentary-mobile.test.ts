@@ -83,7 +83,7 @@ async function measure(width: number, height: number, scale: number) {
       })();`,
     ) as (scale: number) => Promise<unknown>,
     scale,
-  ) as Promise<{
+  ) as unknown as Promise<{
     error?: string;
     vw: number;
     pageWide: boolean;

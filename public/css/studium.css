@@ -572,6 +572,9 @@
   padding: 0.25rem 0.5rem;
 }
 .cm-heading, .cm-heading-only { font-weight: 600; }
+/* En lenke i løpende tekst skilles ut med mer enn farge (WCAG 1.4.1): i
+   kildeavsnittet er den gylne lenkefargen for nær den dempede teksten. */
+.cm-ref { text-decoration: underline; text-underline-offset: 2px; }
 @container (min-width: 40rem) {
   .cm-pair { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 1rem; }
 }

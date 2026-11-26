@@ -377,6 +377,10 @@ describe('sidekontrakt', () => {
    * - `data-proper-names` — lister over EGENNAVN fra dataene (navnene på
    *   bibeloversettelser og versnummereringer). «Bibelen Guds Ord» er tittelen
    *   på en faktisk utgave og skal ikke oversettes.
+   * - `data-verbatim` med en `lang` som IKKE er nb/nn — ordrett tekst fra et
+   *   verk på sitt eget språk (Matthew Henry, 1706, #269): «Sacræ» og
+   *   «Irenæus» er kildens latinske ligaturer, ikke norsk. Kravet om `lang`
+   *   gjør at unntaket aldri kan skjule norsk tekst.
    */
   /**
    * Metadata er tekst leseren SER — i fanen, i søkeresultatet, i en delt
@@ -401,6 +405,7 @@ describe('sidekontrakt', () => {
       .replace(/<style[\s\S]*?<\/style>/gi, ' ')
       .replace(/<([a-z]+)[^>]*\blang="(?:nb|nn)"[^>]*>[\s\S]*?<\/\1>/gi, ' ')
       .replace(/<([a-z]+)[^>]*\bdata-proper-names[^>]*>[\s\S]*?<\/\1>/gi, ' ')
+      .replace(/<(div)(?=[^>]*\bdata-verbatim)(?=[^>]*\blang="(?!nb"|nn")[^"]+")[^>]*>[\s\S]*?<\/\1>/gi, ' ')
       .replace(/<[^>]+>/g, '\n')
       .replace(/&[a-z]+;|&#\d+;/gi, ' ');
   }

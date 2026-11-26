@@ -27,9 +27,13 @@ import * as shared from '../../public/js/commentary-render.js';
 /** OSIS-bokkodene, slik `<ref osisRef>` skriver dem → bok-id. */
 export const OSIS_BOOKS: Record<string, number> = shared.OSIS_BOOKS;
 /** Begynnelsen på en OSIS-henvisning («Gen.1.14-Gen.1.15» → 1 Mos 1:14). */
-export const parseOsisRef: (ref: string) => { book: number; chapter: number; verse: number } | null = shared.parseOsisRef;
+export const parseOsisRef: (
+  ref: string,
+) => { book: number; chapter: number; verse: number; endChapter: number; endVerse: number } | null = shared.parseOsisRef;
 /** Et avsnitt som trygg HTML: alt escapes, bare kildens egne tagger gjenopprettes. */
-export const renderCommentaryParagraph: (text: string, link: (osisRef: string) => string | null) => string =
+/** Hva en henvisning lenker til: en adresse, eller en adresse og nummereringen etiketten er skrevet i. */
+export type CommentaryLink = string | { href: string; labelNumbering?: string } | null;
+export const renderCommentaryParagraph: (text: string, link: (osisRef: string) => CommentaryLink) => string =
   shared.renderCommentaryParagraph;
 /** Er avsnittet bare en overskrift? */
 export const isHeadingOnly: (text: string) => boolean = shared.isHeadingOnly;

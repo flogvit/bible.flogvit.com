@@ -2,7 +2,8 @@
 // til osnb, OSIS-henvisningene og rendreren som bare slipper gjennom kildens
 // egen markup.
 
-import { describe, expect, test } from 'bun:test';
+import { describe, expect, setDefaultTimeout, test } from 'bun:test';
+import { DB_TEST_TIMEOUT_MS } from './db-timeout.ts';
 import {
   anchorChapterSections,
   anchorSection,
@@ -13,6 +14,8 @@ import {
   renderCommentaryParagraph,
 } from '../src/lib/commentary.ts';
 import { loadRawMappingUncached } from '../src/lib/verse-mapper.ts';
+
+setDefaultTimeout(DB_TEST_TIMEOUT_MS);
 
 const toOsnb = osnbTranslator(loadRawMappingUncached('kjv'), loadRawMappingUncached('osnb'));
 
@@ -57,11 +60,14 @@ test('a chapter introduction stands where most of the chapter lands, not where v
 });
 
 describe('OSIS references', () => {
-  test('book, chapter and verse; a range gives its start', () => {
-    expect(parseOsisRef('Eccl.12.13')).toEqual({ book: 21, chapter: 12, verse: 13 });
-    expect(parseOsisRef('Gen.1.14-Gen.1.15')).toEqual({ book: 1, chapter: 1, verse: 14 });
-    expect(parseOsisRef('2Tim.3.16')).toEqual({ book: 55, chapter: 3, verse: 16 });
-    expect(parseOsisRef('Ps.23')).toEqual({ book: 19, chapter: 23, verse: 0 });
+  test('book, chapter and verse, and the end of a range in the same book', () => {
+    expect(parseOsisRef('Eccl.12.13')).toEqual({ book: 21, chapter: 12, verse: 13, endChapter: 12, endVerse: 13 });
+    expect(parseOsisRef('Gen.1.14-Gen.1.15')).toEqual({ book: 1, chapter: 1, verse: 14, endChapter: 1, endVerse: 15 });
+    expect(parseOsisRef('Matt.1.1-Matt.2.3')).toEqual({ book: 40, chapter: 1, verse: 1, endChapter: 2, endVerse: 3 });
+    expect(parseOsisRef('2Tim.3.16')).toEqual({ book: 55, chapter: 3, verse: 16, endChapter: 3, endVerse: 16 });
+    expect(parseOsisRef('Ps.23')).toEqual({ book: 19, chapter: 23, verse: 0, endChapter: 23, endVerse: 0 });
+    // Several references after one another: the first.
+    expect(parseOsisRef('Gen.1.1 Gen.1.3')?.verse).toBe(1);
   });
 
   test('an unknown book is no reference', () => {
@@ -76,6 +82,13 @@ describe('the paragraph renderer lets through the source markup and nothing else
   test('italics, bold, superscript and headings', () => {
     expect(renderCommentaryParagraph('<i>tro</i> og <b>gjerning</b><sup>1</sup>', link)).toBe('<i>tro</i> og <b>gjerning</b><sup>1</sup>');
     expect(renderCommentaryParagraph('<h>Skapelsen</h>', link)).toBe('<strong class="cm-heading">Skapelsen</strong>');
+  });
+
+  test('a link in another numbering than its label says so in the HTML', () => {
+    const moved = () => ({ href: '/nb/sal/38#v14-16', labelNumbering: 'kjv' });
+    expect(renderCommentaryParagraph('<ref osisRef="Ps.38.13-Ps.38.15">Sal 38,13–15</ref>', moved)).toBe(
+      '<a class="cm-ref" href="/nb/sal/38#v14-16" data-label-numbering="kjv">Sal 38,13–15</a>',
+    );
   });
 
   test('a reference becomes a link, or stays text when it cannot be resolved', () => {

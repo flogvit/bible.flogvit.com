@@ -9,6 +9,7 @@ import { DB_TEST_TIMEOUT_MS } from './db-timeout.ts';
 import { createApp } from '../src/app.ts';
 import { getSql } from '../src/lib/db.ts';
 import { getCommentaryForChapter } from '../src/lib/commentary-data.ts';
+import { commentaryRefHref } from '../src/views/commentary.tsx';
 
 setDefaultTimeout(DB_TEST_TIMEOUT_MS);
 
@@ -34,11 +35,13 @@ describe('the commentary block on the chapter page', () => {
     const b = block(await html('/nb/1mos/1'));
     expect(b).toContain('Matthew Henry');
     expect(b).toMatch(/<div class="cm-pair"><div class="cm-text[^"]*" lang="nb">/);
-    expect(b).toMatch(/<div class="cm-source[^"]*" lang="en">/);
+    expect(b).toMatch(/<div class="cm-source[^"]*" lang="en" data-verbatim="true">/);
+    // The rendering is not the work's own text, so it never carries data-verbatim.
+    expect(b).not.toMatch(/lang="nb" data-verbatim/);
     expect(b).toContain('Oversatt og kontrollert av');
     expect(b).toContain('Lisens: Public Domain');
     // Kildens henvisninger er lenker til lesesiden på leserens språk.
-    expect(b).toMatch(/<a class="cm-ref" href="\/nb\/[a-z0-9]+\/\d+(#v\d+(-\d+)?)?">/);
+    expect(b).toMatch(/<a class="cm-ref" href="\/nb\/[a-z0-9]+\/\d+(#v\d+(-\d+)?)?"( data-label-numbering="kjv")?>/);
     expect(b).not.toContain('cm-source-only');
   });
 
@@ -76,6 +79,17 @@ describe('the commentary block on the chapter page', () => {
     expect(page).toContain(`id="${link![1]}"`);
   });
 
+});
+
+describe('a reference in the commentary links to the verses the reader has', () => {
+  test('the same numbering: the whole range, no marker', () => {
+    expect(commentaryRefHref('Gal.1.15-Gal.1.16')).toBe('/en/gal/1#v15-16');
+    expect(commentaryRefHref('Rom.10.17')).toBe('/en/rom/10#v17');
+  });
+
+  test('a psalm with a title: the osnb range, and the label says it is KJV', () => {
+    expect(commentaryRefHref('Ps.38.13-Ps.38.15')).toEqual({ href: '/en/sal/38#v14-16', labelNumbering: 'kjv' });
+  });
 });
 
 describe('the chapter API carries the commentary', () => {

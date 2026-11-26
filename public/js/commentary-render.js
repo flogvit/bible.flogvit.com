@@ -7,33 +7,46 @@
 // kilden når siden som rå HTML — heller ikke et attributt på en kjent tagg.
 
 /**
- * OSIS-bokkodene, slik `<ref osisRef>` skriver dem. Skrevet ut framfor å
- * avledes av en visningsliste: en endret forkortelse i grensesnittet skal ikke
- * kunne bryte lenkene.
+ * OSIS-bokkodene, slik `<ref osisRef>` skriver dem, i kanonisk rekkefølge:
+ * plass + 1 er bok-id-en. Skrevet ut framfor å avledes av en visningsliste: en
+ * endret forkortelse i grensesnittet skal ikke kunne bryte lenkene.
  */
-export const OSIS_BOOKS = {
-  Gen: 1, Exod: 2, Lev: 3, Num: 4, Deut: 5, Josh: 6, Judg: 7, Ruth: 8, '1Sam': 9, '2Sam': 10,
-  '1Kgs': 11, '2Kgs': 12, '1Chr': 13, '2Chr': 14, Ezra: 15, Neh: 16, Esth: 17, Job: 18, Ps: 19,
-  Prov: 20, Eccl: 21, Song: 22, Isa: 23, Jer: 24, Lam: 25, Ezek: 26, Dan: 27, Hos: 28, Joel: 29,
-  Amos: 30, Obad: 31, Jonah: 32, Mic: 33, Nah: 34, Hab: 35, Zeph: 36, Hag: 37, Zech: 38, Mal: 39,
-  Matt: 40, Mark: 41, Luke: 42, John: 43, Acts: 44, Rom: 45, '1Cor': 46, '2Cor': 47, Gal: 48,
-  Eph: 49, Phil: 50, Col: 51, '1Thess': 52, '2Thess': 53, '1Tim': 54, '2Tim': 55, Titus: 56,
-  Phlm: 57, Heb: 58, Jas: 59, '1Pet': 60, '2Pet': 61, '1John': 62, '2John': 63, '3John': 64,
-  Jude: 65, Rev: 66,
-};
+export const OSIS_BOOKS = Object.fromEntries(
+  (
+    'Gen Exod Lev Num Deut Josh Judg Ruth 1Sam 2Sam 1Kgs 2Kgs 1Chr 2Chr Ezra Neh Esth Job Ps Prov Eccl Song ' +
+    'Isa Jer Lam Ezek Dan Hos Joel Amos Obad Jonah Mic Nah Hab Zeph Hag Zech Mal ' +
+    'Matt Mark Luke John Acts Rom 1Cor 2Cor Gal Eph Phil Col 1Thess 2Thess 1Tim 2Tim Titus Phlm Heb Jas ' +
+    '1Pet 2Pet 1John 2John 3John Jude Rev'
+  )
+    .split(' ')
+    .map((code, i) => [code, i + 1]),
+);
 
 /**
- * Begynnelsen på en OSIS-henvisning («Gen.1.14-Gen.1.15» → 1 Mos 1:14).
+ * En OSIS-henvisning: starten, og slutten når den er en rekke i samme bok
+ * («Gen.1.14-Gen.1.15» → 1 Mos 1:14–15). Flere henvisninger etter hverandre
+ * («Gen.1.1 Gen.1.3») gir den første.
  * @param {string} ref
- * @returns {{ book: number, chapter: number, verse: number } | null}
+ * @returns {{ book: number, chapter: number, verse: number, endChapter: number, endVerse: number } | null}
  */
 export function parseOsisRef(ref) {
-  const first = String(ref).split(/[-\s;,]/)[0] ?? '';
-  const m = first.match(/^([1-3]?[A-Za-z]+)\.(\d+)(?:\.(\d+))?/);
-  if (!m) return null;
-  const book = OSIS_BOOKS[m[1]];
+  const [first = '', second = ''] = String(ref).split(/\s+/)[0].split('-');
+  const point = (s) => s.match(/^([1-3]?[A-Za-z]+)\.(\d+)(?:\.(\d+))?$/);
+  const a = point(first);
+  if (!a) return null;
+  const book = OSIS_BOOKS[a[1]];
   if (!book) return null;
-  return { book, chapter: Number(m[2]), verse: m[3] ? Number(m[3]) : 0 };
+  const chapter = Number(a[2]);
+  const verse = a[3] ? Number(a[3]) : 0;
+  const b = second ? point(second) : null;
+  const sameBook = b && OSIS_BOOKS[b[1]] === book;
+  return {
+    book,
+    chapter,
+    verse,
+    endChapter: sameBook ? Number(b[2]) : chapter,
+    endVerse: sameBook ? (b[3] ? Number(b[3]) : 0) : verse,
+  };
 }
 
 const ESC = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
@@ -51,8 +64,15 @@ export function renderCommentaryParagraph(text, link) {
   html = html.replace(/&lt;(\/?)(i|b|sup)&gt;/g, '<$1$2>');
   html = html.replace(/&lt;h&gt;([\s\S]*?)&lt;\/h&gt;/g, '<strong class="cm-heading">$1</strong>');
   html = html.replace(/&lt;ref osisRef=&quot;([^&]*)&quot;&gt;([\s\S]*?)&lt;\/ref&gt;/g, (_m, ref, label) => {
-    const href = link(ref);
-    return href ? `<a class="cm-ref" href="${escapeHtml(href)}">${label}</a>` : label;
+    // `link` gir en adresse, eller { href, labelNumbering } når etiketten er i
+    // verkets egen nummerering og adressen i lesesidens (KJV Sal 38:13 er osnb
+    // 38:14): siden sier det i HTML-en, så versrekke-vakta (#91) vet hvorfor.
+    const target = link(ref);
+    if (!target) return label;
+    const href = typeof target === 'string' ? target : target.href;
+    const numbering = typeof target === 'string' ? '' : target.labelNumbering || '';
+    const attr = numbering ? ` data-label-numbering="${escapeHtml(numbering)}"` : '';
+    return `<a class="cm-ref" href="${escapeHtml(href)}"${attr}>${label}</a>`;
   });
   return html;
 }
