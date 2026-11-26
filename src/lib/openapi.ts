@@ -580,7 +580,7 @@ export const API_OPERATIONS: ApiOperation[] = [
     method: 'get',
     tag: 'Search',
     summary: 'Search everything except the Bible text',
-    description: 'Stories, themes, people, prophecies, timeline events, parallels, plans, key words, number symbolism, days and reading texts in one response.',
+    description: 'Stories, themes, people, prophecies, timeline events, parallels, plans, key words, number symbolism, days, reading texts and Bible commentaries in one response.',
     params: [qp('q', 'At least two characters, or a number.', { required: true, example: 'josef' })],
     lang: true,
     responses: { 200: 'One list per resource type.', 500: SERVER_ERROR },

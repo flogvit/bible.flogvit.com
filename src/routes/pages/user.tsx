@@ -525,6 +525,7 @@ const SEARCH_TYPE_TOGGLES: { key: string; label: MessageKey }[] = [
   { key: 'parallels', label: 'nav.parallels' },
   { key: 'plans', label: 'set.type.plans' },
   { key: 'words', label: 'set.type.words' },
+  { key: 'commentary', label: 'set.type.commentary' },
   { key: 'numberSymbolism', label: 'nav.numbers' },
   { key: 'days', label: 'nav.days' },
 ];

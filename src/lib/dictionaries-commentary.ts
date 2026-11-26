@@ -19,6 +19,7 @@ export const COMMENTARY_EN = {
   "set.showCommentary": "Show Bible commentaries",
   "set.type.commentary": "Bible commentaries",
   "nav.commentaries": "Bible commentaries",
+  "about.tool.commentaries": "Classic commentaries on each chapter, such as Matthew Henry, with the original beside the translation",
 };
 
 type CommentaryDict = Record<keyof typeof COMMENTARY_EN, string>;
@@ -36,6 +37,7 @@ const nb: CommentaryDict = {
   "set.showCommentary": "Vis bibelkommentarer",
   "set.type.commentary": "Bibelkommentarer",
   "nav.commentaries": "Bibelkommentarer",
+  "about.tool.commentaries": "Klassiske kommentarer til hvert kapittel, som Matthew Henry, med originalen ved siden av oversettelsen",
 };
 
 const nn: CommentaryDict = {
@@ -51,6 +53,7 @@ const nn: CommentaryDict = {
   "set.showCommentary": "Vis bibelkommentarar",
   "set.type.commentary": "Bibelkommentarar",
   "nav.commentaries": "Bibelkommentarar",
+  "about.tool.commentaries": "Klassiske kommentarar til kvart kapittel, som Matthew Henry, med originalen ved sida av omsetjinga",
 };
 
 const sv: CommentaryDict = {
@@ -66,6 +69,7 @@ const sv: CommentaryDict = {
   "set.showCommentary": "Visa bibelkommentarer",
   "set.type.commentary": "Bibelkommentarer",
   "nav.commentaries": "Bibelkommentarer",
+  "about.tool.commentaries": "Klassiska kommentarer till varje kapitel, som Matthew Henry, med originalet bredvid översättningen",
 };
 
 const fr: CommentaryDict = {
@@ -81,6 +85,7 @@ const fr: CommentaryDict = {
   "set.showCommentary": "Afficher les commentaires bibliques",
   "set.type.commentary": "Commentaires bibliques",
   "nav.commentaries": "Commentaires bibliques",
+  "about.tool.commentaries": "Des commentaires classiques de chaque chapitre, comme Matthew Henry, avec l’original à côté de la traduction",
 };
 
 const es: CommentaryDict = {
@@ -96,6 +101,7 @@ const es: CommentaryDict = {
   "set.showCommentary": "Mostrar comentarios bíblicos",
   "set.type.commentary": "Comentarios bíblicos",
   "nav.commentaries": "Comentarios bíblicos",
+  "about.tool.commentaries": "Comentarios clásicos de cada capítulo, como Matthew Henry, con el original junto a la traducción",
 };
 
 const fi: CommentaryDict = {
@@ -111,6 +117,7 @@ const fi: CommentaryDict = {
   "set.showCommentary": "Näytä raamatunselitykset",
   "set.type.commentary": "Raamatunselitykset",
   "nav.commentaries": "Raamatunselitykset",
+  "about.tool.commentaries": "Klassisia selityksiä jokaiseen lukuun, kuten Matthew Henry, alkuteksti käännöksen vieressä",
 };
 
 const de: CommentaryDict = {
@@ -126,6 +133,7 @@ const de: CommentaryDict = {
   "set.showCommentary": "Bibelkommentare anzeigen",
   "set.type.commentary": "Bibelkommentare",
   "nav.commentaries": "Bibelkommentare",
+  "about.tool.commentaries": "Klassische Kommentare zu jedem Kapitel, etwa Matthew Henry, mit dem Original neben der Übersetzung",
 };
 
 export const COMMENTARY_DICTS = { nb, nn, sv, fr, es, fi, de };
