@@ -23,7 +23,7 @@ import * as path from 'path';
 import { ukvnDecode, ukvnEncode, UKVN_PART_SIZE, sliceVersePart } from '@free-bible/kvn';
 import type { UkvnMappingFile } from '@free-bible/kvn';
 import { OSNB_NUMBERED } from './editions.ts';
-import { parseStrongs, STRONGS_MARK } from './strongs.ts';
+import { parseStrongs } from './strongs.ts';
 import type { StrongsWord } from './strongs.ts';
 
 /** A verse as free-bible stores it, in the translation's own numbering. */
@@ -218,12 +218,12 @@ function closeSpacedCjk(text: string): string {
  * is imported again with the new rules instead of keeping the old text until
  * its source changes.
  */
-export const READER_TEXT_RULES = 6;
+export const READER_TEXT_RULES = 5;
 
 /** The verse text a reader is shown: other numberings out, spaced Chinese closed up, spaces tidied. */
 export function readerText(text: string): string {
   // [ \t\n], not \s: \s takes the ideographic space (U+3000) too.
-  return closeSpacedCjk(text.replace(STRONGS_MARK, '').replace(INLINE_TAG, '').replace(EMPHASIS_STARS, '$1').replace(RED_LETTER_SEAM_WORD, ' ').replace(RED_LETTER_SEAM, '').replace(RED_LETTER_MARK, '').replace(VERSE_NUMBER_MARK, ' ').replace(PARAGRAPH_MARK, ' ').replace(/[ \t\n]{2,}/g, ' ').trim());
+  return closeSpacedCjk(text.replace(INLINE_TAG, '').replace(EMPHASIS_STARS, '$1').replace(RED_LETTER_SEAM_WORD, ' ').replace(RED_LETTER_SEAM, '').replace(RED_LETTER_MARK, '').replace(VERSE_NUMBER_MARK, ' ').replace(PARAGRAPH_MARK, ' ').replace(/[ \t\n]{2,}/g, ' ').trim());
 }
 
 /** A verse at its osnb address, ready for the `verses` table. */

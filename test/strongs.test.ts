@@ -6,7 +6,7 @@
 
 import { describe, expect, test } from 'bun:test';
 import { parseStrongs, strongsSegments } from '../src/lib/strongs.ts';
-import { readerText, toOsnbNumbering } from '../src/lib/edition-import.ts';
+import { toOsnbNumbering } from '../src/lib/edition-import.ts';
 import { ukvnEncode } from '@free-bible/kvn';
 import { StrongsText } from '../src/views/strongs-text.tsx';
 
@@ -30,10 +30,6 @@ describe('parseStrongs', () => {
 
   test('a verse without numbers gives none, and the text is as it was', () => {
     expect(parseStrongs('In the beginning God.')).toEqual({ text: 'In the beginning God.', strongs: null });
-  });
-
-  test('readerText never lets a marker reach the stored text', () => {
-    expect(readerText('God{H430} created{H1254}{(H8804)}')).toBe('God created');
   });
 });
 

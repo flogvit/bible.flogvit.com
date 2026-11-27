@@ -12,7 +12,7 @@ export interface StrongsWord {
 }
 
 /** A marker in the source text: `{H430}` is a number, `{(H8804)}` a grammatical tag. */
-export const STRONGS_MARK = /\{\(?[HG]\d+\)?\}/g;
+const STRONGS_MARK = /\{\(?[HG]\d+\)?\}/g;
 const NUMBER = /^\{([HG]\d+)\}$/;
 
 /**
