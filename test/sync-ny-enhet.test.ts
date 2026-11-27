@@ -25,12 +25,14 @@ import { getSql, closeSql } from '../src/lib/db.ts';
 import { ensureSchema } from '../src/lib/schema.ts';
 import { kontoUser, startMockKonto } from './mock-konto.ts';
 import { Chrome, type Page } from './chrome-cdp.ts';
+import { testUserId } from './test-users.ts';
 
 setDefaultTimeout(DB_TEST_TIMEOUT_MS);
 
-// Egne bruker-id-er, så testen aldri deler rader med sync.test.ts.
-const API_USER = 990132;
-const CHROME_USER = 990133;
+// Egne bruker-id-er per kjøring, så testen aldri deler rader med en annen fil
+// eller en annen testport mot samme lokale base (test/test-users.ts).
+const API_USER = testUserId(0);
+const CHROME_USER = testUserId(1);
 const USERS = [API_USER, CHROME_USER];
 
 const AUTH = { cookie: 'fv-session=ny-enhet-api', 'content-type': 'application/json' };
