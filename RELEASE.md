@@ -16,6 +16,7 @@
 - The MCP listing check also reads the tool count shown on mcpservers.org.
 - The unpushed-work test no longer writes to `.git/config`, asks git only once per sweep, and no longer clashes when two gate runs happen at the same time.
 - The remaining KJV psalm data errors in the tests now point to the upstream issues free-bible#164 and #165.
+
 ## 2026-11-16 — Security update to the web framework
 
 **Behind the scenes**
