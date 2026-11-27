@@ -119,7 +119,49 @@ export class Chrome {
   ) {}
 
   private nextId = 0;
-  private pending = new Map<number, (msg: any) => void>();
+  private pending = new Map<number, { settle: (msg: any) => void; fail: (err: Error) => void }>();
+
+  /**
+   * Hvorfor nettleseren er borte, eller null mens den lever (#275).
+   *
+   * Bun dreper prosessene en testfil har startet når en test i fila går ut på
+   * tid — også Chrome fra `beforeAll`. Uten dette ventet hvert kall etterpå sine
+   * 30 s og feilet som et navnløst «CDP-tidsavbrudd», så én rød test ble seks.
+   */
+  private gone: string | null = null;
+
+  /** Løses når Chrome-prosessen har avsluttet, av hvilken grunn som helst. */
+  get exited(): Promise<unknown> {
+    return this.proc.exited;
+  }
+
+  /** Prosess-id-en, så en test kan drepe nettleseren slik Bun gjør. */
+  get pid(): number {
+    return this.proc.pid;
+  }
+
+  /** Kobler prosessens og forbindelsens slutt til `markGone()`. Én gang, ved oppstart. */
+  private watchForDeath() {
+    const why = () => (this.proc.signalCode ? `signal ${this.proc.signalCode}` : `exit-kode ${this.proc.exitCode}`);
+    void this.proc.exited.then(() => this.markGone(why()));
+    this.ws.addEventListener('close', () => {
+      // Forbindelsen lukkes som regel FØR prosessen er høstet. Vent kort på
+      // prosessen, så meldingen kan navngi signalet i stedet for bare «lukket».
+      void Promise.race([this.proc.exited, Bun.sleep(1000)]).then(() =>
+        this.markGone(this.proc.exitCode !== null || this.proc.signalCode ? why() : 'DevTools-forbindelsen ble lukket'),
+      );
+    });
+  }
+
+  private markGone(why: string) {
+    if (this.gone) return;
+    this.gone =
+      `Chrome er borte (${why}). Bun dreper prosessene en testfil har startet når en test i ` +
+      'fila går ut på tid («killed N dangling process»): se etter testen som feilet først (#275).';
+    const err = new Error(this.gone);
+    for (const { fail } of this.pending.values()) fail(err);
+    this.pending.clear();
+  }
 
   static launch(): Promise<Chrome> {
     return launchWithSandboxFallback((noSandbox) => Chrome.attemptLaunch(noSandbox));
@@ -156,6 +198,7 @@ export class Chrome {
 
     const chrome = new Chrome(proc, ws, userDataDir, noSandbox);
     ws.onmessage = (e) => chrome.onMessage(String(e.data));
+    chrome.watchForDeath();
 
     // DevTools-endepunktet svarer selv om rendreren er død — `Target.createTarget`
     // og `Target.attachToTarget` gir svar, og det er `Page.enable` som blir
@@ -192,19 +235,29 @@ export class Chrome {
   private onMessage(raw: string) {
     const msg = JSON.parse(raw);
     if (msg.id !== undefined) {
-      this.pending.get(msg.id)?.(msg);
+      this.pending.get(msg.id)?.settle(msg);
       this.pending.delete(msg.id);
     }
   }
 
   private send(method: string, params: unknown = {}, sessionId?: string, timeoutMs = 30_000): Promise<any> {
+    if (this.gone) return Promise.reject(new Error(this.gone));
     const id = ++this.nextId;
     return new Promise((res, rej) => {
-      const timer = setTimeout(() => rej(new Error(`CDP-tidsavbrudd: ${method}`)), timeoutMs);
-      this.pending.set(id, (msg) => {
-        clearTimeout(timer);
-        if (msg.error) rej(new Error(`CDP ${method}: ${msg.error.message}`));
-        else res(msg.result);
+      const timer = setTimeout(() => {
+        this.pending.delete(id);
+        rej(new Error(`CDP-tidsavbrudd: ${method}`));
+      }, timeoutMs);
+      this.pending.set(id, {
+        settle: (msg) => {
+          clearTimeout(timer);
+          if (msg.error) rej(new Error(`CDP ${method}: ${msg.error.message}`));
+          else res(msg.result);
+        },
+        fail: (err) => {
+          clearTimeout(timer);
+          rej(err);
+        },
       });
       this.ws.send(JSON.stringify({ id, method, params, sessionId }));
     });

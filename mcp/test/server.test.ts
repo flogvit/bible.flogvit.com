@@ -131,6 +131,14 @@ test("the editions sentence matches the base's licences", async () => {
   expect(editionsByKind()).toMatch(/list_editions/);
 }, DB_TEST_TIMEOUT_MS);
 
+// #202: hebrew, wlc and tr went out as source texts and asvs as a reading
+// edition; the sentence every client reads must name them as what they are.
+test('the editions sentence names every source text as one, and asvs among the translations', () => {
+  const [, sources, rest] = editionsByKind().match(/; ([^;]*) are the source texts(.*)$/s) ?? [];
+  for (const id of ['sblgnt', 'tanach', 'hebrew', 'wlc', 'tr']) expect(sources).toContain(`${id} (`);
+  expect(rest).toContain('asvs (');
+});
+
 test('the language picks the edition when none is named', async () => {
   expect((await call('get_passage', { reference: 'John 3:16', language: 'nb' })).text).toContain('**osnb**');
   // German has an edition of its own now (#170), and Spanish gets our own oses before rv_1909.
