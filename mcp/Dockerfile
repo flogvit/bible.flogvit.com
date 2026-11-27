@@ -23,6 +23,8 @@ COPY src/lib ./src/lib
 COPY mcp/src ./mcp/src
 # The icon is bibel's own (#128).
 COPY public/favicon.svg public/favicon.ico public/apple-touch-icon.png ./public/
+# The commentary renderer is shared with offline reading (#269): src/lib/commentary.ts imports it.
+COPY public/js/commentary-render.js ./public/js/
 ENV NODE_ENV=production
 ENV PORT=8080
 EXPOSE 8080

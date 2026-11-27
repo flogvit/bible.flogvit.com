@@ -7,6 +7,7 @@
 // lib/lang.ts, og oversettes ikke herfra (Vegard 2026-07-25).
 
 import { MCP_DICTS, MCP_EN } from './dictionaries-mcp.ts';
+import { COMMENTARY_DICTS, COMMENTARY_EN } from './dictionaries-commentary.ts';
 
 const en = {
   "chrome.menuAria": "FLOGVIT — all products",
@@ -1025,6 +1026,7 @@ const en = {
   "ref.err.chapterCount": "{book} has {count} chapters",
   "ref.err.verseCount": "{book} {chapter} has {count} verses",
   ...MCP_EN,
+  ...COMMENTARY_EN,
 };
 
 type Dict = Record<keyof typeof en, string>;
@@ -2044,6 +2046,7 @@ const nb: Dict = {
   "ref.err.chapterCount": "{book} har {count} kapitler",
   "ref.err.verseCount": "{book} {chapter} har {count} vers",
   ...MCP_DICTS.nb,
+  ...COMMENTARY_DICTS.nb,
 };
 
 const nn: Dict = {
@@ -3061,6 +3064,7 @@ const nn: Dict = {
   "ref.err.chapterCount": "{book} har {count} kapittel",
   "ref.err.verseCount": "{book} {chapter} har {count} vers",
   ...MCP_DICTS.nn,
+  ...COMMENTARY_DICTS.nn,
 };
 
 const sv: Dict = {
@@ -4078,6 +4082,7 @@ const sv: Dict = {
   "ref.err.chapterCount": "{book} har {count} kapitel",
   "ref.err.verseCount": "{book} {chapter} har {count} verser",
   ...MCP_DICTS.sv,
+  ...COMMENTARY_DICTS.sv,
 };
 
 const fr: Dict = {
@@ -5095,6 +5100,7 @@ const fr: Dict = {
   "ref.err.chapterCount": "{book} compte {count} chapitres",
   "ref.err.verseCount": "{book} {chapter} compte {count} versets",
   ...MCP_DICTS.fr,
+  ...COMMENTARY_DICTS.fr,
 };
 
 const es: Dict = {
@@ -6112,6 +6118,7 @@ const es: Dict = {
   "ref.err.chapterCount": "{book} tiene {count} capítulos",
   "ref.err.verseCount": "{book} {chapter} tiene {count} versículos",
   ...MCP_DICTS.es,
+  ...COMMENTARY_DICTS.es,
 };
 
 const fi: Dict = {
@@ -7131,6 +7138,7 @@ const fi: Dict = {
   "ref.err.chapterCount": "{book}: {count} lukua",
   "ref.err.verseCount": "{book} {chapter}: {count} jaetta",
   ...MCP_DICTS.fi,
+  ...COMMENTARY_DICTS.fi,
 };
 
 const de: Dict = {
@@ -8148,6 +8156,7 @@ const de: Dict = {
   "ref.err.chapterCount": "{book} hat {count} Kapitel",
   "ref.err.verseCount": "{book} {chapter} hat {count} Verse",
   ...MCP_DICTS.de,
+  ...COMMENTARY_DICTS.de,
 };
 
 export const DICTIONARIES = { en, nb, nn, sv, fr, es, fi, de };

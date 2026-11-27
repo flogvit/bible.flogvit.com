@@ -129,7 +129,8 @@ export const API_OPERATIONS: ApiOperation[] = [
     summary: 'One chapter, with everything the reading page shows',
     description:
       'Verses, the original text, word-for-word data, cross references and the chapter summary, ' +
-      'context and insight. With `mapping` the verse numbering is remapped from `osnb` to another ' +
+      'context and insight, and the Bible commentaries on the chapter (`commentary`: each work with ' +
+      'its sections, the paragraphs in the reader\'s language and the source paragraphs beside them). With `mapping` the verse numbering is remapped from `osnb` to another ' +
       'system (KVN) — the osnb coordinates stay in the response as `osnbChapter`/`osnbVerse`.',
     params: [
       qp('book', 'Book id, 1–66.', { required: true, type: 'integer', example: '1' }),
@@ -579,7 +580,7 @@ export const API_OPERATIONS: ApiOperation[] = [
     method: 'get',
     tag: 'Search',
     summary: 'Search everything except the Bible text',
-    description: 'Stories, themes, people, prophecies, timeline events, parallels, plans, key words, number symbolism, days and reading texts in one response.',
+    description: 'Stories, themes, people, prophecies, timeline events, parallels, plans, key words, number symbolism, days, reading texts and Bible commentaries in one response.',
     params: [qp('q', 'At least two characters, or a number.', { required: true, example: 'josef' })],
     lang: true,
     responses: { 200: 'One list per resource type.', 500: SERVER_ERROR },

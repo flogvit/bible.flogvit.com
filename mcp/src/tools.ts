@@ -48,6 +48,8 @@ import {
 import { bookName, getBookInfoById as bookById } from '../../src/lib/books-data.ts';
 import { EDITION_LABELS, IMPORTED_BIBLES, editionList, editionsByKind, type ImportedBible } from '../../src/lib/editions.ts';
 import { getAvailableMappings } from '../../src/lib/verse-mapper.ts';
+import { getCommentaryForChapter } from '../../src/lib/commentary-data.ts';
+import { commentaryMarkdown } from '../../src/lib/commentary.ts';
 import { findReferences } from './find-references.ts';
 import { chapterUrl, pageUrl } from './links.ts';
 import { parseReferences } from './reference.ts';
@@ -426,7 +428,7 @@ export function registerTools(server: McpServer): void {
     {
       title: 'Study notes for a chapter',
       description:
-        'Everything bible.flogvit.com has about one chapter: summary, historical context, key words, the people in it, themes, stories, prophecies, gospel parallels and timeline events. Give a chapter ("Rom 8"); verses are ignored.',
+        'Everything bible.flogvit.com has about one chapter: summary, historical context, key words, the people in it, themes, stories, prophecies, gospel parallels, timeline events and Bible commentaries (Matthew Henry first). Give a chapter ("Rom 8"); verses are ignored.',
       inputSchema: { reference, mapping, language },
       annotations: READ_ONLY,
     },
@@ -442,7 +444,7 @@ export function registerTools(server: McpServer): void {
       const id = book.id;
       const lang = language;
 
-      const [summary, context, words, persons, themes, stories, prophecies, parallels, timeline] = [
+      const [summary, context, words, persons, themes, stories, prophecies, parallels, timeline, commentary] = [
         await getChapterSummary(id, chapter, lang),
         await getChapterContext(id, chapter, lang),
         await getImportantWords(id, chapter, lang),
@@ -452,6 +454,7 @@ export function registerTools(server: McpServer): void {
         await getPropheciesForChapter(id, chapter, lang),
         await getGospelParallelsForChapter(id, chapter, lang),
         await getTimelineEventsForChapter(id, chapter, lang),
+        await getCommentaryForChapter(id, chapter, lang),
       ];
 
       const heading = label(book, asked.chapter, null, asked.chapter, null, lang);
@@ -480,6 +483,27 @@ export function registerTools(server: McpServer): void {
       }
       if (timeline.length) {
         s.push(`## Timeline\n${timeline.map((x) => `- ${x.year_display ?? ''} ${x.title}${x.description ? `: ${x.description}` : ''}`.trim()).join('\n')}`);
+      }
+      // Bibelkommentarene (#269): seksjon for seksjon på leserens språk, med
+      // verk, lisens og hvem som oversatte. Kildens avsnitt står på siden, ikke
+      // her: dobbel tekst ville gjort svaret dobbelt så langt for ingenting.
+      for (const c of commentary) {
+        const where = (at: { chapter: number; verse: number }) => (at.chapter === chapter ? `${at.verse}` : `${at.chapter}:${at.verse}`);
+        const note = c.sourceOnly
+          ? ` Not yet translated into ${lang}; the original (${c.work.sourceLanguage}) is shown.`
+          : c.language !== c.work.sourceLanguage
+            ? ` Translated from ${c.work.sourceLanguage}; the page shows the original beside each paragraph.`
+            : '';
+        const head = [
+          `## Commentary: ${c.work.title}${c.work.author ? ` (${c.work.author}${c.work.written ? `, ${c.work.written}` : ''})` : ''}`,
+          `Licence: ${c.work.license}.${note}`,
+        ];
+        const body = c.sections.map((x) => {
+          const range = x.from.verse === 0 && x.to.verse === 0 ? 'Introduction' : `Verses ${where(x.from)}–${where(x.to)}`;
+          const models = x.models?.length ? `\n_Translated and checked by ${x.models.join(', ')}._` : '';
+          return `### ${range}\n${x.paragraphs.map(commentaryMarkdown).join('\n\n')}${models}`;
+        });
+        s.push([...head, ...body].join('\n\n'));
       }
       if (s.length === 1) s.push('No study notes for this chapter yet.');
       return text(s.join('\n\n') + numberedAs(numbering.id));

@@ -101,6 +101,10 @@ describe('LENKENE — en etikett som lover en rekke, adresserer den også', () =
       const range = RANGE.exec(label);
       const target = /\/(\d+)#v/.exec(href);
       if (!range || !target) continue;
+      // En kommentarhenvisning med etiketten i verkets egen nummerering (KJV) og
+      // adressen i osnb sier det selv i HTML-en (#269): «Sal 38,13–15» ER osnb
+      // 38:14–16. Bare de som bærer merket hoppes over; resten måles.
+      if (/data-label-numbering=/.test(m[0]!)) continue;
       // Bare etiketter som gjelder KAPITTELET lenka peker på: en referanse til
       // et annet kapittel sier ingenting om denne adressen.
       if (Number(range[1]) !== Number(target[1])) continue;

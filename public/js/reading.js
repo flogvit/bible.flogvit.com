@@ -123,6 +123,10 @@ if (rootPage) {
     if (s.showBookSummary === false) hide('[data-summary-kind="book"]');
     if (s.showChapterContext === false) hide('[data-summary-kind="context"]');
     if (s.showImportantWords === false) hide('.st-block[data-block-id="viktige-ord"]');
+    if (s.showCommentary === false) {
+      hide('.st-block[data-block-id="kommentar"]');
+      hide('.vd-commentary');
+    }
     if (s.showVerseFootnotes === false) hide('.footnotes');
   }
 
