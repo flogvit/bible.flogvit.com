@@ -299,6 +299,8 @@ if (root) {
         const next = readJSON(KEYS.settings, {});
         setPath(next, key, input.type === 'checkbox' ? input.checked : input.value);
         writeJSON(KEYS.settings, next);
+        // Tekststørrelsen vises med én gang, også her (#271, text-size.js).
+        if (key === 'fontSize') document.dispatchEvent(new CustomEvent('bibel:font-size', { detail: input.value }));
       });
     });
 

@@ -3,7 +3,7 @@
 
 .changes-lang-note {
   margin: 0 0 28px;
-  font-size: 13px;
+  font-size: 0.8125rem;
   color: var(--muted);
 }
 
@@ -17,20 +17,20 @@
 .changes-date {
   display: block;
   font-family: var(--font-mono);
-  font-size: 13px;
+  font-size: 0.8125rem;
   color: var(--gold-text);
   margin-bottom: 4px;
 }
 .changes-entry-head h2 {
   font-family: var(--font-serif);
-  font-size: 24px;
+  font-size: 1.5rem;
   line-height: 1.25;
   margin: 0;
 }
 
 .changes-section { margin-bottom: 20px; }
 .changes-section h3 {
-  font-size: 12px;
+  font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.08em;
   color: var(--muted);
@@ -57,5 +57,5 @@
   }
   .changes-entry-head { grid-column: 1; margin-bottom: 0; }
   .changes-entry > .changes-section { grid-column: 2; }
-  .changes-entry-head h2 { font-size: 20px; }
+  .changes-entry-head h2 { font-size: 1.25rem; }
 }
