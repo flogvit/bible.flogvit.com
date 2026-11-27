@@ -3,10 +3,12 @@
 # 170MB bible.db i imaget lenger (import kjøres utenfra, se scripts/).
 FROM oven/bun:1.4.4-slim
 WORKDIR /app
-COPY package.json bun.lock* ./
+# Låsen ved navn og installasjonen uten fallback (#284): prod kjører det
+# bun.lock sier, med integritetshashene, eller så stopper bygget.
+COPY package.json bun.lock ./
 # kvn-package er en vendored file:-dependency og må ligge der før bun install.
 COPY kvn-package ./kvn-package
-RUN bun install --frozen-lockfile --production || bun install --production
+RUN bun install --frozen-lockfile --production
 # tsconfig.json bærer jsxImportSource: hono/jsx — Bun leser den ved kjøring for
 # å transpilere .tsx-viewene; uten den faller Bun til react/jsx-runtime og krasjer.
 COPY tsconfig.json ./
