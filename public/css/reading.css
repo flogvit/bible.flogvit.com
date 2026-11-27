@@ -384,8 +384,7 @@
 /* Strong's numbers (#202): small and quiet, in the line, in rem so they grow with the text. */
 .strongs-num {
   font-size: 0.6rem;
-  color: var(--ink-muted, var(--ink));
-  opacity: 0.7;
+  color: var(--muted);
   margin-inline: 0.1em;
   line-height: 0;
   overflow-wrap: anywhere;

@@ -20,11 +20,7 @@ const NUMBER = /^\{([HG]\d+)\}$/;
  * A number standing on its own after a space joins the word before it.
  */
 export function parseStrongs(raw: string): { text: string; strongs: StrongsWord[] | null } {
-  if (!STRONGS_MARK.test(raw)) {
-    STRONGS_MARK.lastIndex = 0;
-    return { text: raw, strongs: null };
-  }
-  STRONGS_MARK.lastIndex = 0;
+  if (!raw.match(STRONGS_MARK)) return { text: raw, strongs: null };
   const words: string[] = [];
   const strongs: StrongsWord[] = [];
   for (const token of raw.split(/\s+/).filter(Boolean)) {

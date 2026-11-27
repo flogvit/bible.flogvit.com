@@ -410,7 +410,7 @@ async function importVerses(bible: string): Promise<void> {
         }
         await tx`DELETE FROM verses WHERE book_id = ${bookId} AND chapter = ${chapterId} AND bible = ${bible}`;
         if (verses.length > 0) {
-          const placeholders = verses.map(() => '(?, ?, ?, ?, ?, ?, ?, ?)').join(', ');
+          const placeholders = verses.map(() => '(?, ?, ?, ?, ?, ?, ?)').join(', ');
           const params = verses.flatMap((v) => [
             v.bookId,
             v.chapterId,
@@ -419,10 +419,9 @@ async function importVerses(bible: string): Promise<void> {
             bible,
             v.versions ? JSON.stringify(v.versions) : null,
             v.footnotes ? JSON.stringify(v.footnotes) : null,
-            null,
           ]);
           await tx.unsafe(
-            `REPLACE INTO verses (book_id, chapter, verse, text, bible, versions, footnotes, strongs) VALUES ${placeholders}`,
+            `REPLACE INTO verses (book_id, chapter, verse, text, bible, versions, footnotes) VALUES ${placeholders}`,
             params,
           );
         }
