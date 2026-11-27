@@ -1,10 +1,13 @@
 # Release notes
 
-## 2026-11-27 — Security update to the web framework
+## 2026-11-27 — Faster verse search and a security update to the web framework
+
+**Polish**
+- Searching for a verse now looks only within the one Bible edition you are reading, instead of scanning every edition, so verse lookups are lighter on the server.
 
 **Behind the scenes**
-- The web framework under the site and the MCP server (hono) is updated from 4.13.18 to 4.13.23. The update closes three published security advisories, covering paths on requests without a host, route matching with alternatives, and unusual request method names (GHSA-mhwf-w6q6-q58w, GHSA-586x-c76g-h528, GHSA-656w-x92q-369m). A test now holds both lockfiles at or above the fixed version.
-
+- The web framework under the site and the MCP server (hono) is updated from 4.13.18 to 4.13.23. The update closes three published security advisories, covering paths on requests without a host, route matching with alternatives, and unusual request method names (GHSA-mhwf-w6q6-q58w, GHSA-586x-c76g-h528, GHSA-656w-x92q-369m). A test now holds both lockfiles at or above the fixed version, counts nested copies of the framework, reads the lockfiles with the shared parser, and is itself tested to fail when the version is too old.
+- Test files that create users now get per-run user IDs, and a test guards against two test files sharing the same user-ID slot.
 ## 2026-11-27 — King James psalm numbering and Malachi 4 fixed
 
 **Bug fixes**
