@@ -408,6 +408,7 @@ bibelteksten og studiestoffet som MCP-verktøy. Runbook og verktøyliste:
   portalens — endres i portalen. `sw.js` kaller ikke `skipWaiting()` ved install.
 - **Verslister (#133):** `public/js/verse-list.js` eier adresseformen
   (`joh-3-16-18`), som ikke kan byttes.
+- **Bibelkommentarer (#269):** skill `kommentarer`.
 - **API-dokumentasjonen (#114):** `src/lib/openapi.ts` eier operasjonene (OpenAPI
   3.1, `/api/docs`, vakta); hvert `prove.url` hentes av `test/api-docs.test.ts`.
   Ny rute ⇒ dokumentert eller rød. Ingen `swagger-ui-dist`, ingen CDN.

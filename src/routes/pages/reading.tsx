@@ -75,6 +75,8 @@ import { mapChapter, resolveMappingId, getAvailableMappings } from '../../lib/ve
 import { getWorksForChapter, workHref, type WorkRef } from '../../lib/works.ts';
 import { songIndex, songsForPassage, type Song } from '../../lib/songs.ts';
 import { SongList } from '../../views/songs.tsx';
+import { getCommentaryForChapter, type CommentaryForChapter } from '../../lib/commentary-data.ts';
+import { CommentaryBlockBody, commentaryAnchor, sectionCovers, sectionRange } from '../../views/commentary.tsx';
 import { encode as encodeKvn } from '@free-bible/kvn/types';
 import { layoutProps, tFor, type Translator, type MessageKey, lhref } from '../../lib/i18n.ts';
 import { localeToContentLanguage, originalScriptLang } from '../../lib/lang.ts';
@@ -155,6 +157,8 @@ interface DisplayVerse {
   works: WorkRef[];
   /** Songs with a passage that contains this verse (#188). */
   songs: Song[];
+  /** Commentary sections on this verse (#269): the verse details link to them. */
+  commentary: { href: string; label: string }[];
 }
 
 interface ChapterData {
@@ -175,6 +179,8 @@ interface ChapterData {
   chapterWorks: WorkRef[];
   /** Songs with a passage anywhere in the chapter. */
   songs: Song[];
+  /** Bible commentaries on this chapter, work by work (#269). */
+  commentary: CommentaryForChapter[];
 }
 
 function versesInProphecy(p: Prophecy, bookId: number, chapter: number, verse: number): boolean {
@@ -216,7 +222,7 @@ async function loadChapterData(
   // Kapittelmetadata bruker osnb-kapittelet (primærinnholdet).
   const primaryChapter = base[0]?.osnbChapter ?? chapter;
 
-  const [bookSummary, summary, context, insight, importantWords, timelineEvents, chapterProphecies] =
+  const [bookSummary, summary, context, insight, importantWords, timelineEvents, chapterProphecies, commentary] =
     await Promise.all([
       chapter === 1 ? getBookSummary(bookId, lang) : Promise.resolve(null),
       getChapterSummary(bookId, primaryChapter, lang),
@@ -225,6 +231,7 @@ async function loadChapterData(
       getImportantWords(bookId, primaryChapter, lang),
       getTimelineEventsForChapter(bookId, primaryChapter, lang),
       getPropheciesForChapter(bookId, primaryChapter, lang),
+      getCommentaryForChapter(bookId, primaryChapter, lang),
     ]);
 
   // Studium-ressurser (samme kall som /api/search/chapter-resources).
@@ -301,6 +308,14 @@ async function loadChapterData(
         return w.kvn_from <= k + 15 && w.kvn_to >= k;
       }),
       songs: songsForPassage(music, bookId, b.osnbChapter, b.osnbVerse),
+      commentary: commentary.flatMap((c) =>
+        c.sections
+          .filter((s) => sectionCovers(s, b.osnbChapter, b.osnbVerse))
+          .map((s) => ({
+            href: `#${commentaryAnchor(c.work.id, s)}`,
+            label: `${c.work.author ?? c.work.title}, ${sectionRange(b.osnbChapter, s.from, s.to)}`,
+          })),
+      ),
     });
   }
 
@@ -322,6 +337,7 @@ async function loadChapterData(
     readingTexts,
     parallels,
     chapterProphecies,
+    commentary,
   };
 }
 
@@ -916,6 +932,21 @@ function VerseDetailPanel({
         )}
       </div>
 
+      {/* Kommentaren til verset (#269) står i studiepanelet; lenka åpner den der. */}
+      {data.commentary.length > 0 && (
+        <p class="vd-commentary">
+          {t('cm.jump')}:{' '}
+          {data.commentary.map((c, i) => (
+            <>
+              {i > 0 && ', '}
+              <a href={c.href} data-cm-jump>
+                {c.label}
+              </a>
+            </>
+          ))}
+        </p>
+      )}
+
       <div class="vd-tabs" role="tablist" aria-label={`${t('rd.verseDetails')} ${n}`}>
         <button type="button" role="tab" aria-selected="true" class="vd-tab is-active" data-vd-tab="original">
           {t('u.originalText')}
@@ -1312,6 +1343,17 @@ function StudyPanel({
           <p class="st-empty">{t('rd.noSummary')}</p>
         )}
       </StudyBlock>
+
+      {data.commentary.length > 0 && (
+        <StudyBlock
+          id="kommentar"
+          title={t('rd.commentary')}
+          count={data.commentary.reduce((n, c) => n + c.sections.length, 0)}
+          defaultOpen
+        >
+          <CommentaryBlockBody commentary={data.commentary} chapter={chapter} t={t} />
+        </StudyBlock>
+      )}
 
       <StudyBlock id="personer" title={t('nav.persons')} count={data.persons.length} defaultOpen>
         {data.persons.length > 0 ? (

@@ -267,3 +267,28 @@ if (toolbar) {
     });
   });
 }
+
+// ── Bibelkommentarer (#269): lenka fra versdetaljene ────────────────
+// Seksjonen står i studiepanelet. På telefon er panelet skjult bak ▥, og blokka
+// kan være lukket; et vanlig anker ville da rullet til ingenting. Lenka åpner
+// derfor overlegget (når panelet ikke er synlig) og blokka før den ruller.
+function showCommentarySection(id) {
+  const target = document.getElementById(id);
+  if (!target) return false;
+  const opener = document.querySelector('[data-open-studium]');
+  if (opener && target.offsetParent === null && opener.offsetParent !== null) opener.click();
+  const block = target.closest('details');
+  if (block) block.open = true;
+  target.scrollIntoView({ block: 'start' });
+  return true;
+}
+document.addEventListener('click', (e) => {
+  const link = e.target instanceof Element ? e.target.closest('[data-cm-jump]') : null;
+  if (!link) return;
+  const id = (link.getAttribute('href') || '').slice(1);
+  if (showCommentarySection(id)) {
+    e.preventDefault();
+    history.replaceState(null, '', `#${id}`);
+  }
+});
+if (location.hash.startsWith('#cm-')) showCommentarySection(location.hash.slice(1));

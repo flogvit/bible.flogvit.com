@@ -36,6 +36,7 @@ import {
   booksData, getBookInfoById, bookName, bookNameById, bookNameByShort, bookAbbrById, type BookInfo,
 } from '../../lib/books-data.ts';
 import { toUrlSlug } from '../../lib/url-utils.ts';
+import { searchCommentary } from '../../lib/commentary-data.ts';
 import { layoutProps, tFor, type Translator, lhref, islandStrings, tEnum } from '../../lib/i18n.ts';
 import { tCtx } from '../../lib/i18n.ts';
 
@@ -405,7 +406,7 @@ function ExtraSection({ title, typeKey, cards }: { title: string; typeKey: strin
 }
 
 async function loadExtraResults(query: string) {
-  const [stories, themes, persons, prophecies, timeline, parallels, plans, words, numbers, days] = await Promise.all([
+  const [stories, themes, persons, prophecies, timeline, parallels, plans, words, numbers, days, commentary] = await Promise.all([
     searchStories(query),
     searchThemes(query),
     searchPersons(query),
@@ -416,6 +417,7 @@ async function loadExtraResults(query: string) {
     searchImportantWords(query),
     searchNumberSymbolism(query),
     searchDays(query),
+    searchCommentary(query),
   ]);
   const t = tCtx();
   const sections: { title: string; typeKey: string; cards: ExtraCard[] }[] = [
@@ -450,6 +452,19 @@ async function loadExtraResults(query: string) {
     {
       title: t('set.type.words'), typeKey: 'words',
       cards: words.map((w) => ({ href: `/${toUrlSlug(w.book_short_name)}/${w.chapter}`, title: w.word, badge: t('badge.keyWord'), meta: `${bookNameByShort(w.book_short_name)} ${w.chapter}`, desc: trunc(w.explanation) })),
+    },
+    {
+      // Bibelkommentarer (#269): treffet åpner seksjonen i kommentarblokka.
+      title: t('set.type.commentary'), typeKey: 'commentary',
+      cards: commentary.map((h) => {
+        const book = getBookInfoById(h.bookId);
+        return {
+          href: book ? `/${toUrlSlug(book.short_name)}/${h.chapter}#cm-${h.work}-${h.sourceChapter}-${h.sectionNo}` : '/sok',
+          title: `${book ? bookName(book) : ''} ${h.chapter}${h.verse ? `:${h.verse}` : ''}`,
+          meta: h.author ?? h.workTitle,
+          desc: h.snippet,
+        };
+      }),
     },
     {
       title: t('nav.numbers'), typeKey: 'numberSymbolism',

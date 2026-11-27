@@ -15,6 +15,7 @@ import {
   normalizeBibleId,
 } from '../../lib/bible.ts';
 import { currentContentLanguage } from '../../lib/lang.ts';
+import { getCommentaryForChapter } from '../../lib/commentary-data.ts';
 import { mapChapter, resolveMappingId } from '../../lib/verse-mapper.ts';
 import { NO_CACHE, internFeil } from './util.ts';
 
@@ -30,6 +31,9 @@ async function chapterMeta(bookId: number, chapter: number, metaChapter: number)
     summary: await getChapterSummary(bookId, metaChapter),
     context: await getChapterContext(bookId, metaChapter),
     insight: await getChapterInsight(bookId, metaChapter),
+    // Bibelkommentarene (#269), verk for verk: avsnittene på leserens språk med
+    // kildens avsnitt ved siden av, og hvor hver seksjon står i osnb.
+    commentary: await getCommentaryForChapter(bookId, metaChapter),
   };
 }
 
