@@ -117,6 +117,20 @@ describe('SCALE — the choice reaches every text a reader reads', () => {
 });
 
 describe('BEFORE PAINT — the served page sets the size itself', () => {
+  test('the size holds when the page is reloaded', async () => {
+    await page.setViewport({ width: 390, height: 844 });
+    await loadWith('large', '/nb/1mos/1');
+    await page.navigate(`${base}/nb/1mos/1`);
+    const after = await page.evaluate(() => ({
+      root: getComputedStyle(document.documentElement).fontSize,
+      text: parseFloat(getComputedStyle(document.querySelector('.verse-number')!).fontSize),
+    }));
+    expect(after.root).toBe('20px');
+    await loadWith('medium', '/nb/1mos/1');
+    const medium = await page.evaluate(() => parseFloat(getComputedStyle(document.querySelector('.verse-number')!).fontSize));
+    expect(after.text / medium).toBeCloseTo(STEP.large, 2);
+  });
+
   test('the size is on <html> before any module runs, and holds on the next page', async () => {
     const html = await (await fetch(`${base}/nb/1mos/1`)).text();
     const head = html.slice(0, html.indexOf('</head>'));
