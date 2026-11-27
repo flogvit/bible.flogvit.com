@@ -16,6 +16,7 @@ import { toUrlSlug } from './url-utils.ts';
 import { bookMentionTest, personChapterCandidates } from './blob-forfilter.ts';
 import { currentChosenEdition } from './edition-choice.ts';
 import { IMPORTED_BIBLES, OWN_EDITIONS } from './editions.ts';
+import type { StrongsWord } from './strongs.ts';
 
 // --- Språk-scopet uthenting ---
 //
@@ -79,6 +80,8 @@ export interface Verse {
   bible: string;
   versions?: VerseVersion[];
   footnotes?: VerseFootnote[];
+  /** Strong's numbers per word (#202), for the editions that carry them. */
+  strongs?: StrongsWord[];
 }
 
 export interface Word4Word {
@@ -169,6 +172,7 @@ interface VerseRow {
   bible: string;
   versions: string | null;
   footnotes: string | null;
+  strongs: string | null;
 }
 
 // --- Gamle bibel-/mapping-ID-er ------------------------------------------
@@ -204,6 +208,7 @@ export async function getVerses(bookId: number, chapter: number, bible?: string)
     ...row,
     versions: row.versions ? JSON.parse(row.versions) : undefined,
     footnotes: row.footnotes ? JSON.parse(row.footnotes) : undefined,
+    strongs: row.strongs ? JSON.parse(row.strongs) : undefined,
   }));
 }
 
@@ -277,6 +282,7 @@ export async function getVerse(bookId: number, chapter: number, verseNum: number
     ...row,
     versions: row.versions ? JSON.parse(row.versions) : undefined,
     footnotes: row.footnotes ? JSON.parse(row.footnotes) : undefined,
+    strongs: row.strongs ? JSON.parse(row.strongs) : undefined,
   };
 }
 
@@ -768,6 +774,27 @@ export interface SearchResponse {
   hasMore: boolean;
 }
 
+/**
+ * Treffene i ÉN utgave, i bibelrekkefølge (#282). Fast tekst med `?`-parametre.
+ *
+ * `FORCE INDEX (idx_verses_bible)`: uten den velger MySQL `uq_verses`
+ * (book_id, chapter, verse, bible) for å slippe sorteringen, og går gjennom HELE
+ * `verses` — alle utgavene, 1,66 mill. rader — til LIMIT er fylt. En utgave med
+ * få treff ble dermed en full skanning: «gud» i segond_1910 tok 6,6 s mot 0,10 s,
+ * prod svarte `/es/sok?q=gud` på 4 s, og testporten (#70) fikk ECONNRESET når
+ * siden passerte Bun.serve sin idleTimeout under last. Planen snudde etter hvert
+ * som #170 fylte tabellen; osnb var rask bare fordi den har mange treff.
+ * Vakt: `test/verse-search-plan.test.ts`.
+ */
+export const VERSE_SEARCH_SQL = `
+    SELECT v.book_id, b.name_no as book_name_no, b.short_name as book_short_name,
+           v.chapter, v.verse, v.text
+    FROM verses v FORCE INDEX (idx_verses_bible)
+    JOIN books b ON v.book_id = b.id
+    WHERE v.text LIKE ? AND v.bible = ?
+    ORDER BY v.book_id, v.chapter, v.verse
+    LIMIT ? OFFSET ?`;
+
 export async function searchVerses(query: string, limit = 50, offset = 0, bible = 'osnb'): Promise<SearchResponse> {
   if (!query || query.length < 2) return { results: [], total: 0, hasMore: false };
 
@@ -782,15 +809,7 @@ export async function searchVerses(query: string, limit = 50, offset = 0, bible 
 
   const total = Number(countResult?.total ?? 0);
 
-  const results = await sql`
-    SELECT v.book_id, b.name_no as book_name_no, b.short_name as book_short_name,
-           v.chapter, v.verse, v.text
-    FROM verses v
-    JOIN books b ON v.book_id = b.id
-    WHERE v.text LIKE ${pattern} AND v.bible = ${bible}
-    ORDER BY v.book_id, v.chapter, v.verse
-    LIMIT ${limit} OFFSET ${offset}
-  ` as SearchResult[];
+  const results = (await sql.unsafe(VERSE_SEARCH_SQL, [pattern, bible, limit, offset])) as unknown as SearchResult[];
 
   return { results, total, hasMore: offset + results.length < total };
 }

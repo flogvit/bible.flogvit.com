@@ -131,6 +131,14 @@ test("the editions sentence matches the base's licences", async () => {
   expect(editionsByKind()).toMatch(/list_editions/);
 }, DB_TEST_TIMEOUT_MS);
 
+// #202: hebrew, wlc and tr went out as source texts and asvs as a reading
+// edition; the sentence every client reads must name them as what they are.
+test('the editions sentence names every source text as one, and asvs among the translations', () => {
+  const [, sources, rest] = editionsByKind().match(/; ([^;]*) are the source texts(.*)$/s) ?? [];
+  for (const id of ['sblgnt', 'tanach', 'hebrew', 'wlc', 'tr']) expect(sources).toContain(`${id} (`);
+  expect(rest).toContain('asvs (');
+});
+
 test('the language picks the edition when none is named', async () => {
   expect((await call('get_passage', { reference: 'John 3:16', language: 'nb' })).text).toContain('**osnb**');
   // German has an edition of its own now (#170), and Spanish gets our own oses before rv_1909.
@@ -225,3 +233,16 @@ describe('HTTP', () => {
     expect(results).toEqual([200, 200, 200]);
   });
 });
+
+// #269: the chapter tool carries the Bible commentaries, in the reader's
+// language with the work, its licence and who translated it.
+test('get_chapter_study includes the commentary on the chapter', async () => {
+  const nb = (await call('get_chapter_study', { reference: '1 Mos 1', language: 'nb' })).text;
+  expect(nb).toContain("## Commentary: Matthew Henry's Complete Commentary");
+  expect(nb).toContain('Licence: Public Domain.');
+  expect(nb).toContain('Translated and checked by');
+  expect(nb).not.toMatch(/<(?:h|i|b|ref)\b/);
+  const en = (await call('get_chapter_study', { reference: 'Gen 1', language: 'en' })).text;
+  expect(en).toContain('## Commentary:');
+  expect(en).not.toContain('Translated and checked by');
+}, DB_TEST_TIMEOUT_MS);

@@ -506,7 +506,7 @@ function editionLabel(e: BibleEdition): string {
 
 // ---------- /innstillinger ----------
 const TOGGLE_KEYS = [
-  'showBookSummary', 'showChapterSummary', 'showChapterContext', 'showChapterInsights',
+  'showBookSummary', 'showChapterSummary', 'showCommentary', 'showChapterContext', 'showChapterInsights',
   'showImportantWords', 'showVerseDetails', 'showWord4Word', 'showOriginalText',
   'showTimeline', 'showParallels', 'showDailyVerse', 'showTodaysDay', 'showReadingTexts',
   'showVerseFootnotes', 'copyVerseNumbers', 'showContinueReading',
@@ -525,6 +525,7 @@ const SEARCH_TYPE_TOGGLES: { key: string; label: MessageKey }[] = [
   { key: 'parallels', label: 'nav.parallels' },
   { key: 'plans', label: 'set.type.plans' },
   { key: 'words', label: 'set.type.words' },
+  { key: 'commentary', label: 'set.type.commentary' },
   { key: 'numberSymbolism', label: 'nav.numbers' },
   { key: 'days', label: 'nav.days' },
 ];
@@ -803,7 +804,7 @@ r.get('/oversettelser', async (c) => {
             <li>
               <a href={lhref(`/oversettelser/${e.id}`)}>
                 <span lang={originalScriptLang(e.name_native)}>{e.name_native}</span>
-                {e.abbreviation ? ` (${e.abbreviation})` : ''}
+                {e.abbreviation && e.abbreviation !== e.name_native ? ` (${e.abbreviation})` : ''}
               </a>
               {e.license_name ? <span class="trans-license"> {e.license_name}</span> : null}
             </li>

@@ -38,6 +38,43 @@ const ROOT = resolve(import.meta.dir, '..');
 const ARBEIDSGRENER = [/^smie\//, /^testsmie\//];
 
 /**
+ * SESJONSTRÆRNE (#278). En gren som står UTSJEKKET i et levende arbeidstre
+ * under `.claude/worktrees/` er en økt eller en Dux-jobb som holder på — samme
+ * kategori som arbeidsgrenene over, bare navngitt av Claude Code
+ * (`worktree-<navn>`) i stedet for av skallet.
+ *
+ * Uten unntaket var vakta SELVLÅSENDE igjen, og målt: Dux dømmer og bygger hver
+ * PR i et slikt tre, på en lokal gren (`worktree-pr-273-text-size`), og kjører
+ * porten INNE i det. Porten var dermed rød på main så lenge en jobb sto åpen,
+ * Dux la testporten til side som «rød uten endringen også», og mutasjonstesten
+ * stod igjen med bare `typecheck` — #273 ble avvist som ubeviselig
+ * 2026-11-27 selv om testen dens er 11/15 rød uten rettelsen.
+ *
+ * Unntaket er TREET, ikke navnet: forsvinner treet (eller står det som
+ * `prunable`, katalogen er borte), dømmes grenen som før — da er den nettopp
+ * arbeid som ble liggende igjen på én disk. Og en `bibel-no`-utsjekk utenfor
+ * `.claude/worktrees/` er aldri omfattet, så #111 er like synlig.
+ */
+const SESJONSTRE = '/.claude/worktrees/';
+
+/** `git worktree list --porcelain` → grenene som står utsjekket i et levende sesjonstre. */
+export function sesjonsgrener(porcelain: string): Set<string> {
+  const ut = new Set<string>();
+  for (const blokk of porcelain.split(/\n\s*\n/)) {
+    const linjer = blokk.split('\n');
+    const sti = linjer.find((l) => l.startsWith('worktree '))?.slice('worktree '.length);
+    const gren = linjer.find((l) => l.startsWith('branch refs/heads/'))?.slice('branch refs/heads/'.length);
+    const borte = linjer.some((l) => l === 'prunable' || l.startsWith('prunable '));
+    if (sti && gren && !borte && sti.includes(SESJONSTRE)) ut.add(gren);
+  }
+  return ut;
+}
+
+/** Arbeidstrærne slik git har dem, injisert så regelen kan måles uten å lage trær. */
+type Arbeidstrær = () => string;
+const gitsArbeidstrær: Arbeidstrær = () => git('worktree', 'list', '--porcelain').ut;
+
+/**
  * ENDRINGSLOGGEN, som deployen committer FØR den kjører testene (#113).
  *
  * Den er samme kategori som arbeidsgrenene over — arbeid under utførelse, som
@@ -115,15 +152,26 @@ function git(...args: string[]): { ok: boolean; ut: string } {
   return { ok: p.exitCode === 0, ut: new TextDecoder().decode(p.stdout).trim() };
 }
 
-function lokaleGrener(): string[] {
-  return git('for-each-ref', '--format=%(refname:short)', 'refs/heads')
+/** Hver lokal gren med SHA-en tuppen står på, i én git-kjøring. */
+function lokaleGrener(): [gren: string, tupp: string][] {
+  return git('for-each-ref', '--format=%(refname:short) %(objectname)', 'refs/heads')
     .ut.split('\n')
-    .filter(Boolean);
+    .filter(Boolean)
+    .map((l) => l.split(' ') as [string, string]);
 }
 
 function erArbeidsgren(gren: string): boolean {
   return ARBEIDSGRENER.some((re) => re.test(gren));
 }
+
+/** Grenens upstream som en ref git kan lese, eller `null` når den ikke har én. */
+type Oppstrøm = (gren: string) => string | null;
+
+/** Upstreamen slik git har den i `.git/config`. */
+const gitsOppstrøm: Oppstrøm = (gren) => {
+  const opp = git('rev-parse', '--abbrev-ref', `${gren}@{upstream}`);
+  return opp.ok && opp.ut ? opp.ut : null;
+};
 
 /**
  * Filene som er endret av det som ligger upushet på grenen — altså mellom
@@ -132,10 +180,10 @@ function erArbeidsgren(gren: string): boolean {
  * `git diff` gir unionen over hele spennet, så én commit som rører noe annet
  * enn endringsloggen holder til å felle unntaket.
  */
-function upushedeFiler(gren: string): string[] | null {
-  const opp = git('rev-parse', '--abbrev-ref', `${gren}@{upstream}`);
-  if (!opp.ok || !opp.ut) return null;
-  const d = git('diff', '--name-only', `${opp.ut}..${gren}`);
+function upushedeFiler(gren: string, oppstrøm: Oppstrøm): string[] | null {
+  const opp = oppstrøm(gren);
+  if (!opp) return null;
+  const d = git('diff', '--name-only', `${opp}..${gren}`);
   if (!d.ok) return null;
   return d.ut.split('\n').filter(Boolean);
 }
@@ -148,13 +196,26 @@ function upushedeFiler(gren: string): string[] | null {
  * der, og da var mutasjonen «fjern unntaket» GRØNN: porten målte sin egen kopi
  * i stedet for regelen den skulle vokte. Se #113.
  */
-function etterlatteGrener(): string[] {
-  return lokaleGrener().filter(
-    (b) =>
-      !erArbeidsgren(b) &&
-      !bareEndringsloggen(upushedeFiler(b)) &&
-      påÉnDisk([b], fakta).length > 0,
-  );
+function etterlatteGrener(
+  oppstrøm: Oppstrøm = gitsOppstrøm,
+  arbeidstrær: Arbeidstrær = gitsArbeidstrær,
+): string[] {
+  // FORFILTERET (#268): en gren hvis tupp nås fra en remote, frikjennes av
+  // `påRemote` uansett, og hver git-kjøring koster ~40 ms på en travel maskin.
+  // Fem per gren over ~30 grener sprengte Buns 5 s-tak og felte deployen. Én
+  // kjøring finner commit-ene ingen remote har; bare de grenene dømmes fullt.
+  const bareHer = new Set(git('rev-list', '--branches', '--not', '--remotes').ut.split('\n'));
+  const iSesjon = sesjonsgrener(arbeidstrær());
+  return lokaleGrener()
+    .filter(([, tupp]) => bareHer.has(tupp))
+    .map(([gren]) => gren)
+    .filter(
+      (b) =>
+        !erArbeidsgren(b) &&
+        !iSesjon.has(b) &&
+        !bareEndringsloggen(upushedeFiler(b, oppstrøm)) &&
+        påÉnDisk([b], fakta).length > 0,
+    );
 }
 
 const fakta: GitFakta = {
@@ -178,6 +239,65 @@ function shaerIClaudeMd(): string[] {
     .map((fil) => readFileSync(resolve(ROOT, fil), 'utf8'))
     .join('\n');
   return [...new Set(tekst.match(/\b[0-9a-f]{7,40}\b/g) ?? [])];
+}
+
+// ----------------------------------------------------------------- PROBEN
+
+/**
+ * Probe-grenene får et navn per KJØRING (#268). Med faste navn slettet én
+ * kjøring den andres probe midt i målingen — merge-beviset og deployen kjører
+ * porten samtidig mot de samme refene — og «ekte arbeid skal fortsatt meldes»
+ * ble rødt uten at noe var galt.
+ */
+const PROBE = `probe/${process.pid}-${Date.now()}`;
+
+/**
+ * En gren én commit foran `origin/main` der bare `fil` er endret. Bygget med
+ * `commit-tree`: ingen index, intet arbeidstre, ingen HEAD som flyttes.
+ */
+function lagProbeGren(navn: string, fil: string): void {
+  const base = git('rev-parse', 'origin/main').ut;
+  const blob = Bun.spawnSync(['git', 'hash-object', '-w', '--stdin'], {
+    cwd: ROOT,
+    stdin: new TextEncoder().encode('probe\n'),
+  });
+  const sha = new TextDecoder().decode(blob.stdout).trim();
+  const linjer = git('ls-tree', base).ut.split('\n').map((l) => {
+    const [meta, navnDel] = l.split('\t');
+    if (navnDel !== fil) return l;
+    const [modus, type] = meta!.split(' ');
+    return `${modus} ${type} ${sha}\t${navnDel}`;
+  });
+  const tre = Bun.spawnSync(['git', 'mktree'], {
+    cwd: ROOT,
+    stdin: new TextEncoder().encode(`${linjer.join('\n')}\n`),
+  });
+  const treSha = new TextDecoder().decode(tre.stdout).trim();
+  const commit = git('commit-tree', treSha, '-p', base, '-m', `probe: ${fil}`).ut;
+  expect(git('branch', navn, commit).ok, `kunne ikke lage ${navn}`).toBe(true);
+}
+
+/**
+ * Fila som IKKE er endringsloggen velges av treet, ikke av en literal: en fil
+ * som forsvinner ville ellers gjort halvdelen til en tom påstand. En FIL, ikke
+ * en katalog (#167): `.claude/` ble første oppføring i treet, og en katalog
+ * byttet ut med en blob i `mktree` gir ingen diff.
+ */
+function annenFil(): string {
+  return git('ls-tree', 'origin/main')
+    .ut.split('\n')
+    .filter((l) => l.split(' ')[1] === 'blob')
+    .map((l) => l.split('\t')[1]!)
+    .filter((f) => f && f !== ENDRINGSLOGG)[0]!;
+}
+
+/**
+ * Det «GRENA» melder: regelen, minus probe-grenene. De er vaktas egne
+ * gjenstander — en samtidig kjørings, eller en som ble drept før den ryddet —
+ * og aldri arbeid noen har gjort.
+ */
+function grenaFunn(): string[] {
+  return etterlatteGrener().filter((b) => !b.startsWith('probe/'));
 }
 
 // ----------------------------------------------------------------- TESTER
@@ -224,60 +344,36 @@ describe('upushet arbeid (#111)', () => {
     // sin upstream — en tilstand som varer fra deployen committer til den
     // ruller tilbake, altså sjelden når porten kjører. En port som venter på
     // at tilstanden skal dukke opp, måler ingenting.
-    //
-    // Grenene bygges med `commit-tree`: ingen index, intet arbeidstre, ingen
-    // HEAD som flyttes. Klonen er urørt når testen er ferdig.
-    const base = git('rev-parse', 'origin/main').ut;
-    const lagGren = (navn: string, fil: string): void => {
-      const blob = Bun.spawnSync(['git', 'hash-object', '-w', '--stdin'], {
-        cwd: ROOT,
-        stdin: new TextEncoder().encode('probe\n'),
-      });
-      const sha = new TextDecoder().decode(blob.stdout).trim();
-      const linjer = git('ls-tree', base).ut.split('\n').map((l) => {
-        const [meta, navnDel] = l.split('\t');
-        if (navnDel !== fil) return l;
-        const [modus, type] = meta!.split(' ');
-        return `${modus} ${type} ${sha}\t${navnDel}`;
-      });
-      const tre = Bun.spawnSync(['git', 'mktree'], {
-        cwd: ROOT,
-        stdin: new TextEncoder().encode(`${linjer.join('\n')}\n`),
-      });
-      const treSha = new TextDecoder().decode(tre.stdout).trim();
-      const commit = git('commit-tree', treSha, '-p', base, '-m', `probe: ${fil}`).ut;
-      git('branch', navn, commit);
-      git('branch', `--set-upstream-to=origin/main`, navn);
-    };
-
-    // Fila som IKKE er endringsloggen velges av treet, ikke av en literal:
-    // en fil som forsvinner ville ellers gjort halvdelen til en tom påstand.
-    // En FIL, ikke en katalog (#167): `.claude/` ble første oppføring i treet,
-    // og en katalog byttet ut med en blob i `mktree` gir ingen diff.
-    const annen = git('ls-tree', base)
-      .ut.split('\n')
-      .filter((l) => l.split(' ')[1] === 'blob')
-      .map((l) => l.split('\t')[1]!)
-      .filter((f) => f && f !== ENDRINGSLOGG)[0];
+    const annen = annenFil();
     expect(annen, 'fant ingen annen fil i treet å måle mot').toBeTruthy();
+    const logg = `${PROBE}/logg`;
+    const kilde = `${PROBE}/kilde`;
+
+    // Upstreamen GIS probe-grenene i stedet for å skrives i `.git/config` (#268):
+    // Dux kjører porten der `.git/config` er skrivebeskyttet, og der feilet
+    // `--set-upstream-to` i stillhet — probe-loggen sto uten upstream og ble
+    // meldt som etterlatt, så deployen var rød på vaktas egen probe. Alle andre
+    // grener får upstreamen sin fra git, akkurat som i «GRENA».
+    const oppstrøm: Oppstrøm = (gren) =>
+      gren.startsWith(`${PROBE}/`) ? 'origin/main' : gitsOppstrøm(gren);
 
     try {
-      lagGren('probe/logg', ENDRINGSLOGG);
-      lagGren('probe/kilde', annen!);
+      lagProbeGren(logg, ENDRINGSLOGG);
+      lagProbeGren(kilde, annen!);
 
       // Forutsetningen: begge ligger faktisk foran, og rører hver sin fil.
-      expect(git('diff', '--name-only', `origin/main..probe/logg`).ut).toBe(ENDRINGSLOGG);
-      expect(git('diff', '--name-only', `origin/main..probe/kilde`).ut).toBe(annen!);
+      expect(git('diff', '--name-only', `origin/main..${logg}`).ut).toBe(ENDRINGSLOGG);
+      expect(git('diff', '--name-only', `origin/main..${kilde}`).ut).toBe(annen!);
 
       // SAMME funksjon som «GRENA» dømmer med — ikke en kopi av regelen.
-      const meldt = etterlatteGrener();
+      const meldt = etterlatteGrener(oppstrøm);
 
-      expect(meldt, 'deployens egen logg skal IKKE felle porten').not.toContain('probe/logg');
-      expect(meldt, 'ekte arbeid skal fortsatt meldes').toContain('probe/kilde');
+      expect(meldt, 'deployens egen logg skal IKKE felle porten').not.toContain(logg);
+      expect(meldt, 'ekte arbeid skal fortsatt meldes').toContain(kilde);
     } finally {
       // Ryddes uansett utfall — en etterlatt probe-gren ville felt vakta selv.
-      git('branch', '-D', 'probe/logg');
-      git('branch', '-D', 'probe/kilde');
+      git('branch', '-D', logg);
+      git('branch', '-D', kilde);
     }
   });
 
@@ -288,8 +384,65 @@ describe('upushet arbeid (#111)', () => {
     expect(kjente.length).toBeGreaterThan(0);
   });
 
+  test('GRENA: en annen kjørings probe-gren feller ikke porten (#268)', () => {
+    // Merge-beviset og deployen kjører porten SAMTIDIG i hvert sitt arbeidstre,
+    // og alle trærne deler refene. En annen kjørings probe-gren som rører
+    // kildekode, er nettopp «ekte arbeid» for regelen — men den er vaktas egen.
+    const fremmed = `probe/annen-kjoring-${process.pid}/kilde`;
+    try {
+      lagProbeGren(fremmed, annenFil());
+      expect(grenaFunn()).not.toContain(fremmed);
+    } finally {
+      git('branch', '-D', fremmed);
+    }
+  });
+
+  test('SESJONSTRÆRNE: bare en levende utsjekk under .claude/worktrees/ er arbeid under utførelse (#278)', () => {
+    const tre = (sti: string, gren: string, ekstra = '') =>
+      `worktree ${sti}\nHEAD 1111111111111111111111111111111111111111\nbranch refs/heads/${gren}\n${ekstra}`;
+    const liste = [
+      tre('/u/bibel', 'bibel-no'),
+      tre('/u/bibel/.claude/worktrees/pr-273-text-size', 'worktree-pr-273-text-size', 'locked\n'),
+      tre('/u/bibel/.claude/worktrees/gammel', 'worktree-gammel', 'prunable gitdir file points to non-existent location\n'),
+      'worktree /u/bibel/.claude/worktrees/løs\nHEAD 2222222222222222222222222222222222222222\ndetached\n',
+    ].join('\n');
+    // Begge veier: den levende sesjonen er unntatt; bibel-no-utsjekken (#111) og
+    // et tre hvis katalog er borte, er det ikke.
+    expect([...sesjonsgrener(liste)]).toEqual(['worktree-pr-273-text-size']);
+  });
+
+  test('SESJONSTRÆRNE: parseren leser gits egen liste, og finner dette treet', () => {
+    // Uten denne ville et nytt porcelain-format gjort unntaket stille tomt —
+    // og vakta rød i hver Dux-jobb igjen.
+    const egen = gitsArbeidstrær();
+    expect(egen).toContain(`worktree ${ROOT}`);
+    const meg = git('symbolic-ref', '--quiet', '--short', 'HEAD');
+    if (meg.ok && ROOT.includes(SESJONSTRE)) expect(sesjonsgrener(egen).has(meg.ut)).toBe(true);
+  });
+
+  test('SESJONSTRÆRNE: målt på en gren som FAKTISK ligger foran — og meldes igjen når treet er borte', () => {
+    const annen = annenFil();
+    const kilde = `${PROBE}/sesjon`;
+    const oppstrøm: Oppstrøm = (gren) =>
+      gren.startsWith(`${PROBE}/`) ? 'origin/main' : gitsOppstrøm(gren);
+    const liste = (sti: string, ekstra = '') =>
+      () => `${gitsArbeidstrær()}\n\nworktree ${sti}\nHEAD 0\nbranch refs/heads/${kilde}\n${ekstra}`;
+    try {
+      lagProbeGren(kilde, annen);
+      // SAMME funksjon som «GRENA» dømmer med.
+      expect(etterlatteGrener(oppstrøm, liste('/x/bibel/.claude/worktrees/sesjon'))).not.toContain(kilde);
+      expect(etterlatteGrener(oppstrøm, liste('/x/bibel/.claude/worktrees/sesjon', 'prunable\n'))).toContain(kilde);
+      expect(etterlatteGrener(oppstrøm, liste('/x/bibel-no'))).toContain(kilde);
+      expect(etterlatteGrener(oppstrøm, () => gitsArbeidstrær())).toContain(kilde);
+    } finally {
+      git('branch', '-D', kilde);
+    }
+    // Fire dommer à en git-kjøring per upushet gren: på en travel maskin er det
+    // over Buns 5 s-tak (#268), og et tidsavbrudd her ville felt porten selv.
+  }, 30_000);
+
   test('GRENA: hver lokal gren som ikke er en arbeidsgren finnes på en remote', () => {
-    const etterlatte = etterlatteGrener();
+    const etterlatte = grenaFunn();
     expect(
       etterlatte,
       `Grener som bare finnes på denne disken: ${etterlatte.join(', ')}. ` +

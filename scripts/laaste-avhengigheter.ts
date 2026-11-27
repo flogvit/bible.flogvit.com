@@ -32,11 +32,15 @@ export type Lockfile = {
  * rekkevidde av regexen (den krever klammen som neste ikke-blanke tegn etter
  * kommaet, og bun skriver aldri en slik verdi ustrenget).
  */
+function readLock(text: string): {
+  workspaces: Record<string, LockEntry & { name?: string }>;
+  packages: Record<string, unknown[]>;
+} {
+  return JSON.parse(text.replace(/,(\s*[}\]])/g, '$1'));
+}
+
 export function parseLockfile(text: string): Lockfile {
-  const raw = JSON.parse(text.replace(/,(\s*[}\]])/g, '$1')) as {
-    workspaces: Record<string, LockEntry & { name?: string }>;
-    packages: Record<string, unknown[]>;
-  };
+  const raw = readLock(text);
 
   // En oppføring er en tuppel der ETT ledd er selve avhengighetsobjektet.
   // Plassen varierer med hvordan pakka er løst opp (registry, file:, …), så
@@ -90,4 +94,18 @@ export function unreachablePackages(lock: Lockfile): string[] {
   return Object.keys(lock.packages)
     .filter((name) => !reached.has(name))
     .sort();
+}
+
+/**
+ * Hver versjon av `name` låsen løser opp til — toppnivå, nøstet
+ * (`"<forelder>/<name>"`) og alias. Avgjøres på OPPLØSNINGEN (`<name>@<versjon>`,
+ * tuppelens første ledd), ikke på nøkkelen, så en annen pakke som bare slutter
+ * på samme navn (`@scope/hono`) ikke telles med.
+ */
+export function lockedVersions(text: string, name: string): string[] {
+  const prefix = `${name}@`;
+  return Object.values(readLock(text).packages)
+    .map((tuple) => tuple[0])
+    .filter((ident): ident is string => typeof ident === 'string' && ident.startsWith(prefix))
+    .map((ident) => ident.slice(prefix.length));
 }

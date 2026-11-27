@@ -55,7 +55,8 @@ test.each(CALLS)('%s runs with only the granted tables', async (name, args) => {
   const handler = createHandler({ maxConcurrent: 2, maxConcurrentCli: 2, queueWaitMs: 1000, dbBudgetMs: 2000 });
   const res = await mcpPost(handler, { jsonrpc: '2.0', id: 1, method: 'tools/call', params: { name, arguments: args } });
   const body = (await res.json()) as { result: { content: { text: string }[]; isError?: boolean } };
-  expect(body.result.content[0]!.text).not.toMatch(/denied|command denied/i);
+  // MySQL's own wording: the commentary (#269) uses «denied» in its text («Peter denied him»).
+  expect(body.result.content[0]!.text).not.toMatch(/command denied to user|access denied for user/i);
   expect(body.result.isError ?? false).toBe(false);
 });
 

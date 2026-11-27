@@ -19,6 +19,7 @@ import { readStrings, localeHref } from './locale.js';
 import { el } from './dom.js';
 import { chosenEdition } from './edition-pref.js';
 import { verseHash } from './verse-hash.js';
+import { isHeadingOnly, parseOsisRef, renderCommentaryParagraph } from './commentary-render.js';
 
 const t = readStrings(document.body);
 
@@ -158,6 +159,69 @@ function referenceHref(ref) {
   const book = bookById.get(ref.to_book_id);
   const slug = book ? book.slug : String(ref.book_short_name || '').toLowerCase();
   return localeHref(`/${slug}/${ref.to_chapter}`) + verseHash(ref.to_verse_start, ref.to_verse_end);
+}
+
+// ── Bibelkommentarer (#269), i samme form som blokka på lesesiden ────
+//
+// Avsnittene settes med innerHTML, men bare etter `renderCommentaryParagraph`:
+// den escaper ALL tekst først og gjenoppretter bare kildens egne tagger, så
+// ingenting fra kilden når siden som rå HTML. Det er samme rendrer som
+// serveren bruker. Henvisningene lenker til kapittelet: KJV→osnb-oversetteren
+// trenger mappingfilene, som ikke er lastet ned.
+
+function commentaryHref(osisRef) {
+  const ref = parseOsisRef(osisRef);
+  const book = ref && bookById.get(ref.book);
+  return book ? localeHref(`/${book.slug}/${ref.chapter}`) : null;
+}
+
+function commentaryParagraph(text, lang, kind) {
+  const div = el('div', `cm-${kind}${isHeadingOnly(text) ? ' cm-heading-only' : ''}`);
+  div.lang = lang;
+  div.innerHTML = renderCommentaryParagraph(text, commentaryHref);
+  return div;
+}
+
+function commentaryPanel(works, chapter) {
+  if (!Array.isArray(works) || works.length === 0) return null;
+  const at = (a, from, to) => (a.chapter === chapter && from.chapter === to.chapter ? `${a.verse}` : `${a.chapter}:${a.verse}`);
+  const body = el('div', 'st-block-body');
+  const box = el('div', 'cm-block');
+  let sections = 0;
+  for (const c of works) {
+    const work = el('article', 'cm-work');
+    const title = el('h3', 'cm-work-title', c.work.title);
+    title.lang = c.work.sourceLanguage;
+    work.append(title, el('p', 'cm-work-meta', t('cm.license', { license: c.work.license })));
+    if (c.sourceOnly) work.append(el('p', 'cm-source-only', t('cm.sourceOnly')));
+    for (const s of c.sections || []) {
+      sections++;
+      const sec = el('section', 'cm-section');
+      const intro = s.from.verse === 0 && s.to.verse === 0;
+      const same = s.from.chapter === s.to.chapter && s.from.verse === s.to.verse;
+      const range = same ? at(s.from, s.from, s.to) : `${at(s.from, s.from, s.to)}–${at(s.to, s.from, s.to)}`;
+      sec.append(el('h4', 'cm-section-head', intro ? t('cm.intro') : t('cm.verses', { range })));
+      const source = s.sourceParagraphs;
+      (s.paragraphs || []).forEach((p, i) => {
+        const pair = el('div', source ? 'cm-pair' : 'cm-single');
+        pair.append(commentaryParagraph(p, c.language, 'text'));
+        if (source && source[i] !== undefined) pair.append(commentaryParagraph(source[i], c.work.sourceLanguage, 'source'));
+        sec.append(pair);
+      });
+      if (s.models?.length) sec.append(el('p', 'cm-models', t('cm.models', { models: s.models.join(', ') })));
+      work.append(sec);
+    }
+    box.append(work);
+  }
+  body.append(box);
+  const panel = el('div', 'study-panel offline-study');
+  const block = el('details', 'st-block');
+  block.dataset.blockId = 'kommentar';
+  const head = el('summary', 'st-block-head');
+  head.append(el('span', 'st-block-title', t('rd.commentary')), el('span', 'st-block-count', String(sections)));
+  block.append(head, body);
+  panel.append(block);
+  return panel;
 }
 
 // ── Innsikt (samme typer som ChapterInsights på lesesiden) ──────────
@@ -484,6 +548,9 @@ async function renderChapter(book, chapter) {
     panel.append(block);
     root.append(panel);
   }
+
+  const commentary = commentaryPanel(study.commentary, chapter);
+  if (commentary) root.append(commentary);
 
   const verses = el('section', 'verses');
   for (const v of text.verses || []) verses.append(verseBlock(v, study, book));

@@ -112,7 +112,15 @@ describe('utgavesidene er indekserbare (#30)', () => {
   test('sitemap har /oversettelser og én URL per importert utgave', async () => {
     const xml = await (await app.request('/sitemap-nb.xml')).text();
     expect(xml).toContain('/nb/oversettelser</loc>');
-    const mangler = editions.filter((e) => !xml.includes(`/nb/oversettelser/${e.id}</loc>`)).map((e) => e.id);
+    // Utgavene DENNE koden importerer (#278). Den lokale basen deles av alle
+    // økter, og en gren som importerer en ny utgave (#202: asvs, tr, wlc,
+    // hebrew) skriver rader main aldri kunne ha skrevet — `IMPORTED_BIBLES`
+    // styrer importen. Uten snittet var main rød i hver Dux-jobb så lenge en
+    // slik gren hadde importert lokalt. Prod svarte 404 på alle fire.
+    const våre = editions.filter((e) => (IMPORTED_BIBLES as readonly string[]).includes(e.id));
+    // Snittet skal ikke kunne bli en tom påstand: har basen utgaver, er noen av dem våre.
+    if (editions.length > 0) expect(våre.length, 'ingen av basens utgaver er importert av main').toBeGreaterThan(0);
+    const mangler = våre.filter((e) => !xml.includes(`/nb/oversettelser/${e.id}</loc>`)).map((e) => e.id);
     expect(mangler).toEqual([]);
   });
 

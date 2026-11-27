@@ -78,6 +78,7 @@ export const TABLES: string[] = [
     bible VARCHAR(20) NOT NULL DEFAULT 'osnb',
     versions MEDIUMTEXT,
     footnotes MEDIUMTEXT,
+    strongs MEDIUMTEXT,
     UNIQUE KEY uq_verses (book_id, chapter, verse, bible),
     INDEX idx_verses_book_chapter (book_id, chapter),
     INDEX idx_verses_bible (bible)
@@ -474,6 +475,39 @@ export const TABLES: string[] = [
     ${LANG},
     UNIQUE KEY uq_stories (slug, language),
     INDEX idx_stories_category (category, language)
+  ) ENGINE=InnoDB ${CS}`,
+
+  // Bibelkommentarer (#269): verket (navn, lisens, kilde fra meta.json) og
+  // seksjonene, hver på verkets egen adresse (source_*) og på osnb-adressen
+  // den lander på (osnb_*), som lesesiden spør etter. Alle språk ligger side om
+  // side, så en gjengitt seksjon kan vise kildens avsnitt ved siden av.
+  `CREATE TABLE IF NOT EXISTS commentary_works (
+    id VARCHAR(40) NOT NULL PRIMARY KEY,
+    title VARCHAR(500) NOT NULL,
+    author VARCHAR(255),
+    written VARCHAR(100),
+    source_language VARCHAR(10) NOT NULL,
+    license VARCHAR(255) NOT NULL,
+    url VARCHAR(1000)
+  ) ENGINE=InnoDB ${CS}`,
+
+  `CREATE TABLE IF NOT EXISTS commentary_sections (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    work VARCHAR(40) NOT NULL,
+    book_id INT NOT NULL,
+    source_chapter INT NOT NULL,
+    section_no INT NOT NULL,
+    source_from INT NOT NULL,
+    source_to INT NOT NULL,
+    osnb_chapter_from INT NOT NULL,
+    osnb_verse_from INT NOT NULL,
+    osnb_chapter_to INT NOT NULL,
+    osnb_verse_to INT NOT NULL,
+    paragraphs MEDIUMTEXT NOT NULL,
+    models VARCHAR(500),
+    ${LANG},
+    UNIQUE KEY uq_commentary_sections (work, book_id, source_chapter, section_no, language),
+    INDEX idx_commentary_osnb (book_id, osnb_chapter_from, osnb_chapter_to, language)
   ) ENGINE=InnoDB ${CS}`,
 
   // language her er SCOPET til hash-oppføringen, ikke nødvendigvis innholdets
@@ -1013,6 +1047,10 @@ async function runMigrations(sql: SQL): Promise<void> {
   // så kolonnen legges til her og ikke i DDL-en alene (#110).
   if (!(await columnExists(sql, 'persons', 'ref_books'))) {
     await sql.unsafe('ALTER TABLE persons ADD COLUMN ref_books VARCHAR(255) NULL').simple();
+  }
+  // Strong's numbers per word (#202); same reason as above, the CREATE misses old bases.
+  if (!(await columnExists(sql, 'verses', 'strongs'))) {
+    await sql.unsafe('ALTER TABLE verses ADD COLUMN strongs MEDIUMTEXT NULL').simple();
   }
   const refBooks = await syncPersonRefBooks(sql);
   if (!refBooksSyncIsEmpty(refBooks)) console.log(formatRefBooksSync(refBooks));

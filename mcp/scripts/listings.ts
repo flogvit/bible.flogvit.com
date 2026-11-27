@@ -1,7 +1,7 @@
 // The MCP directories after a release: what each one shows, and the registry
 // publish that updates them. Runbook: mcp/README.md → «Releasing a new version».
 //
-//   bun scripts/listings.ts check     compare the live server, the registry and mcptry
+//   bun scripts/listings.ts check     compare the live server, the registry, mcptry and mcpservers.org
 //   bun scripts/listings.ts publish   publish server.json to the MCP Registry
 //
 // publish refuses until the live server runs this server.json's version with
@@ -10,10 +10,10 @@
 
 import { MCP_REGISTRY_NAME, MCP_TOOL_NAMES, MCP_URL } from '../../src/lib/mcp-info.ts';
 import { SERVER_VERSION } from '../src/server.ts';
+import { MCPSERVERS, mcpserversReadUrl, mcpserversToolCount } from './listing-pages.ts';
 
 const REGISTRY = 'https://registry.modelcontextprotocol.io';
 const MCPTRY = `https://mcptry.com/servers/${MCP_REGISTRY_NAME}`;
-const MCPSERVERS = 'https://mcpservers.org/servers/bible-flogvit-com-en-mcp';
 const OWNER = 'flogvit';
 
 const entry = (await Bun.file(new URL('../server.json', import.meta.url)).json()) as {
@@ -54,6 +54,11 @@ async function mcptry(): Promise<{ version: string | null; tools: number | null 
   return { version, tools: tools ? Number(tools) : null };
 }
 
+/** The tool count mcpservers.org's copy of /en/mcp states. */
+async function mcpservers(): Promise<number | null> {
+  return mcpserversToolCount(await (await fetch(mcpserversReadUrl())).text());
+}
+
 const want = [...MCP_TOOL_NAMES].sort();
 const same = (a: string[], b: string[]) => a.length === b.length && a.every((x, i) => x === b[i]);
 
@@ -61,6 +66,7 @@ async function check(): Promise<boolean> {
   const l = await live();
   const r = await registry();
   const m = await mcptry();
+  const s = await mcpservers();
   const rows: [string, boolean, string][] = [
     ['server.json = SERVER_VERSION', entry.version === SERVER_VERSION, `${entry.version} / ${SERVER_VERSION}`],
     ['live server version', l.version === entry.version, l.version],
@@ -69,10 +75,10 @@ async function check(): Promise<boolean> {
     ['registry description', r?.description === entry.description, r?.description ?? '-'],
     ['mcptry version (from the registry, every 30 min)', m.version === entry.version, m.version ?? 'not read'],
     ['mcptry tools (its own scheduled check)', m.tools === l.tools.length, `${m.tools ?? 'not read'}`],
+    ['mcpservers.org tools (its copy of websiteUrl)', s === l.tools.length, `${s ?? 'no count on the page'}`],
   ];
   for (const [what, ok, value] of rows) console.log(`${ok ? 'ok  ' : 'DIFF'} ${what}: ${value}`);
-  console.log(`\nmcpservers.org is behind a Cloudflare check and cannot be read from here. Open ${MCPSERVERS}:`);
-  console.log(`its text is a copy of ${entry.websiteUrl}; if it still shows the old tool count, press «Request update» once.`);
+  if (s !== l.tools.length) console.log(`\nmcpservers.org copies ${entry.websiteUrl}: press «Request update» once on ${MCPSERVERS}.`);
   return rows.every(([, ok]) => ok);
 }
 

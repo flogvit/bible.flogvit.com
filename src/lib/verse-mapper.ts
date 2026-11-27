@@ -15,6 +15,7 @@ import type { UkvnMappingFile } from '@free-bible/kvn';
 import { getVerses } from './bible.ts';
 import type { Verse } from './bible.ts';
 import { registrerMinnekilde } from './minne-regnskap.ts';
+import { verseCounts } from './verse-counts.ts';
 
 export { MAPPING_META, resolveMappingId } from '@free-bible/kvn';
 
@@ -206,20 +207,21 @@ export function getKvnMappingData(
   const meta = MAPPING_META[resolved];
   const verseMap: Record<string, string> = {};
 
-  const osnbFile = mappingFile('osnb');
-  const allEntries = [...osnbFile.map, ...file.map];
-  for (const entry of allEntries) {
-    const decoded = ukvnDecode(entry.kvnFrom);
-    const bookId = decoded.book;
-    if (bookId < 1 || bookId > 66) continue;
-
-    const target = osnbToMapping(resolved, bookId, decoded.chapter, decoded.verse);
-
-    // Vers 0 (en salmeoverskrift) er ingen adresse noen skriver.
-    if (target.verse !== 0 && (target.chapter !== decoded.chapter || target.verse !== decoded.verse)) {
-      const targetKey = `${bookId}-${target.chapter}-${target.verse}`;
-      verseMap[targetKey] = `${bookId}-${decoded.chapter}-${decoded.verse}`;
-    }
+  // Hvert osnb-vers, ikke bare oppføringene i mappingfilene: et vers
+  // kryssmappingen flytter uten egen oppføring (Mal 3:19–24 → KJV 4:1–6)
+  // manglet ellers (#266).
+  for (const [book, chapters] of Object.entries(verseCounts)) {
+    const bookId = Number(book);
+    chapters.forEach((count, i) => {
+      const chapter = i + 1;
+      for (let verse = 1; verse <= count; verse++) {
+        const target = osnbToMapping(resolved, bookId, chapter, verse);
+        // Vers 0 (en salmeoverskrift) er ingen adresse noen skriver.
+        if (target.verse !== 0 && (target.chapter !== chapter || target.verse !== verse)) {
+          verseMap[`${bookId}-${target.chapter}-${target.verse}`] = `${bookId}-${chapter}-${verse}`;
+        }
+      }
+    });
   }
 
   const data = {

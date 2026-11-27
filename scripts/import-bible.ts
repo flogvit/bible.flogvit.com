@@ -52,6 +52,14 @@ const KVN_SRC_HASH = (() => {
 })();
 import type { RawVerse } from '../src/lib/edition-import.ts';
 import { loadRawMappingUncached } from '../src/lib/verse-mapper.ts';
+import {
+  anchorChapterSections,
+  COMMENTARY_IMPORT_RULES,
+  osnbTranslator,
+  parseCommentaryChapter,
+  type CommentaryLanguageIndex,
+  type CommentaryWorkMeta,
+} from '../src/lib/commentary.ts';
 
 // Kilde for bibelinnhold: FREE_BIBLE_DIR (se import-utils.ts). Standard er
 // ../free-bible relativt til cwd, som er en symlink til det ekte free-bible-repoet.
@@ -141,6 +149,7 @@ const STAT_ROWS = [
   ['numberSymbolism', 'Tallsymbolikk', 'tall'],
   ['days', 'Dager', 'dager'],
   ['verseWorks', 'Verk', 'verk'],
+  ['commentary', 'Kommentarer', 'kommentar-kapitler'],
 ] as const;
 
 type Stat = { updated: number; unchanged: number };
@@ -432,6 +441,10 @@ async function importVerses(bible: string): Promise<void> {
   });
 }
 
+// A fixed statement: only the number of rows varies, every value is a parameter.
+const INSERT_VERSES = 'INSERT INTO verses (book_id, chapter, verse, text, bible, versions, footnotes, strongs) VALUES ';
+const VERSE_ROW = '(?, ?, ?, ?, ?, ?, ?, ?)';
+
 /**
  * En høstet oversettelse (#200): hele teksten leses, flyttes til osnb-adresser
  * gjennom KVN-mappingen, og skrives på nytt når teksten ELLER mappingen er
@@ -473,7 +486,7 @@ async function importRenumbered(bible: string, biblePath: string): Promise<void>
     for (let i = 0; i < verses.length; i += 500) {
       const batch = verses.slice(i, i + 500);
       await tx.unsafe(
-        `INSERT INTO verses (book_id, chapter, verse, text, bible, versions, footnotes) VALUES ${batch.map(() => '(?, ?, ?, ?, ?, ?, ?)').join(', ')}`,
+        INSERT_VERSES + Array(batch.length).fill(VERSE_ROW).join(', '),
         batch.flatMap((v) => [
           v.book,
           v.chapter,
@@ -482,6 +495,7 @@ async function importRenumbered(bible: string, biblePath: string): Promise<void>
           bible,
           v.versions ? JSON.stringify(v.versions) : null,
           v.footnotes ? JSON.stringify(v.footnotes) : null,
+          v.strongs ? JSON.stringify(v.strongs) : null,
         ]),
       );
     }
@@ -1761,6 +1775,130 @@ for (const lang of contentLanguages('days')) {
     const dayKeysOnDisk = new Set(dayFiles.map((f) => f.replace('.json', '')));
     await cleanupRemovedEntries(tx, 'days', 'id', dayKeysOnDisk, 'day', 'dager', lang);
   });
+}
+
+// Importer bibelkommentarer (#269): generate/commentary/<verk>/<språk>/<bok>/<kapittel>.json.
+//
+// Verkene og språkene leses fra DISKEN: et nytt verk eller språk er en ny
+// katalog, og en ny ferdig bok er en ny linje i språkets index.json — ingen av
+// delene krever en kodeendring. Kildespråket (meta.json → language) importeres
+// helt; en gjengivelse bare for bøkene index.json melder ferdige, så en bok som
+// er halvveis oversatt ikke dukker opp halv. Seksjonene forankres i osnb ved
+// import (KJV → osmain → osnb), og hashen tar med mappingene, så en rettet
+// mapping flytter seksjonene uten at noen tekst er endret.
+console.log('Importerer kommentarer...');
+{
+  const commentaryRoot = path.join(GENERATE_PATH, 'commentary');
+  const works = fs.existsSync(commentaryRoot)
+    ? fs.readdirSync(commentaryRoot, { withFileTypes: true }).filter((e) => e.isDirectory()).map((e) => e.name).sort()
+    : [];
+  const kjvMap = loadRawMappingUncached('kjv');
+  const osnbMap = loadRawMappingUncached('osnb');
+  const toOsnb = osnbTranslator(kjvMap, osnbMap);
+  const mappingHash = computeHash(JSON.stringify(kjvMap.map) + JSON.stringify(osnbMap.map) + `kvn:${KVN_SRC_HASH}` + `rules:${COMMENTARY_IMPORT_RULES}`);
+  const worksOnDisk = new Set<string>();
+  // Kapitlene på disk per språk, på tvers av verkene: ryddingen velger alle
+  // rader for et språk, så den må kjenne nøklene til hvert verk.
+  const keysByLanguage = new Map<string, Set<string>>();
+
+  for (const work of works) {
+    const workDir = path.join(commentaryRoot, work);
+    const metaPath = path.join(workDir, 'meta.json');
+    if (!fs.existsSync(metaPath)) {
+      console.error(`  commentary/${work}: mangler meta.json — hoppet over`);
+      continue;
+    }
+    const meta = JSON.parse(fs.readFileSync(metaPath, 'utf-8')) as CommentaryWorkMeta;
+    worksOnDisk.add(work);
+    await sql`
+      REPLACE INTO commentary_works (id, title, author, written, source_language, license, url)
+      VALUES (${work}, ${meta.title}, ${meta.author ?? null}, ${meta.written ?? null}, ${meta.language}, ${meta.license}, ${meta.url ?? null})
+    `;
+
+    const langs = fs
+      .readdirSync(workDir, { withFileTypes: true })
+      .filter((e) => e.isDirectory() && isLanguageCode(e.name))
+      .map((e) => e.name)
+      .sort();
+    for (const lang of langs) {
+      const langDir = path.join(workDir, lang);
+      const isSource = lang === meta.language;
+      const indexPath = path.join(langDir, 'index.json');
+      const index: CommentaryLanguageIndex | null = fs.existsSync(indexPath)
+        ? (JSON.parse(fs.readFileSync(indexPath, 'utf-8')) as CommentaryLanguageIndex)
+        : null;
+      // Bøkene som skal inn: alle i kildespråket, de ferdige i en gjengivelse.
+      const books = fs
+        .readdirSync(langDir, { withFileTypes: true })
+        .filter((e) => e.isDirectory() && /^\d+$/.test(e.name))
+        .map((e) => e.name)
+        .filter((b) => isSource || Boolean(index?.books?.[b]))
+        .sort((a, b) => +a - +b);
+      const before = stats.commentary.updated;
+      const keysOnDisk = new Set<string>();
+      await sql.begin(async (tx) => {
+        for (const book of books) {
+          const bookModels = index?.books?.[book]?.models ?? null;
+          for (const file of fs.readdirSync(path.join(langDir, book)).filter((f) => /^\d+\.json$/.test(f))) {
+            const chapter = parseInt(file);
+            const contentKey = `${work}-${book}-${chapter}`;
+            keysOnDisk.add(contentKey);
+            const content = fs.readFileSync(path.join(langDir, book, file), 'utf-8');
+            const contentHash = computeHash(content + JSON.stringify(bookModels) + mappingHash);
+            if (unchanged(stats.commentary, 'commentary', contentKey, contentHash, lang)) continue;
+            const parsed = parseCommentaryChapter(content);
+            if (typeof parsed === 'string') {
+              console.error(`  commentary/${work}/${lang}/${book}/${file}: ${parsed} — hoppet over`);
+              continue;
+            }
+            await tx`
+              DELETE FROM commentary_sections
+              WHERE work = ${work} AND book_id = ${+book} AND source_chapter = ${chapter} AND language = ${lang}
+            `;
+            const anchors = anchorChapterSections(toOsnb, +book, chapter, parsed.sections);
+            for (const [i, s] of parsed.sections.entries()) {
+              const { start, end } = anchors[i]!;
+              const models = s.models?.length ? s.models : bookModels;
+              await tx`
+                INSERT INTO commentary_sections
+                  (work, book_id, source_chapter, section_no, source_from, source_to,
+                   osnb_chapter_from, osnb_verse_from, osnb_chapter_to, osnb_verse_to, paragraphs, models, language)
+                VALUES (${work}, ${+book}, ${chapter}, ${i}, ${s.from}, ${s.to},
+                        ${start.chapter}, ${start.verse}, ${end.chapter}, ${end.verse},
+                        ${JSON.stringify(s.paragraphs)}, ${models ? JSON.stringify(models) : null}, ${lang})
+              `;
+            }
+            await setContentHash(tx, 'commentary', contentKey, contentHash, lang);
+            stats.commentary.updated++;
+          }
+        }
+      });
+      const all = keysByLanguage.get(lang) ?? new Set<string>();
+      for (const k of keysOnDisk) all.add(k);
+      keysByLanguage.set(lang, all);
+      console.log(`${forLang(lang)} ${work}: ${books.length} bøker, ${stats.commentary.updated - before} kapitler oppdatert`);
+    }
+  }
+  // En bok som trekkes fra index.json, eller et kapittel som forsvinner, skal
+  // miste radene sine — samme regel som de andre innholdstypene. Et språk som
+  // har rader men ikke lenger finnes på disk, får en tom nøkkelmengde.
+  const languagesInDb = (await sql`SELECT DISTINCT language FROM commentary_sections`) as { language: string }[];
+  for (const lang of new Set([...keysByLanguage.keys(), ...languagesInDb.map((r) => r.language)])) {
+    if (works.length === 0) break; // hele kilden borte: porten (#58) rapporterer, ingen rydding
+    await sql.begin((tx) =>
+      cleanupRemovedEntries(tx, 'commentary_sections', ['work', 'book_id', 'source_chapter'], keysByLanguage.get(lang) ?? new Set(), 'commentary', 'kommentar-kapitler', lang),
+    );
+  }
+  // Et verk hvis katalog er borte: rapporteres av porten mot foreldreløst
+  // innhold (#58) når hele `commentary/` mangler; et enkelt verk som forsvinner
+  // fjernes her, fordi verkets egen katalog er den eneste kilden til radene.
+  for (const row of (await sql`SELECT id FROM commentary_works`) as { id: string }[]) {
+    if (worksOnDisk.has(row.id) || works.length === 0) continue;
+    await sql`DELETE FROM commentary_sections WHERE work = ${row.id}`;
+    await sql`DELETE FROM commentary_works WHERE id = ${row.id}`;
+    await sql`DELETE FROM content_hashes WHERE content_type = 'commentary' AND content_key LIKE ${`${row.id}-%`}`;
+    console.log(`  Slettet kommentarverket ${row.id}, som ikke lenger finnes på disk`);
+  }
 }
 
 // Importer lesetekster (DNK)
