@@ -1,5 +1,10 @@
 # Release notes
 
+## 2026-11-27 — Security update to the web framework
+
+**Behind the scenes**
+- The web framework under the site and the MCP server (hono) is updated from 4.13.18 to 4.13.23. The update closes three published security advisories, covering paths on requests without a host, route matching with alternatives, and unusual request method names (GHSA-mhwf-w6q6-q58w, GHSA-586x-c76g-h528, GHSA-656w-x92q-369m). A test now holds both lockfiles at or above the fixed version.
+
 ## 2026-11-27 — King James psalm numbering and Malachi 4 fixed
 
 **Bug fixes**

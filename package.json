@@ -12,7 +12,7 @@
   },
   "dependencies": {
     "@free-bible/kvn": "file:kvn-package",
-    "hono": "~4.13.18"
+    "hono": "~4.13.23"
   },
   "devDependencies": {
     "@happy-dom/global-registrator": "^21.0.4",
