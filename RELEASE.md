@@ -5,6 +5,12 @@
 **Bug fixes**
 - In the King James numbering, a psalm's title is no longer folded into verse 1. Psalm 51:1 now reads "Have mercy upon me, O God", and the title stands above the psalm without a number, as in the printed KJV.
 - References in the King James numbering to Malachi 4 (such as Mal 4:5) now find their verses. Before, they were read as verses that do not exist.
+
+**Behind the scenes**
+- The verse map now covers every verse that a numbering moves, with a test that checks all of them.
+- The MCP listing check also reads the tool count shown on mcpservers.org.
+- The unpushed-work test no longer writes to `.git/config`, asks git only once per sweep, and no longer clashes when two gate runs happen at the same time.
+- The remaining KJV psalm data errors in the tests now point to the upstream issues free-bible#164 and #165.
 ## 2026-11-16 — Security update to the web framework
 
 **Behind the scenes**
