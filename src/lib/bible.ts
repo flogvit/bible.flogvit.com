@@ -788,10 +788,16 @@ export async function searchVerses(query: string, limit = 50, offset = 0, bible 
 
   const total = Number(countResult?.total ?? 0);
 
+  // Not uq_verses for the ORDER BY (#285): with few hits in the edition, MySQL
+  // chose an ordered scan of uq_verses (book_id, chapter, verse, bible) for
+  // ORDER BY … LIMIT, and walked every edition's verses — 1.66 M rows, 4–6 s on
+  // every page not in Norwegian. The edition's own ~31 k rows, then a sort of
+  // the hits, is 0.08 s. The hint names uq_verses because the import's upserts
+  // need that key to exist; an index hint on a missing index is an error.
   const results = await sql`
     SELECT v.book_id, b.name_no as book_name_no, b.short_name as book_short_name,
            v.chapter, v.verse, v.text
-    FROM verses v
+    FROM verses v IGNORE INDEX FOR ORDER BY (uq_verses)
     JOIN books b ON v.book_id = b.id
     WHERE v.text LIKE ${pattern} AND v.bible = ${bible}
     ORDER BY v.book_id, v.chapter, v.verse
