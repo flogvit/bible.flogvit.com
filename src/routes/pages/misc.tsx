@@ -163,6 +163,7 @@ r.get('/om', (c) => {
               <li><strong>{t('about.lbl.bookSummary')}</strong> - {t('about.tool.bookSummary')}</li>
               <li><strong>{t('about.lbl.chapterSummary')}</strong> - {t('about.tool.chapterSummary')}</li>
               <li><strong>{t('rd.keyWords')}</strong> - {t('about.tool.keyWords')}</li>
+              <li><strong>{t('nav.commentaries')}</strong> - {t('about.tool.commentaries')}</li>
               <li><strong>{t('nav.stories')}</strong> - {t('about.tool.stories')}</li>
               <li><strong>{t('nav.themes')}</strong> - {t('about.tool.themes')}</li>
               <li><strong>{t('nav.prophecies')}</strong> - {t('about.tool.prophecies')}</li>

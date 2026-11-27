@@ -476,6 +476,39 @@ export const TABLES: string[] = [
     INDEX idx_stories_category (category, language)
   ) ENGINE=InnoDB ${CS}`,
 
+  // Bibelkommentarer (#269): verket (navn, lisens, kilde fra meta.json) og
+  // seksjonene, hver på verkets egen adresse (source_*) og på osnb-adressen
+  // den lander på (osnb_*), som lesesiden spør etter. Alle språk ligger side om
+  // side, så en gjengitt seksjon kan vise kildens avsnitt ved siden av.
+  `CREATE TABLE IF NOT EXISTS commentary_works (
+    id VARCHAR(40) NOT NULL PRIMARY KEY,
+    title VARCHAR(500) NOT NULL,
+    author VARCHAR(255),
+    written VARCHAR(100),
+    source_language VARCHAR(10) NOT NULL,
+    license VARCHAR(255) NOT NULL,
+    url VARCHAR(1000)
+  ) ENGINE=InnoDB ${CS}`,
+
+  `CREATE TABLE IF NOT EXISTS commentary_sections (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    work VARCHAR(40) NOT NULL,
+    book_id INT NOT NULL,
+    source_chapter INT NOT NULL,
+    section_no INT NOT NULL,
+    source_from INT NOT NULL,
+    source_to INT NOT NULL,
+    osnb_chapter_from INT NOT NULL,
+    osnb_verse_from INT NOT NULL,
+    osnb_chapter_to INT NOT NULL,
+    osnb_verse_to INT NOT NULL,
+    paragraphs MEDIUMTEXT NOT NULL,
+    models VARCHAR(500),
+    ${LANG},
+    UNIQUE KEY uq_commentary_sections (work, book_id, source_chapter, section_no, language),
+    INDEX idx_commentary_osnb (book_id, osnb_chapter_from, osnb_chapter_to, language)
+  ) ENGINE=InnoDB ${CS}`,
+
   // language her er SCOPET til hash-oppføringen, ikke nødvendigvis innholdets
   // språk: språknøytrale typer (kapitler, word4word, vers-mappinger) føres på
   // gulvet, slik at eksisterende rader beholder nøkkelen sin og ikke utløser en

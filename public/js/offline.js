@@ -180,6 +180,8 @@ async function startDownload() {
             summary: data.summary ?? null,
             context: data.context ?? null,
             insight: data.insight ?? null,
+            // Bibelkommentarene (#269), verk for verk med kildens avsnitt.
+            commentary: data.commentary || [],
             lang: document.documentElement.lang || null,
             cachedAt: Date.now(),
           }]);

@@ -8,6 +8,7 @@
 !public/favicon.svg
 !public/favicon.ico
 !public/apple-touch-icon.png
+!public/js/commentary-render.js
 !kvn-package/package.json
 !kvn-package/src
 !kvn-package/mappings

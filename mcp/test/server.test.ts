@@ -225,3 +225,16 @@ describe('HTTP', () => {
     expect(results).toEqual([200, 200, 200]);
   });
 });
+
+// #269: the chapter tool carries the Bible commentaries, in the reader's
+// language with the work, its licence and who translated it.
+test('get_chapter_study includes the commentary on the chapter', async () => {
+  const nb = (await call('get_chapter_study', { reference: '1 Mos 1', language: 'nb' })).text;
+  expect(nb).toContain("## Commentary: Matthew Henry's Complete Commentary");
+  expect(nb).toContain('Licence: Public Domain.');
+  expect(nb).toContain('Translated and checked by');
+  expect(nb).not.toMatch(/<(?:h|i|b|ref)\b/);
+  const en = (await call('get_chapter_study', { reference: 'Gen 1', language: 'en' })).text;
+  expect(en).toContain('## Commentary:');
+  expect(en).not.toContain('Translated and checked by');
+}, DB_TEST_TIMEOUT_MS);
