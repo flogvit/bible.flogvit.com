@@ -23,6 +23,8 @@ import * as path from 'path';
 import { ukvnDecode, ukvnEncode, UKVN_PART_SIZE, sliceVersePart } from '@free-bible/kvn';
 import type { UkvnMappingFile } from '@free-bible/kvn';
 import { OSNB_NUMBERED } from './editions.ts';
+import { parseStrongs, STRONGS_MARK } from './strongs.ts';
+import type { StrongsWord } from './strongs.ts';
 
 /** A verse as free-bible stores it, in the translation's own numbering. */
 export interface RawVerse {
@@ -213,12 +215,12 @@ function closeSpacedCjk(text: string): string {
  * is imported again with the new rules instead of keeping the old text until
  * its source changes.
  */
-export const READER_TEXT_RULES = 5;
+export const READER_TEXT_RULES = 6;
 
 /** The verse text a reader is shown: other numberings out, spaced Chinese closed up, spaces tidied. */
 export function readerText(text: string): string {
   // [ \t\n], not \s: \s takes the ideographic space (U+3000) too.
-  return closeSpacedCjk(text.replace(INLINE_TAG, '').replace(EMPHASIS_STARS, '$1').replace(RED_LETTER_SEAM_WORD, ' ').replace(RED_LETTER_SEAM, '').replace(RED_LETTER_MARK, '').replace(VERSE_NUMBER_MARK, ' ').replace(PARAGRAPH_MARK, ' ').replace(/[ \t\n]{2,}/g, ' ').trim());
+  return closeSpacedCjk(text.replace(STRONGS_MARK, '').replace(INLINE_TAG, '').replace(EMPHASIS_STARS, '$1').replace(RED_LETTER_SEAM_WORD, ' ').replace(RED_LETTER_SEAM, '').replace(RED_LETTER_MARK, '').replace(VERSE_NUMBER_MARK, ' ').replace(PARAGRAPH_MARK, ' ').replace(/[ \t\n]{2,}/g, ' ').trim());
 }
 
 /** A verse at its osnb address, ready for the `verses` table. */
@@ -229,6 +231,8 @@ export interface OsnbVerse {
   text: string;
   versions: unknown;
   footnotes: unknown;
+  /** Strong's numbers per word (#202); null when the verse has none or was joined or divided. */
+  strongs: StrongsWord[] | null;
 }
 
 export interface Renumbered {
@@ -279,12 +283,12 @@ export function toOsnbNumbering(raw: RawVerse[], source: UkvnMappingFile, osnb: 
   };
 
   // osnb address → pieces, each with a sort key (its own order, then part).
-  const pieces = new Map<string, { order: number; text: string; raw: RawVerse }[]>();
-  const add = (tkvn: number, order: number, text: string, raw: RawVerse) => {
+  const pieces = new Map<string, { order: number; text: string; raw: RawVerse; strongs: StrongsWord[] | null }[]>();
+  const add = (tkvn: number, order: number, text: string, raw: RawVerse, strongs: StrongsWord[] | null = null) => {
     const d = ukvnDecode(tkvn);
     const key = `${d.book}:${d.chapter}:${d.verse}`;
     const list = pieces.get(key) ?? [];
-    list.push({ order: order * UKVN_PART_SIZE + d.part, text, raw });
+    list.push({ order: order * UKVN_PART_SIZE + d.part, text, raw, strongs });
     pieces.set(key, list);
   };
 
@@ -295,7 +299,11 @@ export function toOsnbNumbering(raw: RawVerse[], source: UkvnMappingFile, osnb: 
       placeholders.push(`${v.bookId}:${v.chapterId}:${v.verseId}`);
       return;
     }
-    const text = readerText(v.text);
+    const parsed = parseStrongs(v.text);
+    const text = readerText(parsed.text);
+    // The numbers point at words by index; if cleaning the text changed the
+    // words, they would point at the wrong ones, so they are dropped.
+    const strongs = parsed.strongs && text.split(/\s+/).length === parsed.text.split(/\s+/).length ? parsed.strongs : null;
     // The translation's own address is the order its pieces are joined in.
     const order = ukvnEncode(v.bookId, v.chapterId, v.verseId);
     const kvn = sourceKvn(order);
@@ -304,7 +312,7 @@ export function toOsnbNumbering(raw: RawVerse[], source: UkvnMappingFile, osnb: 
       split++;
       parts.forEach((t, i) => add(t, order, sliceVersePart(text, i + 1, parts.length), v));
     } else {
-      add(osnbTkvn(kvn), order, text, v);
+      add(osnbTkvn(kvn), order, text, v, strongs);
     }
   });
 
@@ -325,6 +333,8 @@ export function toOsnbNumbering(raw: RawVerse[], source: UkvnMappingFile, osnb: 
       text: texts.join(' '),
       versions: only?.versions ?? null,
       footnotes: only?.footnotes ?? null,
+      // Same reason: the word indexes belong to ONE verse's text.
+      strongs: list.length === 1 ? list[0]!.strongs : null,
     });
   }
   verses.sort((a, b) => a.book - b.book || a.chapter - b.chapter || a.verse - b.verse);
