@@ -56,6 +56,8 @@ export const CONTENT_TABLES: readonly string[] = [
   'reading_texts',
   'reading_text_refs',
   'stories',
+  'commentary_works',
+  'commentary_sections',
   'content_hashes',
 ];
 
@@ -101,6 +103,8 @@ export const CONTENT_SOURCES: Record<string, string> = {
   reading_texts: 'dnk_lesetekster',
   reading_text_refs: 'dnk_lesetekster',
   stories: 'stories',
+  commentary_works: 'commentary',
+  commentary_sections: 'commentary',
 };
 
 /**
