@@ -3,7 +3,7 @@
 .user-main { padding: 48px 0; }
 .user-intro { color: var(--ink-2); margin-bottom: 24px; max-width: 640px; }
 .user-empty { color: var(--muted); font-style: italic; }
-.user-note { color: var(--muted); font-size: 14px; margin-top: 16px; }
+.user-note { color: var(--muted); font-size: 0.875rem; margin-top: 16px; }
 .user-toolbar { margin-bottom: 20px; }
 
 /* Sidebytteren i manuskriptkatalogen (#75). `wrap` fordi rada bærer tekst på
@@ -16,13 +16,13 @@
   gap: 12px;
   margin-top: 24px;
 }
-.pager-status { color: var(--muted); font-size: 14px; }
-.pager-link { color: var(--gold-text); text-decoration: none; font-size: 14px; }
+.pager-status { color: var(--muted); font-size: 0.875rem; }
+.pager-link { color: var(--gold-text); text-decoration: none; font-size: 0.875rem; }
 .pager-link:hover { text-decoration: underline; }
 
 .user-input {
   padding: 10px 14px;
-  font-size: 15px;
+  font-size: 0.9375rem;
   border: 1px solid var(--border);
   border-radius: var(--radius);
   background-color: var(--surface);
@@ -37,7 +37,7 @@ select.user-input { padding-right: 36px; }
   color: var(--on-accent);
   border: none;
   border-radius: var(--radius);
-  font-size: 14px;
+  font-size: 0.875rem;
   font-weight: 500;
   cursor: pointer;
   text-decoration: none;
@@ -52,7 +52,7 @@ select.user-input { padding-right: 36px; }
   border-radius: var(--radius);
   color: var(--ink);
   text-decoration: none;
-  font-size: 14px;
+  font-size: 0.875rem;
 }
 
 .user-create { display: flex; gap: 8px; margin-bottom: 20px; }
@@ -68,9 +68,9 @@ select.user-input { padding-right: 36px; }
   text-decoration: none;
 }
 a.user-card:hover { border-color: var(--gold); }
-.user-card-ref { font-family: var(--font-mono); font-size: 13px; color: var(--gold-text); }
-.user-card-title { display: block; color: var(--ink); font-weight: 500; font-size: 16px; }
-.user-card-meta { color: var(--muted); font-size: 13px; }
+.user-card-ref { font-family: var(--font-mono); font-size: 0.8125rem; color: var(--gold-text); }
+.user-card-title { display: block; color: var(--ink); font-weight: 500; font-size: 1rem; }
+.user-card-meta { color: var(--muted); font-size: 0.8125rem; }
 .user-card-text { font-family: var(--font-serif); color: var(--ink); margin: 6px 0 0; line-height: 1.6; }
 .user-card-remove {
   margin-top: 8px;
@@ -79,7 +79,7 @@ a.user-card:hover { border-color: var(--gold); }
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   color: var(--muted);
-  font-size: 13px;
+  font-size: 0.8125rem;
   cursor: pointer;
 }
 .user-card-remove:hover { color: var(--ink); border-color: var(--gold); }
@@ -93,16 +93,16 @@ a.user-card:hover { border-color: var(--gold); }
   border-radius: var(--radius);
   box-shadow: var(--shadow-sm);
 }
-.plan-name { font-size: 18px; margin-bottom: 6px; }
-.plan-desc { color: var(--ink-2); font-size: 14px; margin-bottom: 10px; }
+.plan-name { font-size: 1.125rem; margin-bottom: 6px; }
+.plan-desc { color: var(--ink-2); font-size: 0.875rem; margin-bottom: 10px; }
 .plan-meta { display: flex; gap: 10px; margin-bottom: 12px; }
-.plan-days, .plan-cat { font-family: var(--font-mono); font-size: 12px; color: var(--muted); }
+.plan-days, .plan-cat { font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); }
 /* Dekning fra lesekartet (#16): en opplysning om hva du alt har lest, ikke en
    avkryssing i planens eget dag-regnskap. */
-.plan-covered { font-size: 12px; color: var(--gold-text); margin: 0 0 10px; }
+.plan-covered { font-size: 0.75rem; color: var(--gold-text); margin: 0 0 10px; }
 .plan-actions { display: flex; align-items: center; gap: 10px; }
 .plan-active-badge {
-  font-size: 12px;
+  font-size: 0.75rem;
   color: var(--gold-text);
   background: var(--gold-bg);
   padding: 3px 10px;
@@ -119,16 +119,16 @@ a.user-card:hover { border-color: var(--gold); }
 
 /* editor */
 .editor-head { display: flex; gap: 12px; align-items: center; margin-bottom: 8px; }
-.editor-title { flex: 1; font-size: 18px; }
+.editor-title { flex: 1; font-size: 1.125rem; }
 .editor-actions { display: flex; gap: 8px; }
-.editor-hint { color: var(--muted); font-size: 13px; margin-bottom: 12px; }
+.editor-hint { color: var(--muted); font-size: 0.8125rem; margin-bottom: 12px; }
 .editor-hint code { font-family: var(--font-mono); background: var(--paper-2); padding: 1px 5px; border-radius: 4px; }
 .editor-split { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 .editor-textarea {
   min-height: 60vh;
   padding: 14px;
   font-family: var(--font-mono);
-  font-size: 14px;
+  font-size: 0.875rem;
   line-height: 1.6;
   border: 1px solid var(--border);
   border-radius: var(--radius);
@@ -151,7 +151,7 @@ a.user-card:hover { border-color: var(--gold); }
 @media (max-width: 768px) { .editor-split { grid-template-columns: 1fr; } }
 
 .devotional-article { font-family: var(--font-serif); line-height: 1.7; }
-.devotional-article h1 { font-size: 28px; margin-bottom: 16px; }
+.devotional-article h1 { font-size: 1.75rem; margin-bottom: 16px; }
 .devotional-article .inline-ref { color: var(--gold-text); }
 .devotional-article .user-btn-ghost { margin-top: 24px; font-family: var(--font-ui); }
 
@@ -163,15 +163,15 @@ a.user-card:hover { border-color: var(--gold); }
 
 /* Konto/sync + eksport/import på innstillingssiden */
 .settings-account { margin: 4px 0; }
-.settings-sync { margin: 4px 0; color: var(--muted); font-size: 14px; }
+.settings-sync { margin: 4px 0; color: var(--muted); font-size: 0.875rem; }
 .settings-data-buttons { display: flex; flex-wrap: wrap; gap: 10px; margin: 4px 0 8px; }
 .settings-import-label { cursor: pointer; }
 
 /* Deling av manuskripter (#15, del 1). Lenken er tilgangen, så feltet skal
    være lesbart i full bredde — en avkortet URL inviterer til halv kopiering. */
 .share-block { margin-top: 32px; padding-top: 20px; border-top: 1px solid var(--line); font-family: var(--font-ui); }
-.share-title { font-size: 18px; margin-bottom: 6px; }
+.share-title { font-size: 1.125rem; margin-bottom: 6px; }
 .share-row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin: 10px 0; }
-.share-link { flex: 1 1 320px; min-width: 0; font-family: var(--font-mono); font-size: 13px; }
-.share-status { margin: 6px 0 0; color: var(--muted); font-size: 14px; min-height: 20px; }
+.share-link { flex: 1 1 320px; min-width: 0; font-family: var(--font-mono); font-size: 0.8125rem; }
+.share-status { margin: 6px 0 0; color: var(--muted); font-size: 0.875rem; min-height: 20px; }
 .share-block .user-btn, .share-block .user-btn-ghost { margin-right: 8px; }
