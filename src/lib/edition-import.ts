@@ -110,9 +110,12 @@ export function checkEdition(
  * `footnotes`; in the text they stood in the middle of the verse on the page,
  * and in search, the songs and the MCP. These are the forms that were found in
  * free-bible (its tests/verse-text-clean.test.ts holds the same list).
+ * A verse that opens with a star is a note, unless a ` **` (or `־**`) before a
+ * word follows it: that is the Hebrew texts' ketiv and qere, «*ויישם **וַיּוּשַׂם»
+ * (hebrew, tanach; #202).
  */
 export const INLINE_NOTE =
-  /\[\s*\*?\s*(?:Footnote|Fotnote|Nota|Note)\s*:|\[\*|\[\^[\w-]+\]|<fn>|(?:^|\n\n)\s*\*\S|\*[ \t]+\*\S/i;
+  /\[\s*\*?\s*(?:Footnote|Fotnote|Nota|Note)\s*:|\[\*|\[\^[\w-]+\]|<fn>|(?:^|\n\n)\s*\*(?![^\n]*?[\s־]\*\*\S)\S|\*[ \t]+\*\S/i;
 
 /**
  * The verses whose text carries a note, as `book:chapter:verse`. A source

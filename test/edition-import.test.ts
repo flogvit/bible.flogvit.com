@@ -12,7 +12,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { DB_TEST_TIMEOUT_MS } from './db-timeout.ts';
 import { FREE_BIBLE_DIR } from '../scripts/kvn-staging.ts';
-import { IMPORTED_BIBLES, OWN_EDITIONS } from '../src/lib/editions.ts';
+import { IMPORTED_BIBLES, OWN_EDITIONS, SOURCE_TEXTS } from '../src/lib/editions.ts';
 import { checkEdition, editionGate, readerText, toOsnbNumbering, versesWithInlineNotes } from '../src/lib/edition-import.ts';
 import type { RawVerse } from '../src/lib/edition-import.ts';
 import { loadRawMappingUncached } from '../src/lib/verse-mapper.ts';
@@ -59,6 +59,26 @@ describe('the gate', () => {
     expect(fs.existsSync(path.join(GENERATE, 'bibles_raw')), `free-bible at ${FREE_BIBLE_DIR}`).toBe(true);
     const refused = IMPORTED_BIBLES.map((id) => checkEdition(id, GENERATE, loadMapping)).filter((g) => !g.ok);
     expect(refused).toEqual([]);
+  });
+
+  // #170 is done when every translation free-bible clears is published (#202).
+  // Red here means free-bible confirmed a licence and verified a KVN mapping
+  // since the list was last touched: add the id to IMPORTED_BIBLES (and to
+  // SOURCE_TEXTS when its meta.json says source_text).
+  test('every edition free-bible clears is listed', () => {
+    const listed = IMPORTED_BIBLES as readonly string[];
+    const cleared = fs
+      .readdirSync(path.join(GENERATE, 'bibles_raw'))
+      .filter((id) => !listed.includes(id) && checkEdition(id, GENERATE, loadMapping).ok);
+    expect(cleared).toEqual([]);
+  });
+
+  test('the source texts are the listed editions free-bible calls source_text', () => {
+    const sourceText = IMPORTED_BIBLES.filter((id) => {
+      const meta = path.join(GENERATE, 'bibles_raw', id, 'meta.json');
+      return fs.existsSync(meta) && JSON.parse(fs.readFileSync(meta, 'utf-8')).philosophy === 'source_text';
+    });
+    expect([...SOURCE_TEXTS].sort() as string[]).toEqual([...sourceText].sort());
   });
 });
 
@@ -194,6 +214,15 @@ describe('the renumbering', () => {
       { bookId: 40, chapterId: 5, verseId: 15, text: '*Or, the lamp-stand' },
     ];
     expect(versesWithInlineNotes(raw)).toEqual(['40:5:15']);
+  });
+
+  test('a verse that opens with a ketiv («*ketiv **qere», hebrew Gen 24:33) is not a note (#202)', () => {
+    const raw = [
+      { bookId: 1, chapterId: 24, verseId: 33, text: '*ויישם **וַיּוּשַׂ֤ם לְפָנָיו֙ לֶאֱכֹ֔ל' },
+      { bookId: 2, chapterId: 21, verseId: 6, text: '*לא־**לֽוֹ־אַחֲרִ֥ישׁ בַּדָּ֑יו' },
+      { bookId: 26, chapterId: 40, verseId: 18, text: '*ומתחתה *לשכות **וּמִתַּ֖חַת **הַלְּשָׁכ֣וֹת הָאֵ֑לֶּה' },
+    ];
+    expect(versesWithInlineNotes(raw)).toEqual([]);
   });
 
   test('footnote asterisks inside real text are not a placeholder (dnb30 Dan 11:17)', () => {
