@@ -1,5 +1,10 @@
 # Release notes
 
+## 2026-11-27 — King James psalm numbering and Malachi 4 fixed
+
+**Bug fixes**
+- In the King James numbering, a psalm's title is no longer folded into verse 1. Psalm 51:1 now reads "Have mercy upon me, O God", and the title stands above the psalm without a number, as in the printed KJV.
+- References in the King James numbering to Malachi 4 (such as Mal 4:5) now find their verses. Before, they were read as verses that do not exist.
 ## 2026-11-16 — Security update to the web framework
 
 **Behind the scenes**
