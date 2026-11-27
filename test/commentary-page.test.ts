@@ -8,7 +8,7 @@ import { describe, expect, setDefaultTimeout, test } from 'bun:test';
 import { DB_TEST_TIMEOUT_MS } from './db-timeout.ts';
 import { createApp } from '../src/app.ts';
 import { getSql } from '../src/lib/db.ts';
-import { getCommentaryForChapter } from '../src/lib/commentary-data.ts';
+import { getCommentaryForChapter, searchCommentary } from '../src/lib/commentary-data.ts';
 import { commentaryRefHref } from '../src/views/commentary.tsx';
 
 setDefaultTimeout(DB_TEST_TIMEOUT_MS);
@@ -101,5 +101,19 @@ describe('the chapter API carries the commentary', () => {
     expect(mhc?.language).toBe('nb');
     expect(mhc?.sections[0]?.paragraphs.length).toBeGreaterThan(0);
     expect(mhc?.sections[0]?.sourceParagraphs?.length).toBe(mhc?.sections[0]?.paragraphs.length);
+  });
+});
+
+describe('the commentary search', () => {
+  test("every word must match, in the reader's language, capped by the limit", async () => {
+    const hits = await searchCommentary('god light', 'en', 3);
+    expect(hits.length).toBeGreaterThan(0);
+    expect(hits.length).toBeLessThanOrEqual(3);
+    for (const h of hits) expect(h.snippet.toLowerCase()).toContain('god');
+    expect(hits[0]?.workTitle).toContain('Matthew Henry');
+  });
+
+  test('a quote in the query is a word, not SQL', async () => {
+    expect(await searchCommentary("o'neil' OR 1=1 --", 'en')).toEqual([]);
   });
 });

@@ -4,6 +4,23 @@
 import { getSql } from './db.ts';
 import { contentLanguageChain, currentContentLanguage, localeToContentLanguage } from './lang.ts';
 
+// Spørringene står som faste tekster med `?`-parametre: ingen verdi settes
+// sammen inn i SQL-en.
+const SECTIONS_IN_CHAPTER_SQL = `
+  SELECT source_chapter, section_no, osnb_chapter_from, osnb_verse_from, osnb_chapter_to, osnb_verse_to, paragraphs, models
+  FROM commentary_sections
+  WHERE work = ? AND book_id = ? AND language = ?
+    AND osnb_chapter_from <= ? AND osnb_chapter_to >= ?
+  ORDER BY osnb_chapter_from, osnb_verse_from, source_chapter, section_no`;
+const SEARCH_SQL_HEAD = `
+  SELECT s.work, w.title, w.author, s.book_id, s.osnb_chapter_from, s.osnb_verse_from,
+         s.source_chapter, s.section_no, s.paragraphs
+  FROM commentary_sections s JOIN commentary_works w ON w.id = s.work
+  WHERE s.language = ?`;
+const SEARCH_SQL_TAIL = `
+  ORDER BY s.book_id, s.osnb_chapter_from, s.osnb_verse_from, s.section_no
+  LIMIT ?`;
+
 export interface CommentaryWork {
   id: string;
   title: string;
@@ -85,13 +102,7 @@ export async function getCommentaryForChapter(
     SELECT id, title, author, written, license, url, source_language FROM commentary_works ORDER BY id
   `) as { id: string; title: string; author: string | null; written: string | null; license: string; url: string | null; source_language: string }[];
   const rowsFor = (work: string, language: string) =>
-    sql`
-      SELECT source_chapter, section_no, osnb_chapter_from, osnb_verse_from, osnb_chapter_to, osnb_verse_to, paragraphs, models
-      FROM commentary_sections
-      WHERE work = ${work} AND book_id = ${bookId} AND language = ${language}
-        AND osnb_chapter_from <= ${chapter} AND osnb_chapter_to >= ${chapter}
-      ORDER BY osnb_chapter_from, osnb_verse_from, source_chapter, section_no
-    ` as Promise<CommentaryRow[]>;
+    sql.unsafe(SECTIONS_IN_CHAPTER_SQL, [work, bookId, language, chapter, chapter]) as unknown as Promise<CommentaryRow[]>;
 
   const requested = localeToContentLanguage(lang);
   const result: CommentaryForChapter[] = [];
@@ -155,17 +166,14 @@ export async function searchCommentary(query: string, lang = currentContentLangu
   const words = query.toLowerCase().split(/\s+/).filter((w) => w.length >= 2);
   if (words.length === 0) return [];
   const sql = getSql();
-  const conditions = words.map(() => 'LOWER(s.paragraphs) LIKE ?').join(' AND ');
+  // Ett fast `LIKE ?`-ledd per ord; ordene selv går som parametre.
+  const searchSql =
+    SEARCH_SQL_HEAD +
+    words.map(() => ' AND LOWER(s.paragraphs) LIKE ?').join('') +
+    SEARCH_SQL_TAIL;
+  const rowLimit = Math.max(1, Math.min(100, limit * 2));
   for (const language of contentLanguageChain(lang)) {
-    const rows = (await sql.unsafe(
-      `SELECT s.work, w.title, w.author, s.book_id, s.osnb_chapter_from, s.osnb_verse_from,
-              s.source_chapter, s.section_no, s.paragraphs
-       FROM commentary_sections s JOIN commentary_works w ON w.id = s.work
-       WHERE s.language = ? AND ${conditions}
-       ORDER BY s.book_id, s.osnb_chapter_from, s.osnb_verse_from, s.section_no
-       LIMIT ${Math.max(1, Math.min(100, limit * 2))}`,
-      [language, ...words.map((w) => `%${w}%`)],
-    )) as { work: string; title: string; author: string | null; book_id: number; osnb_chapter_from: number; osnb_verse_from: number; source_chapter: number; section_no: number; paragraphs: string }[];
+    const rows = (await sql.unsafe(searchSql, [language, ...words.map((w) => `%${w}%`), rowLimit])) as unknown as { work: string; title: string; author: string | null; book_id: number; osnb_chapter_from: number; osnb_verse_from: number; source_chapter: number; section_no: number; paragraphs: string }[];
     const hits: CommentarySearchHit[] = [];
     for (const r of rows) {
       const text = (parseJsonList(r.paragraphs) ?? []).map(plain).join(' ');
@@ -189,14 +197,4 @@ export async function searchCommentary(query: string, lang = currentContentLangu
     if (hits.length > 0) return hits;
   }
   return [];
-}
-
-/** Bøkene et verk har en gjengivelse av på et språk (oversiktssidene, MCP-en). */
-export async function commentaryBooks(language: string): Promise<{ work: string; books: number[] }[]> {
-  const rows = (await getSql()`
-    SELECT work, book_id FROM commentary_sections WHERE language = ${language} GROUP BY work, book_id ORDER BY work, book_id
-  `) as { work: string; book_id: number }[];
-  const byWork = new Map<string, number[]>();
-  for (const r of rows) byWork.set(r.work, [...(byWork.get(r.work) ?? []), Number(r.book_id)]);
-  return [...byWork].map(([work, books]) => ({ work, books }));
 }
