@@ -126,7 +126,8 @@ async function health(): Promise<Response> {
  * /app/bun.lock in the image and mcp/bun.lock in the repo. `--frozen-lockfile`
  * ties the installed versions to it, so a GET answers what only ssh to the VM
  * could before. A hash, not versions: the endpoint proves WHICH commit's lock
- * runs without announcing a version to look up advisories for. How to check it:
+ * runs without printing a version. The repo is public, so this costs a reader
+ * effort, not secrecy — anyone can hash the history. How to check it:
  * mcp/README.md → «Which packages run».
  */
 export function installedLock(): string {

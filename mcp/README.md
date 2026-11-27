@@ -205,9 +205,10 @@ You need this after a deploy, or after a security patch to a dependency (#276). 
 2. Find the commit whose lock gives that hash. Run this in `bibel/`, on an up-to-date `main`:
 
    ```sh
-   want=$(curl -s https://mcp.bible.flogvit.com/version | sed 's/.*"lock":"\([0-9a-f]*\)".*/\1/')
+   want=$(curl -sf https://mcp.bible.flogvit.com/version | sed -n 's/.*"lock":"\([0-9a-f]*\)".*/\1/p')
+   [ -z "$want" ] && echo "no lock hash: see the 503 case below"
    for c in $(git log --format=%h -- mcp/bun.lock); do
-     [ "$(git show "$c:mcp/bun.lock" | shasum -a 256 | cut -c1-12)" = "$want" ] && echo "$c" && break
+     [ -n "$want" ] && [ "$(git show "$c:mcp/bun.lock" | shasum -a 256 | cut -c1-12)" = "$want" ] && echo "$c" && break
    done
    ```
 
