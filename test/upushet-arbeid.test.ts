@@ -38,6 +38,43 @@ const ROOT = resolve(import.meta.dir, '..');
 const ARBEIDSGRENER = [/^smie\//, /^testsmie\//];
 
 /**
+ * SESJONSTRÆRNE (#278). En gren som står UTSJEKKET i et levende arbeidstre
+ * under `.claude/worktrees/` er en økt eller en Dux-jobb som holder på — samme
+ * kategori som arbeidsgrenene over, bare navngitt av Claude Code
+ * (`worktree-<navn>`) i stedet for av skallet.
+ *
+ * Uten unntaket var vakta SELVLÅSENDE igjen, og målt: Dux dømmer og bygger hver
+ * PR i et slikt tre, på en lokal gren (`worktree-pr-273-text-size`), og kjører
+ * porten INNE i det. Porten var dermed rød på main så lenge en jobb sto åpen,
+ * Dux la testporten til side som «rød uten endringen også», og mutasjonstesten
+ * stod igjen med bare `typecheck` — #273 ble avvist som ubeviselig
+ * 2026-11-27 selv om testen dens er 11/15 rød uten rettelsen.
+ *
+ * Unntaket er TREET, ikke navnet: forsvinner treet (eller står det som
+ * `prunable`, katalogen er borte), dømmes grenen som før — da er den nettopp
+ * arbeid som ble liggende igjen på én disk. Og en `bibel-no`-utsjekk utenfor
+ * `.claude/worktrees/` er aldri omfattet, så #111 er like synlig.
+ */
+const SESJONSTRE = '/.claude/worktrees/';
+
+/** `git worktree list --porcelain` → grenene som står utsjekket i et levende sesjonstre. */
+export function sesjonsgrener(porcelain: string): Set<string> {
+  const ut = new Set<string>();
+  for (const blokk of porcelain.split(/\n\s*\n/)) {
+    const linjer = blokk.split('\n');
+    const sti = linjer.find((l) => l.startsWith('worktree '))?.slice('worktree '.length);
+    const gren = linjer.find((l) => l.startsWith('branch refs/heads/'))?.slice('branch refs/heads/'.length);
+    const borte = linjer.some((l) => l === 'prunable' || l.startsWith('prunable '));
+    if (sti && gren && !borte && sti.includes(SESJONSTRE)) ut.add(gren);
+  }
+  return ut;
+}
+
+/** Arbeidstrærne slik git har dem, injisert så regelen kan måles uten å lage trær. */
+type Arbeidstrær = () => string;
+const gitsArbeidstrær: Arbeidstrær = () => git('worktree', 'list', '--porcelain').ut;
+
+/**
  * ENDRINGSLOGGEN, som deployen committer FØR den kjører testene (#113).
  *
  * Den er samme kategori som arbeidsgrenene over — arbeid under utførelse, som
@@ -159,18 +196,23 @@ function upushedeFiler(gren: string, oppstrøm: Oppstrøm): string[] | null {
  * der, og da var mutasjonen «fjern unntaket» GRØNN: porten målte sin egen kopi
  * i stedet for regelen den skulle vokte. Se #113.
  */
-function etterlatteGrener(oppstrøm: Oppstrøm = gitsOppstrøm): string[] {
+function etterlatteGrener(
+  oppstrøm: Oppstrøm = gitsOppstrøm,
+  arbeidstrær: Arbeidstrær = gitsArbeidstrær,
+): string[] {
   // FORFILTERET (#268): en gren hvis tupp nås fra en remote, frikjennes av
   // `påRemote` uansett, og hver git-kjøring koster ~40 ms på en travel maskin.
   // Fem per gren over ~30 grener sprengte Buns 5 s-tak og felte deployen. Én
   // kjøring finner commit-ene ingen remote har; bare de grenene dømmes fullt.
   const bareHer = new Set(git('rev-list', '--branches', '--not', '--remotes').ut.split('\n'));
+  const iSesjon = sesjonsgrener(arbeidstrær());
   return lokaleGrener()
     .filter(([, tupp]) => bareHer.has(tupp))
     .map(([gren]) => gren)
     .filter(
       (b) =>
         !erArbeidsgren(b) &&
+        !iSesjon.has(b) &&
         !bareEndringsloggen(upushedeFiler(b, oppstrøm)) &&
         påÉnDisk([b], fakta).length > 0,
     );
@@ -354,6 +396,50 @@ describe('upushet arbeid (#111)', () => {
       git('branch', '-D', fremmed);
     }
   });
+
+  test('SESJONSTRÆRNE: bare en levende utsjekk under .claude/worktrees/ er arbeid under utførelse (#278)', () => {
+    const tre = (sti: string, gren: string, ekstra = '') =>
+      `worktree ${sti}\nHEAD 1111111111111111111111111111111111111111\nbranch refs/heads/${gren}\n${ekstra}`;
+    const liste = [
+      tre('/u/bibel', 'bibel-no'),
+      tre('/u/bibel/.claude/worktrees/pr-273-text-size', 'worktree-pr-273-text-size', 'locked\n'),
+      tre('/u/bibel/.claude/worktrees/gammel', 'worktree-gammel', 'prunable gitdir file points to non-existent location\n'),
+      'worktree /u/bibel/.claude/worktrees/løs\nHEAD 2222222222222222222222222222222222222222\ndetached\n',
+    ].join('\n');
+    // Begge veier: den levende sesjonen er unntatt; bibel-no-utsjekken (#111) og
+    // et tre hvis katalog er borte, er det ikke.
+    expect([...sesjonsgrener(liste)]).toEqual(['worktree-pr-273-text-size']);
+  });
+
+  test('SESJONSTRÆRNE: parseren leser gits egen liste, og finner dette treet', () => {
+    // Uten denne ville et nytt porcelain-format gjort unntaket stille tomt —
+    // og vakta rød i hver Dux-jobb igjen.
+    const egen = gitsArbeidstrær();
+    expect(egen).toContain(`worktree ${ROOT}`);
+    const meg = git('symbolic-ref', '--quiet', '--short', 'HEAD');
+    if (meg.ok && ROOT.includes(SESJONSTRE)) expect(sesjonsgrener(egen).has(meg.ut)).toBe(true);
+  });
+
+  test('SESJONSTRÆRNE: målt på en gren som FAKTISK ligger foran — og meldes igjen når treet er borte', () => {
+    const annen = annenFil();
+    const kilde = `${PROBE}/sesjon`;
+    const oppstrøm: Oppstrøm = (gren) =>
+      gren.startsWith(`${PROBE}/`) ? 'origin/main' : gitsOppstrøm(gren);
+    const liste = (sti: string, ekstra = '') =>
+      () => `${gitsArbeidstrær()}\n\nworktree ${sti}\nHEAD 0\nbranch refs/heads/${kilde}\n${ekstra}`;
+    try {
+      lagProbeGren(kilde, annen);
+      // SAMME funksjon som «GRENA» dømmer med.
+      expect(etterlatteGrener(oppstrøm, liste('/x/bibel/.claude/worktrees/sesjon'))).not.toContain(kilde);
+      expect(etterlatteGrener(oppstrøm, liste('/x/bibel/.claude/worktrees/sesjon', 'prunable\n'))).toContain(kilde);
+      expect(etterlatteGrener(oppstrøm, liste('/x/bibel-no'))).toContain(kilde);
+      expect(etterlatteGrener(oppstrøm, () => gitsArbeidstrær())).toContain(kilde);
+    } finally {
+      git('branch', '-D', kilde);
+    }
+    // Fire dommer à en git-kjøring per upushet gren: på en travel maskin er det
+    // over Buns 5 s-tak (#268), og et tidsavbrudd her ville felt porten selv.
+  }, 30_000);
 
   test('GRENA: hver lokal gren som ikke er en arbeidsgren finnes på en remote', () => {
     const etterlatte = grenaFunn();
