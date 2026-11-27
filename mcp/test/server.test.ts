@@ -1,4 +1,6 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { getBibleEditionById, getBibleEditions } from '../../src/lib/bible.ts';
 import { DB_TEST_TIMEOUT_MS } from '../../test/db-timeout.ts';
 import { editionsByKind } from '../../src/lib/editions.ts';
@@ -246,3 +248,19 @@ test('get_chapter_study includes the commentary on the chapter', async () => {
   expect(en).toContain('## Commentary:');
   expect(en).not.toContain('Translated and checked by');
 }, DB_TEST_TIMEOUT_MS);
+
+// #276: what the container runs must be readable with a GET, without ssh.
+describe('/version', () => {
+  const lockHash = () =>
+    new Bun.CryptoHasher('sha256').update(readFileSync(join(import.meta.dir, '../bun.lock'))).digest('hex').slice(0, 12);
+
+  test('answers the hash of the lock the packages were installed from, uncached, naming no version', async () => {
+    const res = await handler(new Request('http://localhost/version'));
+    expect(res.status).toBe(200);
+    expect(res.headers.get('cache-control')).toBe('no-store');
+    const body = await res.text();
+    expect(JSON.parse(body)).toEqual({ lock: lockHash() });
+    // A public "hono 4.13.18" would point straight at the advisories.
+    expect(body).not.toMatch(/hono|\d+\.\d+\.\d+/);
+  });
+});

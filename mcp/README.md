@@ -192,6 +192,39 @@ curl -s -X POST localhost:8080/mcp \
 reads John 3:16: 200 with the verse, or 503 with the reason — a missing grant is
 named.
 
+## Which packages run
+
+You need this after a deploy, or after a security patch to a dependency (#276). It tells you which `mcp/bun.lock` the container was installed from, using a plain GET and no ssh.
+
+1. Read the hash the container answers:
+
+   ```sh
+   curl -s https://mcp.bible.flogvit.com/version      # {"lock":"3f9c0a1b2c4d"}
+   ```
+
+2. Find the commit whose lock gives that hash. Run this in `bibel/`, on an up-to-date `main`:
+
+   ```sh
+   want=$(curl -s https://mcp.bible.flogvit.com/version | sed 's/.*"lock":"\([0-9a-f]*\)".*/\1/')
+   for c in $(git log --format=%h -- mcp/bun.lock); do
+     [ "$(git show "$c:mcp/bun.lock" | shasum -a 256 | cut -c1-12)" = "$want" ] && echo "$c" && break
+   done
+   ```
+
+3. Read the version of the package in that lock:
+
+   ```sh
+   git show <commit>:mcp/bun.lock | grep '"hono@'
+   ```
+
+What the answer means:
+
+- **A commit and the version you expected:** the container runs that lock.
+- **No commit:** the image was built from a lock that is not on `main`, for example a dirty tree. Deploy again from `main`.
+- **503 `lock unreadable`:** the image has no `bun.lock` next to its `node_modules`. Look at `COPY mcp/bun.lock` in `mcp/Dockerfile`.
+
+What the hash does not cover: the npm packages only. It says nothing about `@free-bible/kvn`, which is copied in after `bun install`, or about our own source.
+
 ## Tests
 
 ```sh

@@ -14,6 +14,8 @@
 // book's worth of files. It gets a cap of its own INSIDE the global one, so a
 // script can never hold every slot the assistants share.
 
+import { readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { WebStandardStreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js';
 import { getVerse } from '../../src/lib/bible.ts';
@@ -118,6 +120,32 @@ async function health(): Promise<Response> {
   }
 }
 
+/**
+ * WHICH PACKAGES RUN (#276): the sha256 of the bun.lock the running process
+ * installed from — the one beside the node_modules that resolves hono, which is
+ * /app/bun.lock in the image and mcp/bun.lock in the repo. `--frozen-lockfile`
+ * ties the installed versions to it, so a GET answers what only ssh to the VM
+ * could before. A hash, not versions: the endpoint proves WHICH commit's lock
+ * runs without announcing a version to look up advisories for. How to check it:
+ * mcp/README.md → «Which packages run».
+ */
+let lockId: string | null = null;
+
+function version(): Response {
+  const headers = { 'cache-control': 'no-store' };
+  try {
+    if (lockId === null) {
+      const nodeModules = dirname(dirname(Bun.resolveSync('hono/package.json', import.meta.dir)));
+      const lock = readFileSync(join(dirname(nodeModules), 'bun.lock'));
+      lockId = new Bun.CryptoHasher('sha256').update(lock).digest('hex').slice(0, 12);
+    }
+    return Response.json({ lock: lockId }, { headers });
+  } catch {
+    // Not kept: the next request tries again.
+    return new Response('lock unreadable', { status: 503, headers });
+  }
+}
+
 function jsonRpcError(status: number, message: string, headers: Record<string, string> = {}): Response {
   return Response.json({ jsonrpc: '2.0', error: { code: -32000, message }, id: null }, { status, headers });
 }
@@ -180,6 +208,7 @@ export function createHandler(limits: Limits): (req: Request) => Promise<Respons
   return async (req: Request): Promise<Response> => {
     const { pathname } = new URL(req.url);
     if (pathname === '/healthz') return withRetryBudget(health, limits.dbBudgetMs);
+    if (pathname === '/version') return version();
     if (pathname === '/') {
       // A browser gets the landing page (#157); everything else the text it always got.
       const vary = { vary: 'Accept, Accept-Language' };
