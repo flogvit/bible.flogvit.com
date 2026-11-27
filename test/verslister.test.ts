@@ -18,12 +18,13 @@ import { getSql, closeSql } from '../src/lib/db.ts';
 import { ensureSchema } from '../src/lib/schema.ts';
 import { getVerse } from '../src/lib/bible.ts';
 import { kontoUser, startMockKonto } from './mock-konto.ts';
+import { testUserId } from './test-users.ts';
 // @ts-expect-error — delt klient-modul uten typer
 import { parseVerseListRef, verseListRef } from '../public/js/verse-list.js';
 
 setDefaultTimeout(DB_TEST_TIMEOUT_MS);
 
-const TEST_USER_ID = 990133;
+const TEST_USER_ID = testUserId(2);
 const LIST_ID = 'list-133';
 const REF = 'joh-3-16';
 const AUTH = { cookie: 'fv-session=plus-133', 'content-type': 'application/json' };
