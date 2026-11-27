@@ -24,6 +24,7 @@ import {
   normalizeBibleId,
 } from '../../lib/bible.ts';
 import { NO_CACHE, intParam, internFeil } from './util.ts';
+import { searchCommentary } from '../../lib/commentary-data.ts';
 
 const r = new Hono();
 
@@ -52,7 +53,7 @@ r.get('/all', async (c) => {
   if (query.length < 2 && !/^\d+$/.test(query.trim())) {
     return c.json({
       stories: [], themes: [], persons: [], prophecies: [], timeline: [],
-      parallels: [], plans: [], words: [], numberSymbolism: [], days: [], readingTexts: [],
+      parallels: [], plans: [], words: [], numberSymbolism: [], days: [], readingTexts: [], commentary: [],
     });
   }
   try {
@@ -67,8 +68,9 @@ r.get('/all', async (c) => {
     const numberSymbolism = await searchNumberSymbolism(query);
     const days = await searchDays(query);
     const readingTexts = await searchReadingTexts(query);
+    const commentary = await searchCommentary(query);
     return c.json(
-      { stories, themes, persons, prophecies, timeline, parallels, plans, words, numberSymbolism, days, readingTexts },
+      { stories, themes, persons, prophecies, timeline, parallels, plans, words, numberSymbolism, days, readingTexts, commentary },
       200,
       NO_CACHE,
     );

@@ -107,6 +107,12 @@ export const UNCHECKED_TABLES: UncheckedTable[] = [
     why: 'adresserer med KVN (bit-shiftet bok/kapittel/vers), ikke med kolonner — egen akse, se contrib-runbooken',
   },
   { table: 'user_bible_chapters', why: 'brukerdata, ikke importert innhold — eierens egne kapitler i egen utgave' },
+  {
+    table: 'commentary_sections',
+    why:
+      'osnb-adressene er AVLEDET ved import fra verkets KJV-nummerering gjennom KVN-mappingen (#269), og havner per ' +
+      'konstruksjon på osnb-vers; source_chapter er verkets egen akse. Å klippe eller slette her ville kastet kommentartekst vi har (#46)',
+  },
 ];
 
 export interface DanglingFinding {
