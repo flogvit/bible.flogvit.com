@@ -18,6 +18,7 @@ import type { AppEnv } from '../../lib/session.ts';
 import { Layout } from '../../views/layout.tsx';
 import { Breadcrumbs } from '../../views/breadcrumbs.tsx';
 import { Footnotes } from '../../views/footnotes.tsx';
+import { StrongsText } from '../../views/strongs-text.tsx';
 import { InlineRefs } from '../../views/inline-refs.tsx';
 import { Markdown } from '../../views/markdown.tsx';
 import { ItemTagging } from '../../views/item-tagging.tsx';
@@ -1215,7 +1216,7 @@ function VerseBlock({
         {n}
       </button>
       <span class="verse-text" data-verse-text>
-        <span data-verse-plain lang={lang} dir={langDir(lang)}>{v.text}</span>
+        <span data-verse-plain lang={lang} dir={langDir(lang)}><StrongsText text={v.text} strongs={v.strongs} /></span>
         {v.footnotes && v.footnotes.length > 0 && <Footnotes footnotes={v.footnotes} />}
       </span>
       <VerseStrip

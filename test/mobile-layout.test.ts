@@ -191,6 +191,17 @@ describe('mobil-layout: ingen side er bredere enn skjermen (#50)', () => {
  * Legges det til et språk med enda lengre navn, måles det uten at noen har rørt
  * vakta.
  */
+// Strong's numbers stand beside every word in asvs (#202): a line carries twice
+// as many pieces, and a number may not push the verse past the screen.
+describe("mobil-layout: a chapter with Strong's numbers (#202)", () => {
+  test('/1mos/1?bible=asvs', async () => {
+    const url = pageUrl(DEFAULT_LOCALE, '/1mos/1?bible=asvs');
+    await page.navigate(url);
+    expect(await page.evaluate(() => document.querySelectorAll('.strongs-num').length)).toBeGreaterThan(0);
+    await expectFits(url, '/1mos/1?bible=asvs');
+  }, 60_000);
+});
+
 describe('mobil-layout: boknavn på det LENGSTE språket (#69)', () => {
   /** Sidene der et boknavn faktisk rendres: lesesida, forsida og lesekartet. */
   const BOOK_NAME_PAGES = ['/1mos/1', '/', '/lesekart'];

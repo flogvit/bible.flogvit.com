@@ -41,6 +41,9 @@ export const IMPORTED_BIBLES = [
   'svd',
   // #222: text read again from CrossWire's BurJudson (free-bible#152).
   'my_judson',
+  // #202: the source texts as editions of their own (the owner's choice 18.11),
+  // and the first edition with Strong's numbers beside the words.
+  'hebrew', 'wlc', 'tr', 'asvs',
 ] as const;
 
 // De som alt er nummerert som osnb, og lagres som de er. Alle andre flyttes til
@@ -56,7 +59,7 @@ export const OWN_EDITIONS = ['osnb', 'osnn', 'osen', 'oses'] as const;
 export type ImportedBible = (typeof IMPORTED_BIBLES)[number];
 
 /** The source texts; every other edition is a translation a reader reads. */
-export const SOURCE_TEXTS = ['sblgnt', 'tanach'] as const satisfies readonly ImportedBible[];
+export const SOURCE_TEXTS = ['sblgnt', 'tanach', 'hebrew', 'wlc', 'tr'] as const satisfies readonly ImportedBible[];
 
 export const READABLE_BIBLES = IMPORTED_BIBLES.filter(
   (id): id is Exclude<ImportedBible, (typeof SOURCE_TEXTS)[number]> => !(SOURCE_TEXTS as readonly string[]).includes(id),
@@ -123,6 +126,10 @@ export const EDITION_LABELS: Record<ImportedBible, string> = {
   tyndale: 'Tyndale Bible 1526/1534, English',
   svd: 'Smith-Van Dyck 1865, Arabic',
   my_judson: 'Judson Bible 1840, Burmese',
+  hebrew: 'Unicode/XML Leningrad Codex (UXLC), Hebrew Old Testament',
+  wlc: 'Westminster Leningrad Codex, Hebrew Old Testament',
+  tr: 'Textus Receptus 1550/1894, Greek New Testament',
+  asvs: "American Standard Version with Strong's numbers, English",
 };
 
 /** "osnb (Norwegian Bokmål), osnn (Norwegian Nynorsk), …" for the given editions. */
