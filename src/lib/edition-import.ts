@@ -23,6 +23,8 @@ import * as path from 'path';
 import { ukvnDecode, ukvnEncode, UKVN_PART_SIZE, sliceVersePart } from '@free-bible/kvn';
 import type { UkvnMappingFile } from '@free-bible/kvn';
 import { OSNB_NUMBERED } from './editions.ts';
+import { parseStrongs } from './strongs.ts';
+import type { StrongsWord } from './strongs.ts';
 
 /** A verse as free-bible stores it, in the translation's own numbering. */
 export interface RawVerse {
@@ -108,9 +110,12 @@ export function checkEdition(
  * `footnotes`; in the text they stood in the middle of the verse on the page,
  * and in search, the songs and the MCP. These are the forms that were found in
  * free-bible (its tests/verse-text-clean.test.ts holds the same list).
+ * A verse that opens with a star is a note, unless a ` **` (or `־**`) before a
+ * word follows it: that is the Hebrew texts' ketiv and qere, «*ויישם **וַיּוּשַׂם»
+ * (hebrew, tanach; #202).
  */
 export const INLINE_NOTE =
-  /\[\s*\*?\s*(?:Footnote|Fotnote|Nota|Note)\s*:|\[\*|\[\^[\w-]+\]|<fn>|(?:^|\n\n)\s*\*\S|\*[ \t]+\*\S/i;
+  /\[\s*\*?\s*(?:Footnote|Fotnote|Nota|Note)\s*:|\[\*|\[\^[\w-]+\]|<fn>|(?:^|\n\n)\s*\*(?![^\n]*?[\s־]\*\*\S)\S|\*[ \t]+\*\S/i;
 
 /**
  * The verses whose text carries a note, as `book:chapter:verse`. A source
@@ -229,6 +234,8 @@ export interface OsnbVerse {
   text: string;
   versions: unknown;
   footnotes: unknown;
+  /** Strong's numbers per word (#202); null when the verse has none or was joined or divided. */
+  strongs: StrongsWord[] | null;
 }
 
 export interface Renumbered {
@@ -279,12 +286,12 @@ export function toOsnbNumbering(raw: RawVerse[], source: UkvnMappingFile, osnb: 
   };
 
   // osnb address → pieces, each with a sort key (its own order, then part).
-  const pieces = new Map<string, { order: number; text: string; raw: RawVerse }[]>();
-  const add = (tkvn: number, order: number, text: string, raw: RawVerse) => {
+  const pieces = new Map<string, { order: number; text: string; raw: RawVerse; strongs: StrongsWord[] | null }[]>();
+  const add = (tkvn: number, order: number, text: string, raw: RawVerse, strongs: StrongsWord[] | null = null) => {
     const d = ukvnDecode(tkvn);
     const key = `${d.book}:${d.chapter}:${d.verse}`;
     const list = pieces.get(key) ?? [];
-    list.push({ order: order * UKVN_PART_SIZE + d.part, text, raw });
+    list.push({ order: order * UKVN_PART_SIZE + d.part, text, raw, strongs });
     pieces.set(key, list);
   };
 
@@ -295,7 +302,11 @@ export function toOsnbNumbering(raw: RawVerse[], source: UkvnMappingFile, osnb: 
       placeholders.push(`${v.bookId}:${v.chapterId}:${v.verseId}`);
       return;
     }
-    const text = readerText(v.text);
+    const parsed = parseStrongs(v.text);
+    const text = readerText(parsed.text);
+    // The numbers point at words by index; if cleaning the text changed the
+    // words, they would point at the wrong ones, so they are dropped.
+    const strongs = parsed.strongs && text.split(/\s+/).length === parsed.text.split(/\s+/).length ? parsed.strongs : null;
     // The translation's own address is the order its pieces are joined in.
     const order = ukvnEncode(v.bookId, v.chapterId, v.verseId);
     const kvn = sourceKvn(order);
@@ -304,7 +315,7 @@ export function toOsnbNumbering(raw: RawVerse[], source: UkvnMappingFile, osnb: 
       split++;
       parts.forEach((t, i) => add(t, order, sliceVersePart(text, i + 1, parts.length), v));
     } else {
-      add(osnbTkvn(kvn), order, text, v);
+      add(osnbTkvn(kvn), order, text, v, strongs);
     }
   });
 
@@ -325,6 +336,8 @@ export function toOsnbNumbering(raw: RawVerse[], source: UkvnMappingFile, osnb: 
       text: texts.join(' '),
       versions: only?.versions ?? null,
       footnotes: only?.footnotes ?? null,
+      // Same reason: the word indexes belong to ONE verse's text.
+      strongs: list.length === 1 ? list[0]!.strongs : null,
     });
   }
   verses.sort((a, b) => a.book - b.book || a.chapter - b.chapter || a.verse - b.verse);

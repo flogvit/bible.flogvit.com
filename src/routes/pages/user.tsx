@@ -804,7 +804,7 @@ r.get('/oversettelser', async (c) => {
             <li>
               <a href={lhref(`/oversettelser/${e.id}`)}>
                 <span lang={originalScriptLang(e.name_native)}>{e.name_native}</span>
-                {e.abbreviation ? ` (${e.abbreviation})` : ''}
+                {e.abbreviation && e.abbreviation !== e.name_native ? ` (${e.abbreviation})` : ''}
               </a>
               {e.license_name ? <span class="trans-license"> {e.license_name}</span> : null}
             </li>

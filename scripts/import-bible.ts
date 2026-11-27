@@ -441,6 +441,10 @@ async function importVerses(bible: string): Promise<void> {
   });
 }
 
+// A fixed statement: only the number of rows varies, every value is a parameter.
+const INSERT_VERSES = 'INSERT INTO verses (book_id, chapter, verse, text, bible, versions, footnotes, strongs) VALUES ';
+const VERSE_ROW = '(?, ?, ?, ?, ?, ?, ?, ?)';
+
 /**
  * En høstet oversettelse (#200): hele teksten leses, flyttes til osnb-adresser
  * gjennom KVN-mappingen, og skrives på nytt når teksten ELLER mappingen er
@@ -482,7 +486,7 @@ async function importRenumbered(bible: string, biblePath: string): Promise<void>
     for (let i = 0; i < verses.length; i += 500) {
       const batch = verses.slice(i, i + 500);
       await tx.unsafe(
-        `INSERT INTO verses (book_id, chapter, verse, text, bible, versions, footnotes) VALUES ${batch.map(() => '(?, ?, ?, ?, ?, ?, ?)').join(', ')}`,
+        INSERT_VERSES + Array(batch.length).fill(VERSE_ROW).join(', '),
         batch.flatMap((v) => [
           v.book,
           v.chapter,
@@ -491,6 +495,7 @@ async function importRenumbered(bible: string, biblePath: string): Promise<void>
           bible,
           v.versions ? JSON.stringify(v.versions) : null,
           v.footnotes ? JSON.stringify(v.footnotes) : null,
+          v.strongs ? JSON.stringify(v.strongs) : null,
         ]),
       );
     }

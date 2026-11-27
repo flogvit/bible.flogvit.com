@@ -4,6 +4,10 @@
 .trans-section h2 { font-size: 18px; margin: 0 0 10px; }
 .trans-builtin { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
 .trans-builtin li { color: var(--ink-2); font-size: 14px; }
+/* The name and its licence are two items, not a link inside a line of text:
+   axe's link-in-text-block failed on a short name, «WLC» before «Public Domain» (#202). */
+.trans-builtin li { display: flex; flex-wrap: wrap; align-items: baseline; column-gap: 0.5ch; }
+.trans-builtin li > * { min-width: 0; }
 
 .trans-row {
   display: flex;
