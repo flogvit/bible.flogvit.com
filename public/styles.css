@@ -217,10 +217,18 @@ select {
 :focus:not(:focus-visible) { outline: none; }
 
 html {
-  font-size: 16px;
+  /* Prosent, aldri px: en fast rot overstyrer leserens egen nettleser- og
+     telefonstørrelse. Leserens valg i innstillingene skalerer roten, og alt
+     er i rem/em, så hele siden følger (#271). */
+  font-size: 100%;
   /* WCAG 2.4.11: fokusert element skal ikke gjemmes bak sticky header */
   scroll-padding-top: 5rem;
 }
+html[data-text-size='small'] { font-size: 87.5%; }
+html[data-text-size='large'] { font-size: 125%; }
+/* Skjemakontroller får nettleserens FASTE 13,33 px og følger derfor ikke roten.
+   Samme størrelse i rem, med null spesifisitet så enhver klasse slår den (#271). */
+:where(button, input, select, textarea) { font-size: 0.83333rem; }
 
 body {
   background: var(--paper);
@@ -239,9 +247,9 @@ h1, h2, h3, h4, h5, h6 {
   letter-spacing: -0.015em;
 }
 
-h1 { font-size: 32px; }
-h2 { font-size: 24px; }
-h3 { font-size: 19px; }
+h1 { font-size: 2rem; }
+h2 { font-size: 1.5rem; }
+h3 { font-size: 1.1875rem; }
 
 a { color: var(--accent); text-decoration: none; transition: color 0.15s ease-out; }
 a:hover { color: var(--ink); }
@@ -263,7 +271,7 @@ button { font-family: var(--font-ui); }
 
 .eyebrow {
   font-family: var(--font-mono);
-  font-size: 13px;
+  font-size: 0.8125rem;
   font-weight: 500;
   color: var(--ink-2);
   margin: 0 0 8px;
@@ -356,7 +364,7 @@ a.fvmenu-item:hover { background: color-mix(in oklab, var(--ink) 6%, var(--surfa
 .fvmenu-prod { font-family: var(--font-mono); font-weight: 500; font-size: 0.95em; }
 .fvmenu-item.soon { cursor: default; }
 .fvmenu-item.soon .fvmenu-wm { opacity: 0.5; }
-.fvmenu-chip { font-family: var(--font-mono); font-size: 11px; color: var(--ink-2); }
+.fvmenu-chip { font-family: var(--font-mono); font-size: 0.6875rem; color: var(--ink-2); }
 
 /* produktaksenter i menyen: verdiene står på prikken selv, fra
    family-menu.json (portalens liste, #142) — ikke skrevet av her. */
@@ -375,7 +383,7 @@ a.fvmenu-item:hover { background: color-mix(in oklab, var(--ink) 6%, var(--surfa
   margin-top: 6px;
   padding: 10px 10px 4px;
 }
-.fvmenu-prefs-label { font-size: 13px; font-weight: 500; color: var(--ink-2); }
+.fvmenu-prefs-label { font-size: 0.8125rem; font-weight: 500; color: var(--ink-2); }
 .fvmenu-seg {
   display: inline-flex;
   border: 1px solid var(--line);
@@ -385,7 +393,7 @@ a.fvmenu-item:hover { background: color-mix(in oklab, var(--ink) 6%, var(--surfa
 .fvmenu-segBtn {
   border: none;
   background: none;
-  font-size: 12px;
+  font-size: 0.75rem;
   font-weight: 500;
   color: var(--ink-2);
   padding: 4px 10px;
@@ -434,7 +442,7 @@ a.fvmenu-item:hover { background: color-mix(in oklab, var(--ink) 6%, var(--surfa
   border-radius: var(--radius);
   padding: 7px 12px;
   color: var(--ink-2);
-  font-size: 13.5px;
+  font-size: 0.84375rem;
   cursor: pointer;
   min-width: 0;
 }
@@ -449,7 +457,7 @@ a.fvmenu-item:hover { background: color-mix(in oklab, var(--ink) 6%, var(--surfa
 }
 .cmdk-kbd {
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: 0.6875rem;
   background: var(--paper);
   color: var(--ink-2);
   padding: 2px 6px;
@@ -489,7 +497,7 @@ a.fvmenu-item:hover { background: color-mix(in oklab, var(--ink) 6%, var(--surfa
   background: transparent;
   color: var(--ink-2);
   font-family: var(--font-ui);
-  font-size: 13.5px;
+  font-size: 0.84375rem;
   font-weight: 500;
   white-space: nowrap;
   flex-shrink: 0;
@@ -506,7 +514,7 @@ a.fvmenu-item:hover { background: color-mix(in oklab, var(--ink) 6%, var(--surfa
 .account-chip-plus {
   flex-shrink: 0;
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: 0.625rem;
   font-weight: 600;
   letter-spacing: 0.03em;
   text-transform: uppercase;
@@ -533,7 +541,7 @@ a.fvmenu-item:hover { background: color-mix(in oklab, var(--ink) 6%, var(--surfa
 .site-nav { display: flex; align-items: center; gap: 2px; flex-shrink: 0; }
 
 .nav-link {
-  font-size: 13.5px;
+  font-size: 0.84375rem;
   font-weight: 500;
   color: var(--ink-2);
   padding: 7px 11px;
@@ -576,7 +584,7 @@ a.fvmenu-item:hover { background: color-mix(in oklab, var(--ink) 6%, var(--surfa
   padding: 8px 12px;
   border-radius: var(--radius-sm);
   color: var(--ink-2);
-  font-size: 13.5px;
+  font-size: 0.84375rem;
   transition: background 0.12s ease, color 0.12s ease;
 }
 .nav-dd-link:hover { background: var(--gold-bg); color: var(--ink); }
@@ -669,7 +677,7 @@ a.fvmenu-item:hover { background: color-mix(in oklab, var(--ink) 6%, var(--surfa
   .mobile-group { display: contents; }
   .mobile-group-title {
     font-family: var(--font-mono);
-    font-size: 13px;
+    font-size: 0.8125rem;
     color: var(--ink-2);
     text-transform: uppercase;
     letter-spacing: 0.08em;
@@ -680,7 +688,7 @@ a.fvmenu-item:hover { background: color-mix(in oklab, var(--ink) 6%, var(--surfa
   }
   .mobile-group:first-child .mobile-group-title { border-top: none; padding-top: 0; }
   .mobile-link {
-    font-size: 17px;
+    font-size: 1.0625rem;
     font-weight: 500;
     color: var(--ink-2);
     width: 100%;
@@ -773,7 +781,7 @@ a.fvmenu-item:hover { background: color-mix(in oklab, var(--ink) 6%, var(--surfa
   display: flex;
   flex-wrap: wrap;
   gap: 6px 18px;
-  font-size: 14px;
+  font-size: 0.875rem;
 }
 .site-footer-nav a {
   color: var(--ink-2);
@@ -809,7 +817,7 @@ a.fvmenu-item:hover { background: color-mix(in oklab, var(--ink) 6%, var(--surfa
   display: flex;
   flex-wrap: wrap;
   gap: 6px 18px;
-  font-size: 14px;
+  font-size: 0.875rem;
 }
 .site-footer-legalnav a {
   color: var(--ink-2);
@@ -819,7 +827,7 @@ a.fvmenu-item:hover { background: color-mix(in oklab, var(--ink) 6%, var(--surfa
   color: var(--accent);
   text-decoration: underline;
 }
-.site-footer-note { color: var(--ink-2); font-size: 14px; }
+.site-footer-note { color: var(--ink-2); font-size: 0.875rem; }
 
 /* ---------- innholdscontainere (redesignets globale klasser) ---------- */
 
@@ -1135,7 +1143,7 @@ a.fvmenu-item:hover { background: color-mix(in oklab, var(--ink) 6%, var(--surfa
   bottom: 16px;
   padding: 6px 12px;
   border-radius: 999px;
-  font-size: 13px;
+  font-size: 0.8125rem;
   font-weight: 600;
   z-index: 300;
 }
@@ -1157,7 +1165,7 @@ a.fvmenu-item:hover { background: color-mix(in oklab, var(--ink) 6%, var(--surfa
   border-radius: var(--radius);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
   z-index: 320;
-  font-size: 14px;
+  font-size: 0.875rem;
   max-width: min(92vw, 640px);
 }
 .plus-cta-link {
@@ -1181,7 +1189,7 @@ a.fvmenu-item:hover { background: color-mix(in oklab, var(--ink) 6%, var(--surfa
 
 /* Uniform «Konto og språk»-oppføring i familiemenyen (portal/STYLE.md) */
 .fvmenu-kontoitem {
-  font-size: 13px;
+  font-size: 0.8125rem;
   color: var(--gold-text);
   border-top: 1px solid var(--border);
   margin-top: 4px;
