@@ -1,8 +1,10 @@
-import { describe, expect, setDefaultTimeout, test } from 'bun:test';
+import { afterAll, beforeAll, describe, expect, setDefaultTimeout, test } from 'bun:test';
 import { DB_TEST_TIMEOUT_MS } from './db-timeout.ts';
 import { createApp } from '../src/app.ts';
 import { getBibleEditions } from '../src/lib/bible.ts';
+import { getSql } from '../src/lib/db.ts';
 import { IMPORTED_BIBLES } from '../src/lib/editions.ts';
+import { clearPageCache } from '../src/lib/page-cache.ts';
 import { L } from './paths.ts';
 
 setDefaultTimeout(DB_TEST_TIMEOUT_MS);
@@ -120,5 +122,49 @@ describe('utgavesidene er indekserbare (#30)', () => {
     if (editions.length > 0) expect(våre.length, 'ingen av basens utgaver er importert av main').toBeGreaterThan(0);
     const mangler = våre.filter((e) => !xml.includes(`/nb/oversettelser/${e.id}</loc>`)).map((e) => e.id);
     expect(mangler).toEqual([]);
+  });
+
+  // #229: sitemapen lovet utgavesider fra `IMPORTED_BIBLES` mens siden slår opp
+  // i `bible_editions`. Mellom kode-deployen og data-deployen svarte 48
+  // sitemap-adresser 404 — tre grupper på rad. Sitemapen skal følge BASEN:
+  // en rad gir adresse, en manglende rad gir ingen, uansett hva lista sier.
+  describe('følger bible_editions, ikke IMPORTED_BIBLES (#229)', () => {
+    const LISTED = IMPORTED_BIBLES[IMPORTED_BIBLES.length - 1]!;
+    let saved: Record<string, unknown>[] = [];
+    beforeAll(async () => {
+      await getSql()`REPLACE INTO bible_editions (id, name_native, lang_iso639_1, direction, meta)
+        VALUES ('sitemap-test', 'Sitemap', 'en', 'ltr', '{}')`;
+      // En utgave som står i lista, men ennå ikke er importert.
+      saved = await getSql()`SELECT * FROM bible_editions WHERE id = ${LISTED}` as Record<string, unknown>[];
+      await getSql()`DELETE FROM bible_editions WHERE id = ${LISTED}`;
+      // Importen løfter sync-versjonen; her er det mikrocachen fra testene
+      // over som ellers ville servert utgavesiden fra før raden forsvant.
+      clearPageCache();
+    });
+    afterAll(async () => {
+      await getSql()`DELETE FROM bible_editions WHERE id = 'sitemap-test'`;
+      for (const row of saved) await getSql()`INSERT INTO bible_editions ${getSql()(row)}`;
+      clearPageCache();
+    });
+
+    test('en importert rad står i sitemapen, en manglende gjør ikke', async () => {
+      const xml = await (await app.request('/sitemap-nn.xml')).text();
+      const announced = (id: string) => xml.includes(`/nn/oversettelser/${id}</loc>`);
+      expect({ importert: announced('sitemap-test'), mangler: announced(LISTED) })
+        .toEqual({ importert: true, mangler: false });
+    });
+
+    test('hver utgaveadresse i sitemapen svarer 200', async () => {
+      const xml = await (await app.request('/sitemap-en.xml')).text();
+      const urls = [...xml.matchAll(/<loc>[^<]*(\/en\/oversettelser\/[^<]+)<\/loc>/g)].map((m) => m[1]!);
+      expect(urls.length).toBeGreaterThan(0);
+      // Én om gangen: lastvernet svarer 503 over render-taket.
+      const feil: string[] = [];
+      for (const u of urls) {
+        const status = (await app.request(u)).status;
+        if (status !== 200) feil.push(`${u} ${status}`);
+      }
+      expect(feil).toEqual([]);
+    });
   });
 });

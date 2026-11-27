@@ -11,8 +11,7 @@
 // og kodingen skjer på ETT sted — der URL-en skrives ut i seo.ts.
 import { booksData, getBookInfoBySlug } from './books-data.ts';
 import { toUrlSlug } from './url-utils.ts';
-import { IMPORTED_BIBLES } from './editions.ts';
-import { getReadingTextContentLanguages } from './bible.ts';
+import { getBibleEditions, getReadingTextContentLanguages } from './bible.ts';
 import { LOCALES, type Locale } from './i18n.ts';
 import { localesWithContent } from './lang.ts';
 
@@ -62,10 +61,23 @@ export const STATIC_PATHS: readonly string[] = [
   // `LANGUAGE_SCOPED_PATHS` under, som avgjør hvilke sitemaps den havner i.
   '/lesetekster',
   // Utgavesidene (#30). De er ferdig oversatt til alle åtte språk med hreflang
-  // og canonical, og beskriver akkurat det en ny leser søker etter.
+  // og canonical, og beskriver akkurat det en ny leser søker etter. LISTA står
+  // her; de enkelte utgavene kommer fra basen — se `editionPaths()`.
   '/oversettelser',
-  ...IMPORTED_BIBLES.map((id) => `/oversettelser/${id}`),
 ];
+
+/**
+ * Én adresse per utgave som HAR en infoside: radene i `bible_editions`, samme
+ * kilde som `/oversettelser/:id` og lista på `/oversettelser` (#229).
+ *
+ * Den ble bygget av `IMPORTED_BIBLES`, og koden ruller ut før dataene: tre
+ * grupper på rad sto i sitemapen fra kode-deployen og svarte 404 til
+ * data-deployen kom — 48 adresser crawlerne hentet. Lista sier hva vi VIL
+ * importere; bare basen vet hva som finnes.
+ */
+export async function editionPaths(): Promise<string[]> {
+  return (await getBibleEditions()).map((e) => `/oversettelser/${e.id}`);
+}
 
 /**
  * Stier som ikke finnes på alle åtte språk — med KILDEN til språkaksen, aldri

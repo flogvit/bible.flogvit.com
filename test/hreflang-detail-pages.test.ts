@@ -124,6 +124,7 @@ const IKKE_MÅLT: Record<string, string> = {
   '/delt/:token': 'delt manuskript (#15) — noindex, capability-URL uten token å teste med',
   // Bare en 301 til datoadressen (#40) — den rendrer ingen klynge.
   '/lesetekster/:id{[0-9]+}': 'gammel numerisk adresse — 301 til datoen (#40), rendrer ingen HTML',
+  '/:book': 'bok uten kapittel — 301 til kapittel 1 (#217), rendrer ingen HTML',
 };
 
 /** GET-ruter MED parameter, lest ut av ruteren selv. */

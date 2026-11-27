@@ -14,7 +14,7 @@
 // — les kommentaren der før du endrer noe på kodingen.
 import { Hono } from 'hono';
 import { DEFAULT_LOCALE, LOCALES, href, type Locale } from '../lib/i18n.ts';
-import { localesForPath, sitemapLocales, sitemapPaths } from '../lib/sitemap-paths.ts';
+import { editionPaths, localesForPath, sitemapLocales, sitemapPaths } from '../lib/sitemap-paths.ts';
 import { absoluteUrl } from '../lib/site-url.ts';
 import { MCP_REGISTRY_NAME, MCP_URL } from '../lib/mcp-info.ts';
 
@@ -181,12 +181,12 @@ seoRoutes.get('/sitemap.xml', (c) =>
 // en flate som hentes en håndfull ganger i døgnet — sitemapene er 9 URL-er mot
 // 1 189 kapittelsider (#60), og står utenfor lastvernet fordi de aldri fyller
 // cachen (#64). Stilista i `paths()` er fortsatt bygget én gang; det er den som
-// er 1 200 oppføringer lang.
+// er 1 200 oppføringer lang. Utgavene er en spørring av samme slag (#229).
 for (const locale of LOCALES) {
   seoRoutes.get(`/sitemap-${locale}.xml`, async (c) => {
     const loc = (l: Locale, p: string) => xmlEsc(absoluteUrl(href(l, p)));
     const scoped = await sitemapLocales();
-    const urls = paths()
+    const urls = [...paths(), ...(await editionPaths())]
       .map((p) => {
         // Klyngen bygges av SAMME liste som `<loc>`. Bygde den av LOCALES,
         // ville vi annonsert de seks tomme adressene i `xhtml:link` for å
