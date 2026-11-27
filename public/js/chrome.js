@@ -6,6 +6,10 @@
 
 import { readPrefs, setPref as writePref } from './prefs.js';
 import { moveSavedChoiceToCookie } from './edition-pref.js';
+import { followTextSize } from './text-size.js';
+
+// Leserens tekststørrelse på HVER side (#271); førmalingen gjør layoutens <head>.
+followTextSize();
 
 function applyPrefs(p) {
   const d = document.documentElement;

@@ -167,6 +167,17 @@ const PREFS_READ_SNIPPET = `<script>
   } catch (e) {}
 </script>`;
 
+// Leserens tekststørrelse (#271), lagt på FØR første paint så siden ikke
+// hopper når JS-en kommer: `bible-settings.fontSize` i localStorage →
+// html[data-text-size], som styles.css gjør om til rotstørrelsen. Holdes i takt
+// med public/js/text-size.js, som følger endringer etterpå.
+export const TEXT_SIZE_SNIPPET = `<script>
+  try {
+    var z = (JSON.parse(localStorage.getItem('bible-settings') || '{}') || {}).fontSize;
+    if (z === 'small' || z === 'large') document.documentElement.dataset.textSize = z;
+  } catch (e) {}
+</script>`;
+
 // Produktvelgeren leser portalens liste (src/lib/family-menu.json er en KOPI av
 // portal/design/family-menu.json, #142). Lista sto skrevet av her, og drev fra
 // de ti andre flatene fordi ingenting sammenlignet dem. Prikkfargene kommer fra
@@ -590,6 +601,7 @@ export function Layout(props: LayoutProps) {
           <meta charset="utf-8" />
           <meta name="viewport" content="width=device-width, initial-scale=1" />
           {raw(PREFS_READ_SNIPPET)}
+          {raw(TEXT_SIZE_SNIPPET)}
           <title>{props.title}</title>
           <meta name="description" content={desc} />
           {props.noindex && <meta name="robots" content="noindex,follow" />}

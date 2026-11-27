@@ -1,5 +1,10 @@
 # Release notes
 
+## 2026-11-27 — The text size setting works on every page
+
+**Bug fixes**
+- Changing the text size in Settings now changes the text everywhere you read: the Bible text, verse numbers, headings, the study panel, persons, the timeline, search and the front page. Before, it only nudged the verse text on the chapter page. The steps are also clearer now (small is 87.5 %, large is 125 %), they work on top of your phone's own text size, and the page opens at your size without jumping.
+
 ## 2026-11-27 — King James psalm numbering and Malachi 4 fixed
 
 **Bug fixes**

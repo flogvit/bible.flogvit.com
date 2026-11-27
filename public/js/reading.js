@@ -69,13 +69,8 @@ if (rootPage) {
   });
   document.addEventListener('bibel:layout-mode', (e) => setMode(e.detail));
 
-  // ── Skriftstørrelse (settings.fontSize → html[data-font-size]) ───
-  function applyFontSize(size) {
-    if (size === 'small' || size === 'large') document.documentElement.dataset.fontSize = size;
-    else delete document.documentElement.dataset.fontSize;
-  }
-  applyFontSize(settings().fontSize);
-  document.addEventListener('bibel:font-size', (e) => applyFontSize(e.detail));
+  // Skriftstørrelsen gjelder hele siden og alle sider: text-size.js, lastet av
+  // chrome.js (#271).
 
   // ── Innstillinger som standardvalg for lesesiden ─────────────────
   // bible/secondaryBible/verseMapping fra /innstillinger brukes når URL-en
