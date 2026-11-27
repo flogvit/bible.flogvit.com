@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
-import { readFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { getBibleEditionById, getBibleEditions } from '../../src/lib/bible.ts';
 import { DB_TEST_TIMEOUT_MS } from '../../test/db-timeout.ts';
@@ -262,5 +263,27 @@ describe('/version', () => {
     expect(JSON.parse(body)).toEqual({ lock: lockHash() });
     // A public "hono 4.13.18" would point straight at the advisories.
     expect(body).not.toMatch(/hono|\d+\.\d+\.\d+/);
+  });
+
+  test('an unreadable lock answers 503 uncached, and a later request reads it once it is there', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'mcp-version-'));
+    const lock = join(dir, 'bun.lock');
+    const quiet = console.error;
+    console.error = () => {};
+    try {
+      const h = createHandler({ maxConcurrent: 4, maxConcurrentCli: 4, queueWaitMs: 1000, dbBudgetMs: 5000 }, () => lock);
+      const missing = await h(new Request('http://localhost/version'));
+      expect(missing.status).toBe(503);
+      expect(missing.headers.get('cache-control')).toBe('no-store');
+      expect(await missing.text()).toBe('lock unreadable');
+
+      writeFileSync(lock, 'lock');
+      const found = await h(new Request('http://localhost/version'));
+      expect(found.status).toBe(200);
+      expect(await found.json()).toEqual({ lock: new Bun.CryptoHasher('sha256').update('lock').digest('hex').slice(0, 12) });
+    } finally {
+      console.error = quiet;
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 });

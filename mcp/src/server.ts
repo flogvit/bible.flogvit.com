@@ -129,21 +129,24 @@ async function health(): Promise<Response> {
  * runs without announcing a version to look up advisories for. How to check it:
  * mcp/README.md → «Which packages run».
  */
-let lockId: string | null = null;
+export function installedLock(): string {
+  const nodeModules = dirname(dirname(Bun.resolveSync('hono/package.json', import.meta.dir)));
+  return join(dirname(nodeModules), 'bun.lock');
+}
 
-function version(): Response {
-  const headers = { 'cache-control': 'no-store' };
-  try {
-    if (lockId === null) {
-      const nodeModules = dirname(dirname(Bun.resolveSync('hono/package.json', import.meta.dir)));
-      const lock = readFileSync(join(dirname(nodeModules), 'bun.lock'));
-      lockId = new Bun.CryptoHasher('sha256').update(lock).digest('hex').slice(0, 12);
+/** `/version`: read once on success; a failure is logged and tried again on the next request. */
+function versionEndpoint(lockPath: () => string): () => Response {
+  let lockId: string | null = null;
+  return () => {
+    const headers = { 'cache-control': 'no-store' };
+    try {
+      lockId ??= new Bun.CryptoHasher('sha256').update(readFileSync(lockPath())).digest('hex').slice(0, 12);
+      return Response.json({ lock: lockId }, { headers });
+    } catch (err) {
+      console.error('[mcp] /version: lock unreadable:', err instanceof Error ? err.message : err);
+      return new Response('lock unreadable', { status: 503, headers });
     }
-    return Response.json({ lock: lockId }, { headers });
-  } catch {
-    // Not kept: the next request tries again.
-    return new Response('lock unreadable', { status: 503, headers });
-  }
+  };
 }
 
 function jsonRpcError(status: number, message: string, headers: Record<string, string> = {}): Response {
@@ -187,7 +190,8 @@ function semaphore(max: number, waitMs: number): Semaphore {
   };
 }
 
-export function createHandler(limits: Limits): (req: Request) => Promise<Response> {
+export function createHandler(limits: Limits, lockPath: () => string = installedLock): (req: Request) => Promise<Response> {
+  const version = versionEndpoint(lockPath);
   const all = semaphore(limits.maxConcurrent, limits.queueWaitMs);
   const cli = semaphore(limits.maxConcurrentCli, limits.queueWaitMs);
 
