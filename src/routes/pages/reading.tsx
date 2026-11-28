@@ -1675,7 +1675,10 @@ function MobileToolbar({
           ←
         </a>
         <button type="button" class="mt-title" data-open-picker>
-          {bookName(book)} {chapter} <span class="mt-title-arrow" aria-hidden="true">▼</span>
+          <abbr title={bookName(book)}>{bookAbbr(book)}</abbr>{' '}
+          <span class="mt-chapter">
+            {chapter} <span class="mt-title-arrow" aria-hidden="true">▼</span>
+          </span>
         </button>
         <button type="button" class="mt-sidebar" data-open-studium title={t('rd.studyPanel')} aria-label={t('rd.openStudyPanel')}>
           ▥

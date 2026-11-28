@@ -1365,17 +1365,28 @@ a.ins-hero-name:hover {
   opacity: 0.35;
   pointer-events: none;
 }
+/* Stedet leseren står på skal leses HELT, også på 320 px ved 150 % tekst (#287).
+   `nowrap` + ellipse på en variabel tekst kuttet nettopp kapittelnummeret.
+   Hele boknavnet får aldri plass («Tessalonikalaiskirje» er dobbelt så bredt
+   som boksen), så boka står forkortet (`<abbr>` med navnet i `title`), og
+   tittelen får bryte mellom boka og kapittelet framfor å klippe. Forkortelsen og
+   «kapittel ▼» er hver sin atomære enhet. Vakt: `mobile-layout.test.ts`. */
 .mt-title {
   flex: 1;
-  height: 40px;
+  min-height: 40px;
   border: 0;
   background: transparent;
   color: var(--ink);
   font-weight: 600;
+  line-height: 1.15;
   cursor: pointer;
+}
+.mt-title abbr {
+  text-decoration: none;
+}
+.mt-title abbr,
+.mt-chapter {
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 .mt-title-arrow {
   font-size: 0.7em;

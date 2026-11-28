@@ -624,3 +624,107 @@ describe('mobil-chrome: ikonknapper i headeren (#54)', () => {
     expect(bad).toEqual([]);
   }, 60_000);
 });
+
+/**
+ * #287: bunnlinjas tittel («1. Mosebok 1 ▼») var `nowrap` + ellipse på en
+ * VARIABEL tekst, og på 320 px ved 150 % tekst var det kapittelnummeret som
+ * forsvant. Sida ble ikke bredere, så sveipen over (#50) så ingenting:
+ * avkortingen ligger i en `overflow: hidden`-boks, og den hopper vakta over.
+ *
+ * Hele bokNAVNET får aldri plass: de lengste enkeltordene («Tessalonikalaiskirje»,
+ * «Thessalonikerbrevet») er dobbelt så brede som boksen, og en radbryting ville
+ * delt dem midt i ordet. Derfor står boka som `bookAbbr()` i en `<abbr>` med
+ * hele navnet i `title`, og kapittelnummeret + ▼ er én enhet. Vakta måler
+ * UTFALLET: ingenting i tittelen er klippet, og verken boka eller kapittelet er
+ * delt eller stikker ut.
+ *
+ * Ikke én side, men HVER forkortelse på HVERT språk: på Salmene 119 (tre
+ * sifre) settes hver av de 66 forkortelsene inn i den ekte tittelen og måles.
+ * Bredde er en egenskap ved glyfene, ikke ved antall tegn («1Thess» mot
+ * «1. Moos.»), så en rangering etter lengde kan ikke velge for oss.
+ */
+describe('mobil-chrome: bunnlinjas tittel viser hele stedet (#287)', () => {
+  /** Hva som er klippet eller delt i tittelen, også med hver forkortelse satt inn. */
+  function titleProblems(opts: { scale: number; abbrs: string[] }) {
+    const els = Array.from(document.querySelectorAll('*')) as HTMLElement[];
+    const original = els.map((el) => el.style.fontSize);
+    if (opts.scale !== 1) {
+      const sizes = els.map((el) => parseFloat(getComputedStyle(el).fontSize));
+      els.forEach((el, i) => {
+        if (sizes[i]) el.style.fontSize = `${sizes[i]! * opts.scale}px`;
+      });
+    }
+
+    const out: string[] = [];
+    const title = document.querySelector('.mt-title') as HTMLElement | null;
+    if (!title || !title.checkVisibility()) out.push('fant ingen synlig .mt-title');
+    const abbr = title?.querySelector('abbr') ?? null;
+    const chapter = title?.querySelector('.mt-chapter') ?? null;
+    if (title && !abbr) out.push(`«${title.innerText.trim()}»: boka står ikke i en <abbr>`);
+    if (title && !chapter) out.push(`«${title.innerText.trim()}»: kapittelet står ikke i en .mt-chapter`);
+
+    const check = (label: string) => {
+      if (!title) return;
+      if (title.scrollWidth > title.clientWidth + 1 || title.scrollHeight > title.clientHeight + 1) {
+        out.push(
+          `«${label}»: innholdet er ${title.scrollWidth}×${title.scrollHeight} px i en ${title.clientWidth}×${title.clientHeight} px boks`,
+        );
+      }
+      const t = title.getBoundingClientRect();
+      for (const [navn, el] of [['boka', abbr], ['kapittelet', chapter]] as const) {
+        if (!el) continue;
+        const lines = el.getClientRects().length;
+        if (lines !== 1) out.push(`«${label}»: ${navn} er delt over ${lines} linjer`);
+        const r = el.getBoundingClientRect();
+        if (r.left < t.left - 1 || r.right > t.right + 1) {
+          out.push(`«${label}»: ${navn} stikker ut av tittelen (${Math.round(r.left)}–${Math.round(r.right)} mot ${Math.round(t.left)}–${Math.round(t.right)})`);
+        }
+      }
+      const de = document.documentElement;
+      if (de.scrollWidth > de.clientWidth + 1) out.push(`«${label}»: sida er ${de.scrollWidth} px bred`);
+    };
+
+    check(title?.innerText.trim() ?? '');
+    if (abbr) {
+      const real = abbr.textContent;
+      for (const a of opts.abbrs) {
+        abbr.textContent = a;
+        check(`${a} ${chapter?.textContent?.replace('▼', '').trim() ?? ''}`);
+      }
+      abbr.textContent = real;
+    }
+
+    if (opts.scale !== 1) els.forEach((el, i) => (el.style.fontSize = original[i]!));
+    return out;
+  }
+
+  for (const locale of LOCALES) {
+    const abbrs = [...new Set(booksData.map((b) => bookAbbr(b, localeToContentLanguage(locale))))];
+    for (const path of ['/1mos/1', '/sal/119']) {
+      test(`${path} på /${locale}/`, async () => {
+        await page.navigate(pageUrl(locale, path));
+        const problems: string[] = [];
+        for (const vp of VIEWPORTS) {
+          await page.setViewport(vp);
+          for (const scale of SCALES) {
+            const found = await page.evaluate(titleProblems, { scale, abbrs: path === '/sal/119' ? abbrs : [] });
+            problems.push(...found.map((p) => `${vp.name}, ${scale * 100} %: ${p}`));
+          }
+        }
+        expect(problems).toEqual([]);
+      }, 60_000);
+    }
+  }
+
+  test('forkortelsen bærer hele boknavnet, og knappen åpner fortsatt velgeren', async () => {
+    await page.navigate(pageUrl('nb', '/1mos/1'));
+    await page.setViewport({ width: 390, height: 844 });
+    const got = await page.evaluate(() => {
+      const t = document.querySelector('.mt-title');
+      const abbr = t?.querySelector('abbr');
+      return { tag: t?.tagName, picker: t?.hasAttribute('data-open-picker'), abbr: abbr?.textContent, title: abbr?.getAttribute('title') };
+    });
+    const book = booksData.find((b) => b.id === 1)!;
+    expect(got).toEqual({ tag: 'BUTTON', picker: true, abbr: bookAbbr(book, 'nb'), title: bookName(book, 'nb') });
+  }, 60_000);
+});
