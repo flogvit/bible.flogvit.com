@@ -1,5 +1,16 @@
 # Release notes
 
+## 2026-11-28 — Commentary in your own language, and a phone toolbar that shows the full location
+
+### New features
+- Commentary now appears in the reader's language, in a dedicated reading view, with one switch per work so you choose which commentaries to show.
+
+### Polish
+- The phone toolbar shows the whole location: the book name is abbreviated, and the chapter number is never cut off.
+
+### Behind the scenes
+- The server image now installs dependencies only from the lockfile, and the MCP server's /version endpoint reports which lockfile the running container was built from.
+- Test and documentation upkeep: per-file test user IDs, and updated notes for the commentary skill and MCP how-to.
 ## 2026-11-27 — The text size setting works on every page
 
 **Bug fixes**
