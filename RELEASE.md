@@ -1,5 +1,17 @@
 # Release notes
 
+## 2026-11-28 — Commentary in your own language with a reading view, and a phone toolbar that shows the full location
+
+**New features**
+- Commentary now appears in the reader's language, in a dedicated reading view, with one switch per work so you choose which commentaries to show.
+
+**Polish**
+- The phone toolbar now shows the whole location: the book name is abbreviated, and the chapter number is never cut off.
+
+**Behind the scenes**
+- The MCP server's /version endpoint now reports the hash of the lock file the container installed from, with a how-to and tests for the unreadable-lock case.
+- The Docker image now installs only from bun.lock, with no fallback.
+- Test and tooling upkeep: database tests get unique user IDs per file, and the commentary skill documentation is updated.
 ## 2026-11-27 — The text size setting works on every page
 
 **Bug fixes**
