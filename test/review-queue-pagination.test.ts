@@ -22,6 +22,7 @@
 
 import { afterAll, beforeAll, describe, expect, setDefaultTimeout, test } from 'bun:test';
 import { DB_TEST_TIMEOUT_MS } from './db-timeout.ts';
+import { testUserId } from './test-users.ts';
 import { createApp } from '../src/app.ts';
 import { getSql, closeSql } from '../src/lib/db.ts';
 import { ensureSchema } from '../src/lib/schema.ts';
@@ -30,7 +31,7 @@ import { L } from './paths.ts';
 
 setDefaultTimeout(DB_TEST_TIMEOUT_MS);
 
-const USER = 990411;
+const USER = testUserId(12);
 const TOKEN = 'review-paging-token';
 /** Én mer enn én side rommer — men målt i sidelengden, ikke i et tall. */
 const SEEDED = REVIEW_PAGE_SIZE + 3;

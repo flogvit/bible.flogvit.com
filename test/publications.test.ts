@@ -16,6 +16,7 @@
 
 import { afterAll, beforeAll, describe, expect, setDefaultTimeout, test } from 'bun:test';
 import { DB_TEST_TIMEOUT_MS } from './db-timeout.ts';
+import { testUserId } from './test-users.ts';
 import { createApp } from '../src/app.ts';
 import { getSql, closeSql } from '../src/lib/db.ts';
 import { ensureSchema } from '../src/lib/schema.ts';
@@ -25,8 +26,8 @@ import { kontoUser, startMockKonto } from './mock-konto.ts';
 
 setDefaultTimeout(DB_TEST_TIMEOUT_MS);
 
-const PLUS_USER = 990301;
-const FREE_USER = 990302;
+const PLUS_USER = testUserId(8);
+const FREE_USER = testUserId(9);
 const ITEM_ID = 'dev-katalog-test';
 const TOKEN = 'review-token-for-test';
 

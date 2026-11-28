@@ -7,7 +7,7 @@ import type { SessionUser } from '../src/lib/session.ts';
 setDefaultTimeout(DB_TEST_TIMEOUT_MS);
 
 const USER: SessionUser = {
-  id: 990001,
+  id: 42,
   email: 'test@example.com',
   displayName: 'Test Bruker',
   verified: true,
@@ -97,7 +97,7 @@ describe('buildSubmissionPayload', () => {
     const p = buildSubmissionPayload(r.input, USER) as Record<string, any>;
     expect(p.schema).toBe('free-bible-contrib/1');
     expect(p.review).toEqual({ status: 'pending' });
-    expect(p.submitted.by).toEqual({ user_id: '990001' });
+    expect(p.submitted.by).toEqual({ user_id: '42' });
     expect(p.submitted.client).toBe('bible.flogvit.com');
     expect(p.refs[0].context_translation).toBe('osnb');
     expect(p.refs[0].confirmed_by_contributor).toBe(true);
@@ -107,7 +107,7 @@ describe('buildSubmissionPayload', () => {
     const r = validateContribInput({ ...VALID, credit: true });
     if (!r.ok) throw new Error(r.error);
     const p = buildSubmissionPayload(r.input, USER) as Record<string, any>;
-    expect(p.submitted.by).toEqual({ user_id: '990001', name: 'Test Bruker', credit: true });
+    expect(p.submitted.by).toEqual({ user_id: '42', name: 'Test Bruker', credit: true });
 
     const r2 = validateContribInput({ ...VALID, credit: true, credit_name: 'Kari N' });
     if (!r2.ok) throw new Error(r2.error);
@@ -122,7 +122,7 @@ describe('buildSubmissionPayload', () => {
     const r = validateContribInput({ ...VALID, credit: true });
     if (!r.ok) throw new Error(r.error);
     const p = buildSubmissionPayload(r.input, { ...USER, displayName: null }) as Record<string, any>;
-    expect(p.submitted.by).toEqual({ user_id: '990001', credit: true });
+    expect(p.submitted.by).toEqual({ user_id: '42', credit: true });
   });
 });
 

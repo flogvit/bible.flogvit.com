@@ -46,4 +46,17 @@ describe('testUserId', () => {
     const doble = [...perSlot.values()].filter((v) => v.length > 1);
     expect(doble).toEqual([]);
   });
+
+  // #288: en fast 99xxxx-id er nøyaktig det testUserId() erstatter — to porter
+  // samtidig mot samme lokale base sletter hverandres rader.
+  test('ingen testfil tildeler en fast 99xxxx-bruker-id', () => {
+    const dir = import.meta.dir;
+    const funn: string[] = [];
+    for (const fil of fs.readdirSync(dir, { recursive: true }) as string[]) {
+      if (!fil.endsWith('.ts') || path.basename(fil).startsWith('test-users')) continue;
+      const tekst = fs.readFileSync(path.join(dir, fil), 'utf-8');
+      for (const m of tekst.matchAll(/(?:USER[A-Z_]*\s*=|\bid:)\s*99\d{4}\b/g)) funn.push(`${fil}: ${m[0]}`);
+    }
+    expect(funn).toEqual([]);
+  });
 });

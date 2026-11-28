@@ -14,6 +14,7 @@
 
 import { afterAll, beforeAll, describe, expect, setDefaultTimeout, test } from 'bun:test';
 import { DB_TEST_TIMEOUT_MS } from './db-timeout.ts';
+import { testUserId } from './test-users.ts';
 import { createApp } from '../src/app.ts';
 import { getSql, closeSql } from '../src/lib/db.ts';
 import { ensureSchema } from '../src/lib/schema.ts';
@@ -22,7 +23,7 @@ import { L } from './paths.ts';
 
 setDefaultTimeout(DB_TEST_TIMEOUT_MS);
 
-const USER = 990401;
+const USER = testUserId(11);
 const ITEM_ID = 'dev-review-cli-test';
 const TOKEN = 'review-cli-token';
 const TITLE = 'Om tålmodigheten i Jakobs brev';

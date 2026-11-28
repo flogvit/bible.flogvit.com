@@ -3,6 +3,7 @@
 
 import { afterAll, beforeAll, describe, expect, setDefaultTimeout, test } from 'bun:test';
 import { DB_TEST_TIMEOUT_MS } from './db-timeout.ts';
+import { testUserId } from './test-users.ts';
 import { createApp } from '../src/app.ts';
 import { getSql, closeSql } from '../src/lib/db.ts';
 import { ensureSchema } from '../src/lib/schema.ts';
@@ -10,7 +11,7 @@ import { kontoUser, startMockKonto } from './mock-konto.ts';
 
 setDefaultTimeout(DB_TEST_TIMEOUT_MS);
 
-const TEST_USER_ID = 990001;
+const TEST_USER_ID = testUserId(3);
 let mock: ReturnType<typeof Bun.serve>;
 let app: ReturnType<typeof createApp>;
 

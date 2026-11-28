@@ -4,6 +4,7 @@
 
 import { afterAll, beforeAll, describe, expect, setDefaultTimeout, test } from 'bun:test';
 import { DB_TEST_TIMEOUT_MS } from './db-timeout.ts';
+import { testUserId } from './test-users.ts';
 import { createApp } from '../src/app.ts';
 import { getSql, closeSql } from '../src/lib/db.ts';
 import { ensureSchema } from '../src/lib/schema.ts';
@@ -12,7 +13,7 @@ import { kontoUser, startMockKonto } from './mock-konto.ts';
 
 setDefaultTimeout(DB_TEST_TIMEOUT_MS);
 
-const TEST_USER_ID = 990101;
+const TEST_USER_ID = testUserId(5);
 let mock: ReturnType<typeof Bun.serve>;
 let app: ReturnType<typeof createApp>;
 
@@ -170,12 +171,12 @@ describe('contrib-API', () => {
     const res = await app.request('/api/contrib/apply', {
       method: 'POST',
       headers: { 'x-contrib-token': TOKEN, 'content-type': 'application/json' },
-      body: JSON.stringify({ updates: [{ id, payload }, { id: 99999999, payload }] }),
+      body: JSON.stringify({ updates: [{ id, payload }, { id: 2147483647, payload }] }),
     });
     expect(res.status).toBe(200);
     const result = (await res.json()) as { applied: number; failed: number[] };
     expect(result.applied).toBe(1);
-    expect(result.failed).toEqual([99999999]);
+    expect(result.failed).toEqual([2147483647]);
 
     const sql = getSql();
     const rows = (await sql`

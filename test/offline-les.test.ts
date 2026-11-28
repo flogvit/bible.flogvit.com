@@ -18,6 +18,7 @@
 
 import { afterAll, beforeAll, describe, expect, setDefaultTimeout, test } from 'bun:test';
 import { DB_TEST_TIMEOUT_MS } from './db-timeout.ts';
+import { testUserId } from './test-users.ts';
 import { createApp } from '../src/app.ts';
 import {
   getChapterSummary,
@@ -48,7 +49,7 @@ let base = '';
 
 beforeAll(async () => {
   mock = startMockKonto({
-    plus136: () => kontoUser({ id: 990136, plus: true, plusUntil: '2099-01-01T00:00:00.000Z' }),
+    plus136: () => kontoUser({ id: testUserId(14), plus: true, plusUntil: '2099-01-01T00:00:00.000Z' }),
   });
   await initBooks();
   server = Bun.serve({ port: 0, fetch: createApp().fetch });

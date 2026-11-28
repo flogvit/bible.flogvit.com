@@ -13,6 +13,7 @@
 
 import { afterAll, beforeAll, expect, setDefaultTimeout, test } from 'bun:test';
 import { DB_TEST_TIMEOUT_MS } from './db-timeout.ts';
+import { testUserId } from './test-users.ts';
 import { createApp } from '../src/app.ts';
 import { initBooks } from '../src/lib/bible.ts';
 import { closeSql, getSql } from '../src/lib/db.ts';
@@ -22,7 +23,7 @@ import { kontoUser, startMockKonto } from './mock-konto.ts';
 
 setDefaultTimeout(DB_TEST_TIMEOUT_MS);
 
-const TEST_USER_ID = 990134;
+const TEST_USER_ID = testUserId(13);
 const NAME = 'Testbibel 134';
 const VERSE_1 = 'I opphavet laget Gud himmel og jord, sa testbibelen.';
 const TEXT = [`1 Mos 1,1 ${VERSE_1}`, '1 Mos 1,2 Og jorda var tom.'].join('\n');

@@ -19,6 +19,7 @@
 
 import { afterAll, beforeAll, describe, expect, setDefaultTimeout, test } from 'bun:test';
 import { DB_TEST_TIMEOUT_MS } from './db-timeout.ts';
+import { testUserId } from './test-users.ts';
 import { createApp } from '../src/app.ts';
 import { getSql, closeSql } from '../src/lib/db.ts';
 import { ensureSchema } from '../src/lib/schema.ts';
@@ -27,7 +28,7 @@ import { L } from './paths.ts';
 
 setDefaultTimeout(DB_TEST_TIMEOUT_MS);
 
-const USER = 990311;
+const USER = testUserId(10);
 /** Én mer enn én side rommer — men målt i sidestørrelsen, ikke i et tall. */
 const SEEDED = CATALOG_PAGE_SIZE + 3;
 const CATALOG = L('/manuskripter/katalog');
