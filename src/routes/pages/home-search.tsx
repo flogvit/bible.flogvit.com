@@ -360,6 +360,8 @@ interface ExtraCard {
   badge?: string;
   meta?: string;
   desc?: string | null;
+  /** Kommentarverket treffet er fra (#286): search.js skjuler et verk leseren har slått av. */
+  commentaryWork?: string;
 }
 
 const EXTRA_MAX = 6;
@@ -374,7 +376,7 @@ function ExtraSection({ title, typeKey, cards }: { title: string; typeKey: strin
   const t = tCtx();
   if (cards.length === 0) return null;
   const Card = ({ card }: { card: ExtraCard }) => (
-    <a href={lhref(card.href)} class="search-extra-card">
+    <a href={lhref(card.href)} class="search-extra-card" data-commentary-work={card.commentaryWork}>
       <span class="search-extra-card-title">
         {card.title}
         {card.badge && <span class="search-type-badge">{card.badge}</span>}
@@ -384,7 +386,7 @@ function ExtraSection({ title, typeKey, cards }: { title: string; typeKey: strin
     </a>
   );
   return (
-    <section class="search-extra-section" data-search-type={typeKey}>
+    <section class="search-extra-section" data-search-type={typeKey} data-commentary-group={typeKey === 'commentary' || undefined}>
       <h2 class="search-extra-title">{title}</h2>
       <div class="search-extra-cards">
         {cards.slice(0, EXTRA_MAX).map((card) => (
@@ -454,15 +456,16 @@ async function loadExtraResults(query: string) {
       cards: words.map((w) => ({ href: `/${toUrlSlug(w.book_short_name)}/${w.chapter}`, title: w.word, badge: t('badge.keyWord'), meta: `${bookNameByShort(w.book_short_name)} ${w.chapter}`, desc: trunc(w.explanation) })),
     },
     {
-      // Bibelkommentarer (#269): treffet åpner seksjonen i kommentarblokka.
+      // Bibelkommentarer (#269): treffet åpner delen det står i, i lesevisningen (#286).
       title: t('set.type.commentary'), typeKey: 'commentary',
       cards: commentary.map((h) => {
         const book = getBookInfoById(h.bookId);
         return {
-          href: book ? `/${toUrlSlug(book.short_name)}/${h.chapter}#cm-${h.work}-${h.sourceChapter}-${h.sectionNo}` : '/sok',
+          href: book ? `/${toUrlSlug(book.short_name)}/${h.chapter}#cm-${h.work}-${h.part}` : '/sok',
           title: `${book ? bookName(book) : ''} ${h.chapter}${h.verse ? `:${h.verse}` : ''}`,
           meta: h.author ?? h.workTitle,
           desc: h.snippet,
+          commentaryWork: h.work,
         };
       }),
     },

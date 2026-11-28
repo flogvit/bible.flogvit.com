@@ -19,6 +19,7 @@ import { parseVerseHash } from './verse-hash.js';
 import { withRef } from './verse-list.js';
 import { el } from './dom.js';
 import { readJSON, writeJSON } from './store.js';
+import { hideCommentariesTurnedOff } from './commentary-render.js';
 
 const t = readStrings(document.body);
 
@@ -123,10 +124,9 @@ if (rootPage) {
     if (s.showBookSummary === false) hide('[data-summary-kind="book"]');
     if (s.showChapterContext === false) hide('[data-summary-kind="context"]');
     if (s.showImportantWords === false) hide('.st-block[data-block-id="viktige-ord"]');
-    if (s.showCommentary === false) {
-      hide('.st-block[data-block-id="kommentar"]');
-      hide('.vd-commentary');
-    }
+    // Ett bryter per kommentarverk (#286): panelet, bokas innledning,
+    // versdetaljenes lenker og lesevisningen bærer data-commentary-work.
+    hideCommentariesTurnedOff(s);
     if (s.showVerseFootnotes === false) hide('.footnotes');
   }
 

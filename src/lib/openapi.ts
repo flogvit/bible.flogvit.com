@@ -130,7 +130,8 @@ export const API_OPERATIONS: ApiOperation[] = [
     description:
       'Verses, the original text, word-for-word data, cross references and the chapter summary, ' +
       'context and insight, and the Bible commentaries on the chapter (`commentary`: each work with ' +
-      'its sections, the paragraphs in the reader\'s language and the source paragraphs beside them). With `mapping` the verse numbering is remapped from `osnb` to another ' +
+      'its sections in the reader\'s language, with the source paragraphs as `sourceParagraphs`, and the book\'s ' +
+      'introduction as `bookIntro` on its first chapter; the Bible text a section quotes is left out). With `mapping` the verse numbering is remapped from `osnb` to another ' +
       'system (KVN) — the osnb coordinates stay in the response as `osnbChapter`/`osnbVerse`.',
     params: [
       qp('book', 'Book id, 1–66.', { required: true, type: 'integer', example: '1' }),

@@ -1,8 +1,11 @@
-// Bibelkommentarer fra basen (#269). Ren logikk (forankring, OSIS, rendrer) står
-// i `commentary.ts`; her er spørringene lesesiden, API-et og MCP-en deler.
+// Bibelkommentarer fra basen (#269). Ren logikk (forankring, OSIS, rendrer,
+// formingen leseren ser) står i `commentary.ts`; her er spørringene lesesiden,
+// API-et og MCP-en deler.
 
 import { getSql } from './db.ts';
 import { contentLanguageChain, currentContentLanguage, localeToContentLanguage } from './lang.ts';
+import { isLocale, isMessageKey, makeT } from './i18n.ts';
+import { commentaryPlain, shapeCommentary, type CommentaryPart, type RawCommentarySection } from './commentary.ts';
 
 // Spørringene står som faste tekster med `?`-parametre: ingen verdi settes
 // sammen inn i SQL-en.
@@ -14,7 +17,7 @@ const SECTIONS_IN_CHAPTER_SQL = `
   ORDER BY osnb_chapter_from, osnb_verse_from, source_chapter, section_no`;
 const SEARCH_SQL_HEAD = `
   SELECT s.work, w.title, w.author, s.book_id, s.osnb_chapter_from, s.osnb_verse_from,
-         s.source_chapter, s.section_no, s.paragraphs
+         s.osnb_chapter_to, s.osnb_verse_to, s.source_chapter, s.section_no, s.paragraphs
   FROM commentary_sections s JOIN commentary_works w ON w.id = s.work
   WHERE s.language = ?`;
 const SEARCH_SQL_TAIL = `
@@ -23,7 +26,10 @@ const SEARCH_SQL_TAIL = `
 
 export interface CommentaryWork {
   id: string;
+  /** Tittelen på leserens språk (`cm.work.<id>`), ellers verkets egen. */
   title: string;
+  /** Verkets egen tittel, fra meta.json. */
+  sourceTitle: string;
   author: string | null;
   written: string | null;
   license: string;
@@ -36,19 +42,8 @@ export interface CommentaryAt {
   verse: number;
 }
 
-export interface CommentarySectionView {
-  /** Verkets eget kapittel og seksjonsnummer: nøkkelen kilden og gjengivelsen deler. */
-  sourceChapter: number;
-  sectionNo: number;
-  /** Hvor seksjonen står i osnb. Vers 0 er en innledning. */
-  from: CommentaryAt;
-  to: CommentaryAt;
-  paragraphs: string[];
-  /** Kildens avsnitt til samme seksjon, når teksten over er en gjengivelse. */
-  sourceParagraphs: string[] | null;
-  /** Modellene som oversatte og kontrollerte; null for kildens egen tekst. */
-  models: string[] | null;
-}
+/** En del leseren ser (#286): seksjon, kapittelinnledning eller bokas innledning. */
+export type CommentarySectionView = CommentaryPart;
 
 export interface CommentaryForChapter {
   work: CommentaryWork;
@@ -59,6 +54,8 @@ export interface CommentaryForChapter {
    * sier det, i stedet for å vise engelsk tekst uten forklaring.
    */
   sourceOnly: boolean;
+  /** Bokas innledning (forordet i 1 Mos), aldri under en versrekke (#286). */
+  bookIntro: CommentarySectionView | null;
   sections: CommentarySectionView[];
 }
 
@@ -83,6 +80,34 @@ const parseJsonList = (s: string | null): string[] | null => {
   }
 };
 
+const rawSection = (r: CommentaryRow): RawCommentarySection => ({
+  sourceChapter: r.source_chapter,
+  sectionNo: r.section_no,
+  from: { chapter: r.osnb_chapter_from, verse: r.osnb_verse_from },
+  to: { chapter: r.osnb_chapter_to, verse: r.osnb_verse_to },
+  paragraphs: parseJsonList(r.paragraphs) ?? [],
+  sourceParagraphs: null,
+  models: parseJsonList(r.models),
+});
+
+/**
+ * Verkets tittel på leserens språk (#286): `cm.work.<id>` i ordboka. Et verk
+ * uten nøkkel viser sin egen tittel, så et nytt verk trenger ingen kode.
+ */
+export function commentaryWorkTitle(id: string, sourceTitle: string, lang: string): string {
+  const key = `cm.work.${id}`;
+  const locale = localeToContentLanguage(lang);
+  return isMessageKey(key) ? makeT(isLocale(locale) ? locale : 'en')(key) : sourceTitle;
+}
+
+/** Verkene siden har, med tittel på leserens språk: én bryter hver i innstillingene (#286). */
+export async function getCommentaryWorks(
+  lang = currentContentLanguage(),
+): Promise<{ id: string; title: string; sourceTitle: string; sourceLanguage: string }[]> {
+  const rows = (await getSql()`SELECT id, title, source_language FROM commentary_works ORDER BY id`) as { id: string; title: string; source_language: string }[];
+  return rows.map((r) => ({ id: r.id, title: commentaryWorkTitle(r.id, r.title, lang), sourceTitle: r.title, sourceLanguage: r.source_language }));
+}
+
 /**
  * Kommentarene til ett osnb-kapittel, verk for verk. En seksjon tas med når den
  * overlapper kapittelet; en seksjon som spenner over et kapittelskille (KJV 2
@@ -91,6 +116,9 @@ const parseJsonList = (s: string | null): string[] | null => {
  * Språket følger `contentLanguageChain` som resten av innholdet, med kildens
  * språk sist: finnes ingen gjengivelse for kapittelet, vises kilden og
  * `sourceOnly` sier fra. En gjengivelse får kildens avsnitt med seg.
+ *
+ * Seksjonene er FORMET for leseren (#286, `shapeCommentary`): uten bibeltekst,
+ * med bokas innledning skilt ut og kapittelets innledning som egen del.
  */
 export async function getCommentaryForChapter(
   bookId: number,
@@ -122,19 +150,24 @@ export async function getCommentaryForChapter(
       language === w.source_language
         ? null
         : new Map((await rowsFor(w.id, w.source_language)).map((r) => [`${r.source_chapter}:${r.section_no}`, parseJsonList(r.paragraphs)]));
+    const shaped = shapeCommentary(
+      rows.map((r) => ({ ...rawSection(r), sourceParagraphs: source ? (source.get(`${r.source_chapter}:${r.section_no}`) ?? null) : null })),
+    );
     result.push({
-      work: { id: w.id, title: w.title, author: w.author, written: w.written, license: w.license, url: w.url, sourceLanguage: w.source_language },
+      work: {
+        id: w.id,
+        title: commentaryWorkTitle(w.id, w.title, lang),
+        sourceTitle: w.title,
+        author: w.author,
+        written: w.written,
+        license: w.license,
+        url: w.url,
+        sourceLanguage: w.source_language,
+      },
       language,
       sourceOnly: language === w.source_language && requested !== w.source_language,
-      sections: rows.map((r) => ({
-        sourceChapter: r.source_chapter,
-        sectionNo: r.section_no,
-        from: { chapter: r.osnb_chapter_from, verse: r.osnb_verse_from },
-        to: { chapter: r.osnb_chapter_to, verse: r.osnb_verse_to },
-        paragraphs: parseJsonList(r.paragraphs) ?? [],
-        sourceParagraphs: source ? (source.get(`${r.source_chapter}:${r.section_no}`) ?? null) : null,
-        models: parseJsonList(r.models),
-      })),
+      bookIntro: shaped.bookIntro,
+      sections: shaped.sections,
     });
   }
   return result;
@@ -147,20 +180,19 @@ export interface CommentarySearchHit {
   bookId: number;
   chapter: number;
   verse: number;
-  sourceChapter: number;
-  sectionNo: number;
+  /** Delen treffet står i (`CommentaryPart.id`): et treff i forordet åpner bokas innledning (#286). */
+  part: string;
   /** Utdrag rundt treffet, uten markup. */
   snippet: string;
 }
-
-const plain = (s: string) =>
-  s.replace(/<ref osisRef="[^"]*">([\s\S]*?)<\/ref>/g, '$1').replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
 
 /**
  * Søk i kommentarteksten (#269), som søket i viktige ord: hvert ord må finnes,
  * språket følger kjeden (første språk med treff), og treffene sorteres i
  * bibelrekkefølge. Søket leser avsnittene som JSON-tekst; treffet sjekkes mot
- * den rensede teksten, så et ord som bare står i en tagg ikke gir treff.
+ * den formede, rensede teksten, så et ord som bare står i en tagg eller i
+ * bibelteksten seksjonen siterer ikke gir treff, og treffet lenker til delen
+ * det står i (#286).
  */
 export async function searchCommentary(query: string, lang = currentContentLanguage(), limit = 30): Promise<CommentarySearchHit[]> {
   const words = query.toLowerCase().split(/\s+/).filter((w) => w.length >= 2);
@@ -173,23 +205,32 @@ export async function searchCommentary(query: string, lang = currentContentLangu
     SEARCH_SQL_TAIL;
   const rowLimit = Math.max(1, Math.min(100, limit * 2));
   for (const language of contentLanguageChain(lang)) {
-    const rows = (await sql.unsafe(searchSql, [language, ...words.map((w) => `%${w}%`), rowLimit])) as unknown as { work: string; title: string; author: string | null; book_id: number; osnb_chapter_from: number; osnb_verse_from: number; source_chapter: number; section_no: number; paragraphs: string }[];
+    const rows = (await sql.unsafe(searchSql, [language, ...words.map((w) => `%${w}%`), rowLimit])) as unknown as (CommentaryRow & {
+      work: string;
+      title: string;
+      author: string | null;
+      book_id: number;
+    })[];
     const hits: CommentarySearchHit[] = [];
     for (const r of rows) {
-      const text = (parseJsonList(r.paragraphs) ?? []).map(plain).join(' ');
+      const shaped = shapeCommentary([rawSection(r)]);
+      const found = [shaped.bookIntro, ...shaped.sections]
+        .filter((p): p is CommentaryPart => p !== null)
+        .map((p) => ({ p, text: p.paragraphs.map(commentaryPlain).join(' ') }))
+        .find(({ text }) => words.every((w) => text.toLowerCase().includes(w)));
+      if (!found) continue;
+      const { p, text } = found;
       const lower = text.toLowerCase();
-      if (!words.every((w) => lower.includes(w))) continue;
       const at = lower.indexOf(words[0]!);
       const start = Math.max(0, at - 80);
       hits.push({
         work: r.work,
-        workTitle: r.title,
+        workTitle: commentaryWorkTitle(r.work, r.title, language),
         author: r.author,
         bookId: Number(r.book_id),
-        chapter: r.osnb_chapter_from,
-        verse: r.osnb_verse_from,
-        sourceChapter: r.source_chapter,
-        sectionNo: r.section_no,
+        chapter: p.from.chapter,
+        verse: p.from.verse,
+        part: p.id,
         snippet: `${start > 0 ? '…' : ''}${text.slice(start, at + 160).trim()}${at + 160 < text.length ? '…' : ''}`,
       });
       if (hits.length >= limit) break;

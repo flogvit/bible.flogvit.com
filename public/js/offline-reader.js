@@ -19,7 +19,8 @@ import { readStrings, localeHref } from './locale.js';
 import { el } from './dom.js';
 import { chosenEdition } from './edition-pref.js';
 import { verseHash } from './verse-hash.js';
-import { isHeadingOnly, parseOsisRef, renderCommentaryParagraph } from './commentary-render.js';
+import { hideCommentariesTurnedOff, isHeadingOnly, parseOsisRef, renderCommentaryParagraph, shapeCommentary } from './commentary-render.js';
+import { readJSON } from './store.js';
 
 const t = readStrings(document.body);
 
@@ -175,13 +176,24 @@ function commentaryHref(osisRef) {
   return book ? localeHref(`/${book.slug}/${ref.chapter}`) : null;
 }
 
-function commentaryParagraph(text, lang, kind) {
-  const div = el('div', `cm-${kind}${isHeadingOnly(text) ? ' cm-heading-only' : ''}`);
+function commentaryParagraph(text, lang) {
+  const div = el('div', `cm-p${isHeadingOnly(text) ? ' cm-heading-only' : ''}`);
   div.lang = lang;
   div.innerHTML = renderCommentaryParagraph(text, commentaryHref);
   return div;
 }
 
+function languageName(code) {
+  try {
+    return new Intl.DisplayNames([document.documentElement.lang || 'en'], { type: 'language' }).of(code) || code;
+  } catch {
+    return code;
+  }
+}
+
+// Samme form som lesesiden (#286): bare leserens språk, originalen bak én
+// lukket bryter, bokas innledning først og aldri under en versrekke. Et
+// kapittel lastet ned før formingen kom (uten `bookIntro`), formes her.
 function commentaryPanel(works, chapter) {
   if (!Array.isArray(works) || works.length === 0) return null;
   const at = (a, from, to) => (a.chapter === chapter && from.chapter === to.chapter ? `${a.verse}` : `${a.chapter}:${a.verse}`);
@@ -189,25 +201,33 @@ function commentaryPanel(works, chapter) {
   const box = el('div', 'cm-block');
   let sections = 0;
   for (const c of works) {
+    const shaped = c.bookIntro === undefined ? shapeCommentary(c.sections || []) : c;
+    const translated = c.language !== c.work.sourceLanguage;
     const work = el('article', 'cm-work');
+    work.dataset.commentaryWork = c.work.id;
     const title = el('h3', 'cm-work-title', c.work.title);
-    title.lang = c.work.sourceLanguage;
+    if (c.work.title === (c.work.sourceTitle ?? c.work.title)) title.lang = c.work.sourceLanguage;
     work.append(title, el('p', 'cm-work-meta', t('cm.license', { license: c.work.license })));
     if (c.sourceOnly) work.append(el('p', 'cm-source-only', t('cm.sourceOnly')));
-    for (const s of c.sections || []) {
+    const parts = shaped.bookIntro ? [shaped.bookIntro, ...shaped.sections] : shaped.sections;
+    for (const s of parts) {
       sections++;
-      const sec = el('section', 'cm-section');
+      const sec = el('section', 'cm-read');
       const intro = s.from.verse === 0 && s.to.verse === 0;
       const same = s.from.chapter === s.to.chapter && s.from.verse === s.to.verse;
       const range = same ? at(s.from, s.from, s.to) : `${at(s.from, s.from, s.to)}–${at(s.to, s.from, s.to)}`;
-      sec.append(el('h4', 'cm-section-head', intro ? t('cm.intro') : t('cm.verses', { range })));
-      const source = s.sourceParagraphs;
-      (s.paragraphs || []).forEach((p, i) => {
-        const pair = el('div', source ? 'cm-pair' : 'cm-single');
-        pair.append(commentaryParagraph(p, c.language, 'text'));
-        if (source && source[i] !== undefined) pair.append(commentaryParagraph(source[i], c.work.sourceLanguage, 'source'));
-        sec.append(pair);
-      });
+      const label = s.id === 'book' ? t('cm.bookIntro') : intro ? t('cm.intro') : t('cm.verses', { range });
+      sec.append(el('h4', 'cm-read-label', label));
+      const text = el('div', 'cm-read-text');
+      (s.paragraphs || []).forEach((p) => text.append(commentaryParagraph(p, c.language)));
+      sec.append(text);
+      if (translated && s.sourceParagraphs?.length) {
+        const original = el('details', 'cm-original');
+        const inner = el('div', 'cm-original-text');
+        s.sourceParagraphs.forEach((p) => inner.append(commentaryParagraph(p, c.work.sourceLanguage)));
+        original.append(el('summary', '', t('cm.showOriginal', { language: languageName(c.work.sourceLanguage) })), inner);
+        sec.append(original);
+      }
       if (s.models?.length) sec.append(el('p', 'cm-models', t('cm.models', { models: s.models.join(', ') })));
       work.append(sec);
     }
@@ -217,6 +237,7 @@ function commentaryPanel(works, chapter) {
   const panel = el('div', 'study-panel offline-study');
   const block = el('details', 'st-block');
   block.dataset.blockId = 'kommentar';
+  block.dataset.commentaryGroup = '';
   const head = el('summary', 'st-block-head');
   head.append(el('span', 'st-block-title', t('rd.commentary')), el('span', 'st-block-count', String(sections)));
   block.append(head, body);
@@ -550,7 +571,10 @@ async function renderChapter(book, chapter) {
   }
 
   const commentary = commentaryPanel(study.commentary, chapter);
-  if (commentary) root.append(commentary);
+  if (commentary) {
+    root.append(commentary);
+    hideCommentariesTurnedOff(readJSON('bible-settings', {}), commentary);
+  }
 
   const verses = el('section', 'verses');
   for (const v of text.verses || []) verses.append(verseBlock(v, study, book));

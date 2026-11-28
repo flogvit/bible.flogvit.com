@@ -22,6 +22,7 @@ import { getUserItems, getUserSingleton, getReadingProgress } from '../../lib/us
 import { summarizeProgress, fullHeat, stalestBooks, suggestedPlans, planCoverage } from '../../lib/reading-map.ts';
 import { getBibleEditions, offlineEditions, getFavoriteVerses, getVersesWithOriginal, getAllReadingPlansList, getReadingPlanChapterSets, type BibleEdition } from '../../lib/bible.ts';
 import { getAvailableMappings } from '../../lib/verse-mapper.ts';
+import { getCommentaryWorks } from '../../lib/commentary-data.ts';
 import { layoutProps, makeT, tFor, tEnum, type Locale, type MessageKey, lhref } from '../../lib/i18n.ts';
 import { tCtx } from '../../lib/i18n.ts';
 import { originalScriptLang } from '../../lib/lang.ts';
@@ -506,7 +507,7 @@ function editionLabel(e: BibleEdition): string {
 
 // ---------- /innstillinger ----------
 const TOGGLE_KEYS = [
-  'showBookSummary', 'showChapterSummary', 'showCommentary', 'showChapterContext', 'showChapterInsights',
+  'showBookSummary', 'showChapterSummary', 'showChapterContext', 'showChapterInsights',
   'showImportantWords', 'showVerseDetails', 'showWord4Word', 'showOriginalText',
   'showTimeline', 'showParallels', 'showDailyVerse', 'showTodaysDay', 'showReadingTexts',
   'showVerseFootnotes', 'copyVerseNumbers', 'showContinueReading',
@@ -537,6 +538,7 @@ r.get('/innstillinger', async (c) => {
   // (SBLGNT, Tanach) velges som UNDERTEKST, ikke som hovedtekst, og ligger
   // allerede der som «Grunntekst».
   const readable = (await getBibleEditions()).filter((e) => e.philosophy !== 'source_text');
+  const commentaryWorks = await getCommentaryWorks();
   return c.html(
     <UserPage {...layoutProps(c)} title={t('chrome.settings')} crumb={t('chrome.settings')} heading={t('chrome.settings')} page="settings" intro={t('set.intro')}>
       <form data-settings-form class="settings-form">
@@ -689,6 +691,23 @@ r.get('/innstillinger', async (c) => {
             </label>
           ))}
         </fieldset>
+        {/* Én bryter per kommentarverk siden har (#286), lest fra basen: et
+            nytt verk får sin bryter uten kode. `commentaries.<id>`, på som
+            standard; user.js leser startverdien med `commentaryOn`. */}
+        {commentaryWorks.length > 0 && (
+          <fieldset class="settings-group" data-commentary-settings>
+            <legend>{t('set.type.commentary')}</legend>
+            <p class="user-note">{t('set.commentariesHelp')}</p>
+            {commentaryWorks.map((w) => (
+              <label class="settings-toggle">
+                <input type="checkbox" data-setting={`commentaries.${w.id}`} />
+                <span lang={w.title === w.sourceTitle ? w.sourceLanguage : undefined} data-proper-names={w.title === w.sourceTitle || undefined}>
+                  {w.title}
+                </span>
+              </label>
+            ))}
+          </fieldset>
+        )}
         <fieldset class="settings-group">
           <legend>{t('u.searchResults')}</legend>
           <p class="user-note">{t('set.searchTypesHelp')}</p>

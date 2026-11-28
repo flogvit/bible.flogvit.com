@@ -241,10 +241,15 @@ describe('HTTP', () => {
 // language with the work, its licence and who translated it.
 test('get_chapter_study includes the commentary on the chapter', async () => {
   const nb = (await call('get_chapter_study', { reference: '1 Mos 1', language: 'nb' })).text;
-  expect(nb).toContain("## Commentary: Matthew Henry's Complete Commentary");
+  // #286: the work's title in the reader's language, and the preface to the
+  // Pentateuch as the book's introduction, not under verses 1–2.
+  expect(nb).toContain('## Commentary: Matthew Henrys kommentar til hele Bibelen');
   expect(nb).toContain('Licence: Public Domain.');
   expect(nb).toContain('Translated and checked by');
   expect(nb).not.toMatch(/<(?:h|i|b|ref)\b/);
+  const verses12 = nb.slice(nb.indexOf('### Verses 1–2'));
+  expect(nb.indexOf('### Introduction to the book')).toBeGreaterThan(-1);
+  expect(verses12.slice(0, verses12.indexOf('\n### ', 4))).not.toContain('FORORD');
   const en = (await call('get_chapter_study', { reference: 'Gen 1', language: 'en' })).text;
   expect(en).toContain('## Commentary:');
   expect(en).not.toContain('Translated and checked by');

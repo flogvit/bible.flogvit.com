@@ -76,7 +76,15 @@ import { getWorksForChapter, workHref, type WorkRef } from '../../lib/works.ts';
 import { songIndex, songsForPassage, type Song } from '../../lib/songs.ts';
 import { SongList } from '../../views/songs.tsx';
 import { getCommentaryForChapter, type CommentaryForChapter } from '../../lib/commentary-data.ts';
-import { CommentaryBlockBody, commentaryAnchor, sectionCovers, sectionRange } from '../../views/commentary.tsx';
+import {
+  CommentaryBookIntros,
+  CommentaryPanel,
+  CommentaryReader,
+  commentaryAnchor,
+  commentaryCount,
+  sectionCovers,
+  sectionRange,
+} from '../../views/commentary.tsx';
 import { encode as encodeKvn } from '@free-bible/kvn/types';
 import { layoutProps, tFor, type Translator, type MessageKey, lhref } from '../../lib/i18n.ts';
 import { localeToContentLanguage, originalScriptLang } from '../../lib/lang.ts';
@@ -157,8 +165,8 @@ interface DisplayVerse {
   works: WorkRef[];
   /** Songs with a passage that contains this verse (#188). */
   songs: Song[];
-  /** Commentary sections on this verse (#269): the verse details link to them. */
-  commentary: { href: string; label: string }[];
+  /** Commentary sections on this verse (#269), per work (#286: a work can be switched off). */
+  commentary: { work: string; links: { href: string; label: string }[] }[];
 }
 
 interface ChapterData {
@@ -308,14 +316,17 @@ async function loadChapterData(
         return w.kvn_from <= k + 15 && w.kvn_to >= k;
       }),
       songs: songsForPassage(music, bookId, b.osnbChapter, b.osnbVerse),
-      commentary: commentary.flatMap((c) =>
-        c.sections
-          .filter((s) => sectionCovers(s, b.osnbChapter, b.osnbVerse))
-          .map((s) => ({
-            href: `#${commentaryAnchor(c.work.id, s)}`,
-            label: `${c.work.author ?? c.work.title}, ${sectionRange(b.osnbChapter, s.from, s.to)}`,
-          })),
-      ),
+      commentary: commentary
+        .map((c) => ({
+          work: c.work.id,
+          links: c.sections
+            .filter((s) => sectionCovers(s, b.osnbChapter, b.osnbVerse))
+            .map((s) => ({
+              href: `#${commentaryAnchor(c.work.id, s)}`,
+              label: `${c.work.author ?? c.work.title}, ${sectionRange(b.osnbChapter, s.from, s.to)}`,
+            })),
+        }))
+        .filter((c) => c.links.length > 0),
     });
   }
 
@@ -932,20 +943,21 @@ function VerseDetailPanel({
         )}
       </div>
 
-      {/* Kommentaren til verset (#269) står i studiepanelet; lenka åpner den der. */}
-      {data.commentary.length > 0 && (
-        <p class="vd-commentary">
+      {/* Kommentaren til verset (#269): lenka åpner den i lesevisningen (#286).
+          Én linje per verk, så et verk leseren har slått av forsvinner alene. */}
+      {data.commentary.map((c) => (
+        <p class="vd-commentary" data-commentary-work={c.work}>
           {t('cm.jump')}:{' '}
-          {data.commentary.map((c, i) => (
+          {c.links.map((l, i) => (
             <>
               {i > 0 && ', '}
-              <a href={c.href} data-cm-jump>
-                {c.label}
+              <a href={l.href} data-cm-open>
+                {l.label}
               </a>
             </>
           ))}
         </p>
-      )}
+      ))}
 
       <div class="vd-tabs" role="tablist" aria-label={`${t('rd.verseDetails')} ${n}`}>
         <button type="button" role="tab" aria-selected="true" class="vd-tab is-active" data-vd-tab="original">
@@ -1268,16 +1280,19 @@ function StudyBlock({
   title,
   count,
   defaultOpen,
+  commentaryGroup,
   children,
 }: {
   id: string;
   title: string;
   count?: number;
   defaultOpen?: boolean;
+  /** Blokka viser bare kommentarverk: den skjules når leseren har slått av alle (#286). */
+  commentaryGroup?: boolean;
   children?: unknown;
 }) {
   return (
-    <details class="st-block" data-block-id={id} open={defaultOpen}>
+    <details class="st-block" data-block-id={id} open={defaultOpen} data-commentary-group={commentaryGroup || undefined}>
       <summary class="st-block-head">
         <span class="st-block-title">{title}</span>
         {count !== undefined && count > 0 && <span class="st-block-count">{count}</span>}
@@ -1312,7 +1327,8 @@ function StudyPanel({
   chapter: number;
   t: Translator;
 }) {
-  const summaryCount = [data.bookSummary, data.summary, data.context].filter(Boolean).length;
+  const bookIntros = data.commentary.filter((c) => c.bookIntro).length;
+  const summaryCount = [data.bookSummary, data.summary, data.context].filter(Boolean).length + bookIntros;
   const newManuscriptRef = `${book.short_name.toLowerCase()}-${chapter}-1`;
 
   return (
@@ -1338,20 +1354,15 @@ function StudyPanel({
       <StudyBlock id="sammendrag" title={t('rd.summary')} count={summaryCount} defaultOpen>
         {data.summary && <SummaryItem title={`${t('common.chapter')} ${chapter}`} content={data.summary} kind="chapter" />}
         {data.bookSummary && <SummaryItem title={`${t('rd.aboutBook')} ${bookName(book)}`} content={data.bookSummary} kind="book" />}
+        {/* Bokas innledning fra kommentarene (forordet i 1 Mos) hører her, ikke under en versrekke (#286). */}
+        <CommentaryBookIntros commentary={data.commentary} chapter={chapter} t={t} />
         {data.context && <SummaryItem title={t('rd.historicalContext')} content={data.context} kind="context" />}
-        {!data.summary && !data.bookSummary && !data.context && (
-          <p class="st-empty">{t('rd.noSummary')}</p>
-        )}
+        {summaryCount === 0 && <p class="st-empty">{t('rd.noSummary')}</p>}
       </StudyBlock>
 
-      {data.commentary.length > 0 && (
-        <StudyBlock
-          id="kommentar"
-          title={t('rd.commentary')}
-          count={data.commentary.reduce((n, c) => n + c.sections.length, 0)}
-          defaultOpen
-        >
-          <CommentaryBlockBody commentary={data.commentary} chapter={chapter} t={t} />
+      {commentaryCount(data.commentary) > 0 && (
+        <StudyBlock id="kommentar" title={t('rd.commentary')} count={commentaryCount(data.commentary)} defaultOpen commentaryGroup>
+          <CommentaryPanel commentary={data.commentary} chapter={chapter} t={t} />
         </StudyBlock>
       )}
 
@@ -2108,6 +2119,9 @@ r.get('/:book/:chapter', async (c) => {
                 )}
               </div>
             </footer>
+
+            {/* Kommentarene leses i hovedspaltens bredde og skrift (#286). */}
+            <CommentaryReader commentary={data.commentary} chapter={chapter} t={t} />
           </article>
 
           <aside class="reading-sidebar" aria-label={tCtx()('rd.toolPanelAria')} data-panel-tabs>

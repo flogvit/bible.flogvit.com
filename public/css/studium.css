@@ -536,48 +536,82 @@
   font-size: 0.85rem;
 }
 
-/* ── Bibelkommentarer (#269) ──────────────────────────────────────────
-   Teksten på leserens språk med kildens avsnitt ved siden av. «Side om side»
-   er en egenskap ved BLOKKA, ikke vinduet: i sidepanelet på desktop er den
-   smal og stabler, i panelmodus og i ▥-overlegget på et nettbrett er den bred
-   nok til to kolonner. En container-spørring i rem følger dessuten teksten:
-   ved 150 % tekst går den til én kolonne tidligere, som den skal (#50). */
-.cm-block { container-type: inline-size; min-width: 0; }
+/* ── Bibelkommentarer (#269, #286) ────────────────────────────────────
+   Studiepanelet er 280 px med liten skrift: der står bare hva som finnes —
+   hver dels etikett og de første linjene. Teksten leses i lesevisningen
+   (.cm-reader), så bred som hovedspalten og i versteksten størrelse. */
+.cm-block { min-width: 0; }
 .cm-work + .cm-work { margin-top: 1.25rem; }
-.cm-work-title { font-size: 1rem; margin: 0 0 0.15rem; }
-.cm-work-meta, .cm-models, .cm-source-only, .cm-original-note {
+.cm-work-title { font-size: 1rem; margin: 0 0 0.35rem; }
+.cm-work-meta, .cm-models, .cm-source-only {
   font-size: 0.8125rem;
   color: var(--muted);
   margin: 0 0 0.5rem;
 }
 .cm-source-only { font-style: italic; }
-.cm-original-note { display: flex; align-items: center; gap: 0.4rem; }
-.cm-original-swatch {
-  display: inline-block;
-  width: 0.75rem;
-  height: 0.75rem;
-  flex: none;
-  border-left: 3px solid var(--line);
-  background: var(--paper-2);
+.cm-teasers { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.35rem; }
+.cm-teaser {
+  display: block;
+  min-width: 0;
+  padding: 0.4rem 0.5rem;
+  border-radius: 6px;
+  color: inherit;
+  text-decoration: none;
+  border: 1px solid var(--line);
+  background: var(--paper);
 }
-.cm-section { margin-top: 0.75rem; scroll-margin-top: 4rem; }
-.cm-section-head { font-size: 0.875rem; margin: 0 0 0.35rem; }
-.cm-pair, .cm-single { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0.35rem; margin-bottom: 0.6rem; }
-.cm-text, .cm-source { min-width: 0; overflow-wrap: anywhere; line-height: 1.55; }
-.cm-source {
-  font-size: 0.875rem;
+.cm-teaser:hover, .cm-teaser:focus-visible { border-color: var(--accent); }
+.cm-teaser-label { display: block; font-weight: 600; font-size: 0.875rem; color: var(--accent); }
+.cm-teaser-text { display: block; font-size: 0.8125rem; line-height: 1.45; color: var(--muted); overflow-wrap: anywhere; }
+
+/* Lesevisningen. Med JS: en modal dialog, én del om gangen (data-current),
+   lagt over hovedspalten (studium.js måler den); under 768 px hele bredden
+   med sidens innrykk. Uten JS: `:target` viser delen under kapittelteksten. */
+.cm-reader {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 1.25rem 1.25rem 1.5rem;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--paper);
+  color: var(--ink);
+  max-width: none;
+  max-height: none;
+}
+.cm-reader[open] {
+  position: fixed;
+  inset: 0.75rem auto 0.75rem var(--cm-reader-left, max(1rem, calc((100vw - 46rem) / 2)));
+  width: var(--cm-reader-width, min(46rem, calc(100vw - 2rem)));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.cm-reader::backdrop { background: rgb(0 0 0 / 0.35); }
+.cm-reader[open] .cm-read:not([data-current]) { display: none; }
+.cm-reader:not([open]):has(.cm-read:target) { display: block; position: static; width: auto; margin-top: 2rem; }
+.cm-reader:not([open]) .cm-read:not(:target), .cm-reader:not([open]) .cm-reader-close { display: none; }
+.cm-reader-close {
+  float: right;
+  margin: -0.5rem -0.5rem 0.5rem 0.5rem;
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+  border: 0;
+  background: none;
   color: var(--muted);
-  border-left: 3px solid var(--line);
-  background: var(--paper-2);
-  padding: 0.25rem 0.5rem;
+  font-size: 1.25rem;
+  cursor: pointer;
 }
+.cm-read:focus { outline: none; }
+.cm-read-work { margin: 0; font-size: 0.875rem; color: var(--muted); }
+.cm-read-label { margin: 0.15rem 0 0.75rem; font-size: 1.375rem; }
+.cm-read-text, .cm-original-text { font-size: 1.125rem; line-height: 1.65; }
+.cm-p { min-width: 0; overflow-wrap: anywhere; margin: 0 0 0.85em; }
 .cm-heading, .cm-heading-only { font-weight: 600; }
-/* En lenke i løpende tekst skilles ut med mer enn farge (WCAG 1.4.1): i
-   kildeavsnittet er den gylne lenkefargen for nær den dempede teksten. */
+/* En lenke i løpende tekst skilles ut med mer enn farge (WCAG 1.4.1). */
 .cm-ref { text-decoration: underline; text-underline-offset: 2px; }
-@container (min-width: 40rem) {
-  .cm-pair { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 1rem; }
-}
-/* En lenke fra versdetaljene lander her: markeringen viser hvilken seksjon. */
-.cm-section:target { outline: 2px solid color-mix(in oklab, var(--accent) 45%, transparent); outline-offset: 4px; border-radius: 4px; }
+.cm-original { margin: 0.5rem 0 1rem; }
+.cm-original > summary { cursor: pointer; color: var(--muted); font-size: 0.9375rem; }
+.cm-original-text { margin-top: 0.75rem; padding-left: 0.75rem; border-left: 3px solid var(--line); color: var(--muted); }
+.cm-read-foot { border-top: 1px solid var(--line); padding-top: 0.75rem; }
+.cm-read-nav { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 0.5rem 1rem; font-size: 0.9375rem; }
+.cm-read-next { margin-left: auto; }
 .vd-commentary { font-size: 0.875rem; margin: 0.5rem 0 0; }

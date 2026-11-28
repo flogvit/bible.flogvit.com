@@ -6,6 +6,7 @@
 import { readStrings, langParam, localeHref } from './locale.js';
 import { el } from './dom.js';
 import { readJSON, writeJSON } from './store.js';
+import { commentaryOn } from './commentary-render.js';
 
 const t = readStrings(document.body);
 
@@ -268,27 +269,74 @@ if (toolbar) {
   });
 }
 
-// ── Bibelkommentarer (#269): lenka fra versdetaljene ────────────────
-// Seksjonen står i studiepanelet. På telefon er panelet skjult bak ▥, og blokka
-// kan være lukket; et vanlig anker ville da rullet til ingenting. Lenka åpner
-// derfor overlegget (når panelet ikke er synlig) og blokka før den ruller.
-function showCommentarySection(id) {
-  const target = document.getElementById(id);
-  if (!target) return false;
-  const opener = document.querySelector('[data-open-studium]');
-  if (opener && target.offsetParent === null && opener.offsetParent !== null) opener.click();
-  const block = target.closest('details');
-  if (block) block.open = true;
-  target.scrollIntoView({ block: 'start' });
-  return true;
-}
-document.addEventListener('click', (e) => {
-  const link = e.target instanceof Element ? e.target.closest('[data-cm-jump]') : null;
-  if (!link) return;
-  const id = (link.getAttribute('href') || '').slice(1);
-  if (showCommentarySection(id)) {
+// ── Bibelkommentarene (#269, #286): lesevisningen ───────────────────
+// Panelet, versdetaljene og søket lenker til `#cm-<verk>-<del>`. Delen leses i
+// en <dialog> så bred som hovedspalten (målt ved hver åpning — modusene endrer
+// den), én del om gangen. Adressen bærer delen, så en delt lenke åpner den
+// samme; åpning legger adressen i historikken, så Tilbake lukker. Et verk
+// leseren har slått av, åpnes ikke.
+const reader = document.querySelector('[data-cm-reader]');
+if (reader instanceof HTMLDialogElement) {
+  const partFor = (hash) => {
+    if (!hash.startsWith('#cm-')) return null;
+    const part = document.getElementById(decodeURIComponent(hash.slice(1)));
+    if (!part || !reader.contains(part)) return null;
+    return commentaryOn(readJSON(KEYS.settings, {}), part.dataset.commentaryWork || '') ? part : null;
+  };
+  const fit = () => {
+    const column = document.querySelector('.chapter-content');
+    const r = column?.getBoundingClientRect();
+    // Telefon og smale vinduer: hele bredden, med sidens eget innrykk (CSS).
+    if (!r || r.width < 1 || window.innerWidth < 768) {
+      reader.style.removeProperty('--cm-reader-left');
+      reader.style.removeProperty('--cm-reader-width');
+      return;
+    }
+    reader.style.setProperty('--cm-reader-left', `${Math.round(r.left)}px`);
+    reader.style.setProperty('--cm-reader-width', `${Math.round(r.width)}px`);
+  };
+  const show = (hash) => {
+    const part = partFor(hash);
+    if (!part) {
+      if (reader.open) reader.close();
+      return false;
+    }
+    reader.querySelectorAll('.cm-read').forEach((p) => p.toggleAttribute('data-current', p === part));
+    fit();
+    if (!reader.open) reader.showModal();
+    reader.scrollTop = 0;
+    part.focus({ preventScroll: true });
+    return true;
+  };
+  document.addEventListener('click', (e) => {
+    const link = e.target instanceof Element ? e.target.closest('[data-cm-open]') : null;
+    if (!link) return;
+    const hash = link.getAttribute('href') || '';
+    if (!partFor(hash)) return;
     e.preventDefault();
-    history.replaceState(null, '', `#${id}`);
-  }
-});
-if (location.hash.startsWith('#cm-')) showCommentarySection(location.hash.slice(1));
+    // Bla innen lesevisningen erstatter adressen; å åpne den legger til én.
+    if (reader.open) history.replaceState(null, '', hash);
+    else history.pushState({ cmReader: true }, '', hash);
+    show(hash);
+  });
+  const closeReader = () => {
+    if (history.state?.cmReader) history.back();
+    else {
+      history.replaceState(null, '', location.pathname + location.search);
+      reader.close();
+    }
+  };
+  reader.querySelector('[data-cm-close]')?.addEventListener('click', closeReader);
+  reader.addEventListener('cancel', (e) => {
+    e.preventDefault();
+    closeReader();
+  });
+  // Et klikk på bakteppet (utenfor dialogens boks) lukker.
+  reader.addEventListener('click', (e) => {
+    if (e.target === reader) closeReader();
+  });
+  window.addEventListener('popstate', () => show(location.hash));
+  window.addEventListener('hashchange', () => show(location.hash));
+  window.addEventListener('resize', () => reader.open && fit());
+  if (location.hash.startsWith('#cm-')) show(location.hash);
+}

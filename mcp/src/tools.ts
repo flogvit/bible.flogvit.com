@@ -492,14 +492,16 @@ export function registerTools(server: McpServer): void {
         const note = c.sourceOnly
           ? ` Not yet translated into ${lang}; the original (${c.work.sourceLanguage}) is shown.`
           : c.language !== c.work.sourceLanguage
-            ? ` Translated from ${c.work.sourceLanguage}; the page shows the original beside each paragraph.`
+            ? ` Translated from ${c.work.sourceLanguage}; the page has the original a click away.`
             : '';
         const head = [
           `## Commentary: ${c.work.title}${c.work.author ? ` (${c.work.author}${c.work.written ? `, ${c.work.written}` : ''})` : ''}`,
           `Licence: ${c.work.license}.${note}`,
         ];
-        const body = c.sections.map((x) => {
-          const range = x.from.verse === 0 && x.to.verse === 0 ? 'Introduction' : `Verses ${where(x.from)}–${where(x.to)}`;
+        // Bokas innledning (forordet i 1 Mos) står for seg, aldri under en versrekke (#286).
+        const body = [...(c.bookIntro ? [c.bookIntro] : []), ...c.sections].map((x) => {
+          const range =
+            x.id === 'book' ? 'Introduction to the book' : x.from.verse === 0 && x.to.verse === 0 ? 'Introduction' : `Verses ${where(x.from)}–${where(x.to)}`;
           const models = x.models?.length ? `\n_Translated and checked by ${x.models.join(', ')}._` : '';
           return `### ${range}\n${x.paragraphs.map(commentaryMarkdown).join('\n\n')}${models}`;
         });

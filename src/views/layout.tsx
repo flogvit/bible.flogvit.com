@@ -99,7 +99,7 @@ export const PAGE_ISLAND_KEYS: Record<string, readonly MessageKey[]> = {
     'rd.prevChapter', 'rd.nextChapter', 'rd.verseAria', 'rd.verseDetails',
     'rd.day7', 'rd.rest', 'rd.day7Description', 'lang.hebrewShort', 'lang.greekShort',
     // Bibelkommentarene (#269).
-    'rd.commentary', 'cm.intro', 'cm.verses', 'cm.models', 'cm.license', 'cm.sourceOnly',
+    'rd.commentary', 'cm.intro', 'cm.bookIntro', 'cm.verses', 'cm.models', 'cm.license', 'cm.sourceOnly', 'cm.showOriginal',
   ],
   'studium.js': ['is.noManuscriptsHere', 'is.searchTextFor', 'is.searchStudyFor', 'is.untitled'],
   'tagging.js': [

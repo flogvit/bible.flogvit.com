@@ -39,6 +39,36 @@ export const renderCommentaryParagraph: (text: string, link: (osisRef: string) =
 export const isHeadingOnly: (text: string) => boolean = shared.isHeadingOnly;
 /** Et avsnitt som markdown, uten HTML. */
 export const commentaryMarkdown: (text: string) => string = shared.commentaryMarkdown;
+/** Et avsnitt som ren tekst. */
+export const commentaryPlain: (text: string) => string = shared.commentaryPlain;
+/** Begynnelsen av en ren tekst, kuttet ved et ordskille. */
+export const commentaryTeaser: (text: string, max?: number) => string = shared.commentaryTeaser;
+
+/** En seksjon slik den ligger i basen, før formingen (#286). */
+export interface RawCommentarySection {
+  /** Verkets eget kapittel og seksjonsnummer: nøkkelen kilden og gjengivelsen deler. */
+  sourceChapter: number;
+  sectionNo: number;
+  /** Hvor seksjonen står i osnb. Vers 0 er en innledning. */
+  from: OsnbAt;
+  to: OsnbAt;
+  paragraphs: string[];
+  /** Kildens avsnitt til samme seksjon, når teksten over er en gjengivelse. */
+  sourceParagraphs: string[] | null;
+  /** Modellene som oversatte og kontrollerte; null for kildens egen tekst. */
+  models: string[] | null;
+}
+/** En del leseren ser: en seksjon, en kapittelinnledning eller bokas innledning. */
+export interface CommentaryPart extends RawCommentarySection {
+  /** Delens adresse innen verket: `<kap>-<nr>`, `<kap>-<nr>-intro` eller `book`. */
+  id: string;
+}
+/**
+ * Formen leseren ser (#286): versitatene ute, bokas innledning skilt ut og
+ * kapittelets innledning som egen del. Se `public/js/commentary-render.js`.
+ */
+export const shapeCommentary: (sections: RawCommentarySection[]) => { bookIntro: CommentaryPart | null; sections: CommentaryPart[] } =
+  shared.shapeCommentary;
 
 /**
  * Løft når forankringen eller det som lagres per seksjon endres: importens

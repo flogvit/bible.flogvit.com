@@ -11,6 +11,7 @@ import { parseVerseListRef, withRef } from './verse-list.js';
 import { verseHash } from './verse-hash.js';
 import { readJSON, writeJSON } from './store.js';
 import { chooseEdition, chosenEdition } from './edition-pref.js';
+import { commentaryOn } from './commentary-render.js';
 
 const t = readStrings(document.body);
 
@@ -293,7 +294,9 @@ if (root) {
         return;
       }
       const cur = getPath(s, key);
-      if (input.type === 'checkbox') input.checked = cur !== false;
+      // Et kommentarverk (#286) følger den gamle felles bryteren til leseren velger selv.
+      if (key.startsWith('commentaries.')) input.checked = commentaryOn(s, key.slice('commentaries.'.length));
+      else if (input.type === 'checkbox') input.checked = cur !== false;
       else if (cur !== undefined) input.value = cur;
       input.addEventListener('change', () => {
         const next = readJSON(KEYS.settings, {});
