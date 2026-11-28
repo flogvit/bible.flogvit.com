@@ -1369,8 +1369,9 @@ a.ins-hero-name:hover {
    `nowrap` + ellipse på en variabel tekst kuttet nettopp kapittelnummeret.
    Hele boknavnet får aldri plass («Tessalonikalaiskirje» er dobbelt så bredt
    som boksen), så boka står forkortet (`<abbr>` med navnet i `title`), og
-   tittelen får bryte mellom boka og kapittelet framfor å klippe. Forkortelsen og
-   «kapittel ▼» er hver sin atomære enhet. Vakt: `mobile-layout.test.ts`. */
+   tittelen får bryte mellom boka og kapittelet framfor å klippe. «Kapittel ▼»
+   er én atomær enhet: kapittelnummeret skilles aldri fra pila.
+   Vakt: `mobile-layout.test.ts`. */
 .mt-title {
   flex: 1;
   min-height: 40px;
@@ -1384,7 +1385,6 @@ a.ins-hero-name:hover {
 .mt-title abbr {
   text-decoration: none;
 }
-.mt-title abbr,
 .mt-chapter {
   white-space: nowrap;
 }
